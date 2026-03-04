@@ -312,24 +312,45 @@ class GoogleSignInRequest(BaseModel):
 @limiter.limit("10/minute")
 async def google_sign_in(request: Request, body: GoogleSignInRequest):
     """
-    Validate a Google ID token, create or find the user, and return JWT tokens.
+    Validate a Google token, create or find the user, and return JWT tokens.
 
-    The mobile app sends the ID token obtained from @react-native-google-signin.
-    We verify it with Google's tokeninfo endpoint (no google-auth dependency needed).
+    Accepts either:
+      - A Google ID token (from native @react-native-google-signin)
+      - A Google access token (from web expo-auth-session OAuth flow)
+
+    We try ID-token verification first; if that fails we try the
+    access_token userinfo endpoint as a fallback.
     """
     import httpx
 
-    # Verify the ID token with Google
-    try:
-        async with httpx.AsyncClient(timeout=10) as client:
+    google_data = None
+    token = body.id_token
+
+    async with httpx.AsyncClient(timeout=10) as client:
+        # ── Attempt 1: verify as id_token ────────────────────────
+        try:
             resp = await client.get(
-                f"https://oauth2.googleapis.com/tokeninfo?id_token={body.id_token}"
+                f"https://oauth2.googleapis.com/tokeninfo?id_token={token}"
             )
-        if resp.status_code != 200:
-            raise UnauthorizedError("Invalid Google ID token")
-        google_data = resp.json()
-    except httpx.HTTPError:
-        raise BadRequestError("Failed to verify Google token. Please try again.")
+            if resp.status_code == 200:
+                google_data = resp.json()
+        except httpx.HTTPError:
+            pass  # fall through to access_token attempt
+
+        # ── Attempt 2: verify as access_token via userinfo ───────
+        if google_data is None or "email" not in google_data:
+            try:
+                resp = await client.get(
+                    "https://www.googleapis.com/oauth2/v3/userinfo",
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+                if resp.status_code == 200:
+                    google_data = resp.json()
+            except httpx.HTTPError:
+                pass
+
+    if not google_data:
+        raise UnauthorizedError("Invalid Google token — could not verify with Google.")
 
     email = google_data.get("email")
     if not email:
