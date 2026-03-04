@@ -97,8 +97,10 @@ async def set_rf_rate(
     """Store the user's risk-free rate (as percentage, e.g. 4.25 for 4.25%)."""
     import time
     exec_sql(
-        "INSERT OR REPLACE INTO user_settings (user_id, setting_key, setting_value, updated_at) "
-        "VALUES (?, 'rf_rate', ?, ?)",
+        "INSERT INTO user_settings (user_id, setting_key, setting_value, updated_at) "
+        "VALUES (?, 'rf_rate', ?, ?) "
+        "ON CONFLICT (user_id, setting_key) DO UPDATE "
+        "SET setting_value = EXCLUDED.setting_value, updated_at = EXCLUDED.updated_at",
         (current_user.user_id, str(rf_rate), int(time.time())),
     )
     return {

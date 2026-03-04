@@ -130,17 +130,124 @@ def _ensure_wal_mode(conn: sqlite3.Connection) -> None:
     cur.close()
 
 
+# ── PG cursor proxy — translates ?-style placeholders to %s ─────────
+
+class _PgCursorProxy:
+    """Wraps a psycopg2 cursor to accept SQLite-style ? placeholders."""
+
+    def __init__(self, cursor):
+        self._cur = cursor
+
+    @staticmethod
+    def _translate(sql: str) -> str:
+        """Convert ? placeholders to %s for psycopg2."""
+        return sql.replace("?", "%s") if "?" in sql else sql
+
+    def execute(self, sql, params=None):
+        return self._cur.execute(self._translate(sql), params)
+
+    def fetchone(self):
+        return self._cur.fetchone()
+
+    def fetchall(self):
+        return self._cur.fetchall()
+
+    @property
+    def lastrowid(self):
+        return getattr(self._cur, "lastrowid", None)
+
+    @property
+    def description(self):
+        return self._cur.description
+
+    def close(self):
+        self._cur.close()
+
+    def __iter__(self):
+        return iter(self._cur)
+
+
+class _DualRow:
+    """Row that supports both index access (row[0]) and key access (row["col"]).
+
+    This bridges the gap between sqlite3.Row (supports both) and the dicts
+    returned by SQLAlchemy mappings (key-only).  Used by query_one/query_all
+    so that existing code works unchanged on both SQLite and PostgreSQL.
+    """
+
+    __slots__ = ("_dict", "_vals")
+
+    def __init__(self, keys, values):
+        self._vals = tuple(values)
+        self._dict = dict(zip(keys, self._vals))
+
+    def __getitem__(self, key):
+        if isinstance(key, (int, slice)):
+            return self._vals[key]
+        return self._dict[key]
+
+    def keys(self):
+        return self._dict.keys()
+
+    def values(self):
+        return self._dict.values()
+
+    def items(self):
+        return self._dict.items()
+
+    def get(self, key, default=None):
+        return self._dict.get(key, default)
+
+    def __contains__(self, key):
+        return key in self._dict
+
+    def __len__(self):
+        return len(self._vals)
+
+    def __repr__(self):
+        return f"_DualRow({self._dict})"
+
+
+class _PgConnProxy:
+    """Wraps a raw psycopg2 connection so .cursor() returns _PgCursorProxy."""
+
+    def __init__(self, raw_conn):
+        self._conn = raw_conn
+
+    def cursor(self):
+        return _PgCursorProxy(self._conn.cursor())
+
+    def commit(self):
+        self._conn.commit()
+
+    def rollback(self):
+        self._conn.rollback()
+
+    def close(self):
+        self._conn.close()
+
+    def execute(self, sql, params=None):
+        """Convenience — execute directly on a new cursor."""
+        cur = self.cursor()
+        cur.execute(sql, params)
+        return cur
+
+
 @contextmanager
 def get_connection():
     """
     Context-managed database connection.
 
     For SQLite: yields a sqlite3.Connection with WAL mode.
-    For PostgreSQL: yields a SQLAlchemy connection (raw DBAPI).
+    For PostgreSQL: yields a proxied raw DBAPI connection that accepts
+      ?-style placeholders (translated to %s for psycopg2).
     """
     if _USE_PG:
-        with engine.connect() as conn:
-            yield conn
+        raw = engine.raw_connection()
+        try:
+            yield _PgConnProxy(raw)
+        finally:
+            raw.close()
     else:
         conn = sqlite3.connect(_DB_PATH, check_same_thread=False)
         _ensure_wal_mode(conn)
@@ -187,13 +294,18 @@ def query_val(sql: str, params: tuple = ()) -> Any:
 
 
 def query_one(sql: str, params: tuple = ()):
-    """Execute a query and return a single row."""
+    """Execute a query and return a single row.
+
+    Returns a _DualRow for PG (supports both row[0] and row["col"]),
+    or a sqlite3.Row for SQLite.
+    """
     if _USE_PG:
         pg_sql, named = _pg_sql_named(sql, params)
         with engine.connect() as conn:
             result = conn.execute(text(pg_sql), named)
-            row = result.mappings().fetchone()
-            return dict(row) if row else None
+            cols = list(result.keys())
+            row = result.fetchone()
+            return _DualRow(cols, row) if row else None
     with get_connection() as conn:
         cur = conn.cursor()
         cur.execute(sql, params)
@@ -206,7 +318,8 @@ def query_all(sql: str, params: tuple = ()) -> list:
         pg_sql, named = _pg_sql_named(sql, params)
         with engine.connect() as conn:
             result = conn.execute(text(pg_sql), named)
-            return [dict(r) for r in result.mappings().fetchall()]
+            cols = list(result.keys())
+            return [_DualRow(cols, r) for r in result.fetchall()]
     with get_connection() as conn:
         cur = conn.cursor()
         cur.execute(sql, params)

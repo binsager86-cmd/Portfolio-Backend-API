@@ -35,11 +35,14 @@ def _ensure_schema() -> None:
     global _SCHEMA_INIT
     if _SCHEMA_INIT:
         return
-    with get_connection() as conn:
-        cur = conn.cursor()
-        cur.executescript("""
-            CREATE TABLE IF NOT EXISTS analysis_stocks (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    from app.core.config import get_settings
+    _s = get_settings()
+    _PK = "SERIAL PRIMARY KEY" if _s.use_postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"
+
+    _TABLES = [
+        f"""CREATE TABLE IF NOT EXISTS analysis_stocks (
+                id {_PK},
                 user_id INTEGER NOT NULL,
                 symbol TEXT NOT NULL,
                 company_name TEXT NOT NULL,
@@ -56,9 +59,9 @@ def _ensure_schema() -> None:
                 created_at INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL,
                 UNIQUE(user_id, symbol)
-            );
-            CREATE TABLE IF NOT EXISTS financial_statements (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+            )""",
+        f"""CREATE TABLE IF NOT EXISTS financial_statements (
+                id {_PK},
                 stock_id INTEGER NOT NULL,
                 statement_type TEXT NOT NULL,
                 fiscal_year INTEGER NOT NULL,
@@ -73,9 +76,9 @@ def _ensure_schema() -> None:
                 created_at INTEGER NOT NULL,
                 UNIQUE(stock_id, statement_type, period_end_date),
                 FOREIGN KEY (stock_id) REFERENCES analysis_stocks(id)
-            );
-            CREATE TABLE IF NOT EXISTS financial_line_items (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+            )""",
+        f"""CREATE TABLE IF NOT EXISTS financial_line_items (
+                id {_PK},
                 statement_id INTEGER NOT NULL,
                 line_item_code TEXT NOT NULL,
                 line_item_name TEXT NOT NULL,
@@ -88,9 +91,9 @@ def _ensure_schema() -> None:
                 edited_by_user_id INTEGER,
                 edited_at INTEGER,
                 FOREIGN KEY (statement_id) REFERENCES financial_statements(id)
-            );
-            CREATE TABLE IF NOT EXISTS stock_metrics (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+            )""",
+        f"""CREATE TABLE IF NOT EXISTS stock_metrics (
+                id {_PK},
                 stock_id INTEGER NOT NULL,
                 fiscal_year INTEGER NOT NULL,
                 fiscal_quarter INTEGER,
@@ -101,9 +104,9 @@ def _ensure_schema() -> None:
                 created_at INTEGER NOT NULL,
                 UNIQUE(stock_id, metric_name, period_end_date),
                 FOREIGN KEY (stock_id) REFERENCES analysis_stocks(id)
-            );
-            CREATE TABLE IF NOT EXISTS valuation_models (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+            )""",
+        f"""CREATE TABLE IF NOT EXISTS valuation_models (
+                id {_PK},
                 stock_id INTEGER NOT NULL,
                 model_type TEXT NOT NULL,
                 valuation_date TEXT NOT NULL,
@@ -113,9 +116,9 @@ def _ensure_schema() -> None:
                 created_by_user_id INTEGER,
                 created_at INTEGER NOT NULL,
                 FOREIGN KEY (stock_id) REFERENCES analysis_stocks(id)
-            );
-            CREATE TABLE IF NOT EXISTS stock_scores (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+            )""",
+        f"""CREATE TABLE IF NOT EXISTS stock_scores (
+                id {_PK},
                 stock_id INTEGER NOT NULL,
                 scoring_date TEXT NOT NULL,
                 overall_score REAL,
@@ -128,9 +131,9 @@ def _ensure_schema() -> None:
                 created_by_user_id INTEGER,
                 created_at INTEGER NOT NULL,
                 FOREIGN KEY (stock_id) REFERENCES analysis_stocks(id)
-            );
-            CREATE TABLE IF NOT EXISTS analysis_audit_log (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+            )""",
+        f"""CREATE TABLE IF NOT EXISTS analysis_audit_log (
+                id {_PK},
                 user_id INTEGER NOT NULL,
                 operation TEXT NOT NULL,
                 entity_type TEXT NOT NULL,
@@ -140,16 +143,22 @@ def _ensure_schema() -> None:
                 reason TEXT,
                 details TEXT,
                 created_at INTEGER NOT NULL
-            );
-            CREATE INDEX IF NOT EXISTS idx_analysis_stocks_user ON analysis_stocks(user_id);
-            CREATE INDEX IF NOT EXISTS idx_analysis_stocks_symbol ON analysis_stocks(symbol);
-            CREATE INDEX IF NOT EXISTS idx_financial_statements_stock ON financial_statements(stock_id);
-            CREATE INDEX IF NOT EXISTS idx_line_items_statement ON financial_line_items(statement_id);
-            CREATE INDEX IF NOT EXISTS idx_stock_metrics_stock ON stock_metrics(stock_id);
-            CREATE INDEX IF NOT EXISTS idx_valuation_models_stock ON valuation_models(stock_id);
-            CREATE INDEX IF NOT EXISTS idx_stock_scores_stock ON stock_scores(stock_id);
-        """)
-        conn.commit()
+            )""",
+        "CREATE INDEX IF NOT EXISTS idx_analysis_stocks_user ON analysis_stocks(user_id)",
+        "CREATE INDEX IF NOT EXISTS idx_analysis_stocks_symbol ON analysis_stocks(symbol)",
+        "CREATE INDEX IF NOT EXISTS idx_financial_statements_stock ON financial_statements(stock_id)",
+        "CREATE INDEX IF NOT EXISTS idx_line_items_statement ON financial_line_items(statement_id)",
+        "CREATE INDEX IF NOT EXISTS idx_stock_metrics_stock ON stock_metrics(stock_id)",
+        "CREATE INDEX IF NOT EXISTS idx_valuation_models_stock ON valuation_models(stock_id)",
+        "CREATE INDEX IF NOT EXISTS idx_stock_scores_stock ON stock_scores(stock_id)",
+    ]
+
+    try:
+        for ddl in _TABLES:
+            exec_sql(ddl)
+    except Exception as e:
+        logger.warning("⚠️  Analysis schema creation skipped: %s", e)
+
     _SCHEMA_INIT = True
 
 

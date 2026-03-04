@@ -170,22 +170,20 @@ async def create_security(
     if body.display_name:
         aliases_to_create.add(body.display_name)
 
-    with get_connection() as conn:
-        cur = conn.cursor()
-        for alias in aliases_to_create:
-            alias_clean = alias.strip()
-            if not alias_clean:
-                continue
-            try:
-                cur.execute(
-                    """INSERT OR IGNORE INTO security_aliases
-                       (security_id, user_id, alias_name, alias_type, created_at)
-                       VALUES (?, ?, ?, 'user_input', ?)""",
-                    (security_id, uid, alias_clean, now),
-                )
-            except Exception:
-                pass  # skip duplicates
-        conn.commit()
+    for alias in aliases_to_create:
+        alias_clean = alias.strip()
+        if not alias_clean:
+            continue
+        try:
+            exec_sql(
+                """INSERT INTO security_aliases
+                   (security_id, user_id, alias_name, alias_type, created_at)
+                   VALUES (?, ?, ?, 'user_input', ?)
+                   ON CONFLICT DO NOTHING""",
+                (security_id, uid, alias_clean, now),
+            )
+        except Exception:
+            pass  # skip duplicates
 
     return {
         "status": "ok",
