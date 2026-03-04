@@ -420,14 +420,38 @@ def ensure_all_tables() -> None:
 
     # ── 13. Additive column migrations ───────────────────────────────
     try:
-        add_column_if_missing("stocks", "yf_ticker", "TEXT")
+        # -- users --
         add_column_if_missing("users", "failed_login_attempts", "INTEGER DEFAULT 0")
         add_column_if_missing("users", "locked_until", "INTEGER")
         add_column_if_missing("users", "last_failed_login", "INTEGER")
-        # Google OAuth: store email separately so email-registered users
-        # can be matched when they later sign in via Google.
         add_column_if_missing("users", "email", "TEXT")
         add_column_if_missing("users", "google_sub", "TEXT")
+
+        # -- stocks --
+        add_column_if_missing("stocks", "yf_ticker", "TEXT")
+
+        # -- cash_deposits (production PG may have older schema) --
+        add_column_if_missing("cash_deposits", "bank_name", "TEXT")
+        add_column_if_missing("cash_deposits", "source", "TEXT DEFAULT 'deposit'")
+        add_column_if_missing("cash_deposits", "deposit_type", "TEXT DEFAULT 'deposit'")
+        add_column_if_missing("cash_deposits", "notes", "TEXT")
+        add_column_if_missing("cash_deposits", "description", "TEXT")
+        add_column_if_missing("cash_deposits", "comments", "TEXT")
+        add_column_if_missing("cash_deposits", "include_in_analysis", "INTEGER DEFAULT 1")
+        add_column_if_missing("cash_deposits", "fx_rate_at_deposit", "REAL")
+        add_column_if_missing("cash_deposits", "is_deleted", "INTEGER DEFAULT 0")
+        add_column_if_missing("cash_deposits", "deleted_at", "INTEGER")
+        add_column_if_missing("cash_deposits", "created_at", "INTEGER")
+
+        # -- transactions --
+        add_column_if_missing("transactions", "is_deleted", "INTEGER DEFAULT 0")
+        add_column_if_missing("transactions", "deleted_at", "INTEGER")
+        add_column_if_missing("transactions", "category", "TEXT DEFAULT 'portfolio'")
+
+        # -- portfolio_cash --
+        add_column_if_missing("portfolio_cash", "manual_override", "INTEGER DEFAULT 0")
+        add_column_if_missing("portfolio_cash", "last_updated", "INTEGER")
+
         logger.info("✅  Additive column migrations applied")
     except Exception as e:
         logger.warning("⚠️  Additive column migrations skipped: %s", e)

@@ -258,11 +258,15 @@ def get_connection():
             conn.close()
 
 
-def get_conn() -> sqlite3.Connection:
-    """Non-context-manager connection (for legacy-compatible code paths)."""
+def get_conn():
+    """Non-context-manager connection (for legacy-compatible code paths).
+
+    For PostgreSQL: wraps the raw DBAPI connection in _PgConnProxy
+    so that ?-style placeholders are translated to %s automatically.
+    """
     if _USE_PG:
-        # Return a raw DBAPI connection from the pool
-        return engine.raw_connection()
+        raw = engine.raw_connection()
+        return _PgConnProxy(raw)
     conn = sqlite3.connect(_DB_PATH, check_same_thread=False)
     _ensure_wal_mode(conn)
     return conn
