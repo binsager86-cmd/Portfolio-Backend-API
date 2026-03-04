@@ -178,8 +178,29 @@ async def health():
     return {
         "status": "ok",
         "version": "1.0.0",
-        "deploy": "2025-07-11-pg-compat",
+        "deploy": "2026-03-04-schema-init",
         "db_mode": "postgresql" if settings.use_postgres else "sqlite",
         "db_connected": check_db_exists(),
         "environment": "production" if settings.is_production else "development",
     }
+
+
+@app.get("/health/tables", tags=["System"])
+async def health_tables():
+    """Diagnostic: list all tables that exist in the database."""
+    from app.core.database import query_df
+    try:
+        if settings.use_postgres:
+            df = query_df(
+                "SELECT table_name FROM information_schema.tables "
+                "WHERE table_schema = 'public' ORDER BY table_name"
+            )
+            tables = df["table_name"].tolist() if not df.empty else []
+        else:
+            df = query_df(
+                "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+            )
+            tables = df["name"].tolist() if not df.empty else []
+        return {"status": "ok", "table_count": len(tables), "tables": tables}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
