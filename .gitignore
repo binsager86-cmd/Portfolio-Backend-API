@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+
+# Virtual Environment
+.venv/
+venv/
+
+# Environment — NEVER commit secrets
+.env
+.env.local
+.env.*.local
+
+# Keep the example
+!.env.example
+!.env.production
+
+# Database files
+*.db
+*.sqlite3
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

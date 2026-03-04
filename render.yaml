@@ -1,0 +1,55 @@
+# ──────────────────────────────────────────────────────────────────────
+# Render Blueprint — deploy via https://render.com/docs/blueprint-spec
+# Docs: https://docs.render.com/infrastructure-as-code
+#
+# Usage:
+#   1. Push this repo to GitHub
+#   2. Go to https://dashboard.render.com → New → Blueprint
+#   3. Connect your repo and point to mobile-migration/backend-api/
+#   4. Render reads this file and provisions the service automatically
+# ──────────────────────────────────────────────────────────────────────
+services:
+  - type: web
+    name: portfolio-api
+    runtime: docker                          # uses the Dockerfile
+    dockerfilePath: ./Dockerfile
+    region: frankfurt                         # fra (EU) — change to oregon for US
+    plan: free                               # free tier; upgrade to starter ($7/mo) to avoid spin-down
+    buildFilter:
+      paths:
+        - mobile-migration/backend-api/**
+    envVars:
+      # ── Core ──
+      - key: ENVIRONMENT
+        value: production
+      - key: SECRET_KEY
+        generateValue: true                  # Render auto-generates a random value
+      - key: DATABASE_PATH
+        value: /data/portfolio.db            # persisted on disk mount
+      # ── CORS — replace with your real Vercel URL after deploy ──
+      - key: CORS_ORIGINS
+        value: https://your-app.vercel.app
+      # ── JWT ──
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_EXPIRE_MINUTES
+        value: "1440"
+      # ── FX ──
+      - key: FX_CACHE_TTL
+        value: "3600"
+      # ── Cron / Scheduler ──
+      - key: CRON_SECRET_KEY
+        generateValue: true
+      - key: PRICE_UPDATE_ENABLED
+        value: "true"
+      - key: PRICE_UPDATE_HOUR
+        value: "14"                          # 14 UTC ≈ 17:00 Kuwait
+      - key: PRICE_UPDATE_MINUTE
+        value: "0"
+      # ── AI (optional) ──
+      - key: GEMINI_API_KEY
+        value: ""                            # set manually in Render dashboard
+    disk:
+      name: portfolio-data
+      mountPath: /data
+      sizeGB: 1

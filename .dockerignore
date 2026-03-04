@@ -1,0 +1,17 @@
+# ── Docker ignore — keep image lean ──────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+.env
+.env.local
+.env.*.local
+*.db
+*.db-wal
+*.db-shm
+.git/
+.gitignore
+.vscode/
+*.md
+Dockerfile
+.dockerignore
+render.yaml
