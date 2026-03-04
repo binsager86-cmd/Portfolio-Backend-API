@@ -151,9 +151,14 @@ _dev_origins = [
     "http://192.168.1.5:8081", # LAN mobile browser
     "http://127.0.0.1:8081",
 ]
+
+# In production, match any *.ondigitalocean.app subdomain + explicit CORS_ORIGINS
+_prod_origin_regex = r"https://.*\.ondigitalocean\.app"
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list if settings.is_production else _dev_origins,
+    allow_origin_regex=_prod_origin_regex if settings.is_production else None,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
