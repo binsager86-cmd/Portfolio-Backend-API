@@ -56,104 +56,14 @@ async def lifespan(app: FastAPI):
         )
     else:
         logger.info("✅  Database found: %s", settings.database_abs_path)
-        # Additive migrations — safe to run every startup
-        from app.core.database import add_column_if_missing, exec_sql, query_df
 
+        # ── Schema initialization — create ALL tables ────────────
+        from app.core.schema import ensure_all_tables
+        ensure_all_tables()
+
+        # ── Backfill yf_ticker for existing stocks ───────────────
         try:
-            add_column_if_missing("stocks", "yf_ticker", "TEXT")
-        except Exception as e:
-            logger.warning("⚠️  add_column migration skipped: %s", e)
-
-        # Users table — lockout columns added after initial schema
-        try:
-            add_column_if_missing("users", "failed_login_attempts", "INTEGER DEFAULT 0")
-            add_column_if_missing("users", "locked_until", "INTEGER")
-            add_column_if_missing("users", "last_failed_login", "INTEGER")
-        except Exception as e:
-            logger.warning("⚠️  users lockout columns migration skipped: %s", e)
-
-        # Ensure PFM tables exist (additive — safe to run every startup)
-        # Use SERIAL for PostgreSQL auto-increment, INTEGER PRIMARY KEY for SQLite
-        if settings.use_postgres:
-            _PK = "SERIAL PRIMARY KEY"
-        else:
-            _PK = "INTEGER PRIMARY KEY AUTOINCREMENT"
-
-        try:
-            exec_sql(f"""
-                CREATE TABLE IF NOT EXISTS pfm_snapshots (
-                    id {_PK},
-                    user_id INTEGER NOT NULL,
-                    snapshot_date TEXT NOT NULL,
-                    notes TEXT,
-                    total_assets REAL DEFAULT 0,
-                    total_liabilities REAL DEFAULT 0,
-                    net_worth REAL DEFAULT 0,
-                    created_at INTEGER
-                )
-            """)
-            exec_sql(f"""
-                CREATE TABLE IF NOT EXISTS pfm_assets (
-                    id {_PK},
-                    snapshot_id INTEGER NOT NULL,
-                    user_id INTEGER NOT NULL,
-                    asset_type TEXT NOT NULL,
-                    category TEXT NOT NULL,
-                    name TEXT NOT NULL,
-                    quantity REAL,
-                    price REAL,
-                    currency TEXT DEFAULT 'KWD',
-                    value_kwd REAL DEFAULT 0,
-                    created_at INTEGER
-                )
-            """)
-            exec_sql(f"""
-                CREATE TABLE IF NOT EXISTS pfm_liabilities (
-                    id {_PK},
-                    snapshot_id INTEGER NOT NULL,
-                    user_id INTEGER NOT NULL,
-                    category TEXT NOT NULL,
-                    amount_kwd REAL DEFAULT 0,
-                    is_current INTEGER DEFAULT 0,
-                    is_long_term INTEGER DEFAULT 0,
-                    created_at INTEGER
-                )
-            """)
-            exec_sql(f"""
-                CREATE TABLE IF NOT EXISTS pfm_income_expenses (
-                    id {_PK},
-                    snapshot_id INTEGER NOT NULL,
-                    user_id INTEGER NOT NULL,
-                    kind TEXT NOT NULL,
-                    category TEXT NOT NULL,
-                    monthly_amount REAL DEFAULT 0,
-                    is_finance_cost INTEGER DEFAULT 0,
-                    is_gna INTEGER DEFAULT 0,
-                    sort_order INTEGER DEFAULT 0,
-                    created_at INTEGER
-                )
-            """)
-            logger.info("✅  PFM tables ensured")
-        except Exception as e:
-            logger.warning("⚠️  PFM tables creation skipped: %s", e)
-
-        # User settings table (stores rf_rate, etc.)
-        try:
-            exec_sql("""
-                CREATE TABLE IF NOT EXISTS user_settings (
-                    user_id INTEGER NOT NULL,
-                    setting_key TEXT NOT NULL,
-                    setting_value TEXT NOT NULL,
-                    updated_at INTEGER,
-                    PRIMARY KEY (user_id, setting_key)
-                )
-            """)
-            logger.info("✅  user_settings table ensured")
-        except Exception as e:
-            logger.warning("⚠️  user_settings creation skipped: %s", e)
-
-        # Backfill yf_ticker for existing stocks that don't have one yet
-        try:
+            from app.core.database import exec_sql, query_df
             from app.data.stock_lists import KUWAIT_STOCKS, US_STOCKS
             ticker_map = {}
             for s in KUWAIT_STOCKS:

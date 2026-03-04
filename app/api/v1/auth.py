@@ -46,6 +46,7 @@ from app.services.audit_service import (
     AUTH_TOKEN_REFRESH,
     AUTH_LOCKOUT,
 )
+from app.services.user_onboarding import setup_new_user
 
 logger = logging.getLogger(__name__)
 _settings = get_settings()
@@ -293,6 +294,9 @@ async def register(request: Request, body: RegisterRequest):
         "SELECT id FROM users WHERE username = ?", (body.username,)
     )
 
+    # Set up default portfolios, settings, and cash balances for the new user
+    setup_new_user(user_id, body.username)
+
     log_event(AUTH_REGISTER, user_id=user_id, request=request)
 
     return _build_token_response({
@@ -385,6 +389,9 @@ async def google_sign_in(request: Request, body: GoogleSignInRequest):
 
     user_id = query_val("SELECT id FROM users WHERE username = ?", (email,))
     user = {"id": user_id, "username": email, "name": google_name or email.split("@")[0]}
+
+    # Set up default portfolios, settings, and cash balances for the new user
+    setup_new_user(user_id, email)
 
     log_event(AUTH_GOOGLE_LOGIN, user_id=user_id, details={"google_sub": google_sub, "new_account": True}, request=request)
     return _build_token_response(user)
