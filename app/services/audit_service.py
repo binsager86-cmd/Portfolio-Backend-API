@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 AUTH_LOGIN = "auth.login"
 AUTH_LOGIN_FAILED = "auth.login_failed"
 AUTH_REGISTER = "auth.register"
+AUTH_GOOGLE_LOGIN = "auth.google_login"
 AUTH_LOGOUT = "auth.logout"
 AUTH_PASSWORD_CHANGE = "auth.password_change"
 AUTH_TOKEN_REFRESH = "auth.token_refresh"

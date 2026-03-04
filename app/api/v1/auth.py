@@ -41,6 +41,7 @@ from app.services.audit_service import (
     AUTH_LOGIN,
     AUTH_LOGIN_FAILED,
     AUTH_REGISTER,
+    AUTH_GOOGLE_LOGIN,
     AUTH_PASSWORD_CHANGE,
     AUTH_TOKEN_REFRESH,
     AUTH_LOCKOUT,
@@ -115,8 +116,9 @@ def _blacklist_token(jti: str, user_id: int, expires_at: int) -> None:
         return
     try:
         exec_sql(
-            "INSERT OR IGNORE INTO token_blacklist (jti, user_id, blacklisted_at, expires_at) "
-            "VALUES (?, ?, ?, ?)",
+            "INSERT INTO token_blacklist (jti, user_id, blacklisted_at, expires_at) "
+            "VALUES (?, ?, ?, ?) "
+            "ON CONFLICT DO NOTHING",
             (jti, user_id, int(time.time()), expires_at),
         )
     except Exception as exc:
@@ -298,6 +300,73 @@ async def register(request: Request, body: RegisterRequest):
         "username": body.username,
         "name": body.name,
     })
+
+
+# ── Google Sign-In ───────────────────────────────────────────────────
+
+class GoogleSignInRequest(BaseModel):
+    id_token: str
+
+
+@router.post("/google", response_model=TokenResponse)
+@limiter.limit("10/minute")
+async def google_sign_in(request: Request, body: GoogleSignInRequest):
+    """
+    Validate a Google ID token, create or find the user, and return JWT tokens.
+
+    The mobile app sends the ID token obtained from @react-native-google-signin.
+    We verify it with Google's tokeninfo endpoint (no google-auth dependency needed).
+    """
+    import httpx
+
+    # Verify the ID token with Google
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                f"https://oauth2.googleapis.com/tokeninfo?id_token={body.id_token}"
+            )
+        if resp.status_code != 200:
+            raise UnauthorizedError("Invalid Google ID token")
+        google_data = resp.json()
+    except httpx.HTTPError:
+        raise BadRequestError("Failed to verify Google token. Please try again.")
+
+    email = google_data.get("email")
+    if not email:
+        raise BadRequestError("Google account does not have an email address")
+
+    google_name = google_data.get("name", "")
+    google_sub = google_data.get("sub", "")  # Google user ID
+
+    # Look up user by email (username) or google_sub
+    existing = query_one(
+        "SELECT id, username, name FROM users WHERE username = ?",
+        (email,),
+    )
+
+    if existing:
+        # Existing user — log in
+        user = {"id": existing[0], "username": existing[1], "name": existing[2]}
+        _reset_lockout(user["id"])
+        log_event(AUTH_GOOGLE_LOGIN, user_id=user["id"], details={"google_sub": google_sub}, request=request)
+        return _build_token_response(user)
+
+    # New user — create account (no password needed)
+    import secrets
+    random_pw_hash = hash_password(secrets.token_urlsafe(32))
+    now = int(time.time())
+
+    exec_sql(
+        "INSERT INTO users (username, password_hash, name, created_at, failed_login_attempts) "
+        "VALUES (?, ?, ?, ?, 0)",
+        (email, random_pw_hash, google_name or email.split("@")[0], now),
+    )
+
+    user_id = query_val("SELECT id FROM users WHERE username = ?", (email,))
+    user = {"id": user_id, "username": email, "name": google_name or email.split("@")[0]}
+
+    log_event(AUTH_GOOGLE_LOGIN, user_id=user_id, details={"google_sub": google_sub, "new_account": True}, request=request)
+    return _build_token_response(user)
 
 
 # ── Change password ──────────────────────────────────────────────────
