@@ -154,10 +154,18 @@ async def api_error_handler(request: Request, exc: APIError) -> JSONResponse:
 
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Catch-all for unhandled exceptions in production."""
+    import traceback
+    import logging
+    logger = logging.getLogger("unhandled")
+    tb = traceback.format_exc()
+    logger.error("Unhandled %s on %s %s:\n%s", type(exc).__name__, request.method, request.url.path, tb)
+
     from app.core.config import get_settings
     settings = get_settings()
 
-    detail = str(exc) if not settings.is_production else "Internal server error"
+    # Include exception class + message (but not full traceback) so the
+    # frontend / curl shows enough detail to diagnose 500s.
+    detail = f"{type(exc).__name__}: {exc}"
     return JSONResponse(
         status_code=500,
         content={
