@@ -185,7 +185,7 @@ async def health():
     return {
         "status": "ok",
         "version": "1.0.0",
-        "deploy": "2026-03-05-fix-pg-cash",
+        "deploy": "2026-03-05-fix-not-null-tracker",
         "db_mode": "postgresql" if settings.use_postgres else "sqlite",
         "db_connected": check_db_exists(),
         "environment": "production" if settings.is_production else "development",

@@ -456,4 +456,58 @@ def ensure_all_tables() -> None:
     except Exception as e:
         logger.warning("⚠️  Additive column migrations skipped: %s", e)
 
+    # ── 14. PostgreSQL: drop stale NOT NULL constraints ──────────────
+    # Production PG tables may have been created with older schemas that
+    # used NOT NULL on columns now expected to be nullable.  SQLite has
+    # no ALTER COLUMN, so this block is PG-only.
+    if settings.use_postgres:
+        _drop_stale_not_null_constraints()
+
     logger.info("🏁  Schema initialization complete — all tables ensured")
+
+
+def _drop_stale_not_null_constraints() -> None:
+    """Drop NOT NULL from columns that should be nullable in PostgreSQL.
+
+    This is idempotent — running it on an already-nullable column is a
+    no-op in PostgreSQL.
+    """
+    nullable_columns = {
+        "cash_deposits": [
+            "bank_name", "source", "deposit_type", "notes", "description",
+            "comments", "fx_rate_at_deposit", "is_deleted", "deleted_at",
+            "created_at", "currency",
+        ],
+        "transactions": [
+            "txn_date", "shares", "purchase_cost", "sell_value",
+            "bonus_shares", "cash_dividend", "reinvested_dividend", "fees",
+            "price_override", "planned_cum_shares", "broker", "reference",
+            "notes", "category", "source", "fx_rate_at_txn",
+            "is_deleted", "deleted_at", "created_at",
+        ],
+        "portfolio_cash": [
+            "balance", "currency", "last_updated", "manual_override",
+        ],
+        "portfolio_snapshots": [
+            "portfolio", "portfolio_value", "daily_movement",
+            "beginning_difference", "deposit_cash", "accumulated_cash",
+            "net_gain", "change_percent", "roi_percent",
+            "twr_percent", "mwrr_percent", "created_at",
+        ],
+        "stocks": [
+            "name", "portfolio", "currency", "current_price",
+            "last_updated", "price_source", "tradingview_symbol",
+            "tradingview_exchange", "market_cap", "sector", "industry",
+            "yf_ticker",
+        ],
+    }
+
+    for table, cols in nullable_columns.items():
+        for col in cols:
+            try:
+                exec_sql(
+                    f"ALTER TABLE {table} ALTER COLUMN {col} DROP NOT NULL"
+                )
+            except Exception:
+                pass  # column already nullable or doesn't exist — fine
+    logger.info("✅  PostgreSQL NOT NULL constraints relaxed on optional columns")
