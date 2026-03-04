@@ -595,7 +595,16 @@ async def update_line_item(
     """Update a single line item amount."""
     _ensure_schema()
 
-    row = query_one("SELECT id FROM financial_line_items WHERE id = ?", (item_id,))
+    # Verify the line item exists AND belongs to the current user
+    # by joining through financial_statements → analysis_stocks
+    row = query_one(
+        """SELECT li.id
+           FROM financial_line_items li
+           JOIN financial_statements fs ON li.statement_id = fs.id
+           JOIN analysis_stocks       s  ON fs.stock_id    = s.id
+           WHERE li.id = ? AND s.user_id = ?""",
+        (item_id, current_user.user_id),
+    )
     if not row:
         raise NotFoundError("Line Item", str(item_id))
 

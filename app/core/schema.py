@@ -247,24 +247,17 @@ def ensure_all_tables() -> None:
     try:
         exec_sql(f"""
             CREATE TABLE IF NOT EXISTS securities_master (
-                id                  {PK},
-                symbol              TEXT NOT NULL,
-                name                TEXT NOT NULL,
-                exchange            TEXT,
-                currency            TEXT DEFAULT 'KWD',
-                asset_type          TEXT DEFAULT 'EQUITY',
-                sector              TEXT,
-                industry            TEXT,
-                country             TEXT,
-                yahoo_symbol        TEXT,
-                tradingview_symbol  TEXT,
-                tradingview_exchange TEXT,
+                security_id         TEXT PRIMARY KEY,
+                user_id             INTEGER NOT NULL,
+                exchange            TEXT NOT NULL,
+                canonical_ticker    TEXT NOT NULL,
+                display_name        TEXT,
                 isin                TEXT,
-                market_cap          REAL,
-                outstanding_shares  REAL,
-                is_active           INTEGER DEFAULT 1,
-                created_at          INTEGER,
-                updated_at          INTEGER
+                currency            TEXT DEFAULT 'KWD',
+                country             TEXT DEFAULT 'KW',
+                sector              TEXT,
+                status              TEXT DEFAULT 'active',
+                created_at          INTEGER
             )
         """)
         exec_sql(f"""
