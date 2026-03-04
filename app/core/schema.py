@@ -431,6 +431,10 @@ def ensure_all_tables() -> None:
         add_column_if_missing("users", "failed_login_attempts", "INTEGER DEFAULT 0")
         add_column_if_missing("users", "locked_until", "INTEGER")
         add_column_if_missing("users", "last_failed_login", "INTEGER")
+        # Google OAuth: store email separately so email-registered users
+        # can be matched when they later sign in via Google.
+        add_column_if_missing("users", "email", "TEXT")
+        add_column_if_missing("users", "google_sub", "TEXT")
         logger.info("✅  Additive column migrations applied")
     except Exception as e:
         logger.warning("⚠️  Additive column migrations skipped: %s", e)

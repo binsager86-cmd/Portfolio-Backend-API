@@ -273,20 +273,20 @@ async def me(current_user=Depends(get_current_user)):
 @limiter.limit("3/minute")
 async def register(request: Request, body: RegisterRequest):
     """Create a new user account and return JWT + refresh token."""
-    # Check if username already exists
+    # Check if username or email already exists
     existing = query_val(
-        "SELECT id FROM users WHERE username = ?", (body.username,)
+        "SELECT id FROM users WHERE username = ? OR email = ?", (body.username, body.username)
     )
     if existing:
-        raise ConflictError(f"Username '{body.username}' already taken")
+        raise ConflictError(f"An account with '{body.username}' already exists")
 
     hashed = hash_password(body.password)
     now = int(time.time())
 
     exec_sql(
-        "INSERT INTO users (username, password_hash, name, created_at, failed_login_attempts) "
-        "VALUES (?, ?, ?, ?, 0)",
-        (body.username, hashed, body.name, now),
+        "INSERT INTO users (username, email, password_hash, name, created_at, failed_login_attempts) "
+        "VALUES (?, ?, ?, ?, ?, 0)",
+        (body.username, body.username, hashed, body.name, now),
     )
 
     # Fetch the new user's ID
@@ -363,15 +363,33 @@ async def google_sign_in(request: Request, body: GoogleSignInRequest):
     google_name = google_data.get("name", "")
     google_sub = google_data.get("sub", "")  # Google user ID
 
-    # Look up user by email (username) or google_sub
-    existing = query_one(
-        "SELECT id, username, name FROM users WHERE username = ?",
-        (email,),
-    )
+    # Look up existing user by:
+    #   1. google_sub (previously linked Google account)
+    #   2. username = email (registered with email as username)
+    #   3. email column (registered with different username but same email)
+    existing = None
+    if google_sub:
+        existing = query_one(
+            "SELECT id, username, name FROM users WHERE google_sub = ?",
+            (google_sub,),
+        )
+    if not existing:
+        existing = query_one(
+            "SELECT id, username, name FROM users WHERE username = ? OR email = ?",
+            (email, email),
+        )
 
     if existing:
-        # Existing user — log in
+        # Existing user — link Google account if not yet linked, then log in
         user = {"id": existing[0], "username": existing[1], "name": existing[2]}
+        if google_sub:
+            try:
+                exec_sql(
+                    "UPDATE users SET google_sub = ?, email = COALESCE(email, ?) WHERE id = ?",
+                    (google_sub, email, user["id"]),
+                )
+            except Exception:
+                pass  # non-critical — user can still log in
         _reset_lockout(user["id"])
         log_event(AUTH_GOOGLE_LOGIN, user_id=user["id"], details={"google_sub": google_sub}, request=request)
         return _build_token_response(user)
@@ -382,9 +400,9 @@ async def google_sign_in(request: Request, body: GoogleSignInRequest):
     now = int(time.time())
 
     exec_sql(
-        "INSERT INTO users (username, password_hash, name, created_at, failed_login_attempts) "
-        "VALUES (?, ?, ?, ?, 0)",
-        (email, random_pw_hash, google_name or email.split("@")[0], now),
+        "INSERT INTO users (username, email, google_sub, password_hash, name, created_at, failed_login_attempts) "
+        "VALUES (?, ?, ?, ?, ?, ?, 0)",
+        (email, email, google_sub or None, random_pw_hash, google_name or email.split("@")[0], now),
     )
 
     user_id = query_val("SELECT id FROM users WHERE username = ?", (email,))

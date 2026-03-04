@@ -145,11 +145,13 @@ app.add_middleware(RequestSizeLimitMiddleware)
 # Fix: list explicit dev origins so the browser always sees the real origin.
 _dev_origins = [
     "http://localhost:8081",   # Expo web
+    "http://localhost:8082",   # Expo web (alt port)
     "http://localhost:19006",  # Expo web (alt port)
     "http://localhost:3000",   # dev fallback
     "http://localhost:8004",   # Swagger UI
     "http://192.168.1.5:8081", # LAN mobile browser
     "http://127.0.0.1:8081",
+    "http://127.0.0.1:8082",
 ]
 
 # In production, match any *.ondigitalocean.app subdomain + explicit CORS_ORIGINS
