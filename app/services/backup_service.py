@@ -74,8 +74,9 @@ def export_portfolio_excel(user_id: int) -> io.BytesIO:
 
         # Portfolio Snapshots
         ps_df = query_df(
-            """SELECT snapshot_date, portfolio_value,
-                      deposit_cash, net_gain, roi_percent,
+            """SELECT snapshot_date, portfolio_value, daily_movement,
+                      beginning_difference, deposit_cash, accumulated_cash,
+                      net_gain, change_percent, roi_percent,
                       twr_percent, mwrr_percent
                FROM portfolio_snapshots
                WHERE user_id = ?
@@ -308,16 +309,20 @@ def import_transactions_excel(
                 exec_sql(
                     """INSERT INTO portfolio_snapshots
                        (user_id, snapshot_date, portfolio_value, daily_movement,
-                        deposit_cash, net_gain, roi_percent,
+                        beginning_difference, deposit_cash, accumulated_cash,
+                        net_gain, change_percent, roi_percent,
                         twr_percent, mwrr_percent, created_at)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (
                         user_id,
                         snap_date,
                         pv,
                         _safe_num(row, "daily_movement"),
+                        _safe_num(row, "beginning_difference"),
                         dep_cash,
+                        _safe_num(row, "accumulated_cash"),
                         _safe_num(row, "net_gain"),
+                        _safe_num(row, "change_percent"),
                         _safe_num(row, "roi_percent"),
                         _safe_num(row, "twr_percent"),
                         _safe_num(row, "mwrr_percent"),
@@ -335,6 +340,17 @@ def import_transactions_excel(
 
     result["imported"] = total_imported
     result["skipped"] = total_skipped
+
+    # ── Auto-recalculate snapshot metrics after import ────────────
+    try:
+        from app.api.v1.tracker import recalculate_all_snapshots
+        updated = recalculate_all_snapshots(user_id)
+        if updated > 0:
+            result["warnings"].append(f"Auto-recalculated {updated} snapshots to fill derived metrics.")
+            logger.info("Auto-recalculated %d snapshots for user %d after import", updated, user_id)
+    except Exception as exc:
+        logger.warning("Auto-recalculate after import failed: %s", exc)
+
     return result
 
 

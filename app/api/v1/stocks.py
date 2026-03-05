@@ -156,9 +156,9 @@ async def fetch_price(
 
         price = float(data[close_col].dropna().iloc[-1])
 
-        # Auto-correct Kuwait fils → KWD
-        if body.currency == "KWD" and price > 50:
-            price = round(price / 1000.0, 3)
+        # Auto-correct Kuwait fils → KWD (always divide for KWD)
+        if body.currency == "KWD":
+            price = round(price / 1000.0, 6)
 
         return {
             "status": "ok",

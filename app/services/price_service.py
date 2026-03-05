@@ -100,10 +100,10 @@ def _yahoo_symbol(symbol: str, currency: str) -> str:
 
 def _normalise_kwd_price(raw: float, currency: str) -> float:
     """
-    Kuwait Exchange quotes are in fils → divide by 1000 to get KWD.
-    Only apply when the raw value looks like fils (> 50).
+    Kuwait Exchange quotes are in fils → always divide by 1000 to get KWD.
+    yfinance returns .KW prices in fils; dividing converts to KWD.
     """
-    if currency == "KWD" and raw > 50:
+    if currency == "KWD":
         return raw / 1000.0
     return raw
 

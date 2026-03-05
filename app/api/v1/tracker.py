@@ -377,7 +377,8 @@ async def save_snapshot(
         (uid, today),
     )
     prev_val = float(prev.iloc[0]["portfolio_value"]) if not prev.empty else 0.0
-    prev_accumulated = float(prev.iloc[0]["accumulated_cash"]) if not prev.empty else 0.0
+    prev_acc_raw = prev.iloc[0]["accumulated_cash"] if not prev.empty else 0.0
+    prev_accumulated = float(prev_acc_raw) if prev_acc_raw is not None and not (isinstance(prev_acc_raw, float) and prev_acc_raw != prev_acc_raw) else 0.0
     daily_movement = round(portfolio_value - prev_val, 3) if prev_val > 0 else 0.0
 
     # ── 4. Beginning difference (vs first ever snapshot) ─────────────
