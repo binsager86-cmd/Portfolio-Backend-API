@@ -9,7 +9,7 @@ from datetime import date
 from typing import Optional
 
 import pandas as pd
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from starlette.responses import StreamingResponse
 
 from app.api.deps import get_current_user
@@ -421,4 +421,260 @@ async def deposits_export(current_user: TokenData = Depends(get_current_user)):
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="deposits_{today}.xlsx"'},
+    )
+
+
+# ── Upload / Import endpoint ────────────────────────────────────────
+
+@router.post("/deposits-import")
+async def deposits_import(
+    request: Request,
+    file: UploadFile = File(...),
+    mode: str = Query("merge", description="'merge' (append) or 'replace' (delete existing first)"),
+    current_user: TokenData = Depends(get_current_user),
+):
+    """
+    Bulk import cash deposits from an Excel file (.xlsx).
+
+    Expected columns (case-insensitive, underscores/spaces accepted):
+      - **deposit_date** / date  (required, YYYY-MM-DD or Excel date)
+      - **amount**  (required, positive number)
+      - **currency**  (optional, default KWD)
+      - **portfolio**  (optional, default KFH)
+      - **source**  (optional, 'deposit' or 'withdrawal', default 'deposit')
+      - **bank_name**  (optional)
+      - **description**  (optional)
+      - **comments**  (optional)
+      - **notes**  (optional)
+      - **include_in_analysis**  (optional, Yes/No/1/0, default Yes)
+
+    Modes:
+      - merge: Append new deposits alongside existing ones.
+      - replace: Delete all existing deposits first, then import.
+
+    Returns per-row summary of imported / skipped / errors.
+    """
+    if mode not in ("merge", "replace"):
+        raise BadRequestError("mode must be 'merge' or 'replace'")
+
+    if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
+        raise BadRequestError("File must be an Excel file (.xlsx or .xls)")
+
+    contents = await file.read()
+    if len(contents) > 10 * 1024 * 1024:
+        raise BadRequestError("File too large (max 10 MB)")
+
+    user_id = current_user.user_id
+
+    try:
+        xls = pd.ExcelFile(io.BytesIO(contents))
+        # Use first sheet
+        sheet = xls.sheet_names[0]
+        df = pd.read_excel(xls, sheet_name=sheet)
+    except Exception as exc:
+        raise BadRequestError(f"Failed to read Excel file: {exc}")
+
+    # Normalize column names
+    df.columns = [str(c).strip().lower().replace(" ", "_").replace("-", "_") for c in df.columns]
+
+    # Validate required columns
+    date_col = next(
+        (c for c in ("deposit_date", "date", "trade_date") if c in df.columns), None
+    )
+    amount_col = "amount" if "amount" in df.columns else None
+
+    if not date_col or not amount_col:
+        raise BadRequestError(
+            "Excel must contain at least 'deposit_date' (or 'date') and 'amount' columns. "
+            f"Found columns: {list(df.columns)}"
+        )
+
+    # Replace mode: delete all existing deposits
+    if mode == "replace":
+        exec_sql("DELETE FROM cash_deposits WHERE user_id = ?", (user_id,))
+
+    now = int(time.time())
+    imported = 0
+    skipped = 0
+    errors: list = []
+
+    # Auto FX rate
+    fx_rate = None
+    try:
+        from app.services.fx_service import get_usd_kwd_rate
+        fx_rate = get_usd_kwd_rate()
+    except Exception:
+        pass
+
+    for idx, row in df.iterrows():
+        try:
+            # Parse date
+            raw_date = row.get(date_col)
+            if raw_date is None or (isinstance(raw_date, float) and pd.isna(raw_date)):
+                skipped += 1
+                errors.append({"row": int(idx) + 2, "error": "Empty date"})
+                continue
+
+            if hasattr(raw_date, "strftime"):
+                dep_date = raw_date.strftime("%Y-%m-%d")
+            else:
+                s = str(raw_date).strip()
+                if not s or s.lower() in ("nan", "nat"):
+                    skipped += 1
+                    continue
+                try:
+                    dep_date = pd.to_datetime(s).strftime("%Y-%m-%d")
+                except Exception:
+                    dep_date = s
+
+            # Parse amount
+            raw_amount = row.get(amount_col)
+            if raw_amount is None or (isinstance(raw_amount, float) and pd.isna(raw_amount)):
+                skipped += 1
+                errors.append({"row": int(idx) + 2, "error": "Empty amount"})
+                continue
+            amount = float(raw_amount)
+            if amount == 0:
+                skipped += 1
+                continue
+
+            # Optional fields with sensible defaults
+            def _cell_str(col: str, default: str = "") -> str:
+                val = row.get(col)
+                if val is None or (isinstance(val, float) and pd.isna(val)):
+                    return default
+                s = str(val).strip()
+                return default if s.lower() in ("nan", "nat") else s
+
+            portfolio = _cell_str("portfolio", "KFH")
+            if portfolio not in PORTFOLIO_CCY:
+                portfolio = "KFH"
+            currency = _cell_str("currency", "KWD").upper()
+            source = _cell_str("source", "deposit").lower()
+            if source not in ("deposit", "withdrawal"):
+                source = "deposit"
+            bank_name = _cell_str("bank_name")
+            description = _cell_str("description")
+            comments = _cell_str("comments")
+            notes = _cell_str("notes")
+
+            include_raw = _cell_str("include_in_analysis", "1")
+            include_in_analysis = 0 if include_raw.lower() in ("0", "no", "false", "record") else 1
+
+            exec_sql(
+                """INSERT INTO cash_deposits
+                   (user_id, portfolio, deposit_date, amount, currency,
+                    bank_name, source, deposit_type, notes,
+                    description, comments, include_in_analysis,
+                    fx_rate_at_deposit, is_deleted, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)""",
+                (
+                    user_id, portfolio, dep_date, amount, currency,
+                    bank_name, source, source, notes,
+                    description, comments, include_in_analysis,
+                    fx_rate, now,
+                ),
+            )
+            imported += 1
+
+            # Sync deposit to snapshot if included in analysis
+            if include_in_analysis:
+                try:
+                    amount_kwd = convert_to_kwd(amount, currency)
+                    sync_deposit_to_snapshot(
+                        user_id=user_id,
+                        deposit_date=dep_date,
+                        amount_kwd=amount_kwd,
+                    )
+                except Exception:
+                    pass  # non-critical
+
+        except Exception as exc:
+            skipped += 1
+            errors.append({"row": int(idx) + 2, "error": str(exc)[:120]})
+
+    # Recalculate portfolio cash
+    if imported > 0:
+        try:
+            svc = PortfolioService(user_id)
+            svc.recalc_portfolio_cash()
+        except Exception as exc:
+            logger.warning("recalc_portfolio_cash after deposit import: %s", exc)
+
+    log_event(
+        CASH_CREATE,
+        user_id=user_id,
+        resource_type="cash_deposit_import",
+        resource_id=0,
+        details={"imported": imported, "skipped": skipped, "mode": mode},
+        request=request,
+    )
+
+    return {
+        "status": "ok",
+        "data": {
+            "imported": imported,
+            "skipped": skipped,
+            "total_rows": len(df),
+            "errors": errors[:50],
+            "mode": mode,
+        },
+    }
+
+
+# ── Download sample template ────────────────────────────────────────
+
+@router.get("/deposits-template")
+async def deposits_template():
+    """
+    Download a sample Excel template for cash deposit uploads.
+    """
+    sample = pd.DataFrame([
+        {
+            "deposit_date": date.today().isoformat(),
+            "amount": 1000.0,
+            "currency": "KWD",
+            "portfolio": "KFH",
+            "source": "deposit",
+            "bank_name": "KFH Bank",
+            "description": "Monthly Salary",
+            "comments": "",
+            "notes": "",
+            "include_in_analysis": "Yes",
+        },
+        {
+            "deposit_date": date.today().isoformat(),
+            "amount": 500.0,
+            "currency": "USD",
+            "portfolio": "USA",
+            "source": "deposit",
+            "bank_name": "US Bank",
+            "description": "Transfer",
+            "comments": "",
+            "notes": "",
+            "include_in_analysis": "Yes",
+        },
+        {
+            "deposit_date": date.today().isoformat(),
+            "amount": 200.0,
+            "currency": "KWD",
+            "portfolio": "KFH",
+            "source": "withdrawal",
+            "bank_name": "KFH Bank",
+            "description": "Cash withdrawal",
+            "comments": "",
+            "notes": "",
+            "include_in_analysis": "Yes",
+        },
+    ])
+
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+        sample.to_excel(writer, sheet_name="Cash Deposits", index=False)
+    buf.seek(0)
+
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="cash_deposits_template.xlsx"'},
     )
