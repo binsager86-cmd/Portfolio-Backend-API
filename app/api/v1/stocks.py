@@ -325,12 +325,19 @@ async def manual_price_update(
     """
     from app.services.price_service import update_all_prices
 
-    result = update_all_prices(
-        user_id=current_user.user_id,
-        only_with_holdings=True,
-    )
+    try:
+        result = update_all_prices(
+            user_id=current_user.user_id,
+            only_with_holdings=True,
+        )
 
-    return {
-        "status": "ok",
-        "data": result.to_dict() if hasattr(result, "to_dict") else {"message": "Prices updated"},
-    }
+        data = result.to_dict() if hasattr(result, "to_dict") else {}
+        data["message"] = f"Updated {data.get('updated', 0)} of {data.get('stocks_found', 0)} stocks"
+
+        return {"status": "ok", "data": data}
+    except Exception as e:
+        logger.exception("Price update failed for user %s", current_user.user_id)
+        return {
+            "status": "error",
+            "data": {"message": f"Price update failed: {str(e)}", "updated": 0},
+        }

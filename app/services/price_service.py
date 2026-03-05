@@ -182,7 +182,10 @@ def update_all_prices(
                 WHERE s.user_id = ?
                   AND s.symbol IS NOT NULL AND s.symbol != ''
                 GROUP BY s.id, s.symbol, s.currency, s.yf_ticker
-                HAVING net_shares > 0.001
+                HAVING COALESCE(
+                        SUM(CASE WHEN t.txn_type = 'Buy'  THEN t.shares ELSE 0 END) -
+                        SUM(CASE WHEN t.txn_type = 'Sell' THEN t.shares ELSE 0 END),
+                       0) > 0.001
                 """,
                 (user_id,),
             )
