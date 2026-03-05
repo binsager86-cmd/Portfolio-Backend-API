@@ -440,6 +440,36 @@ async def save_snapshot(
         )
         action = "created"
 
+    # ── 8. Auto-recalculate ALL snapshots (Streamlit parity) ─────────
+    # Mirrors the Streamlit recalculate button: rebuilds deposit_cash
+    # from cash_deposits, recomputes accumulated_cash as a running sum,
+    # and cascades net_gain / roi_percent across the full chain.
+    try:
+        recalculate_all_snapshots(uid)
+        logger.info("Auto-recalculated snapshots after save for user %d", uid)
+    except Exception as exc:
+        logger.warning("Auto-recalculate after save failed: %s", exc)
+
+    # ── 9. Re-read final values after recalculate ────────────────────
+    final = query_df(
+        """SELECT portfolio_value, daily_movement, beginning_difference,
+                  deposit_cash, accumulated_cash, net_gain,
+                  roi_percent, change_percent
+           FROM portfolio_snapshots
+           WHERE id = ? AND user_id = ?""",
+        (snapshot_id, uid),
+    )
+    if not final.empty:
+        r = final.iloc[0]
+        portfolio_value = float(r["portfolio_value"])
+        daily_movement = float(r["daily_movement"]) if r["daily_movement"] else 0.0
+        beginning_difference = float(r["beginning_difference"]) if r["beginning_difference"] else 0.0
+        deposit_cash = float(r["deposit_cash"]) if r["deposit_cash"] else 0.0
+        accumulated_cash = float(r["accumulated_cash"]) if r["accumulated_cash"] else 0.0
+        net_gain = float(r["net_gain"]) if r["net_gain"] else 0.0
+        roi_percent = float(r["roi_percent"]) if r["roi_percent"] else 0.0
+        change_percent = float(r["change_percent"]) if r["change_percent"] else 0.0
+
     return {
         "status": "ok",
         "data": {
