@@ -313,6 +313,87 @@ async def delete_stock(
     return {"status": "ok", "data": {"id": stock_id, "message": "Stock deleted"}}
 
 
+# ── Merge / unify two stock records ──────────────────────────────────
+
+class StockMergeRequest(BaseModel):
+    source_stock_id: int = Field(..., description="Stock to merge FROM (will be deleted)")
+    target_stock_id: int = Field(..., description="Stock to merge INTO (will be kept)")
+
+
+@router.post("/merge")
+async def merge_stocks(
+    body: StockMergeRequest,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """
+    Merge two stock records: reassign all transactions from the source
+    stock to the target stock, then delete the source stock record.
+
+    Use this to unify duplicate entries (e.g. GFH + GFH.KW → GFH).
+    """
+    uid = current_user.user_id
+
+    source = query_one(
+        "SELECT id, symbol, portfolio, currency FROM stocks WHERE id = ? AND user_id = ?",
+        (body.source_stock_id, uid),
+    )
+    if not source:
+        raise NotFoundError("Source stock", body.source_stock_id)
+
+    target = query_one(
+        "SELECT id, symbol, portfolio, currency FROM stocks WHERE id = ? AND user_id = ?",
+        (body.target_stock_id, uid),
+    )
+    if not target:
+        raise NotFoundError("Target stock", body.target_stock_id)
+
+    if source["id"] == target["id"]:
+        raise BadRequestError("Source and target stock cannot be the same")
+
+    source_sym = source["symbol"].strip()
+    target_sym = target["symbol"].strip()
+
+    # Count transactions that will be moved
+    moved = query_val(
+        "SELECT COUNT(*) FROM transactions WHERE stock_symbol = ? AND user_id = ?",
+        (source_sym, uid),
+    ) or 0
+
+    # Reassign transactions from source symbol to target symbol
+    exec_sql(
+        "UPDATE transactions SET stock_symbol = ? WHERE stock_symbol = ? AND user_id = ?",
+        (target_sym, source_sym, uid),
+    )
+
+    # Also update portfolio assignment on moved transactions if needed
+    target_portfolio = target["portfolio"]
+    exec_sql(
+        "UPDATE transactions SET portfolio = ? WHERE stock_symbol = ? AND user_id = ? AND (portfolio IS NULL OR portfolio = ?)",
+        (target_portfolio, target_sym, uid, source["portfolio"]),
+    )
+
+    # Delete the source stock record
+    exec_sql(
+        "DELETE FROM stocks WHERE id = ? AND user_id = ?",
+        (body.source_stock_id, uid),
+    )
+
+    logger.info(
+        "Merged stock %s (id=%s) into %s (id=%s) for user %s — %s transactions moved",
+        source_sym, source["id"], target_sym, target["id"], uid, moved,
+    )
+
+    return {
+        "status": "ok",
+        "data": {
+            "message": f"Merged {source_sym} into {target_sym}",
+            "source_symbol": source_sym,
+            "target_symbol": target_sym,
+            "transactions_moved": moved,
+        },
+    }
+
+
 # ── Bulk price update (manual) ───────────────────────────────────────
 
 @router.post("/update-prices")
