@@ -179,13 +179,16 @@ app.include_router(cron_router_legacy)
 
 
 # ── Health check (no auth) ──────────────────────────────────────────
+# Exposed at both /health (legacy) and /api/health (for DO App Platform
+# routing where only /api/* is forwarded to this service).
 
 @app.get("/health", tags=["System"])
+@app.get("/api/health", tags=["System"])
 async def health():
     return {
         "status": "ok",
         "version": "1.0.0",
-        "deploy": "2026-03-05-fix-not-null-tracker",
+        "deploy": "2026-03-06-combined-app-spa-fix",
         "db_mode": "postgresql" if settings.use_postgres else "sqlite",
         "db_connected": check_db_exists(),
         "environment": "production" if settings.is_production else "development",
@@ -193,6 +196,7 @@ async def health():
 
 
 @app.get("/health/tables", tags=["System"])
+@app.get("/api/health/tables", tags=["System"])
 async def health_tables():
     """Diagnostic: list all tables that exist in the database."""
     from app.core.database import query_df
