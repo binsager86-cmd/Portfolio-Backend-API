@@ -101,3 +101,82 @@ async def import_backup(
     except Exception as exc:
         logger.exception("Backup import failed for user %s: %s", current_user.user_id, exc)
         raise BadRequestError(f"Import failed: {exc}")
+
+
+# ── Data ownership check / migrate ────────────────────────────────────
+
+@router.get("/data-check")
+async def data_ownership_check(
+    current_user: TokenData = Depends(get_current_user),
+):
+    """
+    Diagnose data ownership — show record counts per user_id for each table.
+    Helps debug production issues where imported data may be under a different user.
+    """
+    uid = current_user.user_id
+    tables = ["stocks", "transactions", "cash_deposits", "portfolio_snapshots"]
+    result = {"current_user_id": uid, "tables": {}}
+
+    for table in tables:
+        try:
+            from app.core.database import query_df as _qdf
+            df = _qdf(f"SELECT user_id, COUNT(*) as cnt FROM {table} GROUP BY user_id", ())
+            rows = df.to_dict(orient="records") if not df.empty else []
+            result["tables"][table] = {
+                "by_user": {int(r["user_id"]): int(r["cnt"]) for r in rows},
+                "your_records": next((int(r["cnt"]) for r in rows if int(r["user_id"]) == uid), 0),
+            }
+        except Exception as exc:
+            result["tables"][table] = {"error": str(exc)}
+
+    return {"status": "ok", "data": result}
+
+
+@router.post("/claim-data")
+async def claim_orphaned_data(
+    source_user_id: int = Query(..., description="The user_id whose data to claim"),
+    current_user: TokenData = Depends(get_current_user),
+):
+    """
+    Reassign ALL data from *source_user_id* to the current authenticated user.
+    Use after diagnosing a user_id mismatch (e.g., backup imported under user 1,
+    but Google OAuth created user 2).
+
+    This is a one-time migration — call it once after confirming the mismatch
+    via /data-check.
+    """
+    uid = current_user.user_id
+    if source_user_id == uid:
+        raise BadRequestError("Source and target user IDs are the same.")
+
+    from app.core.database import exec_sql as _exec, query_val as _qv
+
+    tables = ["stocks", "transactions", "cash_deposits", "portfolio_snapshots"]
+    migrated = {}
+
+    for table in tables:
+        count = _qv(
+            f"SELECT COUNT(*) FROM {table} WHERE user_id = ?",
+            (source_user_id,),
+        ) or 0
+        if count > 0:
+            _exec(
+                f"UPDATE {table} SET user_id = ? WHERE user_id = ?",
+                (uid, source_user_id),
+            )
+        migrated[table] = count
+
+    logger.info(
+        "Claimed data from user %d → user %d: %s",
+        source_user_id, uid, migrated,
+    )
+
+    return {
+        "status": "ok",
+        "data": {
+            "source_user_id": source_user_id,
+            "target_user_id": uid,
+            "migrated": migrated,
+            "message": f"Migrated data from user {source_user_id} to user {uid}",
+        },
+    }

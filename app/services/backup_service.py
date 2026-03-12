@@ -52,7 +52,9 @@ def export_portfolio_excel(user_id: int) -> io.BytesIO:
         # Cash Deposits
         cd_df = query_df(
             """SELECT id, portfolio, deposit_date, amount, currency,
-                      bank_name, notes, created_at
+                      bank_name, COALESCE(source, 'deposit') AS source,
+                      deposit_type, notes, description, comments,
+                      include_in_analysis, fx_rate_at_deposit, created_at
                FROM cash_deposits
                WHERE user_id = ? AND COALESCE(is_deleted, 0) = 0
                ORDER BY deposit_date ASC""",
@@ -74,8 +76,9 @@ def export_portfolio_excel(user_id: int) -> io.BytesIO:
 
         # Portfolio Snapshots
         ps_df = query_df(
-            """SELECT snapshot_date, portfolio_value,
-                      deposit_cash, net_gain, roi_percent,
+            """SELECT snapshot_date, portfolio_value, daily_movement,
+                      beginning_difference, deposit_cash, accumulated_cash,
+                      net_gain, change_percent, roi_percent,
                       twr_percent, mwrr_percent
                FROM portfolio_snapshots
                WHERE user_id = ?
@@ -254,19 +257,38 @@ def import_transactions_excel(
                     or time.strftime("%Y-%m-%d")
                 )
 
+                source = _safe_str(row, "source") or "deposit"
+                deposit_type = _safe_str(row, "deposit_type") or source
+                description = _safe_str(row, "description")
+                comments = _safe_str(row, "comments")
+                include_raw = _safe_str(row, "include_in_analysis")
+                if include_raw.lower() in ("0", "no", "false", "record"):
+                    include_in_analysis = 0
+                else:
+                    include_in_analysis = 1
+                fx_rate = _safe_num(row, "fx_rate_at_deposit") or None
+
                 exec_sql(
                     """INSERT INTO cash_deposits
                        (user_id, portfolio, deposit_date, amount, currency,
-                        bank_name, notes, is_deleted, created_at)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)""",
+                        bank_name, source, deposit_type, notes,
+                        description, comments, include_in_analysis,
+                        fx_rate_at_deposit, is_deleted, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)""",
                     (
                         user_id,
                         row_port,
                         dep_date,
                         amount,
                         _safe_str(row, "currency") or "KWD",
-                        _safe_str(row, "bank_name") or _safe_str(row, "source") or "",
+                        _safe_str(row, "bank_name") or "",
+                        source,
+                        deposit_type,
                         _safe_str(row, "notes"),
+                        description,
+                        comments,
+                        include_in_analysis,
+                        fx_rate,
                         now,
                     ),
                 )
@@ -308,16 +330,20 @@ def import_transactions_excel(
                 exec_sql(
                     """INSERT INTO portfolio_snapshots
                        (user_id, snapshot_date, portfolio_value, daily_movement,
-                        deposit_cash, net_gain, roi_percent,
+                        beginning_difference, deposit_cash, accumulated_cash,
+                        net_gain, change_percent, roi_percent,
                         twr_percent, mwrr_percent, created_at)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (
                         user_id,
                         snap_date,
                         pv,
                         _safe_num(row, "daily_movement"),
+                        _safe_num(row, "beginning_difference"),
                         dep_cash,
+                        _safe_num(row, "accumulated_cash"),
                         _safe_num(row, "net_gain"),
+                        _safe_num(row, "change_percent"),
                         _safe_num(row, "roi_percent"),
                         _safe_num(row, "twr_percent"),
                         _safe_num(row, "mwrr_percent"),
@@ -335,6 +361,17 @@ def import_transactions_excel(
 
     result["imported"] = total_imported
     result["skipped"] = total_skipped
+
+    # ── Auto-recalculate snapshot metrics after import ────────────
+    try:
+        from app.api.v1.tracker import recalculate_all_snapshots
+        updated = recalculate_all_snapshots(user_id)
+        if updated > 0:
+            result["warnings"].append(f"Auto-recalculated {updated} snapshots to fill derived metrics.")
+            logger.info("Auto-recalculated %d snapshots for user %d after import", updated, user_id)
+    except Exception as exc:
+        logger.warning("Auto-recalculate after import failed: %s", exc)
+
     return result
 
 

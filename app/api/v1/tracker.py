@@ -22,9 +22,9 @@ from pydantic import BaseModel, Field
 from app.api.deps import get_current_user
 from app.core.security import TokenData
 from app.core.exceptions import BadRequestError
-from app.core.database import query_df, query_val, exec_sql, get_connection, add_column_if_missing
+from app.core.database import query_df, query_val, exec_sql, add_column_if_missing
 from app.services.portfolio_service import build_portfolio_table, get_total_portfolio_value
-from app.services.fx_service import convert_to_kwd, PORTFOLIO_CCY
+from app.services.fx_service import convert_to_kwd
 
 logger = logging.getLogger(__name__)
 
@@ -45,11 +45,13 @@ def recalculate_all_snapshots(uid: int) -> int:
     """
     Recalculate all derived columns for every snapshot of a user.
 
+    Phase 0 — Undo deposit_adjustment corruption (one-time repair):
+      Previous code wrongly added deposit amounts to portfolio_value via
+      a ``deposit_adjustment`` column.  Reverse that: subtract the stored
+      adjustment from portfolio_value and zero the column.
+
     Phase 1 — Deposit reconciliation:
-      Re-sync deposit_cash from cash_deposits.  Then for each snapshot,
-      compute the correct deposit_adjustment (sum of deposits with
-      deposit_date <= snapshot_date that were created AFTER the snapshot
-      was saved).  Adjust portfolio_value accordingly.
+      Re-sync deposit_cash from cash_deposits for every snapshot date.
 
     Phase 2 — Derived metrics (Streamlit formulas):
       1. daily_movement = current − previous value
@@ -63,7 +65,18 @@ def recalculate_all_snapshots(uid: int) -> int:
     """
     _ensure_deposit_adjustment_col()
 
-    # ── Phase 1a: Re-sync deposit_cash for every snapshot ────────────
+    # ── Phase 0: Undo deposit_adjustment corruption ──────────────────
+    # Previous logic wrongly inflated portfolio_value by deposit amounts.
+    # Reverse it: subtract stored adjustment, then zero the column.
+    exec_sql(
+        """UPDATE portfolio_snapshots
+           SET portfolio_value = portfolio_value - COALESCE(deposit_adjustment, 0),
+               deposit_adjustment = 0
+           WHERE user_id = ? AND COALESCE(deposit_adjustment, 0) != 0""",
+        (uid,),
+    )
+
+    # ── Phase 1: Re-sync deposit_cash for every snapshot ─────────────
     # Reset all deposit_cash to 0
     exec_sql(
         "UPDATE portfolio_snapshots SET deposit_cash = 0 WHERE user_id = ?",
@@ -84,62 +97,7 @@ def recalculate_all_snapshots(uid: int) -> int:
             (day_kwd, uid, dd["deposit_date"]),
         )
 
-    # ── Phase 1b: Reconcile portfolio_value with deposit adjustments ─
-    df = query_df(
-        """SELECT id, snapshot_date, portfolio_value, deposit_cash,
-                  COALESCE(deposit_adjustment, 0) AS deposit_adjustment,
-                  created_at
-           FROM portfolio_snapshots
-           WHERE user_id = ?
-           ORDER BY snapshot_date ASC""",
-        (uid,),
-    )
-    if df.empty:
-        return 0
-
-    # Load all active deposits once
-    all_deposits = query_df(
-        """SELECT deposit_date, amount, COALESCE(currency, 'KWD') AS currency,
-                  created_at AS dep_created
-           FROM cash_deposits
-           WHERE user_id = ? AND COALESCE(is_deleted, 0) = 0""",
-        (uid,),
-    )
-
-    for _, snap in df.iterrows():
-        snap_id = int(snap["id"])
-        snap_date = str(snap["snapshot_date"])
-        snap_created = int(snap["created_at"]) if snap["created_at"] else 0
-        old_adj = float(snap["deposit_adjustment"])
-        pv_stored = float(snap["portfolio_value"])
-
-        # Compute correct adjustment: deposits on or before this date
-        # that were created AFTER this snapshot was saved.
-        new_adj = 0.0
-        if not all_deposits.empty:
-            mask = (
-                (all_deposits["deposit_date"] <= snap_date)
-                & (all_deposits["dep_created"] > snap_created)
-            )
-            for _, dr in all_deposits[mask].iterrows():
-                new_adj += convert_to_kwd(float(dr["amount"]), str(dr["currency"]))
-        new_adj = round(new_adj, 3)
-
-        if abs(new_adj - old_adj) > 0.001:
-            corrected_pv = round(pv_stored - old_adj + new_adj, 3)
-            exec_sql(
-                """UPDATE portfolio_snapshots
-                   SET portfolio_value = ?, deposit_adjustment = ?
-                   WHERE id = ? AND user_id = ?""",
-                (corrected_pv, new_adj, snap_id, uid),
-            )
-            logger.info(
-                "Reconciled snapshot %s: pv %s → %s (adj %s → %s)",
-                snap_date, pv_stored, corrected_pv, old_adj, new_adj,
-            )
-
     # ── Phase 2: Derived metrics ─────────────────────────────────────
-    # Re-read after adjustments
     df = query_df(
         """SELECT id, snapshot_date, portfolio_value, deposit_cash
            FROM portfolio_snapshots
@@ -147,6 +105,8 @@ def recalculate_all_snapshots(uid: int) -> int:
            ORDER BY snapshot_date ASC""",
         (uid,),
     )
+    if df.empty:
+        return 0
 
     first_value = float(df.iloc[0]["portfolio_value"])
     prev_value = 0.0
@@ -377,8 +337,9 @@ async def save_snapshot(
         (uid, today),
     )
     prev_val = float(prev.iloc[0]["portfolio_value"]) if not prev.empty else 0.0
-    prev_accumulated = float(prev.iloc[0]["accumulated_cash"]) if not prev.empty else 0.0
-    daily_movement = round(portfolio_value - prev_val, 3)
+    prev_acc_raw = prev.iloc[0]["accumulated_cash"] if not prev.empty else 0.0
+    prev_accumulated = float(prev_acc_raw) if prev_acc_raw is not None and not (isinstance(prev_acc_raw, float) and prev_acc_raw != prev_acc_raw) else 0.0
+    daily_movement = round(portfolio_value - prev_val, 3) if prev_val > 0 else 0.0
 
     # ── 4. Beginning difference (vs first ever snapshot) ─────────────
     first_val = query_val(
@@ -438,6 +399,36 @@ async def save_snapshot(
             (uid,),
         )
         action = "created"
+
+    # ── 8. Auto-recalculate ALL snapshots (Streamlit parity) ─────────
+    # Mirrors the Streamlit recalculate button: rebuilds deposit_cash
+    # from cash_deposits, recomputes accumulated_cash as a running sum,
+    # and cascades net_gain / roi_percent across the full chain.
+    try:
+        recalculate_all_snapshots(uid)
+        logger.info("Auto-recalculated snapshots after save for user %d", uid)
+    except Exception as exc:
+        logger.warning("Auto-recalculate after save failed: %s", exc)
+
+    # ── 9. Re-read final values after recalculate ────────────────────
+    final = query_df(
+        """SELECT portfolio_value, daily_movement, beginning_difference,
+                  deposit_cash, accumulated_cash, net_gain,
+                  roi_percent, change_percent
+           FROM portfolio_snapshots
+           WHERE id = ? AND user_id = ?""",
+        (snapshot_id, uid),
+    )
+    if not final.empty:
+        r = final.iloc[0]
+        portfolio_value = float(r["portfolio_value"])
+        daily_movement = float(r["daily_movement"]) if r["daily_movement"] else 0.0
+        beginning_difference = float(r["beginning_difference"]) if r["beginning_difference"] else 0.0
+        deposit_cash = float(r["deposit_cash"]) if r["deposit_cash"] else 0.0
+        accumulated_cash = float(r["accumulated_cash"]) if r["accumulated_cash"] else 0.0
+        net_gain = float(r["net_gain"]) if r["net_gain"] else 0.0
+        roi_percent = float(r["roi_percent"]) if r["roi_percent"] else 0.0
+        change_percent = float(r["change_percent"]) if r["change_percent"] else 0.0
 
     return {
         "status": "ok",

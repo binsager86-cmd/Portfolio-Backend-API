@@ -180,7 +180,9 @@ class IntegrityService:
             WHERE user_id = ? AND portfolio = ?
               AND COALESCE(category,'portfolio') = 'portfolio' {sd}
             GROUP BY TRIM(stock_symbol)
-            HAVING agg_shares > 0.001
+            HAVING (SUM(CASE WHEN txn_type='Buy'  THEN COALESCE(shares,0) ELSE 0 END)
+                  + SUM(COALESCE(bonus_shares,0))
+                  - SUM(CASE WHEN txn_type='Sell' THEN COALESCE(shares,0) ELSE 0 END)) > 0.001
             """,
             (self.user_id, portfolio),
         )

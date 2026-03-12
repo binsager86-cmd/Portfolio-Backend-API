@@ -595,7 +595,16 @@ async def update_line_item(
     """Update a single line item amount."""
     _ensure_schema()
 
-    row = query_one("SELECT id FROM financial_line_items WHERE id = ?", (item_id,))
+    # Verify the line item exists AND belongs to the current user
+    # by joining through financial_statements → analysis_stocks
+    row = query_one(
+        """SELECT li.id
+           FROM financial_line_items li
+           JOIN financial_statements fs ON li.statement_id = fs.id
+           JOIN analysis_stocks       s  ON fs.stock_id    = s.id
+           WHERE li.id = ? AND s.user_id = ?""",
+        (item_id, current_user.user_id),
+    )
     if not row:
         raise NotFoundError("Line Item", str(item_id))
 
@@ -847,8 +856,9 @@ async def upload_financial_statement(
     """
     Upload a financial report PDF and extract statements using Gemini AI.
 
-    Flow: PDF → page images (PyMuPDF) → Gemini batch extraction →
-    parse JSON → normalize codes → upsert statements + line items.
+    Self-Reflective Pipeline:
+    PDF → 300 DPI images → AI reasoning + extraction → arithmetic audit
+    → retry on mismatches → cache result → persist to DB.
     """
     _ensure_schema()
     _verify_stock_owner(stock_id, current_user.user_id)
@@ -887,88 +897,27 @@ async def upload_financial_statement(
             "Set GEMINI_API_KEY in .env or add it in Settings."
         )
 
-    # ── 3. Convert PDF pages to images ───────────────────────────────
+    # ── 3. Run self-reflective extraction pipeline ───────────────────
+    from app.services.extraction_service import extract_financials
+
     try:
-        import fitz  # PyMuPDF
-    except ImportError:
-        raise BadRequestError(
-            "PDF processing requires PyMuPDF. "
-            "Install with: pip install PyMuPDF"
+        result = await extract_financials(
+            pdf_bytes=pdf_bytes,
+            stock_id=stock_id,
+            api_key=api_key,
+            filename=file.filename or "upload.pdf",
         )
-
-    import base64
-    import io
-
-    try:
-        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    except ValueError as exc:
+        raise BadRequestError(str(exc))
     except Exception as exc:
-        raise BadRequestError(f"Failed to open PDF: {exc}")
-
-    page_images = []
-    for page_num in range(len(doc)):
-        page = doc[page_num]
-        # Render at 250 DPI for good OCR quality
-        mat = fitz.Matrix(250 / 72, 250 / 72)
-        pix = page.get_pixmap(matrix=mat)
-        png_bytes = pix.tobytes("png")
-        page_images.append(png_bytes)
-    doc.close()
-
-    if not page_images:
-        raise BadRequestError("PDF has no pages.")
-
-    logger.info(
-        "PDF uploaded: %s (%d pages, %.1f KB)",
-        file.filename, len(page_images), len(pdf_bytes) / 1024,
-    )
-
-    # ── 4. Call Gemini with batch extraction prompt ──────────────────
-    try:
-        import google.generativeai as genai
-        from PIL import Image
-    except ImportError:
-        raise BadRequestError(
-            "AI extraction requires google-generativeai and Pillow. "
-            "Install with: pip install google-generativeai Pillow"
-        )
-
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-2.5-flash")
-
-    prompt = _BATCH_EXTRACT_PROMPT.format(n_pages=len(page_images))
-
-    # Build content parts: prompt + all page images
-    content_parts: list = [prompt]
-    for png_bytes in page_images:
-        img = Image.open(io.BytesIO(png_bytes))
-        content_parts.append(img)
-
-    try:
-        response = model.generate_content(
-            content_parts,
-            generation_config={
-                "max_output_tokens": 16384,
-                "temperature": 0.1,
-            },
-        )
-    except Exception as exc:
-        logger.error("Gemini API error during extraction: %s", exc)
+        logger.error("Extraction pipeline error: %s", exc)
         raise BadRequestError(f"AI extraction failed: {exc}")
 
-    if not response.text:
-        raise BadRequestError("AI returned an empty response. Try a clearer PDF.")
-
-    # ── 5. Parse and validate AI response ────────────────────────────
-    raw_statements = _parse_ai_json(response.text)
-    if not isinstance(raw_statements, list) or len(raw_statements) == 0:
-        raise BadRequestError("AI did not detect any financial statements in the PDF.")
-
-    # ── 6. Process each extracted statement ──────────────────────────
+    # ── 4. Persist extracted data to DB ──────────────────────────────
     now = int(time.time())
     created_statements = []
     total_items = 0
 
-    # Get stock currency for default
     stock_row = query_one(
         "SELECT currency FROM analysis_stocks WHERE id = ?",
         (stock_id,),
@@ -978,28 +927,17 @@ async def upload_financial_statement(
     with get_connection() as conn:
         cur = conn.cursor()
 
-        for stmt_data in raw_statements:
-            stmt_type_raw = stmt_data.get("statement_type", "unknown")
-            stmt_type = _AI_STMT_TYPE_MAP.get(stmt_type_raw, stmt_type_raw)
+        for stmt in result.statements:
+            currency = stmt.currency or stock_currency
 
-            if stmt_type not in ("income", "balance", "cashflow", "equity"):
-                logger.warning("Skipping unknown statement type: %s", stmt_type_raw)
+            if not stmt.periods or not stmt.items:
                 continue
 
-            currency = stmt_data.get("currency", stock_currency)
-            unit_scale = stmt_data.get("unit_scale", 1)
-            periods = stmt_data.get("periods", [])
-            items = stmt_data.get("items", [])
-
-            if not periods or not items:
-                continue
-
-            # Process each period column
-            for period_info in periods:
+            for period_info in stmt.periods:
                 period_label = period_info.get("label", "")
                 col_name = period_info.get("col_name", period_label)
 
-                # Derive fiscal year from period label
+                # Derive fiscal year
                 fiscal_year = None
                 if period_label and len(period_label) >= 4:
                     try:
@@ -1009,20 +947,18 @@ async def upload_financial_statement(
                             fiscal_year = int(period_label[-4:])
                         except ValueError:
                             fiscal_year = date.today().year
-
                 if not fiscal_year:
                     fiscal_year = date.today().year
 
-                # Ensure period_end_date is ISO format
                 period_end_date = period_label
-                if len(period_end_date) == 4:  # Just a year like "2024"
+                if len(period_end_date) == 4:
                     period_end_date = f"{period_end_date}-12-31"
 
                 # Upsert statement
                 existing = query_one(
                     """SELECT id FROM financial_statements
                        WHERE stock_id = ? AND statement_type = ? AND period_end_date = ?""",
-                    (stock_id, stmt_type, period_end_date),
+                    (stock_id, stmt.statement_type, period_end_date),
                 )
 
                 if existing:
@@ -1032,7 +968,8 @@ async def upload_financial_statement(
                            SET fiscal_year=?, source_file=?, extracted_by=?,
                                confidence_score=?, created_at=?
                            WHERE id=?""",
-                        (fiscal_year, file.filename, "gemini-ai", 0.85, now, stmt_id),
+                        (fiscal_year, file.filename, "gemini-ai-pipeline",
+                         result.confidence, now, stmt_id),
                     )
                     cur.execute(
                         "DELETE FROM financial_line_items WHERE statement_id = ?",
@@ -1046,76 +983,508 @@ async def upload_financial_statement(
                             confidence_score, notes, created_at)
                            VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
                         (
-                            stock_id, stmt_type, fiscal_year, None,
-                            period_end_date, None, file.filename, "gemini-ai",
-                            0.85, f"AI-extracted from {file.filename}", now,
+                            stock_id, stmt.statement_type, fiscal_year, None,
+                            period_end_date, None, file.filename, "gemini-ai-pipeline",
+                            result.confidence,
+                            f"AI-extracted (pipeline, retries={result.retry_count})",
+                            now,
                         ),
                     )
                     stmt_id = cur.lastrowid
 
                 # Insert line items for this period
-                for idx, item in enumerate(items, 1):
-                    raw_key = item.get("key", item.get("label_raw", "UNKNOWN"))
-                    label_raw = item.get("label_raw", raw_key)
-                    code = _normalize_key(raw_key)
-                    values = item.get("values", {})
-                    is_total = item.get("is_total", False)
-
-                    # Get value for this period
-                    amount = values.get(period_label)
+                for item in stmt.items:
+                    code = _normalize_key(item.key)
+                    amount = item.values.get(period_label)
                     if amount is None:
-                        amount = values.get(col_name)
+                        amount = item.values.get(col_name)
                     if amount is None:
-                        # Try first value
-                        all_vals = list(values.values())
-                        if period_info == periods[0] and len(all_vals) > 0:
-                            amount = all_vals[0]
-                        elif period_info == periods[-1] and len(all_vals) > 1:
-                            amount = all_vals[-1]
-
+                        all_vals = list(item.values.values())
+                        pidx = stmt.periods.index(period_info)
+                        if pidx < len(all_vals):
+                            amount = all_vals[pidx]
                     if amount is None:
                         amount = 0.0
-
-                    # Apply unit scale
-                    if unit_scale and unit_scale != 1 and isinstance(amount, (int, float)):
-                        amount = amount * unit_scale
 
                     cur.execute(
                         """INSERT INTO financial_line_items
                            (statement_id, line_item_code, line_item_name,
                             amount, currency, order_index, is_total)
                            VALUES (?,?,?,?,?,?,?)""",
-                        (stmt_id, code, label_raw, float(amount),
-                         currency, idx, is_total),
+                        (stmt_id, code, item.label_raw, float(amount),
+                         currency, item.order_index, item.is_total),
                     )
                     total_items += 1
 
                 created_statements.append({
                     "statement_id": stmt_id,
-                    "statement_type": stmt_type,
+                    "statement_type": stmt.statement_type,
                     "period_end_date": period_end_date,
                     "fiscal_year": fiscal_year,
-                    "line_items_count": len(items),
+                    "line_items_count": len(stmt.items),
+                    "currency": currency,
+                })
+
+        conn.commit()
+
+    # ── 5. Build audit summary ───────────────────────────────────────
+    audit_summary = {
+        "checks_total": len(result.audit_checks),
+        "checks_passed": sum(1 for c in result.audit_checks if c.passed),
+        "checks_failed": sum(1 for c in result.audit_checks if not c.passed),
+        "retries_used": result.retry_count,
+        "validation_corrections": result.validation_corrections,
+        "details": [
+            {
+                "statement_type": c.statement_type,
+                "period": c.period,
+                "rule": c.total_label,
+                "expected": c.computed_sum,
+                "actual": c.total_value,
+                "passed": c.passed,
+            }
+            for c in result.audit_checks
+        ],
+    }
+
+    logger.info(
+        "Pipeline complete for stock %d: %d statements, %d items, "
+        "confidence=%.1f%%, retries=%d, validation_corrections=%d, cached=%s",
+        stock_id, len(created_statements), total_items,
+        result.confidence * 100, result.retry_count,
+        result.validation_corrections, result.cached,
+    )
+
+    return {
+        "status": "ok",
+        "data": {
+            "message": (
+                f"Successfully extracted {len(created_statements)} statements "
+                f"with {total_items} line items."
+            ),
+            "statements": created_statements,
+            "source_file": file.filename,
+            "pages_processed": result.pages_processed,
+            "model": result.model_used,
+            "confidence": result.confidence,
+            "cached": result.cached,
+            "audit": audit_summary,
+        },
+    }
+
+
+@router.post("/stocks/{stock_id}/validate-statement")
+async def validate_financial_statement(
+    stock_id: int,
+    file: UploadFile = File(...),
+    current_user: TokenData = Depends(get_current_user),
+):
+    """
+    Step 2: Validate previously extracted financial data.
+
+    Sends the cached extraction + PDF back to AI for completeness check.
+    Applies corrections (missing items, wrong values) and updates DB + cache.
+    """
+    _ensure_schema()
+    _verify_stock_owner(stock_id, current_user.user_id)
+
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        raise BadRequestError("Only PDF files are supported.")
+
+    pdf_bytes = await file.read()
+    if len(pdf_bytes) < 100:
+        raise BadRequestError("File is too small to be a valid PDF.")
+
+    # Get Gemini API key
+    from app.core.config import get_settings
+    settings = get_settings()
+    api_key = settings.GEMINI_API_KEY
+
+    try:
+        from app.core.database import add_column_if_missing
+        add_column_if_missing("users", "gemini_api_key", "TEXT")
+        row = query_one(
+            "SELECT gemini_api_key FROM users WHERE id = ?",
+            (current_user.user_id,),
+        )
+        if row and row[0]:
+            api_key = row[0]
+    except Exception:
+        pass
+
+    if not api_key:
+        raise BadRequestError("Gemini API key required for validation.")
+
+    # Run validation pipeline
+    from app.services.extraction_service import validate_extraction
+
+    try:
+        result = await validate_extraction(
+            pdf_bytes=pdf_bytes,
+            stock_id=stock_id,
+            api_key=api_key,
+            filename=file.filename or "upload.pdf",
+        )
+    except ValueError as exc:
+        raise BadRequestError(str(exc))
+    except Exception as exc:
+        logger.error("Validation pipeline error: %s", exc)
+        raise BadRequestError(f"AI validation failed: {exc}")
+
+    if result.validation_corrections == 0:
+        return {
+            "status": "ok",
+            "data": {
+                "message": "Validation complete — no corrections needed.",
+                "corrections_applied": 0,
+                "confidence": result.confidence,
+            },
+        }
+
+    # Re-persist corrected data to DB
+    now = int(time.time())
+    updated_statements = []
+    total_items = 0
+
+    stock_row = query_one(
+        "SELECT currency FROM analysis_stocks WHERE id = ?",
+        (stock_id,),
+    )
+    stock_currency = stock_row["currency"] if stock_row else "USD"
+
+    with get_connection() as conn:
+        cur = conn.cursor()
+
+        for stmt in result.statements:
+            currency = stmt.currency or stock_currency
+
+            if not stmt.periods or not stmt.items:
+                continue
+
+            for period_info in stmt.periods:
+                period_label = period_info.get("label", "")
+                col_name = period_info.get("col_name", period_label)
+
+                fiscal_year = None
+                if period_label and len(period_label) >= 4:
+                    try:
+                        fiscal_year = int(period_label[:4])
+                    except ValueError:
+                        try:
+                            fiscal_year = int(period_label[-4:])
+                        except ValueError:
+                            fiscal_year = date.today().year
+                if not fiscal_year:
+                    fiscal_year = date.today().year
+
+                period_end_date = period_label
+                if len(period_end_date) == 4:
+                    period_end_date = f"{period_end_date}-12-31"
+
+                # Upsert statement
+                existing = query_one(
+                    """SELECT id FROM financial_statements
+                       WHERE stock_id = ? AND statement_type = ? AND period_end_date = ?""",
+                    (stock_id, stmt.statement_type, period_end_date),
+                )
+
+                if existing:
+                    stmt_id = existing["id"]
+                    cur.execute(
+                        """UPDATE financial_statements
+                           SET confidence_score=?, created_at=?
+                           WHERE id=?""",
+                        (result.confidence, now, stmt_id),
+                    )
+                    cur.execute(
+                        "DELETE FROM financial_line_items WHERE statement_id = ?",
+                        (stmt_id,),
+                    )
+                else:
+                    cur.execute(
+                        """INSERT INTO financial_statements
+                           (stock_id, statement_type, fiscal_year, fiscal_quarter,
+                            period_end_date, filing_date, source_file, extracted_by,
+                            confidence_score, notes, created_at)
+                           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                        (
+                            stock_id, stmt.statement_type, fiscal_year, None,
+                            period_end_date, None, file.filename,
+                            "gemini-ai-validated",
+                            result.confidence,
+                            f"AI-validated (corrections={result.validation_corrections})",
+                            now,
+                        ),
+                    )
+                    stmt_id = cur.lastrowid
+
+                for item in stmt.items:
+                    code = _normalize_key(item.key)
+                    amount = item.values.get(period_label)
+                    if amount is None:
+                        amount = item.values.get(col_name)
+                    if amount is None:
+                        all_vals = list(item.values.values())
+                        pidx = stmt.periods.index(period_info)
+                        if pidx < len(all_vals):
+                            amount = all_vals[pidx]
+                    if amount is None:
+                        amount = 0.0
+
+                    cur.execute(
+                        """INSERT INTO financial_line_items
+                           (statement_id, line_item_code, line_item_name,
+                            amount, currency, order_index, is_total)
+                           VALUES (?,?,?,?,?,?,?)""",
+                        (stmt_id, code, item.label_raw, float(amount),
+                         currency, item.order_index, item.is_total),
+                    )
+                    total_items += 1
+
+                updated_statements.append({
+                    "statement_id": stmt_id,
+                    "statement_type": stmt.statement_type,
+                    "period_end_date": period_end_date,
+                    "fiscal_year": fiscal_year,
+                    "line_items_count": len(stmt.items),
                     "currency": currency,
                 })
 
         conn.commit()
 
     logger.info(
-        "AI extraction complete for stock %d: %d statements, %d line items",
-        stock_id, len(created_statements), total_items,
+        "Validation persisted for stock %d: %d corrections, %d statements, %d items",
+        stock_id, result.validation_corrections,
+        len(updated_statements), total_items,
     )
 
     return {
         "status": "ok",
         "data": {
-            "message": f"Successfully extracted {len(created_statements)} statements with {total_items} line items.",
-            "statements": created_statements,
-            "source_file": file.filename,
-            "pages_processed": len(page_images),
-            "model": "gemini-2.5-flash",
+            "message": (
+                f"Validation complete — {result.validation_corrections} corrections "
+                f"applied across {len(updated_statements)} statements."
+            ),
+            "corrections_applied": result.validation_corrections,
+            "statements": updated_statements,
+            "confidence": result.confidence,
         },
     }
+
+
+@router.post("/stocks/{stock_id}/verify-placement")
+async def verify_statement_placement(
+    stock_id: int,
+    file: UploadFile = File(...),
+    current_user: TokenData = Depends(get_current_user),
+):
+    """
+    Step 3: Verify every line item is placed in the correct statement type
+    with the correct key and is_total flag.
+    """
+    _ensure_schema()
+    _verify_stock_owner(stock_id, current_user.user_id)
+
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        raise BadRequestError("Only PDF files are supported.")
+
+    pdf_bytes = await file.read()
+    if len(pdf_bytes) < 100:
+        raise BadRequestError("File is too small to be a valid PDF.")
+
+    # Get Gemini API key
+    from app.core.config import get_settings
+    settings = get_settings()
+    api_key = settings.GEMINI_API_KEY
+
+    try:
+        from app.core.database import add_column_if_missing
+        add_column_if_missing("users", "gemini_api_key", "TEXT")
+        row = query_one(
+            "SELECT gemini_api_key FROM users WHERE id = ?",
+            (current_user.user_id,),
+        )
+        if row and row[0]:
+            api_key = row[0]
+    except Exception:
+        pass
+
+    if not api_key:
+        raise BadRequestError("Gemini API key required for placement verification.")
+
+    from app.services.extraction_service import verify_placement
+
+    try:
+        result = await verify_placement(
+            pdf_bytes=pdf_bytes,
+            stock_id=stock_id,
+            api_key=api_key,
+            filename=file.filename or "upload.pdf",
+        )
+    except ValueError as exc:
+        raise BadRequestError(str(exc))
+    except Exception as exc:
+        logger.error("Placement verification error: %s", exc)
+        raise BadRequestError(f"Placement verification failed: {exc}")
+
+    if result.placement_corrections == 0:
+        return {
+            "status": "ok",
+            "data": {
+                "message": "Placement verified — all items correctly placed.",
+                "corrections_applied": 0,
+                "confidence": result.confidence,
+            },
+        }
+
+    # Re-persist corrected data to DB
+    now = int(time.time())
+    updated_statements = []
+    total_items = 0
+
+    stock_row = query_one(
+        "SELECT currency FROM analysis_stocks WHERE id = ?",
+        (stock_id,),
+    )
+    stock_currency = stock_row["currency"] if stock_row else "USD"
+
+    with get_connection() as conn:
+        cur = conn.cursor()
+
+        for stmt in result.statements:
+            currency = stmt.currency or stock_currency
+
+            if not stmt.periods or not stmt.items:
+                continue
+
+            for period_info in stmt.periods:
+                period_label = period_info.get("label", "")
+                col_name = period_info.get("col_name", period_label)
+
+                fiscal_year = None
+                if period_label and len(period_label) >= 4:
+                    try:
+                        fiscal_year = int(period_label[:4])
+                    except ValueError:
+                        try:
+                            fiscal_year = int(period_label[-4:])
+                        except ValueError:
+                            fiscal_year = date.today().year
+                if not fiscal_year:
+                    fiscal_year = date.today().year
+
+                period_end_date = period_label
+                if len(period_end_date) == 4:
+                    period_end_date = f"{period_end_date}-12-31"
+
+                existing = query_one(
+                    """SELECT id FROM financial_statements
+                       WHERE stock_id = ? AND statement_type = ? AND period_end_date = ?""",
+                    (stock_id, stmt.statement_type, period_end_date),
+                )
+
+                if existing:
+                    stmt_id = existing["id"]
+                    cur.execute(
+                        """UPDATE financial_statements
+                           SET confidence_score=?, extracted_by=?, created_at=?
+                           WHERE id=?""",
+                        (result.confidence, "gemini-ai-verified", now, stmt_id),
+                    )
+                    cur.execute(
+                        "DELETE FROM financial_line_items WHERE statement_id = ?",
+                        (stmt_id,),
+                    )
+                else:
+                    cur.execute(
+                        """INSERT INTO financial_statements
+                           (stock_id, statement_type, fiscal_year, fiscal_quarter,
+                            period_end_date, filing_date, source_file, extracted_by,
+                            confidence_score, notes, created_at)
+                           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                        (
+                            stock_id, stmt.statement_type, fiscal_year, None,
+                            period_end_date, None, file.filename,
+                            "gemini-ai-verified",
+                            result.confidence,
+                            f"AI-verified (placement={result.placement_corrections})",
+                            now,
+                        ),
+                    )
+                    stmt_id = cur.lastrowid
+
+                for item in stmt.items:
+                    code = _normalize_key(item.key)
+                    amount = item.values.get(period_label)
+                    if amount is None:
+                        amount = item.values.get(col_name)
+                    if amount is None:
+                        all_vals = list(item.values.values())
+                        pidx = stmt.periods.index(period_info)
+                        if pidx < len(all_vals):
+                            amount = all_vals[pidx]
+                    if amount is None:
+                        amount = 0.0
+
+                    cur.execute(
+                        """INSERT INTO financial_line_items
+                           (statement_id, line_item_code, line_item_name,
+                            amount, currency, order_index, is_total)
+                           VALUES (?,?,?,?,?,?,?)""",
+                        (stmt_id, code, item.label_raw, float(amount),
+                         currency, item.order_index, item.is_total),
+                    )
+                    total_items += 1
+
+                updated_statements.append({
+                    "statement_id": stmt_id,
+                    "statement_type": stmt.statement_type,
+                    "period_end_date": period_end_date,
+                    "fiscal_year": fiscal_year,
+                    "line_items_count": len(stmt.items),
+                    "currency": currency,
+                })
+
+        conn.commit()
+
+    logger.info(
+        "Placement persisted for stock %d: %d corrections, %d statements, %d items",
+        stock_id, result.placement_corrections,
+        len(updated_statements), total_items,
+    )
+
+    return {
+        "status": "ok",
+        "data": {
+            "message": (
+                f"Placement verified — {result.placement_corrections} corrections "
+                f"applied across {len(updated_statements)} statements."
+            ),
+            "corrections_applied": result.placement_corrections,
+            "statements": updated_statements,
+            "confidence": result.confidence,
+        },
+    }
+
+
+@router.delete("/stocks/{stock_id}/extraction-cache")
+async def clear_extraction_cache(
+    stock_id: int,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Clear cached extraction results so next upload re-runs the AI pipeline."""
+    _ensure_schema()
+    _verify_stock_owner(stock_id, current_user.user_id)
+
+    from app.services.extraction_service import _ensure_cache_table
+    _ensure_cache_table()
+
+    exec_sql(
+        "DELETE FROM extraction_cache WHERE stock_id = ?",
+        (stock_id,),
+    )
+
+    return {"status": "ok", "data": {"message": "Extraction cache cleared."}}
 
 
 # ════════════════════════════════════════════════════════════════════

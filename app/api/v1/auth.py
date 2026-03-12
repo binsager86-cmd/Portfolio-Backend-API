@@ -23,7 +23,7 @@ from app.core.security import (
 )
 from app.core.config import get_settings
 from app.core.exceptions import UnauthorizedError, ConflictError, BadRequestError
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from app.core.database import query_one, query_val, exec_sql, column_exists
 from app.api.deps import get_current_user
 from app.schemas.user import (
@@ -46,6 +46,7 @@ from app.services.audit_service import (
     AUTH_TOKEN_REFRESH,
     AUTH_LOCKOUT,
 )
+from app.services.user_onboarding import setup_new_user
 
 logger = logging.getLogger(__name__)
 _settings = get_settings()
@@ -272,26 +273,29 @@ async def me(current_user=Depends(get_current_user)):
 @limiter.limit("3/minute")
 async def register(request: Request, body: RegisterRequest):
     """Create a new user account and return JWT + refresh token."""
-    # Check if username already exists
+    # Check if username or email already exists
     existing = query_val(
-        "SELECT id FROM users WHERE username = ?", (body.username,)
+        "SELECT id FROM users WHERE username = ? OR email = ?", (body.username, body.username)
     )
     if existing:
-        raise ConflictError(f"Username '{body.username}' already taken")
+        raise ConflictError(f"An account with '{body.username}' already exists")
 
     hashed = hash_password(body.password)
     now = int(time.time())
 
     exec_sql(
-        "INSERT INTO users (username, password_hash, name, created_at, failed_login_attempts) "
-        "VALUES (?, ?, ?, ?, 0)",
-        (body.username, hashed, body.name, now),
+        "INSERT INTO users (username, email, password_hash, name, created_at, failed_login_attempts) "
+        "VALUES (?, ?, ?, ?, ?, 0)",
+        (body.username, body.username, hashed, body.name, now),
     )
 
     # Fetch the new user's ID
     user_id = query_val(
         "SELECT id FROM users WHERE username = ?", (body.username,)
     )
+
+    # Set up default portfolios, settings, and cash balances for the new user
+    setup_new_user(user_id, body.username)
 
     log_event(AUTH_REGISTER, user_id=user_id, request=request)
 
@@ -312,24 +316,45 @@ class GoogleSignInRequest(BaseModel):
 @limiter.limit("10/minute")
 async def google_sign_in(request: Request, body: GoogleSignInRequest):
     """
-    Validate a Google ID token, create or find the user, and return JWT tokens.
+    Validate a Google token, create or find the user, and return JWT tokens.
 
-    The mobile app sends the ID token obtained from @react-native-google-signin.
-    We verify it with Google's tokeninfo endpoint (no google-auth dependency needed).
+    Accepts either:
+      - A Google ID token (from native @react-native-google-signin)
+      - A Google access token (from web expo-auth-session OAuth flow)
+
+    We try ID-token verification first; if that fails we try the
+    access_token userinfo endpoint as a fallback.
     """
     import httpx
 
-    # Verify the ID token with Google
-    try:
-        async with httpx.AsyncClient(timeout=10) as client:
+    google_data = None
+    token = body.id_token
+
+    async with httpx.AsyncClient(timeout=10) as client:
+        # ── Attempt 1: verify as id_token ────────────────────────
+        try:
             resp = await client.get(
-                f"https://oauth2.googleapis.com/tokeninfo?id_token={body.id_token}"
+                f"https://oauth2.googleapis.com/tokeninfo?id_token={token}"
             )
-        if resp.status_code != 200:
-            raise UnauthorizedError("Invalid Google ID token")
-        google_data = resp.json()
-    except httpx.HTTPError:
-        raise BadRequestError("Failed to verify Google token. Please try again.")
+            if resp.status_code == 200:
+                google_data = resp.json()
+        except httpx.HTTPError:
+            pass  # fall through to access_token attempt
+
+        # ── Attempt 2: verify as access_token via userinfo ───────
+        if google_data is None or "email" not in google_data:
+            try:
+                resp = await client.get(
+                    "https://www.googleapis.com/oauth2/v3/userinfo",
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+                if resp.status_code == 200:
+                    google_data = resp.json()
+            except httpx.HTTPError:
+                pass
+
+    if not google_data:
+        raise UnauthorizedError("Invalid Google token — could not verify with Google.")
 
     email = google_data.get("email")
     if not email:
@@ -338,15 +363,33 @@ async def google_sign_in(request: Request, body: GoogleSignInRequest):
     google_name = google_data.get("name", "")
     google_sub = google_data.get("sub", "")  # Google user ID
 
-    # Look up user by email (username) or google_sub
-    existing = query_one(
-        "SELECT id, username, name FROM users WHERE username = ?",
-        (email,),
-    )
+    # Look up existing user by:
+    #   1. google_sub (previously linked Google account)
+    #   2. username = email (registered with email as username)
+    #   3. email column (registered with different username but same email)
+    existing = None
+    if google_sub:
+        existing = query_one(
+            "SELECT id, username, name FROM users WHERE google_sub = ?",
+            (google_sub,),
+        )
+    if not existing:
+        existing = query_one(
+            "SELECT id, username, name FROM users WHERE username = ? OR email = ?",
+            (email, email),
+        )
 
     if existing:
-        # Existing user — log in
+        # Existing user — link Google account if not yet linked, then log in
         user = {"id": existing[0], "username": existing[1], "name": existing[2]}
+        if google_sub:
+            try:
+                exec_sql(
+                    "UPDATE users SET google_sub = ?, email = COALESCE(email, ?) WHERE id = ?",
+                    (google_sub, email, user["id"]),
+                )
+            except Exception:
+                pass  # non-critical — user can still log in
         _reset_lockout(user["id"])
         log_event(AUTH_GOOGLE_LOGIN, user_id=user["id"], details={"google_sub": google_sub}, request=request)
         return _build_token_response(user)
@@ -357,13 +400,16 @@ async def google_sign_in(request: Request, body: GoogleSignInRequest):
     now = int(time.time())
 
     exec_sql(
-        "INSERT INTO users (username, password_hash, name, created_at, failed_login_attempts) "
-        "VALUES (?, ?, ?, ?, 0)",
-        (email, random_pw_hash, google_name or email.split("@")[0], now),
+        "INSERT INTO users (username, email, google_sub, password_hash, name, created_at, failed_login_attempts) "
+        "VALUES (?, ?, ?, ?, ?, ?, 0)",
+        (email, email, google_sub or None, random_pw_hash, google_name or email.split("@")[0], now),
     )
 
     user_id = query_val("SELECT id FROM users WHERE username = ?", (email,))
     user = {"id": user_id, "username": email, "name": google_name or email.split("@")[0]}
+
+    # Set up default portfolios, settings, and cash balances for the new user
+    setup_new_user(user_id, email)
 
     log_event(AUTH_GOOGLE_LOGIN, user_id=user_id, details={"google_sub": google_sub, "new_account": True}, request=request)
     return _build_token_response(user)
@@ -410,6 +456,19 @@ def _ensure_api_key_column():
 
 class ApiKeyRequest(BaseModel):
     api_key: str
+
+    @field_validator("api_key")
+    @classmethod
+    def validate_api_key(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("API key is required")
+        if len(v) > 256:
+            raise ValueError("API key too long")
+        import re
+        if not re.match(r"^AIzaSy[A-Za-z0-9_-]{33}$", v):
+            raise ValueError("Invalid Gemini API key format")
+        return v
 
 
 @router.put("/api-key")

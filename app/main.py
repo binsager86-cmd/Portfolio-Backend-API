@@ -18,7 +18,7 @@ from app.core.config import get_settings
 from app.core.database import check_db_exists
 from app.core.limiter import limiter
 from app.core.exceptions import APIError, api_error_handler, unhandled_exception_handler
-from app.core.middleware import SecurityHeadersMiddleware, RequestSizeLimitMiddleware
+from app.core.middleware import SecurityHeadersMiddleware, RequestSizeLimitMiddleware, PrivateNetworkAccessMiddleware
 from app.core.json_response import SafeJSONResponse
 
 # Versioned API router (all /api/v1/* routes)
@@ -56,104 +56,14 @@ async def lifespan(app: FastAPI):
         )
     else:
         logger.info("✅  Database found: %s", settings.database_abs_path)
-        # Additive migrations — safe to run every startup
-        from app.core.database import add_column_if_missing, exec_sql, query_df
 
+        # ── Schema initialization — create ALL tables ────────────
+        from app.core.schema import ensure_all_tables
+        ensure_all_tables()
+
+        # ── Backfill yf_ticker for existing stocks ───────────────
         try:
-            add_column_if_missing("stocks", "yf_ticker", "TEXT")
-        except Exception as e:
-            logger.warning("⚠️  add_column migration skipped: %s", e)
-
-        # Users table — lockout columns added after initial schema
-        try:
-            add_column_if_missing("users", "failed_login_attempts", "INTEGER DEFAULT 0")
-            add_column_if_missing("users", "locked_until", "INTEGER")
-            add_column_if_missing("users", "last_failed_login", "INTEGER")
-        except Exception as e:
-            logger.warning("⚠️  users lockout columns migration skipped: %s", e)
-
-        # Ensure PFM tables exist (additive — safe to run every startup)
-        # Use SERIAL for PostgreSQL auto-increment, INTEGER PRIMARY KEY for SQLite
-        if settings.use_postgres:
-            _PK = "SERIAL PRIMARY KEY"
-        else:
-            _PK = "INTEGER PRIMARY KEY AUTOINCREMENT"
-
-        try:
-            exec_sql(f"""
-                CREATE TABLE IF NOT EXISTS pfm_snapshots (
-                    id {_PK},
-                    user_id INTEGER NOT NULL,
-                    snapshot_date TEXT NOT NULL,
-                    notes TEXT,
-                    total_assets REAL DEFAULT 0,
-                    total_liabilities REAL DEFAULT 0,
-                    net_worth REAL DEFAULT 0,
-                    created_at INTEGER
-                )
-            """)
-            exec_sql(f"""
-                CREATE TABLE IF NOT EXISTS pfm_assets (
-                    id {_PK},
-                    snapshot_id INTEGER NOT NULL,
-                    user_id INTEGER NOT NULL,
-                    asset_type TEXT NOT NULL,
-                    category TEXT NOT NULL,
-                    name TEXT NOT NULL,
-                    quantity REAL,
-                    price REAL,
-                    currency TEXT DEFAULT 'KWD',
-                    value_kwd REAL DEFAULT 0,
-                    created_at INTEGER
-                )
-            """)
-            exec_sql(f"""
-                CREATE TABLE IF NOT EXISTS pfm_liabilities (
-                    id {_PK},
-                    snapshot_id INTEGER NOT NULL,
-                    user_id INTEGER NOT NULL,
-                    category TEXT NOT NULL,
-                    amount_kwd REAL DEFAULT 0,
-                    is_current INTEGER DEFAULT 0,
-                    is_long_term INTEGER DEFAULT 0,
-                    created_at INTEGER
-                )
-            """)
-            exec_sql(f"""
-                CREATE TABLE IF NOT EXISTS pfm_income_expenses (
-                    id {_PK},
-                    snapshot_id INTEGER NOT NULL,
-                    user_id INTEGER NOT NULL,
-                    kind TEXT NOT NULL,
-                    category TEXT NOT NULL,
-                    monthly_amount REAL DEFAULT 0,
-                    is_finance_cost INTEGER DEFAULT 0,
-                    is_gna INTEGER DEFAULT 0,
-                    sort_order INTEGER DEFAULT 0,
-                    created_at INTEGER
-                )
-            """)
-            logger.info("✅  PFM tables ensured")
-        except Exception as e:
-            logger.warning("⚠️  PFM tables creation skipped: %s", e)
-
-        # User settings table (stores rf_rate, etc.)
-        try:
-            exec_sql("""
-                CREATE TABLE IF NOT EXISTS user_settings (
-                    user_id INTEGER NOT NULL,
-                    setting_key TEXT NOT NULL,
-                    setting_value TEXT NOT NULL,
-                    updated_at INTEGER,
-                    PRIMARY KEY (user_id, setting_key)
-                )
-            """)
-            logger.info("✅  user_settings table ensured")
-        except Exception as e:
-            logger.warning("⚠️  user_settings creation skipped: %s", e)
-
-        # Backfill yf_ticker for existing stocks that don't have one yet
-        try:
+            from app.core.database import exec_sql, query_df
             from app.data.stock_lists import KUWAIT_STOCKS, US_STOCKS
             ticker_map = {}
             for s in KUWAIT_STOCKS:
@@ -235,19 +145,32 @@ app.add_middleware(RequestSizeLimitMiddleware)
 # Fix: list explicit dev origins so the browser always sees the real origin.
 _dev_origins = [
     "http://localhost:8081",   # Expo web
+    "http://localhost:8082",   # Expo web (alt port)
     "http://localhost:19006",  # Expo web (alt port)
     "http://localhost:3000",   # dev fallback
     "http://localhost:8004",   # Swagger UI
     "http://192.168.1.5:8081", # LAN mobile browser
     "http://127.0.0.1:8081",
+    "http://127.0.0.1:8082",
 ]
+
+# In production, match any *.ondigitalocean.app subdomain + explicit CORS_ORIGINS
+_prod_origin_regex = r"https://.*\.ondigitalocean\.app"
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list if settings.is_production else _dev_origins,
+    allow_origin_regex=_prod_origin_regex if settings.is_production else None,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
 )
+
+# ── Private Network Access ──────────────────────────────────────────
+# Must be added AFTER CORSMiddleware so it runs outermost (Starlette
+# processes middleware in reverse-add order). CORSMiddleware short-circuits
+# OPTIONS preflights, so this middleware wraps it to append the PNA header.
+app.add_middleware(PrivateNetworkAccessMiddleware)
 
 
 # ── Routes ───────────────────────────────────────────────────────────
@@ -262,14 +185,39 @@ app.include_router(cron_router_legacy)
 
 
 # ── Health check (no auth) ──────────────────────────────────────────
+# Exposed at both /health (legacy) and /api/health (for DO App Platform
+# routing where only /api/* is forwarded to this service).
 
 @app.get("/health", tags=["System"])
+@app.get("/api/health", tags=["System"])
 async def health():
     return {
         "status": "ok",
         "version": "1.0.0",
-        "deploy": "2025-07-11-pg-compat",
+        "deploy": "2026-03-06-combined-app-spa-fix",
         "db_mode": "postgresql" if settings.use_postgres else "sqlite",
         "db_connected": check_db_exists(),
         "environment": "production" if settings.is_production else "development",
     }
+
+
+@app.get("/health/tables", tags=["System"])
+@app.get("/api/health/tables", tags=["System"])
+async def health_tables():
+    """Diagnostic: list all tables that exist in the database."""
+    from app.core.database import query_df
+    try:
+        if settings.use_postgres:
+            df = query_df(
+                "SELECT table_name FROM information_schema.tables "
+                "WHERE table_schema = 'public' ORDER BY table_name"
+            )
+            tables = df["table_name"].tolist() if not df.empty else []
+        else:
+            df = query_df(
+                "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+            )
+            tables = df["name"].tolist() if not df.empty else []
+        return {"status": "ok", "table_count": len(tables), "tables": tables}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}

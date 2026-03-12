@@ -1058,6 +1058,8 @@ class PortfolioService:
             **self._calc_daily_movement(total_value),
             # CAGR inputs: first deposit amount and date
             **self._calc_cagr_inputs(total_value),
+            # MWRR (IRR) — calculated inline so the overview always has it
+            "mwrr_percent": self._safe_mwrr(),
         }
 
     # ------------------------------------------------------------------
@@ -1069,15 +1071,22 @@ class PortfolioService:
         Compute daily movement as live_total_value - previous_snapshot.portfolio_value.
         Matches Streamlit's approach: live_portfolio_value (stocks + cash) compared
         against the previous day's stored snapshot portfolio_value (also stocks + cash).
+
+        Uses ``snapshot_date < today`` so the comparison baseline is always
+        yesterday's snapshot, regardless of whether today's snapshot exists.
         """
+        from datetime import date as _date
+
         try:
+            today_str = str(_date.today())
             prev = query_one(
                 """SELECT portfolio_value
                    FROM portfolio_snapshots
                    WHERE user_id = ?
+                     AND snapshot_date < ?
                    ORDER BY snapshot_date DESC
-                   LIMIT 1 OFFSET 1""",
-                (self.user_id,),
+                   LIMIT 1""",
+                (self.user_id, today_str),
             )
             if prev:
                 prev_pv = prev[0] or 0.0
@@ -1139,6 +1148,18 @@ class PortfolioService:
         except Exception:
             pass
         return {"cagr_percent": 0.0, "cagr_first_deposit": 0.0, "cagr_first_date": None}
+
+    # ------------------------------------------------------------------
+    #  Safe MWRR wrapper for overview (never raises)
+    # ------------------------------------------------------------------
+
+    def _safe_mwrr(self) -> Optional[float]:
+        """Compute MWRR for the overview response; returns None on any error."""
+        try:
+            return self.calculate_mwrr()
+        except Exception as exc:
+            logger.warning("_safe_mwrr: %s", exc)
+            return None
 
     # ------------------------------------------------------------------
     #  External cash flows — shared by TWR & MWRR
@@ -1214,8 +1235,8 @@ class PortfolioService:
                     dep_df.loc[usd_mask, "amount"] = dep_df.loc[usd_mask, "amount"] * rate
                 dep_df = dep_df[["date", "amount", "type"]]
                 frames.append(dep_df)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("_get_external_flows: cash_deposits query failed: %s", exc)
 
         # 2. Ledger deposits (txn_type = 'Deposit' / category = 'FLOW_IN')
         try:
@@ -1230,8 +1251,8 @@ class PortfolioService:
             ldep_df = query_df(ldep_sql, _params("txn_date"))
             if not ldep_df.empty:
                 frames.append(ldep_df[["date", "amount", "type"]])
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("_get_external_flows: ledger deposits query failed: %s", exc)
 
         # 3. Withdrawals (txn_type = 'Withdrawal' / category = 'FLOW_OUT')
         try:
@@ -1246,8 +1267,8 @@ class PortfolioService:
             wd_df = query_df(wd_sql, _params("txn_date"))
             if not wd_df.empty:
                 frames.append(wd_df[["date", "amount", "type"]])
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("_get_external_flows: withdrawals query failed: %s", exc)
 
         # 4. Transfer In
         try:
@@ -1263,8 +1284,8 @@ class PortfolioService:
             tin_df = query_df(tin_sql, _params("txn_date"))
             if not tin_df.empty:
                 frames.append(tin_df[["date", "amount", "type"]])
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("_get_external_flows: transfer-in query failed: %s", exc)
 
         # 5. Transfer Out
         try:
@@ -1280,8 +1301,8 @@ class PortfolioService:
             tout_df = query_df(tout_sql, _params("txn_date"))
             if not tout_df.empty:
                 frames.append(tout_df[["date", "amount", "type"]])
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("_get_external_flows: transfer-out query failed: %s", exc)
 
         # 6. Cash dividends (MWRR only — per CFA, dividends are
         #    investment returns, NOT external flows for TWR)
@@ -1301,8 +1322,8 @@ class PortfolioService:
                 div_df = query_df(div_sql, _params("txn_date"))
                 if not div_df.empty:
                     frames.append(div_df[["date", "amount", "type"]])
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("_get_external_flows: dividends query failed: %s", exc)
 
         if not frames:
             return pd.DataFrame(columns=["date", "amount", "type"])
@@ -1399,40 +1420,65 @@ class PortfolioService:
         portfolio: Optional[str] = None,
     ) -> Optional[float]:
         """
-        Money-Weighted Rate of Return (XIRR) via Newton-Raphson
-        with bisection fallback.
+        Money-Weighted Rate of Return (XIRR) — CFA Level III compliant.
 
-        Matches Streamlit's MWRR logic (ui.py L8871-L9030):
-        - Cash flows from source tables (cash_deposits + transactions)
-        - INCLUDES dividends as positive cash flows (unlike TWR)
-        - Deposits → negative (money out of investor's pocket)
-        - Dividends & Withdrawals → positive (money back to investor)
-        - Terminal portfolio value → positive
+        Per the CFA curriculum (GIPS & Performance Measurement):
+        MWRR is the internal rate of return (IRR) that equates the PV of all
+        cash flows (deposits, withdrawals, dividends) to the terminal market
+        value.  It is equivalent to dollar-weighted return and captures both
+        the timing *and* magnitude of portfolio cash flows.
 
-        Day-count: ACT/365.25
-        Returns percentage (e.g. 11.74 for 11.74%).
+        Algorithm: XIRR via Newton-Raphson with bisection fallback.
+
+        Cash flow sign convention (investor's perspective):
+        - Deposits / Transfers In  → negative (money *from* investor)
+        - Withdrawals / Transfers Out → positive (money *to* investor)
+        - Cash dividends received → positive (return *to* investor)
+        - Terminal portfolio value → positive (simulated liquidation)
+
+        Day-count: ACT/365.25 (standard for XIRR, matches Excel / CFA)
+
+        Terminal value: LIVE market value (stocks + cash in KWD).
+        Fallback: latest portfolio_snapshot value.
+
+        Returns annualised IRR as percentage (e.g. 11.74 for 11.74%),
+        or None if insufficient data.
         """
-        # Get current portfolio value for terminal flow.
-        # CFA-compliant: terminal value = LIVE market value (stocks + cash),
-        # not a potentially stale snapshot.  Matches Streamlit approach.
-        df = self._fetch_snapshots(start_date, end_date, portfolio)
-        if df is None or len(df) < 2:
+        # ── 1. Terminal value ────────────────────────────────────────
+        # CFA-compliant: use LIVE portfolio value (mark-to-market).
+        # Fall back to the latest snapshot if live is unavailable.
+        current_value = 0.0
+        try:
+            live = self.get_total_portfolio_value()
+            current_value = live.get("total_value_kwd", 0.0)
+        except Exception as exc:
+            logger.warning("MWRR: live portfolio value failed: %s", exc)
+
+        if current_value <= 0:
+            # Fallback: latest snapshot portfolio_value
+            try:
+                snap = query_one(
+                    """SELECT portfolio_value FROM portfolio_snapshots
+                       WHERE user_id = ? ORDER BY snapshot_date DESC LIMIT 1""",
+                    (self.user_id,),
+                )
+                if snap and snap[0]:
+                    current_value = float(snap[0])
+                    logger.info("MWRR: using snapshot fallback value %.2f", current_value)
+            except Exception as exc:
+                logger.warning("MWRR: snapshot fallback failed: %s", exc)
+
+        if current_value <= 0:
+            logger.warning("MWRR: terminal value is 0; cannot compute IRR")
             return None
 
-        live = self.get_total_portfolio_value()
-        current_value = live.get("total_value_kwd", 0.0)
-        # Fallback to last snapshot if live value unavailable
-        if current_value <= 0:
-            current_value = float(df.iloc[-1]["portfolio_value"] or 0)
-        if current_value <= 0:
-            return None
-
-        # Get actual cash flows from source tables (includes dividends)
+        # ── 2. Collect external cash flows ───────────────────────────
         flows = self._get_external_flows(start_date, end_date, include_dividends=True)
         if flows.empty:
+            logger.warning("MWRR: no external cash flows found")
             return None
 
-        # Build signed cash flow list
+        # ── 3. Build signed cash flow series ─────────────────────────
         cf_dates: list = []
         cf_amounts: list = []
 
@@ -1449,19 +1495,21 @@ class PortfolioService:
                 continue
             cf_dates.append(pd.to_datetime(row["date"]))
 
-        # Terminal value (simulated full liquidation)
+        # Terminal value (simulated full liquidation at market)
         today = pd.Timestamp.now()
         cf_dates.append(today)
         cf_amounts.append(abs(current_value))
 
         if len(cf_dates) < 2:
+            logger.warning("MWRR: fewer than 2 cash flows after filtering")
             return None
 
-        # Must have at least one negative AND one positive
+        # Must have at least one negative AND one positive flow
         if not (any(c < 0 for c in cf_amounts) and any(c > 0 for c in cf_amounts)):
+            logger.warning("MWRR: cash flows are all same sign; IRR undefined")
             return None
 
-        # Sort & combine same-day flows
+        # ── 4. Aggregate same-day flows ──────────────────────────────
         pairs = sorted(zip(cf_dates, cf_amounts), key=lambda x: x[0])
         combined_dates: list = []
         combined_amounts: list = []
@@ -1483,11 +1531,11 @@ class PortfolioService:
         cf_dates = combined_dates
         cf_amounts = combined_amounts
 
-        # Year-fraction (ACT/365.25)
+        # ── 5. Year-fraction (ACT/365.25) ────────────────────────────
         t0 = cf_dates[0]
         year_fracs = [(dt - t0).days / 365.25 for dt in cf_dates]
 
-        # NPV & derivative
+        # ── 6. XIRR solver ──────────────────────────────────────────
         def npv(r: float) -> float:
             if r <= -1.0:
                 return float("inf")
@@ -1498,7 +1546,7 @@ class PortfolioService:
                 return float("inf")
             return sum(-t * a / ((1.0 + r) ** (t + 1.0)) for a, t in zip(cf_amounts, year_fracs))
 
-        # Newton-Raphson (primary solver)
+        # 6a. Newton-Raphson (primary) — initial guess 10%, max 200 iter
         rate = 0.10
         converged = False
         for _ in range(200):
@@ -1515,12 +1563,13 @@ class PortfolioService:
             rate = r_next
 
         if converged:
-            return round(rate * 100, 4)
+            result = round(rate * 100, 4)
+            logger.info("MWRR (Newton): %.4f%% from %d flows", result, len(cf_dates))
+            return result
 
-        # Bisection fallback
+        # 6b. Bisection fallback — wider search
         lo, hi = -0.9999, 10.0
         npv_lo = npv(lo)
-        # Widen range if needed
         if npv_lo * npv(hi) > 0:
             for test_hi in [20.0, 50.0, 100.0]:
                 if npv(lo) * npv(test_hi) < 0:
@@ -1528,20 +1577,27 @@ class PortfolioService:
                     break
             else:
                 if abs(npv(rate)) < 1.0 and -0.99 < rate < 100:
-                    return round(rate * 100, 4)
+                    result = round(rate * 100, 4)
+                    logger.info("MWRR (approx): %.4f%%", result)
+                    return result
+                logger.warning("MWRR: bisection bracket not found")
                 return None
 
         for _ in range(1000):
             mid = (lo + hi) / 2.0
             npv_mid = npv(mid)
             if abs(npv_mid) < 1e-8:
-                return round(mid * 100, 4)
+                result = round(mid * 100, 4)
+                logger.info("MWRR (bisection): %.4f%%", result)
+                return result
             if npv(lo) * npv_mid < 0:
                 hi = mid
             else:
                 lo = mid
 
-        return round((lo + hi) / 2.0 * 100, 4)
+        result = round((lo + hi) / 2.0 * 100, 4)
+        logger.info("MWRR (bisection final): %.4f%%", result)
+        return result
 
     # ------------------------------------------------------------------
     #  Performance (combines TWR + MWRR + ROI for a period)

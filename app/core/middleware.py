@@ -54,6 +54,28 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class PrivateNetworkAccessMiddleware(BaseHTTPMiddleware):
+    """
+    Handle Chrome's Private Network Access (PNA) preflight requests.
+
+    When a page at localhost:PORT makes a cross-origin request to 127.0.0.1:PORT,
+    Chrome sends a preflight with Access-Control-Request-Private-Network: true.
+    The server must respond with Access-Control-Allow-Private-Network: true or
+    Chrome silently blocks the request (Axios sees a network error).
+    """
+
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        response = await call_next(request)
+
+        # If the preflight asked for private network access, grant it
+        if request.headers.get("access-control-request-private-network") == "true":
+            response.headers["Access-Control-Allow-Private-Network"] = "true"
+
+        return response
+
+
 class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
     """
     Rejects requests with Content-Length exceeding the configured maximum.

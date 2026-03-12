@@ -279,6 +279,8 @@ async def trading_summary(
             COALESCE(t.source, 'MANUAL') AS source,
             t.source_reference,
             COALESCE(s.current_price, 0) AS current_price,
+            COALESCE(s.name, t.stock_symbol) AS company_name,
+            s.id AS stock_id,
             {avg_cost_col},
             {realized_col},
             {cost_basis_col},
@@ -721,6 +723,7 @@ async def trading_summary(
         for w in words:
             mask = (
                 filtered["symbol"].astype(str).str.lower().str.contains(w, na=False)
+                | filtered["company_name"].astype(str).str.lower().str.contains(w, na=False)
                 | filtered["portfolio"].astype(str).str.lower().str.contains(w, na=False)
                 | filtered["type"].astype(str).str.lower().str.contains(w, na=False)
                 | filtered["notes"].astype(str).str.lower().str.contains(w, na=False)
@@ -736,7 +739,7 @@ async def trading_summary(
     # ── Serialize transactions ───────────────────────────────────────
 
     cols = [
-        "id", "date", "symbol", "portfolio", "type", "status", "source",
+        "id", "date", "symbol", "company_name", "stock_id", "portfolio", "type", "status", "source",
         "quantity", "avg_cost", "price", "current_price", "sell_price",
         "value", "pnl", "pnl_pct", "fees", "dividend", "bonus_shares", "notes",
     ]
@@ -767,6 +770,41 @@ async def trading_summary(
                 "total_items": total_filtered,
                 "total_pages": total_pages,
             },
+        },
+    }
+
+
+@router.patch("/rename-stock")
+async def rename_stock_by_symbol(
+    symbol: str = Query(..., description="Stock symbol to rename"),
+    name: str = Query(..., description="New display name"),
+    current_user: TokenData = Depends(get_current_user),
+):
+    """
+    Rename a stock by symbol — mirrors Streamlit 'Edit Stock Details' expander.
+    Updates the stock name for the current user.
+    """
+    user_id = current_user.user_id
+    row = query_df(
+        "SELECT id, name FROM stocks WHERE UPPER(symbol) = UPPER(?) AND user_id = ?",
+        (symbol, user_id),
+    )
+    if row.empty:
+        from app.core.exceptions import NotFoundError
+        raise NotFoundError("Stock", symbol)
+
+    stock_id = int(row.iloc[0]["id"])
+    exec_sql(
+        "UPDATE stocks SET name = ? WHERE id = ? AND user_id = ?",
+        (name.strip(), stock_id, user_id),
+    )
+    return {
+        "status": "ok",
+        "data": {
+            "stock_id": stock_id,
+            "symbol": symbol,
+            "name": name.strip(),
+            "message": "Stock name updated",
         },
     }
 

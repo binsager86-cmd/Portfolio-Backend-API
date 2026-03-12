@@ -36,4 +36,4 @@ HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
 EXPOSE 8002
 
 # ── Start server ─────────────────────────────────────────────────────
-CMD ["sh", "-c", "gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8002} --timeout 120 --access-logfile -"]
+CMD ["sh", "-c", "gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8002} --timeout 300 --access-logfile -"]
