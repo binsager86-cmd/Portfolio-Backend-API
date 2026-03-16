@@ -6,14 +6,18 @@ Mirrors the Streamlit ``stock_analysis`` package using raw SQL through
 the backend's database helpers (same SQLite/PG database).
 """
 
+import hashlib
 import json
 import math
+import os
 import time
 import logging
 from datetime import date
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Query, UploadFile, File
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from app.api.deps import get_current_user
@@ -144,6 +148,17 @@ def _ensure_schema() -> None:
                 details TEXT,
                 created_at INTEGER NOT NULL
             )""",
+        f"""CREATE TABLE IF NOT EXISTS pdf_uploads (
+                id {_PK},
+                stock_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                filename TEXT NOT NULL,
+                original_name TEXT NOT NULL,
+                pdf_hash TEXT NOT NULL,
+                file_size INTEGER NOT NULL,
+                created_at INTEGER NOT NULL,
+                FOREIGN KEY (stock_id) REFERENCES analysis_stocks(id)
+            )""",
         "CREATE INDEX IF NOT EXISTS idx_analysis_stocks_user ON analysis_stocks(user_id)",
         "CREATE INDEX IF NOT EXISTS idx_analysis_stocks_symbol ON analysis_stocks(symbol)",
         "CREATE INDEX IF NOT EXISTS idx_financial_statements_stock ON financial_statements(stock_id)",
@@ -151,6 +166,7 @@ def _ensure_schema() -> None:
         "CREATE INDEX IF NOT EXISTS idx_stock_metrics_stock ON stock_metrics(stock_id)",
         "CREATE INDEX IF NOT EXISTS idx_valuation_models_stock ON valuation_models(stock_id)",
         "CREATE INDEX IF NOT EXISTS idx_stock_scores_stock ON stock_scores(stock_id)",
+        "CREATE INDEX IF NOT EXISTS idx_pdf_uploads_stock ON pdf_uploads(stock_id)",
     ]
 
     try:
@@ -160,6 +176,54 @@ def _ensure_schema() -> None:
         logger.warning("⚠️  Analysis schema creation skipped: %s", e)
 
     _SCHEMA_INIT = True
+
+
+# ── PDF file storage ─────────────────────────────────────────────────
+
+_PDF_UPLOAD_DIR = Path(__file__).resolve().parents[2] / "uploads" / "pdfs"
+
+
+def _get_pdf_dir(stock_id: int) -> Path:
+    """Return (and create) the per-stock PDF directory."""
+    d = _PDF_UPLOAD_DIR / str(stock_id)
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _save_pdf_file(
+    stock_id: int, user_id: int, pdf_bytes: bytes, original_name: str,
+) -> int:
+    """Save PDF to disk and record in pdf_uploads table. Returns the row id."""
+    pdf_hash = hashlib.sha256(pdf_bytes).hexdigest()
+
+    # Deduplicate: skip if same file already saved for this stock
+    existing = query_one(
+        "SELECT id FROM pdf_uploads WHERE stock_id = ? AND pdf_hash = ?",
+        (stock_id, pdf_hash),
+    )
+    if existing:
+        return existing["id"] if isinstance(existing, dict) else existing[0]
+
+    now = int(time.time())
+    safe_name = "".join(
+        c if (c.isalnum() or c in "._- ") else "_" for c in original_name
+    ).strip()
+    disk_name = f"{now}_{pdf_hash[:12]}_{safe_name}"
+
+    target = _get_pdf_dir(stock_id) / disk_name
+    target.write_bytes(pdf_bytes)
+
+    exec_sql(
+        """INSERT INTO pdf_uploads
+           (stock_id, user_id, filename, original_name, pdf_hash, file_size, created_at)
+           VALUES (?,?,?,?,?,?,?)""",
+        (stock_id, user_id, disk_name, original_name, pdf_hash, len(pdf_bytes), now),
+    )
+    row_id = query_val(
+        "SELECT id FROM pdf_uploads WHERE stock_id = ? AND pdf_hash = ?",
+        (stock_id, pdf_hash),
+    )
+    return row_id
 
 
 # ── Pydantic Schemas ─────────────────────────────────────────────────
@@ -208,6 +272,9 @@ class StatementCreate(BaseModel):
         description="Array of {code, name, amount, currency?, order?, is_total?}",
     )
 
+
+class DeletePeriodsRequest(BaseModel):
+    periods: List[str] = Field(..., description="List of period_end_date values to delete")
 
 class LineItemUpdate(BaseModel):
     amount: float
@@ -586,6 +653,42 @@ async def delete_statement(
     return {"status": "ok", "data": {"message": "Statement deleted."}}
 
 
+@router.post("/stocks/{stock_id}/statements/delete-periods")
+async def delete_statements_by_period(
+    stock_id: int,
+    body: DeletePeriodsRequest,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Delete all statements (and their line items) for the given periods."""
+    _ensure_schema()
+    _verify_stock_owner(stock_id, current_user.user_id)
+
+    if not body.periods:
+        raise BadRequestError("No periods provided.")
+
+    placeholders = ",".join("?" for _ in body.periods)
+    rows = query_all(
+        f"SELECT id FROM financial_statements WHERE stock_id = ? AND period_end_date IN ({placeholders})",
+        [stock_id] + body.periods,
+    )
+    if not rows:
+        raise NotFoundError("Statements", ", ".join(body.periods))
+
+    stmt_ids = [r["id"] if isinstance(r, dict) else r[0] for r in rows]
+    id_placeholders = ",".join("?" for _ in stmt_ids)
+
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(f"DELETE FROM financial_line_items WHERE statement_id IN ({id_placeholders})", stmt_ids)
+        cur.execute(f"DELETE FROM financial_statements WHERE id IN ({id_placeholders})", stmt_ids)
+        conn.commit()
+
+    return {
+        "status": "ok",
+        "data": {"message": f"{len(stmt_ids)} statement(s) deleted.", "deleted_count": len(stmt_ids)},
+    }
+
+
 @router.put("/line-items/{item_id}")
 async def update_line_item(
     item_id: int,
@@ -724,6 +827,40 @@ _STANDARD_CODES: Dict[str, str] = {
     "treasury_shares": "TREASURY_SHARES_EQUITY",
     "shares_outstanding": "SHARES_DILUTED", "share_count": "SHARE_COUNT",
     "shares_basic": "SHARES_BASIC", "shares_diluted": "SHARES_DILUTED",
+    # GCC / Kuwait specific
+    "cost_of_operations": "COST_OF_REVENUE",
+    "general_and_administrative_expenses": "GENERAL_AND_ADMIN",
+    "general_and_administrative_expens": "GENERAL_AND_ADMIN",
+    "selling_expenses": "SELLING_EXPENSES",
+    "selling_and_distribution_expenses": "SELLING_EXPENSES",
+    "finance_charges": "FINANCE_CHARGES",
+    "finance_charge": "FINANCE_CHARGES",
+    "profit_before_contribution_to_kfas": "PROFIT_BEFORE_DEDUCTIONS",
+    "profit_before_contribution_to_kuwait_foundation_for_advancement_of_sciences": "PROFIT_BEFORE_DEDUCTIONS",
+    "profit_before_contribution_to_kuwait_foundation_for_the_advancement_of_sciences": "PROFIT_BEFORE_DEDUCTIONS",
+    "contribution_to_kfas": "CONTRIBUTION_KFAS",
+    "contribution_to_kuwait_foundation_for_advancement_of_sciences": "CONTRIBUTION_KFAS",
+    "contribution_to_kuwait_foundation_for_the_advancement_of_sciences": "CONTRIBUTION_KFAS",
+    "national_labour_support_tax": "NLST", "nlst": "NLST",
+    "national_labor_support_tax": "NLST",
+    "zakat": "ZAKAT",
+    "directors_remuneration": "DIRECTORS_REMUNERATION",
+    "directors_fees": "DIRECTORS_REMUNERATION",
+    "board_of_directors_remuneration": "DIRECTORS_REMUNERATION",
+    "basic_and_diluted_earnings_per_share": "EPS_BASIC",
+    "basic_and_diluted_earnings_per_sha": "EPS_BASIC",
+    "earnings_per_share": "EPS_BASIC",
+    "share_of_profit_of_associates": "SHARE_RESULTS_ASSOCIATES",
+    "share_of_loss_of_associates": "SHARE_RESULTS_ASSOCIATES",
+    "share_of_results_of_associates": "SHARE_RESULTS_ASSOCIATES",
+    "share_of_profit_loss_of_associates": "SHARE_RESULTS_ASSOCIATES",
+    # Cash flow additional
+    "net_cash_used_in_operating_activities": "CASH_FROM_OPERATIONS",
+    "net_cash_used_in_investing_activities": "CASH_FROM_INVESTING",
+    "net_cash_used_in_financing_activities": "CASH_FROM_FINANCING",
+    "cash_used_in_financing_activities": "CASH_FROM_FINANCING",
+    "cash_used_in_investing_activities": "CASH_FROM_INVESTING",
+    "cash_used_in_operating_activities": "CASH_FROM_OPERATIONS",
 }
 
 # Batch extraction prompt (from Streamlit ai_vision_extractor.py)
@@ -851,6 +988,7 @@ def _parse_ai_json(text: str) -> list:
 async def upload_financial_statement(
     stock_id: int,
     file: UploadFile = File(...),
+    force: bool = Query(False, description="Skip cache and re-extract from scratch"),
     current_user: TokenData = Depends(get_current_user),
 ):
     """
@@ -906,6 +1044,7 @@ async def upload_financial_statement(
             stock_id=stock_id,
             api_key=api_key,
             filename=file.filename or "upload.pdf",
+            use_cache=not force,
         )
     except ValueError as exc:
         raise BadRequestError(str(exc))
@@ -924,6 +1063,19 @@ async def upload_financial_statement(
     )
     stock_currency = stock_row["currency"] if stock_row else "USD"
 
+    logger.info(
+        "Persisting extraction: %d statements from pipeline",
+        len(result.statements),
+    )
+    for _dbg_s in result.statements:
+        _dbg_labels = [p.get("label", p.get("col_name", "?")) for p in _dbg_s.periods]
+        _sample_keys = [it.key for it in _dbg_s.items[:3]]
+        _sample_vals = {it.key: list(it.values.keys())[:4] for it in _dbg_s.items[:3]}
+        logger.info(
+            "  stmt type=%s  periods=%s  items=%d  sample_keys=%s  sample_val_keys=%s",
+            _dbg_s.statement_type, _dbg_labels, len(_dbg_s.items), _sample_keys, _sample_vals,
+        )
+
     with get_connection() as conn:
         cur = conn.cursor()
 
@@ -931,6 +1083,10 @@ async def upload_financial_statement(
             currency = stmt.currency or stock_currency
 
             if not stmt.periods or not stmt.items:
+                logger.warning(
+                    "Skipping stmt type=%s: periods=%d, items=%d",
+                    stmt.statement_type, len(stmt.periods), len(stmt.items),
+                )
                 continue
 
             for period_info in stmt.periods:
@@ -993,18 +1149,24 @@ async def upload_financial_statement(
                     stmt_id = cur.lastrowid
 
                 # Insert line items for this period
+                _MISSING = object()
+                seen_codes: set = set()
                 for item in stmt.items:
                     code = _normalize_key(item.key)
-                    amount = item.values.get(period_label)
-                    if amount is None:
-                        amount = item.values.get(col_name)
-                    if amount is None:
+                    if code in seen_codes:
+                        continue  # already stored for this period
+                    amount = item.values.get(period_label, _MISSING)
+                    if amount is _MISSING:
+                        amount = item.values.get(col_name, _MISSING)
+                    if amount is _MISSING:
                         all_vals = list(item.values.values())
                         pidx = stmt.periods.index(period_info)
                         if pidx < len(all_vals):
                             amount = all_vals[pidx]
+                    if amount is _MISSING:
+                        continue  # not extracted for this period — skip
                     if amount is None:
-                        amount = 0.0
+                        amount = 0.0  # document showed dash/blank
 
                     cur.execute(
                         """INSERT INTO financial_line_items
@@ -1014,6 +1176,7 @@ async def upload_financial_statement(
                         (stmt_id, code, item.label_raw, float(amount),
                          currency, item.order_index, item.is_total),
                     )
+                    seen_codes.add(code)
                     total_items += 1
 
                 created_statements.append({
@@ -1026,6 +1189,12 @@ async def upload_financial_statement(
                 })
 
         conn.commit()
+
+    # ── 4b. Save PDF file for future reference ───────────────────────
+    try:
+        _save_pdf_file(stock_id, current_user.user_id, pdf_bytes, file.filename or "upload.pdf")
+    except Exception as e:
+        logger.warning("PDF file save failed (non-fatal): %s", e)
 
     # ── 5. Build audit summary ───────────────────────────────────────
     audit_summary = {
@@ -1042,6 +1211,8 @@ async def upload_financial_statement(
                 "expected": c.computed_sum,
                 "actual": c.total_value,
                 "passed": c.passed,
+                "detail": c.detail,
+                "discrepancy": c.discrepancy,
             }
             for c in result.audit_checks
         ],
@@ -1218,16 +1389,22 @@ async def validate_financial_statement(
                     )
                     stmt_id = cur.lastrowid
 
+                _MISSING = object()
+                seen_codes: set = set()
                 for item in stmt.items:
                     code = _normalize_key(item.key)
-                    amount = item.values.get(period_label)
-                    if amount is None:
-                        amount = item.values.get(col_name)
-                    if amount is None:
+                    if code in seen_codes:
+                        continue
+                    amount = item.values.get(period_label, _MISSING)
+                    if amount is _MISSING:
+                        amount = item.values.get(col_name, _MISSING)
+                    if amount is _MISSING:
                         all_vals = list(item.values.values())
                         pidx = stmt.periods.index(period_info)
                         if pidx < len(all_vals):
                             amount = all_vals[pidx]
+                    if amount is _MISSING:
+                        continue
                     if amount is None:
                         amount = 0.0
 
@@ -1239,6 +1416,7 @@ async def validate_financial_statement(
                         (stmt_id, code, item.label_raw, float(amount),
                          currency, item.order_index, item.is_total),
                     )
+                    seen_codes.add(code)
                     total_items += 1
 
                 updated_statements.append({
@@ -1415,14 +1593,17 @@ async def verify_statement_placement(
 
                 for item in stmt.items:
                     code = _normalize_key(item.key)
-                    amount = item.values.get(period_label)
-                    if amount is None:
-                        amount = item.values.get(col_name)
-                    if amount is None:
+                    _MISSING = object()
+                    amount = item.values.get(period_label, _MISSING)
+                    if amount is _MISSING:
+                        amount = item.values.get(col_name, _MISSING)
+                    if amount is _MISSING:
                         all_vals = list(item.values.values())
                         pidx = stmt.periods.index(period_info)
                         if pidx < len(all_vals):
                             amount = all_vals[pidx]
+                    if amount is _MISSING:
+                        continue
                     if amount is None:
                         amount = 0.0
 
@@ -1461,6 +1642,198 @@ async def verify_statement_placement(
                 f"applied across {len(updated_statements)} statements."
             ),
             "corrections_applied": result.placement_corrections,
+            "statements": updated_statements,
+            "confidence": result.confidence,
+        },
+    }
+
+
+@router.post("/stocks/{stock_id}/ai-attribute")
+async def ai_attribute_statement(
+    stock_id: int,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """
+    Step 4: AI Attribution Expert — user-triggered.
+
+    Uses the cached extraction result (no PDF re-upload needed).
+    Sends extracted data to AI for expert review of item attribution:
+    statement-type placement, key naming, is_total flags, value signs,
+    and cross-statement consistency.
+    """
+    _ensure_schema()
+    _verify_stock_owner(stock_id, current_user.user_id)
+
+    # Get Gemini API key
+    from app.core.config import get_settings
+    settings = get_settings()
+    api_key = settings.GEMINI_API_KEY
+
+    try:
+        from app.core.database import add_column_if_missing
+        add_column_if_missing("users", "gemini_api_key", "TEXT")
+        row = query_one(
+            "SELECT gemini_api_key FROM users WHERE id = ?",
+            (current_user.user_id,),
+        )
+        if row and row[0]:
+            api_key = row[0]
+    except Exception:
+        pass
+
+    if not api_key:
+        raise BadRequestError("Gemini API key required for AI attribution.")
+
+    from app.services.extraction_service import ai_attribute_extraction
+
+    try:
+        result = await ai_attribute_extraction(
+            stock_id=stock_id,
+            api_key=api_key,
+        )
+    except ValueError as exc:
+        raise BadRequestError(str(exc))
+    except Exception as exc:
+        logger.error("AI attribution error: %s", exc)
+        raise BadRequestError(f"AI attribution failed: {exc}")
+
+    if result.validation_corrections == 0:
+        return {
+            "status": "ok",
+            "data": {
+                "message": "AI attribution reviewed — all items correctly attributed.",
+                "corrections_applied": 0,
+                "confidence": result.confidence,
+            },
+        }
+
+    # Re-persist corrected data to DB
+    now = int(time.time())
+    updated_statements = []
+    total_items = 0
+
+    stock_row = query_one(
+        "SELECT currency FROM analysis_stocks WHERE id = ?",
+        (stock_id,),
+    )
+    stock_currency = stock_row["currency"] if stock_row else "USD"
+
+    with get_connection() as conn:
+        cur = conn.cursor()
+
+        for stmt in result.statements:
+            currency = stmt.currency or stock_currency
+
+            if not stmt.periods or not stmt.items:
+                continue
+
+            for period_info in stmt.periods:
+                period_label = period_info.get("label", "")
+                col_name = period_info.get("col_name", period_label)
+
+                fiscal_year = None
+                if period_label and len(period_label) >= 4:
+                    try:
+                        fiscal_year = int(period_label[:4])
+                    except ValueError:
+                        try:
+                            fiscal_year = int(period_label[-4:])
+                        except ValueError:
+                            fiscal_year = date.today().year
+                if not fiscal_year:
+                    fiscal_year = date.today().year
+
+                period_end_date = period_label
+                if len(period_end_date) == 4:
+                    period_end_date = f"{period_end_date}-12-31"
+
+                existing = query_one(
+                    """SELECT id FROM financial_statements
+                       WHERE stock_id = ? AND statement_type = ? AND period_end_date = ?""",
+                    (stock_id, stmt.statement_type, period_end_date),
+                )
+
+                if existing:
+                    stmt_id = existing["id"]
+                    cur.execute(
+                        """UPDATE financial_statements
+                           SET confidence_score=?, extracted_by=?, created_at=?
+                           WHERE id=?""",
+                        (result.confidence, "gemini-ai-attributed", now, stmt_id),
+                    )
+                    cur.execute(
+                        "DELETE FROM financial_line_items WHERE statement_id = ?",
+                        (stmt_id,),
+                    )
+                else:
+                    cur.execute(
+                        """INSERT INTO financial_statements
+                           (stock_id, statement_type, fiscal_year, fiscal_quarter,
+                            period_end_date, filing_date, source_file, extracted_by,
+                            confidence_score, notes, created_at)
+                           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                        (
+                            stock_id, stmt.statement_type, fiscal_year, None,
+                            period_end_date, None, None,
+                            "gemini-ai-attributed",
+                            result.confidence,
+                            f"AI-attributed (corrections={result.validation_corrections})",
+                            now,
+                        ),
+                    )
+                    stmt_id = cur.lastrowid
+
+                for item in stmt.items:
+                    code = _normalize_key(item.key)
+                    _MISSING = object()
+                    amount = item.values.get(period_label, _MISSING)
+                    if amount is _MISSING:
+                        amount = item.values.get(col_name, _MISSING)
+                    if amount is _MISSING:
+                        all_vals = list(item.values.values())
+                        pidx = stmt.periods.index(period_info)
+                        if pidx < len(all_vals):
+                            amount = all_vals[pidx]
+                    if amount is _MISSING:
+                        continue
+                    if amount is None:
+                        amount = 0.0
+
+                    cur.execute(
+                        """INSERT INTO financial_line_items
+                           (statement_id, line_item_code, line_item_name,
+                            amount, currency, order_index, is_total)
+                           VALUES (?,?,?,?,?,?,?)""",
+                        (stmt_id, code, item.label_raw, float(amount),
+                         currency, item.order_index, item.is_total),
+                    )
+                    total_items += 1
+
+                updated_statements.append({
+                    "statement_id": stmt_id,
+                    "statement_type": stmt.statement_type,
+                    "period_end_date": period_end_date,
+                    "fiscal_year": fiscal_year,
+                    "line_items_count": len(stmt.items),
+                    "currency": currency,
+                })
+
+        conn.commit()
+
+    logger.info(
+        "Attribution persisted for stock %d: %d corrections, %d statements, %d items",
+        stock_id, result.validation_corrections,
+        len(updated_statements), total_items,
+    )
+
+    return {
+        "status": "ok",
+        "data": {
+            "message": (
+                f"AI attribution applied — {result.validation_corrections} corrections "
+                f"across {len(updated_statements)} statements."
+            ),
+            "corrections_applied": result.validation_corrections,
             "statements": updated_statements,
             "confidence": result.confidence,
         },
@@ -1704,6 +2077,100 @@ async def run_multiples(
     )
     _save_valuation(stock_id, result, current_user.user_id)
     return {"status": "ok", "data": result}
+
+
+# ════════════════════════════════════════════════════════════════════
+# PDF FILE MANAGEMENT
+# ════════════════════════════════════════════════════════════════════
+
+@router.get("/stocks/{stock_id}/pdfs")
+async def list_stock_pdfs(
+    stock_id: int,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """List all saved PDF files for a stock."""
+    _ensure_schema()
+    _verify_stock_owner(stock_id, current_user.user_id)
+
+    rows = query_all(
+        """SELECT id, original_name, file_size, created_at
+           FROM pdf_uploads
+           WHERE stock_id = ? AND user_id = ?
+           ORDER BY created_at DESC""",
+        (stock_id, current_user.user_id),
+    )
+    pdfs = []
+    for r in rows:
+        if isinstance(r, dict):
+            pdfs.append(r)
+        else:
+            pdfs.append({
+                "id": r[0],
+                "original_name": r[1],
+                "file_size": r[2],
+                "created_at": r[3],
+            })
+    return {"status": "ok", "data": pdfs}
+
+
+@router.get("/stocks/{stock_id}/pdfs/{pdf_id}/download")
+async def download_stock_pdf(
+    stock_id: int,
+    pdf_id: int,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Download a previously uploaded PDF."""
+    _ensure_schema()
+    _verify_stock_owner(stock_id, current_user.user_id)
+
+    row = query_one(
+        """SELECT filename, original_name
+           FROM pdf_uploads
+           WHERE id = ? AND stock_id = ? AND user_id = ?""",
+        (pdf_id, stock_id, current_user.user_id),
+    )
+    if not row:
+        raise NotFoundError("PDF Upload", str(pdf_id))
+
+    disk_name = row["filename"] if isinstance(row, dict) else row[0]
+    original = row["original_name"] if isinstance(row, dict) else row[1]
+    path = _get_pdf_dir(stock_id) / disk_name
+
+    if not path.is_file():
+        raise NotFoundError("PDF file on disk", str(pdf_id))
+
+    return FileResponse(
+        path=str(path),
+        media_type="application/pdf",
+        filename=original,
+    )
+
+
+@router.delete("/stocks/{stock_id}/pdfs/{pdf_id}")
+async def delete_stock_pdf(
+    stock_id: int,
+    pdf_id: int,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Delete a saved PDF file."""
+    _ensure_schema()
+    _verify_stock_owner(stock_id, current_user.user_id)
+
+    row = query_one(
+        """SELECT filename FROM pdf_uploads
+           WHERE id = ? AND stock_id = ? AND user_id = ?""",
+        (pdf_id, stock_id, current_user.user_id),
+    )
+    if not row:
+        raise NotFoundError("PDF Upload", str(pdf_id))
+
+    disk_name = row["filename"] if isinstance(row, dict) else row[0]
+    path = _get_pdf_dir(stock_id) / disk_name
+    if path.is_file():
+        path.unlink()
+
+    exec_sql("DELETE FROM pdf_uploads WHERE id = ?", (pdf_id,))
+    return {"status": "ok", "message": "PDF deleted."}
 
 
 # ════════════════════════════════════════════════════════════════════
