@@ -24,6 +24,7 @@ os.environ["ENVIRONMENT"] = "development"
 os.environ["SECRET_KEY"] = "test-secret-key-for-unit-tests"
 os.environ["CRON_SECRET_KEY"] = "test-cron-key"
 os.environ["PRICE_UPDATE_ENABLED"] = "false"
+os.environ.setdefault("GEMINI_API_KEY", "test-fake-gemini-key")
 
 
 @pytest.fixture(scope="session")

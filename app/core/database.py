@@ -137,6 +137,7 @@ class _PgCursorProxy:
 
     def __init__(self, cursor):
         self._cur = cursor
+        self._lastrowid = None
 
     @staticmethod
     def _translate(sql: str) -> str:
@@ -144,7 +145,19 @@ class _PgCursorProxy:
         return sql.replace("?", "%s") if "?" in sql else sql
 
     def execute(self, sql, params=None):
-        return self._cur.execute(self._translate(sql), params)
+        translated = self._translate(sql)
+        # Auto-append RETURNING id for INSERT statements so .lastrowid works
+        stripped = translated.strip().rstrip(";")
+        is_insert = stripped.upper().lstrip().startswith("INSERT")
+        if is_insert and "RETURNING" not in stripped.upper():
+            translated = stripped + " RETURNING id"
+        result = self._cur.execute(translated, params)
+        if is_insert:
+            row = self._cur.fetchone()
+            self._lastrowid = row[0] if row else None
+        else:
+            self._lastrowid = None
+        return result
 
     def fetchone(self):
         return self._cur.fetchone()
@@ -154,7 +167,7 @@ class _PgCursorProxy:
 
     @property
     def lastrowid(self):
-        return getattr(self._cur, "lastrowid", None)
+        return self._lastrowid
 
     @property
     def description(self):
@@ -313,7 +326,10 @@ def query_one(sql: str, params: tuple = ()):
     with get_connection() as conn:
         cur = conn.cursor()
         cur.execute(sql, params)
-        return cur.fetchone()
+        row = cur.fetchone()
+        if row is None:
+            return None
+        return _DualRow(row.keys(), tuple(row))
 
 
 def query_all(sql: str, params: tuple = ()) -> list:
@@ -327,7 +343,11 @@ def query_all(sql: str, params: tuple = ()) -> list:
     with get_connection() as conn:
         cur = conn.cursor()
         cur.execute(sql, params)
-        return cur.fetchall()
+        rows = cur.fetchall()
+        if not rows:
+            return []
+        keys = rows[0].keys()
+        return [_DualRow(keys, tuple(r)) for r in rows]
 
 
 def exec_sql(sql: str, params: tuple = ()) -> None:

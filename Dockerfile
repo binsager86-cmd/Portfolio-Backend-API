@@ -2,7 +2,7 @@
 # Portfolio Mobile API — Production Dockerfile
 # ─────────────────────────────────────────────────────────────────────
 # Build:  docker build -t portfolio-api .
-# Run:    docker run -p 8002:8002 --env-file .env portfolio-api
+# Run:    docker run -p 8004:8004 --env-file .env portfolio-api
 # ─────────────────────────────────────────────────────────────────────
 
 FROM python:3.12-slim AS base
@@ -30,10 +30,10 @@ COPY alembic.ini ./
 
 # ── Health check ─────────────────────────────────────────────────────
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-8002}/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8004}/health || exit 1
 
 # ── Default port ─────────────────────────────────────────────────────
-EXPOSE 8002
+EXPOSE 8004
 
 # ── Start server ─────────────────────────────────────────────────────
-CMD ["sh", "-c", "gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8002} --timeout 300 --access-logfile -"]
+CMD ["sh", "-c", "gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8004} --timeout 300 --access-logfile -"]

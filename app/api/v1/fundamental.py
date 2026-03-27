@@ -16,7 +16,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, Query, UploadFile, File
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, UploadFile, File
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
@@ -130,6 +130,7 @@ def _ensure_schema() -> None:
                 valuation_score REAL,
                 growth_score REAL,
                 quality_score REAL,
+                risk_score REAL,
                 details JSON,
                 analyst_notes TEXT,
                 created_by_user_id INTEGER,
@@ -159,6 +160,64 @@ def _ensure_schema() -> None:
                 created_at INTEGER NOT NULL,
                 FOREIGN KEY (stock_id) REFERENCES analysis_stocks(id)
             )""",
+        # ── Cash flow staging tables ──────────────────────────────────
+        f"""CREATE TABLE IF NOT EXISTS cashflow_extraction_runs (
+                id {_PK},
+                stock_id INTEGER NOT NULL,
+                pdf_upload_id INTEGER,
+                source_file TEXT,
+                status TEXT NOT NULL DEFAULT 'extracted',
+                periods_json TEXT,
+                raw_model_response TEXT,
+                reconciliation_summary TEXT,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                FOREIGN KEY (stock_id) REFERENCES analysis_stocks(id)
+            )""",
+        f"""CREATE TABLE IF NOT EXISTS cashflow_staged_rows (
+                id {_PK},
+                run_id INTEGER NOT NULL,
+                row_order INTEGER NOT NULL,
+                label_raw TEXT NOT NULL,
+                normalized_code TEXT,
+                section TEXT NOT NULL DEFAULT 'unknown',
+                row_kind TEXT NOT NULL DEFAULT 'item',
+                values_json TEXT NOT NULL DEFAULT '{{}}',
+                is_total BOOLEAN DEFAULT 0,
+                confidence REAL,
+                is_accepted BOOLEAN DEFAULT 0,
+                rejection_reason TEXT,
+                created_at INTEGER NOT NULL,
+                FOREIGN KEY (run_id) REFERENCES cashflow_extraction_runs(id)
+            )""",
+        # ── Extraction jobs (async upload pipeline) ─────────────────────
+        f"""CREATE TABLE IF NOT EXISTS extraction_jobs (
+                id {_PK},
+                stock_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                pdf_upload_id INTEGER,
+                pdf_hash TEXT,
+                source_file TEXT,
+                status TEXT NOT NULL DEFAULT 'queued',
+                stage TEXT NOT NULL DEFAULT 'uploading',
+                pages_processed INTEGER DEFAULT 0,
+                total_pages INTEGER DEFAULT 0,
+                progress_percent REAL DEFAULT 0,
+                model TEXT DEFAULT 'gemini-2.5-flash',
+                error_message TEXT,
+                result_payload TEXT,
+                attempt_count INTEGER DEFAULT 1,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                started_at INTEGER,
+                last_heartbeat_at INTEGER,
+                completed_at INTEGER,
+                FOREIGN KEY (stock_id) REFERENCES analysis_stocks(id)
+            )""",
+        "CREATE INDEX IF NOT EXISTS idx_extraction_jobs_stock ON extraction_jobs(stock_id)",
+        "CREATE INDEX IF NOT EXISTS idx_extraction_jobs_hash ON extraction_jobs(stock_id, pdf_hash)",
+        "CREATE INDEX IF NOT EXISTS idx_cf_runs_stock ON cashflow_extraction_runs(stock_id)",
+        "CREATE INDEX IF NOT EXISTS idx_cf_rows_run ON cashflow_staged_rows(run_id)",
         "CREATE INDEX IF NOT EXISTS idx_analysis_stocks_user ON analysis_stocks(user_id)",
         "CREATE INDEX IF NOT EXISTS idx_analysis_stocks_symbol ON analysis_stocks(symbol)",
         "CREATE INDEX IF NOT EXISTS idx_financial_statements_stock ON financial_statements(stock_id)",
@@ -174,6 +233,16 @@ def _ensure_schema() -> None:
             exec_sql(ddl)
     except Exception as e:
         logger.warning("⚠️  Analysis schema creation skipped: %s", e)
+
+    # ── Schema migrations (add columns to existing tables) ──
+    _MIGRATIONS = [
+        "ALTER TABLE stock_scores ADD COLUMN risk_score REAL",
+    ]
+    for mig in _MIGRATIONS:
+        try:
+            exec_sql(mig)
+        except Exception:
+            pass  # column already exists
 
     _SCHEMA_INIT = True
 
@@ -226,6 +295,253 @@ def _save_pdf_file(
     return row_id
 
 
+# ── Extraction job helpers ───────────────────────────────────────────
+
+# Stale-job threshold: jobs without heartbeat for this long are marked failed.
+STALE_JOB_THRESHOLD_SECONDS = 15 * 60  # 15 minutes
+
+
+def _log_job(job_id: int, stock_id: int, event: str, **extra: Any) -> None:
+    """Emit a structured extraction-job log line.
+
+    Every message includes job_id and stock_id; callers add stage, duration_ms,
+    filename, hash, error, etc. via **extra.
+    """
+    parts = [f"extraction job_id={job_id} stock_id={stock_id} event={event}"]
+    for k, v in extra.items():
+        parts.append(f"{k}={v}")
+    logger.info(" ".join(parts))
+
+
+def _update_job(job_id: int, **fields: Any) -> None:
+    """Update extraction_jobs fields atomically."""
+    fields["updated_at"] = int(time.time())
+    sets = ", ".join(f"{k} = ?" for k in fields)
+    vals = list(fields.values()) + [job_id]
+    exec_sql(f"UPDATE extraction_jobs SET {sets} WHERE id = ?", tuple(vals))
+
+
+def recover_stale_jobs() -> int:
+    """Mark stale running/queued jobs as failed.
+
+    Called at app startup and can be called periodically.
+    Returns the number of jobs recovered.
+    """
+    now = int(time.time())
+    cutoff = now - STALE_JOB_THRESHOLD_SECONDS
+    stale = query_all(
+        """SELECT id, stock_id, status, last_heartbeat_at, updated_at FROM extraction_jobs
+           WHERE status IN ('queued', 'running')
+           AND COALESCE(last_heartbeat_at, updated_at, created_at) < ?""",
+        (cutoff,),
+    )
+    count = 0
+    for row in (stale or []):
+        r = dict(row) if not isinstance(row, dict) else row
+        job_id = r["id"]
+        logger.warning(
+            "Recovering stale extraction job %d (status=%s, last_heartbeat=%s)",
+            job_id, r["status"], r.get("last_heartbeat_at"),
+        )
+        _log_job(job_id, r.get("stock_id", 0), "stale_recovery",
+                 prev_status=r["status"],
+                 last_heartbeat=r.get("last_heartbeat_at"))
+        _update_job(
+            job_id,
+            status="failed",
+            error_message="Job timed out — server restart or stale heartbeat.",
+            completed_at=now,
+        )
+        count += 1
+    if count:
+        logger.info("Recovered %d stale extraction job(s).", count)
+    return count
+
+
+HEARTBEAT_INTERVAL_SECONDS = 30  # Periodic heartbeat interval
+
+
+def _start_heartbeat_thread(job_id: int, interval: int = HEARTBEAT_INTERVAL_SECONDS):
+    """Spawn a daemon thread that updates last_heartbeat_at every *interval* seconds.
+
+    Returns (thread, stop_event).  Call ``stop_event.set()`` to terminate.
+    """
+    import threading
+
+    stop_event = threading.Event()
+
+    def _heartbeat_loop():
+        while not stop_event.wait(timeout=interval):
+            try:
+                _update_job(job_id, last_heartbeat_at=int(time.time()))
+            except Exception:
+                pass  # best-effort; don't crash the heartbeat thread
+
+    t = threading.Thread(target=_heartbeat_loop, daemon=True, name=f"hb-job-{job_id}")
+    t.start()
+    return t, stop_event
+
+
+def _run_extraction_job_sync(
+    job_id: int,
+    stock_id: int,
+    user_id: int,
+    pdf_bytes: bytes,
+    filename: str,
+    model: str,
+    force: bool,
+    api_key: str,
+    existing_codes: List[Dict[str, str]],
+) -> None:
+    """Background extraction worker — runs the full AI pipeline for a job.
+
+    This is a synchronous wrapper executed via FastAPI BackgroundTasks.
+    The actual AI call (extract_financials) is async, so we run it in
+    an event loop.  A periodic heartbeat thread keeps *last_heartbeat_at*
+    fresh so stale-job recovery doesn't kill long-running jobs.
+    """
+    import asyncio
+    from app.services.extraction_service import extract_financials
+
+    start_ts = time.time()
+    now = int(start_ts)
+    _update_job(job_id, status="running", stage="extracting", started_at=now, last_heartbeat_at=now)
+
+    _log_job(job_id, stock_id, "started", filename=filename, model=model)
+
+    # ── Start periodic heartbeat thread ──────────────────────────────
+    hb_thread, hb_stop = _start_heartbeat_thread(job_id)
+    loop: Optional[asyncio.AbstractEventLoop] = None
+
+    try:
+        # Run the async extraction in a new event loop (BackgroundTasks are sync threads)
+        loop = asyncio.new_event_loop()
+        result = loop.run_until_complete(extract_financials(
+            pdf_bytes=pdf_bytes,
+            stock_id=stock_id,
+            api_key=api_key,
+            filename=filename,
+            model_name=model,
+            use_cache=not force,
+            existing_codes=existing_codes if existing_codes else None,
+        ))
+
+        extract_ms = int((time.time() - start_ts) * 1000)
+        _log_job(job_id, stock_id, "extraction_complete", filename=filename,
+                 duration_ms=extract_ms, pages=result.pages_processed)
+
+        # Heartbeat after extraction
+        _update_job(
+            job_id,
+            stage="saving",
+            total_pages=result.pages_processed,
+            pages_processed=result.pages_processed,
+            progress_percent=80,
+            last_heartbeat_at=int(time.time()),
+        )
+
+        # ── Persist (must succeed for status=done) ───────────────────
+        stock_row = query_one(
+            "SELECT currency FROM analysis_stocks WHERE id = ?", (stock_id,),
+        )
+        stock_currency = stock_row["currency"] if stock_row else "USD"
+
+        created_statements, total_items = _persist_extraction_result(
+            stock_id=stock_id,
+            result=result,
+            stock_currency=stock_currency,
+            source_file=filename,
+            extracted_by="gemini-ai-pipeline",
+            notes_template=f"AI-extracted (pipeline, retries={result.retry_count})",
+        )
+
+        # Save PDF (non-fatal)
+        try:
+            _save_pdf_file(stock_id, user_id, pdf_bytes, filename)
+        except Exception as e:
+            logger.warning("PDF file save failed (non-fatal): %s", e)
+
+        # Build audit summary
+        audit_summary = {
+            "checks_total": len(result.audit_checks),
+            "checks_passed": sum(1 for c in result.audit_checks if c.passed),
+            "checks_failed": sum(1 for c in result.audit_checks if not c.passed),
+            "retries_used": result.retry_count,
+            "validation_corrections": result.validation_corrections,
+            "details": [
+                {
+                    "statement_type": c.statement_type,
+                    "period": c.period,
+                    "rule": c.total_label,
+                    "expected": c.computed_sum,
+                    "actual": c.total_value,
+                    "passed": c.passed,
+                    "detail": c.detail,
+                    "discrepancy": c.discrepancy,
+                }
+                for c in result.audit_checks
+            ],
+        }
+
+        total_ms = int((time.time() - start_ts) * 1000)
+        result_payload = {
+            "message": (
+                f"Successfully extracted {len(created_statements)} statements "
+                f"with {total_items} line items."
+            ),
+            "statements": created_statements,
+            "source_file": filename,
+            "pages_processed": result.pages_processed,
+            "model": result.model_used,
+            "confidence": result.confidence,
+            "cached": result.cached,
+            "audit": audit_summary,
+            "duration_ms": total_ms,
+        }
+
+        # Attach raw AI text for debugging when 0 statements extracted
+        if not created_statements and getattr(result, "raw_ai_text", ""):
+            result_payload["raw_ai_response_preview"] = result.raw_ai_text[:3000]
+
+        # ── Finalize atomically: status=done only after all persistence ──
+        _update_job(
+            job_id,
+            status="done",
+            stage="done",
+            progress_percent=100,
+            pages_processed=result.pages_processed,
+            total_pages=result.pages_processed,
+            result_payload=json.dumps(result_payload, default=str),
+            last_heartbeat_at=int(time.time()),
+            completed_at=int(time.time()),
+        )
+
+        _log_job(job_id, stock_id, "done", filename=filename,
+                 duration_ms=total_ms, statements=len(created_statements),
+                 items=total_items)
+
+    except Exception as exc:
+        err_ms = int((time.time() - start_ts) * 1000)
+        _log_job(job_id, stock_id, "failed", filename=filename,
+                 duration_ms=err_ms, error=str(exc)[:200])
+        _update_job(
+            job_id,
+            status="failed",
+            error_message=str(exc)[:2000],
+            last_heartbeat_at=int(time.time()),
+            completed_at=int(time.time()),
+        )
+    finally:
+        # ── Cleanup: stop heartbeat, close event loop ────────────────
+        hb_stop.set()
+        hb_thread.join(timeout=5)
+        if loop is not None:
+            try:
+                loop.close()
+            except Exception:
+                pass
+
+
 # ── Pydantic Schemas ─────────────────────────────────────────────────
 
 class StockCreate(BaseModel):
@@ -275,9 +591,37 @@ class StatementCreate(BaseModel):
 
 class DeletePeriodsRequest(BaseModel):
     periods: List[str] = Field(..., description="List of period_end_date values to delete")
+    statement_type: Optional[str] = Field(None, description="Optional: only delete this statement type (income, balance, cashflow, equity)")
 
 class LineItemUpdate(BaseModel):
     amount: float
+
+
+class ReorderItem(BaseModel):
+    id: int
+    order_index: int
+
+
+class ReorderItemsRequest(BaseModel):
+    items: List[ReorderItem]
+
+
+class CreateLineItemRequest(BaseModel):
+    statement_id: int
+    line_item_code: str
+    line_item_name: str
+    amount: float = 0.0
+    order_index: Optional[int] = None
+
+
+class MergeLineItemsRequest(BaseModel):
+    """Merge two line items into one.
+
+    keep_code: the line_item_code to keep (target)
+    remove_code: the line_item_code to merge into keep_code and delete
+    """
+    keep_code: str
+    remove_code: str
 
 
 class MetricsCalculateRequest(BaseModel):
@@ -288,8 +632,10 @@ class MetricsCalculateRequest(BaseModel):
 
 class GrahamRequest(BaseModel):
     eps: float
-    book_value_per_share: float
-    multiplier: float = 22.5
+    growth_rate: float = 0.0
+    corporate_yield: float = 4.4
+    margin_of_safety: float = 25.0
+    current_price: Optional[float] = None
 
 
 class DCFRequest(BaseModel):
@@ -301,6 +647,8 @@ class DCFRequest(BaseModel):
     stage2_years: int = 5
     terminal_growth: float = 0.025
     shares_outstanding: float = 1.0
+    cash: float = 0.0
+    debt: float = 0.0
 
 
 class DDMRequest(BaseModel):
@@ -667,10 +1015,16 @@ async def delete_statements_by_period(
         raise BadRequestError("No periods provided.")
 
     placeholders = ",".join("?" for _ in body.periods)
-    rows = query_all(
-        f"SELECT id FROM financial_statements WHERE stock_id = ? AND period_end_date IN ({placeholders})",
-        [stock_id] + body.periods,
-    )
+    if body.statement_type:
+        rows = query_all(
+            f"SELECT id FROM financial_statements WHERE stock_id = ? AND statement_type = ? AND period_end_date IN ({placeholders})",
+            [stock_id, body.statement_type] + body.periods,
+        )
+    else:
+        rows = query_all(
+            f"SELECT id FROM financial_statements WHERE stock_id = ? AND period_end_date IN ({placeholders})",
+            [stock_id] + body.periods,
+        )
     if not rows:
         raise NotFoundError("Statements", ", ".join(body.periods))
 
@@ -687,6 +1041,107 @@ async def delete_statements_by_period(
         "status": "ok",
         "data": {"message": f"{len(stmt_ids)} statement(s) deleted.", "deleted_count": len(stmt_ids)},
     }
+
+
+@router.delete("/stocks/{stock_id}/statements")
+async def delete_all_statements(
+    stock_id: int,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Hard-delete ALL financial statements and their line items for a stock."""
+    _ensure_schema()
+    _verify_stock_owner(stock_id, current_user.user_id)
+
+    rows = query_all(
+        "SELECT id FROM financial_statements WHERE stock_id = ?",
+        (stock_id,),
+    )
+    if not rows:
+        raise NotFoundError("No statements found for this stock.")
+
+    stmt_ids = [r["id"] if isinstance(r, dict) else r[0] for r in rows]
+    id_placeholders = ",".join("?" for _ in stmt_ids)
+
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(f"DELETE FROM financial_line_items WHERE statement_id IN ({id_placeholders})", stmt_ids)
+        cur.execute(f"DELETE FROM financial_statements WHERE id IN ({id_placeholders})", stmt_ids)
+        conn.commit()
+
+    return {
+        "status": "ok",
+        "data": {"message": f"All {len(stmt_ids)} statement(s) deleted.", "deleted_count": len(stmt_ids)},
+    }
+
+
+@router.post("/stocks/{stock_id}/statements/reorder-items")
+async def reorder_line_items(
+    stock_id: int,
+    body: ReorderItemsRequest,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Bulk-update order_index for line items (drag-and-drop reorder)."""
+    _ensure_schema()
+    if not body.items:
+        raise BadRequestError("No items provided.")
+
+    with get_connection() as conn:
+        cur = conn.cursor()
+        updated = 0
+        for item in body.items:
+            # Verify ownership via join chain
+            cur.execute(
+                """SELECT li.id FROM financial_line_items li
+                   JOIN financial_statements fs ON li.statement_id = fs.id
+                   JOIN analysis_stocks s ON fs.stock_id = s.id
+                   WHERE li.id = ? AND s.id = ? AND s.user_id = ?""",
+                (item.id, stock_id, current_user.user_id),
+            )
+            if cur.fetchone():
+                cur.execute(
+                    "UPDATE financial_line_items SET order_index = ? WHERE id = ?",
+                    (item.order_index, item.id),
+                )
+                updated += 1
+        conn.commit()
+    return {"status": "ok", "data": {"message": f"{updated} item(s) reordered.", "updated": updated}}
+
+
+@router.post("/stocks/{stock_id}/line-items", status_code=201)
+async def create_line_item(
+    stock_id: int,
+    body: CreateLineItemRequest,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Create a single line item in an existing statement (e.g. filling a dash)."""
+    _ensure_schema()
+    # Verify the statement belongs to this stock and user
+    row = query_one(
+        """SELECT fs.id FROM financial_statements fs
+           JOIN analysis_stocks s ON fs.stock_id = s.id
+           WHERE fs.id = ? AND s.id = ? AND s.user_id = ?""",
+        (body.statement_id, stock_id, current_user.user_id),
+    )
+    if not row:
+        raise NotFoundError("Statement", str(body.statement_id))
+
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """INSERT INTO financial_line_items
+               (statement_id, line_item_code, line_item_name, amount,
+                currency, order_index, is_total, manually_edited,
+                edited_by_user_id, edited_at)
+               VALUES (?, ?, ?, ?, 'KWD', ?, 0, 1, ?, ?)""",
+            (
+                body.statement_id, body.line_item_code, body.line_item_name,
+                body.amount, body.order_index,
+                current_user.user_id, int(time.time()),
+            ),
+        )
+        new_id = cur.lastrowid
+        conn.commit()
+    return {"status": "ok", "data": {"id": new_id, "message": "Line item created."}}
 
 
 @router.put("/line-items/{item_id}")
@@ -721,6 +1176,119 @@ async def update_line_item(
     return {"status": "ok", "data": {"message": "Line item updated."}}
 
 
+@router.delete("/line-items/{item_id}")
+async def delete_line_item(
+    item_id: int,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Delete a single line item (row removal from statement table)."""
+    _ensure_schema()
+    row = query_one(
+        """SELECT li.id, li.line_item_code
+           FROM financial_line_items li
+           JOIN financial_statements fs ON li.statement_id = fs.id
+           JOIN analysis_stocks       s  ON fs.stock_id    = s.id
+           WHERE li.id = ? AND s.user_id = ?""",
+        (item_id, current_user.user_id),
+    )
+    if not row:
+        raise NotFoundError("Line Item", str(item_id))
+    exec_sql("DELETE FROM financial_line_items WHERE id = ?", (item_id,))
+    return {"status": "ok", "data": {"message": "Line item deleted."}}
+
+
+@router.post("/stocks/{stock_id}/merge-line-items")
+async def merge_line_items(
+    stock_id: int,
+    body: MergeLineItemsRequest,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Merge two line items across all periods.
+
+    For each period/statement: if keep_code has no value (or is 0/dash) but
+    remove_code does, copy remove_code's amount into keep_code.  Then delete
+    all remove_code items.
+    """
+    _ensure_schema()
+    _verify_stock_owner(stock_id, current_user.user_id)
+
+    keep_code = body.keep_code
+    remove_code = body.remove_code
+    if keep_code == remove_code:
+        raise BadRequestError("Cannot merge a line item with itself.")
+
+    now = int(time.time())
+    merged_count = 0
+    deleted_count = 0
+
+    with get_connection() as conn:
+        cur = conn.cursor()
+
+        # Get all statements for this stock
+        stmt_rows = cur.execute(
+            "SELECT id FROM financial_statements WHERE stock_id = ?",
+            (stock_id,),
+        ).fetchall()
+
+        for stmt_row in stmt_rows:
+            sid = stmt_row["id"] if isinstance(stmt_row, dict) else stmt_row[0]
+
+            # Find keep_code item in this statement
+            keep_item = cur.execute(
+                "SELECT id, amount FROM financial_line_items WHERE statement_id = ? AND line_item_code = ?",
+                (sid, keep_code),
+            ).fetchone()
+
+            # Find remove_code item in this statement
+            remove_item = cur.execute(
+                "SELECT id, amount, line_item_name, order_index, is_total FROM financial_line_items WHERE statement_id = ? AND line_item_code = ?",
+                (sid, remove_code),
+            ).fetchone()
+
+            if remove_item is None:
+                continue
+
+            r_id = remove_item["id"] if isinstance(remove_item, dict) else remove_item[0]
+            r_amount = remove_item["amount"] if isinstance(remove_item, dict) else remove_item[1]
+            r_name = remove_item["line_item_name"] if isinstance(remove_item, dict) else remove_item[2]
+            r_order = remove_item["order_index"] if isinstance(remove_item, dict) else remove_item[3]
+            r_is_total = remove_item["is_total"] if isinstance(remove_item, dict) else remove_item[4]
+
+            if keep_item is None:
+                # No keep_code in this period — re-label the remove item
+                cur.execute(
+                    "UPDATE financial_line_items SET line_item_code = ? WHERE id = ?",
+                    (keep_code, r_id),
+                )
+                merged_count += 1
+            else:
+                k_id = keep_item["id"] if isinstance(keep_item, dict) else keep_item[0]
+                k_amount = keep_item["amount"] if isinstance(keep_item, dict) else keep_item[1]
+
+                # If keep has 0/null but remove has a real value, copy it over
+                if (k_amount is None or k_amount == 0) and r_amount is not None and r_amount != 0:
+                    cur.execute(
+                        "UPDATE financial_line_items SET amount = ?, manually_edited = 1, edited_at = ? WHERE id = ?",
+                        (r_amount, now, k_id),
+                    )
+                    merged_count += 1
+
+                # Delete the remove item
+                cur.execute("DELETE FROM financial_line_items WHERE id = ?", (r_id,))
+                deleted_count += 1
+
+        conn.commit()
+
+    return {
+        "status": "ok",
+        "data": {
+            "message": f"Merged '{remove_code}' into '{keep_code}': {merged_count} values merged, {deleted_count} duplicates removed.",
+            "merged_count": merged_count,
+            "deleted_count": deleted_count,
+        },
+    }
+
+
 # ════════════════════════════════════════════════════════════════════
 # AI-POWERED PDF UPLOAD — Gemini Vision Extraction
 # ════════════════════════════════════════════════════════════════════
@@ -739,128 +1307,137 @@ _AI_STMT_TYPE_MAP = {
 }
 
 # Standard line item codes for normalization
-_STANDARD_CODES: Dict[str, str] = {
+# Canonical code map — all values are lowercase for consistency across years.
+# Uses the same canonical forms as _MERGE_CODES in extraction_service.py.
+_CANONICAL_CODES: Dict[str, str] = {
     # Income statement
-    "revenue": "REVENUE", "total_revenue": "REVENUE", "net_revenue": "REVENUE",
-    "sales": "REVENUE", "net_sales": "REVENUE",
-    "cost_of_revenue": "COST_OF_REVENUE", "cost_of_sales": "COST_OF_REVENUE",
-    "cost_of_goods_sold": "COST_OF_REVENUE", "cogs": "COST_OF_REVENUE",
-    "gross_profit": "GROSS_PROFIT",
-    "selling_general_administrative": "SGA", "sga": "SGA",
-    "selling_general_and_administrative": "SGA",
-    "research_and_development": "R&D", "r_and_d": "R&D", "r&d": "R&D",
-    "operating_expenses": "OPERATING_EXPENSES", "total_operating_expenses": "OPERATING_EXPENSES",
-    "operating_income": "OPERATING_INCOME", "operating_profit": "OPERATING_INCOME",
-    "income_from_operations": "OPERATING_INCOME",
-    "interest_expense": "INTEREST_EXPENSE", "finance_costs": "INTEREST_EXPENSE",
-    "finance_cost": "INTEREST_EXPENSE",
-    "other_income": "OTHER_INCOME", "other_income_expense": "OTHER_INCOME",
-    "income_before_tax": "INCOME_BEFORE_TAX", "profit_before_tax": "INCOME_BEFORE_TAX",
-    "income_tax": "INCOME_TAX", "income_tax_expense": "INCOME_TAX",
-    "tax_expense": "INCOME_TAX", "taxation": "INCOME_TAX",
-    "net_income": "NET_INCOME", "net_profit": "NET_INCOME",
-    "profit_for_the_year": "NET_INCOME", "profit_for_the_period": "NET_INCOME",
-    "net_income_attributable_to_shareholders": "NET_INCOME",
-    "eps_basic": "EPS_BASIC", "basic_eps": "EPS_BASIC",
-    "basic_earnings_per_share": "EPS_BASIC", "earnings_per_share_basic": "EPS_BASIC",
-    "eps_diluted": "EPS_DILUTED", "diluted_eps": "EPS_DILUTED",
-    "diluted_earnings_per_share": "EPS_DILUTED", "earnings_per_share_diluted": "EPS_DILUTED",
-    "ebitda": "EBITDA",
-    "depreciation_and_amortization": "DEPRECIATION_AMORTIZATION",
-    "depreciation_amortization": "DEPRECIATION_AMORTIZATION",
+    "revenue": "revenue", "total_revenue": "revenue", "net_revenue": "revenue",
+    "sales": "revenue", "net_sales": "revenue",
+    "cost_of_revenue": "cost_of_revenue", "cost_of_sales": "cost_of_revenue",
+    "cost_of_goods_sold": "cost_of_revenue", "cogs": "cost_of_revenue",
+    "gross_profit": "gross_profit",
+    "selling_general_administrative": "sga", "sga": "sga",
+    "selling_general_and_administrative": "sga",
+    "research_and_development": "r_and_d", "r_and_d": "r_and_d", "r&d": "r_and_d",
+    "operating_expenses": "operating_expenses", "total_operating_expenses": "operating_expenses",
+    "operating_income": "operating_income", "operating_profit": "operating_income",
+    "income_from_operations": "operating_income",
+    "interest_expense": "interest_expense", "finance_costs": "interest_expense",
+    "finance_cost": "interest_expense",
+    "other_income": "other_income", "other_income_expense": "other_income",
+    "income_before_tax": "income_before_tax", "profit_before_tax": "income_before_tax",
+    "income_tax": "income_tax", "income_tax_expense": "income_tax",
+    "tax_expense": "income_tax", "taxation": "income_tax",
+    "net_income": "net_income", "net_profit": "net_income",
+    "profit_for_the_year": "net_income", "profit_for_the_period": "net_income",
+    "profit_for_year": "net_income",
+    "net_income_attributable_to_shareholders": "net_income",
+    "eps_basic": "eps_basic", "basic_eps": "eps_basic",
+    "basic_earnings_per_share": "eps_basic", "earnings_per_share_basic": "eps_basic",
+    "basic_and_diluted_earnings_per_share": "eps_basic",
+    "basic_and_diluted_earnings_per_sha": "eps_basic",
+    "earnings_per_share": "eps_basic",
+    "eps_diluted": "eps_diluted", "diluted_eps": "eps_diluted",
+    "diluted_earnings_per_share": "eps_diluted", "earnings_per_share_diluted": "eps_diluted",
+    "ebitda": "ebitda",
+    "depreciation_and_amortization": "depreciation_amortization",
+    "depreciation_amortization": "depreciation_amortization",
     # Balance sheet
-    "cash_and_cash_equivalents": "CASH_EQUIVALENTS", "cash_equivalents": "CASH_EQUIVALENTS",
-    "cash_and_bank_balances": "CASH_EQUIVALENTS", "cash_and_balances_with_banks": "CASH_EQUIVALENTS",
-    "accounts_receivable": "ACCOUNTS_RECEIVABLE", "trade_receivables": "ACCOUNTS_RECEIVABLE",
-    "receivables": "ACCOUNTS_RECEIVABLE", "trade_and_other_receivables": "ACCOUNTS_RECEIVABLE",
-    "inventory": "INVENTORY", "inventories": "INVENTORY",
-    "other_current_assets": "OTHER_CURRENT_ASSETS",
-    "total_current_assets": "TOTAL_CURRENT_ASSETS",
-    "property_plant_equipment": "PPE_NET", "property_plant_and_equipment": "PPE_NET",
-    "ppe_net": "PPE_NET", "fixed_assets": "PPE_NET",
-    "goodwill": "GOODWILL",
-    "intangible_assets": "INTANGIBLE_ASSETS", "intangibles": "INTANGIBLE_ASSETS",
-    "total_non_current_assets": "TOTAL_NON_CURRENT_ASSETS",
-    "total_assets": "TOTAL_ASSETS",
-    "accounts_payable": "ACCOUNTS_PAYABLE", "trade_payables": "ACCOUNTS_PAYABLE",
-    "trade_and_other_payables": "ACCOUNTS_PAYABLE",
-    "short_term_debt": "SHORT_TERM_DEBT", "current_portion_of_debt": "SHORT_TERM_DEBT",
-    "short_term_borrowings": "SHORT_TERM_DEBT",
-    "total_current_liabilities": "TOTAL_CURRENT_LIABILITIES",
-    "long_term_debt": "LONG_TERM_DEBT", "long_term_borrowings": "LONG_TERM_DEBT",
-    "non_current_borrowings": "LONG_TERM_DEBT",
-    "total_non_current_liabilities": "TOTAL_NON_CURRENT_LIABILITIES",
-    "total_liabilities": "TOTAL_LIABILITIES",
-    "common_stock": "COMMON_STOCK", "share_capital": "COMMON_STOCK",
-    "issued_capital": "COMMON_STOCK",
-    "retained_earnings": "RETAINED_EARNINGS",
-    "total_equity": "TOTAL_EQUITY", "total_shareholders_equity": "TOTAL_EQUITY",
-    "total_stockholders_equity": "TOTAL_EQUITY",
-    "equity_attributable_to_shareholders": "TOTAL_EQUITY",
-    "total_liabilities_and_equity": "TOTAL_LIABILITIES_EQUITY",
-    "total_liabilities_and_shareholders_equity": "TOTAL_LIABILITIES_EQUITY",
+    "cash": "cash", "cash_and_cash_equivalents": "cash", "cash_equivalents": "cash",
+    "cash_and_bank_balances": "cash", "cash_and_balances_with_banks": "cash",
+    "accounts_receivable": "accounts_receivable", "trade_receivables": "accounts_receivable",
+    "receivables": "accounts_receivable", "trade_and_other_receivables": "accounts_receivable",
+    "inventory": "inventory", "inventories": "inventory",
+    "other_current_assets": "other_current_assets",
+    "total_current_assets": "total_current_assets",
+    "property_plant_equipment": "ppe_net", "property_plant_and_equipment": "ppe_net",
+    "ppe_net": "ppe_net", "fixed_assets": "ppe_net",
+    "property_and_equipment": "ppe_net",
+    "goodwill": "goodwill",
+    "intangible_assets": "intangible_assets", "intangibles": "intangible_assets",
+    "total_non_current_assets": "total_non_current_assets",
+    "total_assets": "total_assets",
+    "accounts_payable": "accounts_payable", "trade_payables": "accounts_payable",
+    "trade_and_other_payables": "accounts_payable",
+    "short_term_debt": "short_term_debt", "current_portion_of_debt": "short_term_debt",
+    "current_portion_of_long_term_debt": "short_term_debt",
+    "short_term_borrowings": "short_term_debt",
+    "total_current_liabilities": "total_current_liabilities",
+    "long_term_debt": "long_term_debt", "long_term_borrowings": "long_term_debt",
+    "non_current_borrowings": "long_term_debt",
+    "total_non_current_liabilities": "total_non_current_liabilities",
+    "total_liabilities": "total_liabilities",
+    "common_stock": "share_capital", "share_capital": "share_capital",
+    "issued_capital": "share_capital",
+    "retained_earnings": "retained_earnings",
+    "share_premium": "share_premium",
+    "statutory_reserve": "statutory_reserve",
+    "voluntary_reserve": "voluntary_reserve",
+    "general_reserve": "general_reserve",
+    "treasury_shares": "treasury_shares", "treasury_shares_equity": "treasury_shares",
+    "total_equity": "total_equity", "total_shareholders_equity": "total_equity",
+    "total_stockholders_equity": "total_equity",
+    "equity_attributable_to_shareholders": "total_equity",
+    "total_liabilities_and_equity": "total_liabilities_and_equity",
+    "total_liabilities_and_shareholders_equity": "total_liabilities_and_equity",
+    "total_liabilities_equity": "total_liabilities_and_equity",
     # Cash flow
-    "net_income_cf": "NET_INCOME_CF",
-    "cash_from_operations": "CASH_FROM_OPERATIONS",
-    "cash_from_operating_activities": "CASH_FROM_OPERATIONS",
-    "net_cash_from_operating_activities": "CASH_FROM_OPERATIONS",
-    "capital_expenditures": "CAPITAL_EXPENDITURES", "capex": "CAPITAL_EXPENDITURES",
-    "purchase_of_property_plant_equipment": "CAPITAL_EXPENDITURES",
-    "other_investing_activities": "OTHER_INVESTING",
-    "cash_from_investing": "CASH_FROM_INVESTING",
-    "cash_from_investing_activities": "CASH_FROM_INVESTING",
-    "net_cash_from_investing_activities": "CASH_FROM_INVESTING",
-    "debt_issued": "DEBT_ISSUED", "proceeds_from_borrowings": "DEBT_ISSUED",
-    "debt_repaid": "DEBT_REPAID", "repayment_of_borrowings": "DEBT_REPAID",
-    "dividends_paid": "DIVIDENDS_PAID", "dividend_paid": "DIVIDENDS_PAID",
-    "cash_from_financing": "CASH_FROM_FINANCING",
-    "cash_from_financing_activities": "CASH_FROM_FINANCING",
-    "net_cash_from_financing_activities": "CASH_FROM_FINANCING",
-    "net_change_in_cash": "NET_CHANGE_CASH",
-    "net_increase_decrease_in_cash": "NET_CHANGE_CASH",
-    "changes_in_working_capital": "CHANGES_WORKING_CAPITAL",
+    "net_income_cf": "net_income_cf",
+    "cash_from_operations": "cash_from_operations",
+    "cash_from_operating_activities": "cash_from_operations",
+    "net_cash_from_operating_activities": "cash_from_operations",
+    "net_cash_used_in_operating_activities": "cash_from_operations",
+    "cash_used_in_operating_activities": "cash_from_operations",
+    "capital_expenditures": "capital_expenditures", "capex": "capital_expenditures",
+    "purchase_of_property_plant_equipment": "capital_expenditures",
+    "purchase_of_property_plant_and_equipment": "capital_expenditures",
+    "other_investing_activities": "other_investing",
+    "other_investing": "other_investing",
+    "cash_from_investing": "cash_from_investing",
+    "cash_from_investing_activities": "cash_from_investing",
+    "net_cash_from_investing_activities": "cash_from_investing",
+    "net_cash_used_in_investing_activities": "cash_from_investing",
+    "cash_used_in_investing_activities": "cash_from_investing",
+    "debt_issued": "debt_issued", "proceeds_from_borrowings": "debt_issued",
+    "debt_repaid": "debt_repaid", "repayment_of_borrowings": "debt_repaid",
+    "dividends_paid": "dividends_paid", "dividend_paid": "dividends_paid",
+    "cash_from_financing": "cash_from_financing",
+    "cash_from_financing_activities": "cash_from_financing",
+    "net_cash_from_financing_activities": "cash_from_financing",
+    "net_cash_used_in_financing_activities": "cash_from_financing",
+    "cash_used_in_financing_activities": "cash_from_financing",
+    "net_change_in_cash": "net_change_in_cash",
+    "net_change_cash": "net_change_in_cash",
+    "net_increase_decrease_in_cash": "net_change_in_cash",
+    "changes_in_working_capital": "changes_in_working_capital",
+    "changes_working_capital": "changes_in_working_capital",
     # Equity statement
-    "share_premium": "SHARE_PREMIUM",
-    "statutory_reserve": "STATUTORY_RESERVE",
-    "voluntary_reserve": "VOLUNTARY_RESERVE",
-    "general_reserve": "GENERAL_RESERVE",
-    "treasury_shares": "TREASURY_SHARES_EQUITY",
-    "shares_outstanding": "SHARES_DILUTED", "share_count": "SHARE_COUNT",
-    "shares_basic": "SHARES_BASIC", "shares_diluted": "SHARES_DILUTED",
+    "shares_outstanding": "shares_diluted", "share_count": "share_count",
+    "shares_basic": "shares_basic", "shares_diluted": "shares_diluted",
     # GCC / Kuwait specific
-    "cost_of_operations": "COST_OF_REVENUE",
-    "general_and_administrative_expenses": "GENERAL_AND_ADMIN",
-    "general_and_administrative_expens": "GENERAL_AND_ADMIN",
-    "selling_expenses": "SELLING_EXPENSES",
-    "selling_and_distribution_expenses": "SELLING_EXPENSES",
-    "finance_charges": "FINANCE_CHARGES",
-    "finance_charge": "FINANCE_CHARGES",
-    "profit_before_contribution_to_kfas": "PROFIT_BEFORE_DEDUCTIONS",
-    "profit_before_contribution_to_kuwait_foundation_for_advancement_of_sciences": "PROFIT_BEFORE_DEDUCTIONS",
-    "profit_before_contribution_to_kuwait_foundation_for_the_advancement_of_sciences": "PROFIT_BEFORE_DEDUCTIONS",
-    "contribution_to_kfas": "CONTRIBUTION_KFAS",
-    "contribution_to_kuwait_foundation_for_advancement_of_sciences": "CONTRIBUTION_KFAS",
-    "contribution_to_kuwait_foundation_for_the_advancement_of_sciences": "CONTRIBUTION_KFAS",
-    "national_labour_support_tax": "NLST", "nlst": "NLST",
-    "national_labor_support_tax": "NLST",
-    "zakat": "ZAKAT",
-    "directors_remuneration": "DIRECTORS_REMUNERATION",
-    "directors_fees": "DIRECTORS_REMUNERATION",
-    "board_of_directors_remuneration": "DIRECTORS_REMUNERATION",
-    "basic_and_diluted_earnings_per_share": "EPS_BASIC",
-    "basic_and_diluted_earnings_per_sha": "EPS_BASIC",
-    "earnings_per_share": "EPS_BASIC",
-    "share_of_profit_of_associates": "SHARE_RESULTS_ASSOCIATES",
-    "share_of_loss_of_associates": "SHARE_RESULTS_ASSOCIATES",
-    "share_of_results_of_associates": "SHARE_RESULTS_ASSOCIATES",
-    "share_of_profit_loss_of_associates": "SHARE_RESULTS_ASSOCIATES",
-    # Cash flow additional
-    "net_cash_used_in_operating_activities": "CASH_FROM_OPERATIONS",
-    "net_cash_used_in_investing_activities": "CASH_FROM_INVESTING",
-    "net_cash_used_in_financing_activities": "CASH_FROM_FINANCING",
-    "cash_used_in_financing_activities": "CASH_FROM_FINANCING",
-    "cash_used_in_investing_activities": "CASH_FROM_INVESTING",
-    "cash_used_in_operating_activities": "CASH_FROM_OPERATIONS",
+    "cost_of_operations": "cost_of_revenue",
+    "general_and_administrative_expenses": "general_and_admin",
+    "general_and_administrative_expens": "general_and_admin",
+    "selling_expenses": "selling_expenses",
+    "selling_and_distribution_expenses": "selling_expenses",
+    "finance_charges": "finance_charges", "finance_charge": "finance_charges",
+    "profit_before_contribution_to_kfas": "profit_before_deductions",
+    "profit_before_contribution_to_kuwait_foundation_for_advancement_of_sciences": "profit_before_deductions",
+    "profit_before_contribution_to_kuwait_foundation_for_the_advancement_of_sciences": "profit_before_deductions",
+    "contribution_to_kfas": "contribution_to_kfas",
+    "contribution_kfas": "contribution_to_kfas",
+    "contribution_to_kuwait_foundation_for_advancement_of_sciences": "contribution_to_kfas",
+    "contribution_to_kuwait_foundation_for_the_advancement_of_sciences": "contribution_to_kfas",
+    "national_labour_support_tax": "nlst", "nlst": "nlst",
+    "national_labor_support_tax": "nlst",
+    "zakat": "zakat",
+    "directors_remuneration": "directors_remuneration",
+    "directors_fees": "directors_remuneration",
+    "board_of_directors_remuneration": "directors_remuneration",
+    "share_of_profit_of_associates": "share_results_associates",
+    "share_of_loss_of_associates": "share_results_associates",
+    "share_of_results_of_associates": "share_results_associates",
+    "share_of_profit_loss_of_associates": "share_results_associates",
 }
 
 # Batch extraction prompt (from Streamlit ai_vision_extractor.py)
@@ -938,18 +1515,504 @@ CRITICAL — COMPLETENESS & PRECISION:
 
 
 def _normalize_key(raw_key: str) -> str:
-    """Map an AI-extracted key to a standard line item code."""
+    """Map an AI-extracted key to a canonical lowercase line item code."""
+    import re as _re
     k = raw_key.strip().lower().replace(" ", "_").replace("-", "_")
-    # Direct lookup
-    if k in _STANDARD_CODES:
-        return _STANDARD_CODES[k]
+    k = _re.sub(r"_+", "_", k).strip("_")
+    # Direct lookup in canonical map
+    if k in _CANONICAL_CODES:
+        return _CANONICAL_CODES[k]
     # Try without trailing _total, _net etc.
     for suffix in ("_total", "_net", "_and_equivalents"):
-        trimmed = k.rstrip(suffix) if k.endswith(suffix) else None
-        if trimmed and trimmed in _STANDARD_CODES:
-            return _STANDARD_CODES[trimmed]
-    # Fallback: uppercase the raw key
-    return raw_key.strip().upper().replace(" ", "_").replace("-", "_")
+        if k.endswith(suffix):
+            trimmed = k[: -len(suffix)].rstrip("_")
+            if trimmed in _CANONICAL_CODES:
+                return _CANONICAL_CODES[trimmed]
+    # Fallback: clean lowercase snake_case (never uppercase)
+    return k
+
+
+def _reconcile_code_with_existing(
+    new_code: str,
+    new_name: str,
+    existing_codes_map: Dict[str, str],
+) -> str:
+    """Fuzzy-match a newly extracted code against existing codes for the same stock.
+
+    All comparisons are case-insensitive. If the new_code already exists
+    (case-insensitively), return the existing version. Otherwise, check if
+    any existing code shares enough word overlap to be the same financial
+    concept.
+
+    Returns the best matching existing code, or the original new_code if no match.
+    """
+    if not existing_codes_map:
+        return new_code
+
+    # Build a lowercase → original-code lookup for case-insensitive matching
+    lower_map: Dict[str, str] = {k.lower(): k for k in existing_codes_map}
+
+    # Case-insensitive exact match
+    new_lower = new_code.lower()
+    if new_lower in lower_map:
+        return lower_map[new_lower]
+
+    # Check if both map to the same canonical code
+    new_canonical = _CANONICAL_CODES.get(new_lower)
+    if new_canonical:
+        for ex_code in existing_codes_map:
+            ex_canonical = _CANONICAL_CODES.get(ex_code.lower())
+            if ex_canonical and ex_canonical == new_canonical:
+                logger.info(
+                    "Code reconciled via canonical map: '%s' → '%s' (canonical=%s)",
+                    new_code, ex_code, new_canonical,
+                )
+                return ex_code
+
+    # Build word sets for fuzzy comparison
+    new_words = set(new_lower.replace("_", " ").split())
+    filler = {"for", "the", "of", "and", "in", "on", "to", "a", "an", "total"}
+    new_meaningful = new_words - filler
+
+    if not new_meaningful:
+        return new_code
+
+    best_code = new_code
+    best_score = 0.0
+
+    for ex_code in existing_codes_map:
+        ex_words = set(ex_code.lower().replace("_", " ").split())
+        ex_meaningful = ex_words - filler
+
+        if not ex_meaningful:
+            continue
+
+        # Jaccard-like overlap on meaningful words
+        intersection = new_meaningful & ex_meaningful
+        union = new_meaningful | ex_meaningful
+        score = len(intersection) / len(union) if union else 0.0
+
+        if score > best_score:
+            best_score = score
+            best_code = ex_code
+
+    # Threshold: 60% word overlap = same concept
+    if best_score >= 0.6:
+        logger.info(
+            "Code reconciled: '%s' → '%s' (score=%.2f)",
+            new_code, best_code, best_score,
+        )
+        return best_code
+
+    return new_code
+
+
+def _persist_extraction_result(
+    stock_id: int,
+    result,
+    stock_currency: str,
+    source_file: Optional[str],
+    extracted_by: str,
+    notes_template: str = "AI-extracted",
+) -> tuple:
+    """Shared persist logic for all extraction/validation endpoints.
+
+    Returns (created_statements, total_items).
+    Uses _resolve_amount (key-based matching) instead of unsafe positional fallback.
+
+    **Cash flow statements** are routed through a staging→reconcile→commit pipeline
+    instead of being saved directly. Only reconciled, accepted rows reach
+    financial_line_items.
+    """
+    from app.services.extraction_service import _resolve_amount, _MISSING
+
+    now = int(time.time())
+    created_statements = []
+    total_items = 0
+
+    # Build map of existing codes for this stock (for fuzzy reconciliation)
+    existing_codes_map: Dict[str, str] = {}
+    try:
+        rows = query_all(
+            """SELECT DISTINCT li.line_item_code, fs.statement_type
+               FROM financial_line_items li
+               JOIN financial_statements fs ON li.statement_id = fs.id
+               WHERE fs.stock_id = ?""",
+            (stock_id,),
+        )
+        for r in rows:
+            existing_codes_map[r["line_item_code"]] = r["statement_type"]
+    except Exception:
+        pass
+
+    with get_connection() as conn:
+        cur = conn.cursor()
+
+        for stmt in result.statements:
+            currency = stmt.currency or stock_currency
+
+            if not stmt.periods or not stmt.items:
+                logger.warning(
+                    "Skipping stmt type=%s: periods=%d, items=%d",
+                    stmt.statement_type, len(stmt.periods), len(stmt.items),
+                )
+                continue
+
+            # ── CASH FLOW → staging pipeline ─────────────────────────
+            if stmt.statement_type == "cashflow":
+                cf_result = _stage_and_reconcile_cashflow(
+                    stock_id=stock_id,
+                    stmt=stmt,
+                    result=result,
+                    stock_currency=currency,
+                    source_file=source_file,
+                    extracted_by=extracted_by,
+                    notes_template=notes_template,
+                    existing_codes_map=existing_codes_map,
+                    cur=cur,
+                    now=now,
+                )
+                created_statements.extend(cf_result["created_statements"])
+                total_items += cf_result["total_items"]
+                continue
+
+            # ── Non-cashflow: direct persist (income / balance / equity) ─
+            for period_info in stmt.periods:
+                period_label = period_info.get("label", "")
+
+                # Derive fiscal year
+                fiscal_year = None
+                if period_label and len(period_label) >= 4:
+                    try:
+                        fiscal_year = int(period_label[:4])
+                    except ValueError:
+                        try:
+                            fiscal_year = int(period_label[-4:])
+                        except ValueError:
+                            fiscal_year = date.today().year
+                if not fiscal_year:
+                    fiscal_year = date.today().year
+
+                period_end_date = period_label
+                if len(period_end_date) == 4:
+                    period_end_date = f"{period_end_date}-12-31"
+
+                # Upsert statement
+                existing = query_one(
+                    """SELECT id FROM financial_statements
+                       WHERE stock_id = ? AND statement_type = ? AND period_end_date = ?""",
+                    (stock_id, stmt.statement_type, period_end_date),
+                )
+
+                if existing:
+                    stmt_id = existing["id"]
+                    cur.execute(
+                        """UPDATE financial_statements
+                           SET fiscal_year=?, source_file=?, extracted_by=?,
+                               confidence_score=?, created_at=?
+                           WHERE id=?""",
+                        (fiscal_year, source_file, extracted_by,
+                         result.confidence, now, stmt_id),
+                    )
+                    cur.execute(
+                        "DELETE FROM financial_line_items WHERE statement_id = ?",
+                        (stmt_id,),
+                    )
+                else:
+                    cur.execute(
+                        """INSERT INTO financial_statements
+                           (stock_id, statement_type, fiscal_year, fiscal_quarter,
+                            period_end_date, filing_date, source_file, extracted_by,
+                            confidence_score, notes, created_at)
+                           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                        (
+                            stock_id, stmt.statement_type, fiscal_year, None,
+                            period_end_date, None, source_file, extracted_by,
+                            result.confidence, notes_template, now,
+                        ),
+                    )
+                    stmt_id = cur.lastrowid
+
+                # Insert line items — key-based matching only (no positional fallback)
+                seen_codes: set = set()
+                for item in stmt.items:
+                    code = _normalize_key(item.key)
+                    # Reconcile with existing codes to prevent duplicates
+                    code = _reconcile_code_with_existing(
+                        code, item.label_raw, existing_codes_map,
+                    )
+                    if code in seen_codes:
+                        continue
+                    amount = _resolve_amount(item, period_info, stmt.periods)
+                    if amount is _MISSING:
+                        continue
+                    if amount is None:
+                        amount = 0.0
+
+                    cur.execute(
+                        """INSERT INTO financial_line_items
+                           (statement_id, line_item_code, line_item_name,
+                            amount, currency, order_index, is_total)
+                           VALUES (?,?,?,?,?,?,?)""",
+                        (stmt_id, code, item.label_raw, float(amount),
+                         currency, item.order_index, item.is_total),
+                    )
+                    seen_codes.add(code)
+                    total_items += 1
+
+                created_statements.append({
+                    "statement_id": stmt_id,
+                    "statement_type": stmt.statement_type,
+                    "period_end_date": period_end_date,
+                    "fiscal_year": fiscal_year,
+                    "line_items_count": len(stmt.items),
+                    "currency": currency,
+                })
+
+        conn.commit()
+
+    return created_statements, total_items
+
+
+def _stage_and_reconcile_cashflow(
+    stock_id: int,
+    stmt,
+    result,
+    stock_currency: str,
+    source_file: Optional[str],
+    extracted_by: str,
+    notes_template: str,
+    existing_codes_map: Dict[str, str],
+    cur,
+    now: int,
+) -> Dict[str, Any]:
+    """I) Stage cash flow rows, reconcile, and commit ONLY if reconciliation passes.
+
+    If reconciliation fails (needs_review):
+     - rows are persisted in staging
+     - run is marked needs_review
+     - NO rows are committed to financial_line_items
+     - enough metadata is preserved for UI/debugging
+
+    Returns dict with created_statements and total_items.
+    """
+    from app.services.extraction_service import _resolve_amount, _MISSING
+    from app.services.cashflow_reconciler import (
+        reconcile_cashflow, ReconcileResult, compute_validated_cashflow_metrics,
+    )
+
+    created_statements = []
+    total_items = 0
+
+    # Build period labels list
+    period_labels = [p.get("label", p.get("col_name", "")) for p in stmt.periods]
+
+    # ── 1. Create extraction run ─────────────────────────────────────
+    cur.execute(
+        """INSERT INTO cashflow_extraction_runs
+           (stock_id, source_file, status, periods_json, created_at, updated_at)
+           VALUES (?,?,?,?,?,?)""",
+        (stock_id, source_file, "extracted",
+         json.dumps(period_labels), now, now),
+    )
+    run_id = cur.lastrowid
+
+    # ── 2. Build raw items with resolved values per period ───────────
+    raw_items_for_reconcile: List[Dict[str, Any]] = []
+    for idx, item in enumerate(stmt.items):
+        resolved_values: Dict[str, Optional[float]] = {}
+        for period_info in stmt.periods:
+            period_label = period_info.get("label", "")
+            amount = _resolve_amount(item, period_info, stmt.periods)
+            if amount is _MISSING:
+                resolved_values[period_label] = None
+            else:
+                resolved_values[period_label] = float(amount) if amount is not None else None
+
+        raw_item = {
+            "label_raw": item.label_raw,
+            "key": item.key,
+            "values": resolved_values,
+            "is_total": item.is_total,
+            "order_index": item.order_index or (idx + 1),
+            "section": getattr(item, "section", "unknown"),
+            "row_kind": getattr(item, "row_kind", "item"),
+        }
+        raw_items_for_reconcile.append(raw_item)
+
+    # ── 3. Run deterministic reconciliation ──────────────────────────
+    recon: ReconcileResult = reconcile_cashflow(raw_items_for_reconcile, period_labels)
+
+    # ── 4. Stage ALL rows (raw + reconciliation results) ─────────────
+    for row in recon.rows:
+        cur.execute(
+            """INSERT INTO cashflow_staged_rows
+               (run_id, row_order, label_raw, normalized_code, section,
+                row_kind, values_json, is_total, confidence,
+                is_accepted, rejection_reason, created_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                run_id, row.row_order, row.label_raw,
+                row.normalized_code, row.section, row.row_kind,
+                json.dumps(row.values), row.is_total, row.confidence,
+                row.is_accepted, row.rejection_reason, now,
+            ),
+        )
+
+    # ── 5. Compute validated metrics from accepted rows ──────────────
+    cf_metrics = compute_validated_cashflow_metrics(recon.rows, period_labels)
+
+    # ── 6. Update run with reconciliation summary + metrics ──────────
+    recon_summary = {
+        "status": recon.status,
+        "summary": recon.summary,
+        "warnings": recon.warnings,
+        "errors": recon.errors,
+        "validated_metrics": {
+            p: {k: v for k, v in m.items() if not str(k).startswith("_")}
+            for p, m in cf_metrics.items()
+        },
+    }
+    new_status = "reconciled" if recon.status == "reconciled" else "needs_review"
+    cur.execute(
+        """UPDATE cashflow_extraction_runs
+           SET status=?, reconciliation_summary=?, updated_at=?
+           WHERE id=?""",
+        (new_status, json.dumps(recon_summary), now, run_id),
+    )
+
+    # ── I) Log reconciliation issues but always commit accepted rows ─
+    if recon.status != "reconciled":
+        logger.warning(
+            "Cash flow run %d: reconciliation=%s — committing accepted rows despite errors. "
+            "Errors: %s",
+            run_id, recon.status, recon.errors,
+        )
+
+    accepted_rows = [r for r in recon.rows if r.is_accepted]
+    if not accepted_rows:
+        logger.warning("Cash flow run %d: no accepted rows to commit", run_id)
+        created_statements.append({
+            "statement_type": "cashflow",
+            "staged_run_id": run_id,
+            "reconcile_status": recon.status,
+            "needs_review": recon.status != "reconciled",
+            "errors": recon.errors[:5],
+        })
+        return {"created_statements": created_statements, "total_items": 0}
+
+    # ── 7. Commit accepted rows to financial_line_items ──────────────
+    for period_info in stmt.periods:
+        period_label = period_info.get("label", "")
+        period_end_date = period_label
+        if len(period_end_date) == 4:
+            period_end_date = f"{period_end_date}-12-31"
+
+        fiscal_year = None
+        if period_label and len(period_label) >= 4:
+            try:
+                fiscal_year = int(period_label[:4])
+            except ValueError:
+                try:
+                    fiscal_year = int(period_label[-4:])
+                except ValueError:
+                    fiscal_year = date.today().year
+        if not fiscal_year:
+            fiscal_year = date.today().year
+
+        # Upsert statement
+        existing = query_one(
+            """SELECT id FROM financial_statements
+               WHERE stock_id = ? AND statement_type = ? AND period_end_date = ?""",
+            (stock_id, "cashflow", period_end_date),
+        )
+        if existing:
+            stmt_id = existing["id"]
+            cur.execute(
+                """UPDATE financial_statements
+                   SET fiscal_year=?, source_file=?, extracted_by=?,
+                       confidence_score=?, notes=?, created_at=?
+                   WHERE id=?""",
+                (fiscal_year, source_file, extracted_by,
+                 result.confidence,
+                 f"{notes_template} (staged run #{run_id}, {new_status})",
+                 now, stmt_id),
+            )
+            cur.execute(
+                "DELETE FROM financial_line_items WHERE statement_id = ?",
+                (stmt_id,),
+            )
+        else:
+            cur.execute(
+                """INSERT INTO financial_statements
+                   (stock_id, statement_type, fiscal_year, fiscal_quarter,
+                    period_end_date, filing_date, source_file, extracted_by,
+                    confidence_score, notes, created_at)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    stock_id, "cashflow", fiscal_year, None,
+                    period_end_date, None, source_file, extracted_by,
+                    result.confidence,
+                    f"{notes_template} (staged run #{run_id}, {new_status})",
+                    now,
+                ),
+            )
+            stmt_id = cur.lastrowid
+
+        # I) Insert only accepted rows — preserve section, ordering, raw label, normalized code
+        seen_codes: set = set()
+        for row in accepted_rows:
+            # G) Headers must never be committed as financial line items
+            if row.row_kind == "header":
+                continue
+
+            code = _normalize_key(row.normalized_code or row.label_raw)
+            code = _reconcile_code_with_existing(
+                code, row.label_raw, existing_codes_map,
+            )
+            if code in seen_codes:
+                continue
+
+            amount = row.values.get(period_label)
+            if amount is None:
+                amount = 0.0
+
+            cur.execute(
+                """INSERT INTO financial_line_items
+                   (statement_id, line_item_code, line_item_name,
+                    amount, currency, order_index, is_total)
+                   VALUES (?,?,?,?,?,?,?)""",
+                (stmt_id, code, row.label_raw, float(amount),
+                 stock_currency, row.row_order, row.is_total),
+            )
+            seen_codes.add(code)
+            total_items += 1
+
+        created_statements.append({
+            "statement_id": stmt_id,
+            "statement_type": "cashflow",
+            "period_end_date": period_end_date,
+            "fiscal_year": fiscal_year,
+            "line_items_count": total_items,
+            "currency": stock_currency,
+            "staged_run_id": run_id,
+            "reconcile_status": recon.status,
+        })
+
+    # Update run status to committed
+    cur.execute(
+        """UPDATE cashflow_extraction_runs
+           SET status='committed', updated_at=?
+           WHERE id=?""",
+        (now, run_id),
+    )
+
+    logger.info(
+        "Cash flow staged run #%d: %d/%d rows accepted → committed to %d period(s)",
+        run_id, len(accepted_rows), len(recon.rows), len(stmt.periods),
+    )
+
+    return {"created_statements": created_statements, "total_items": total_items}
 
 
 def _parse_ai_json(text: str) -> list:
@@ -987,16 +2050,18 @@ def _parse_ai_json(text: str) -> list:
 @router.post("/stocks/{stock_id}/upload-statement")
 async def upload_financial_statement(
     stock_id: int,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     force: bool = Query(False, description="Skip cache and re-extract from scratch"),
+    model: str = Query("gemini-2.5-flash", description="Gemini model to use: gemini-2.5-flash or gemini-2.5-pro"),
     current_user: TokenData = Depends(get_current_user),
 ):
     """
-    Upload a financial report PDF and extract statements using Gemini AI.
+    Upload a financial report PDF and start async AI extraction.
 
-    Self-Reflective Pipeline:
-    PDF → 300 DPI images → AI reasoning + extraction → arithmetic audit
-    → retry on mismatches → cache result → persist to DB.
+    Phase 1 (fast): Validate file, save PDF, create extraction job.
+    Phase 2 (async): BackgroundTasks runs the full AI pipeline.
+    Frontend polls GET /extraction-status/{job_id} for progress.
     """
     _ensure_schema()
     _verify_stock_owner(stock_id, current_user.user_id)
@@ -1016,7 +2081,6 @@ async def upload_financial_statement(
     settings = get_settings()
     api_key = settings.GEMINI_API_KEY
 
-    # Check per-user key
     try:
         from app.core.database import add_column_if_missing
         add_column_if_missing("users", "gemini_api_key", "TEXT")
@@ -1035,211 +2099,166 @@ async def upload_financial_statement(
             "Set GEMINI_API_KEY in .env or add it in Settings."
         )
 
-    # ── 3. Run self-reflective extraction pipeline ───────────────────
-    from app.services.extraction_service import extract_financials
+    # Validate model name
+    allowed_models = {"gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-pro-preview-03-25"}
+    if model not in allowed_models:
+        raise BadRequestError(f"Invalid model. Choose from: {', '.join(sorted(allowed_models))}")
 
-    try:
-        result = await extract_financials(
-            pdf_bytes=pdf_bytes,
-            stock_id=stock_id,
-            api_key=api_key,
-            filename=file.filename or "upload.pdf",
-            use_cache=not force,
-        )
-    except ValueError as exc:
-        raise BadRequestError(str(exc))
-    except Exception as exc:
-        logger.error("Extraction pipeline error: %s", exc)
-        raise BadRequestError(f"AI extraction failed: {exc}")
-
-    # ── 4. Persist extracted data to DB ──────────────────────────────
-    now = int(time.time())
-    created_statements = []
-    total_items = 0
-
-    stock_row = query_one(
-        "SELECT currency FROM analysis_stocks WHERE id = ?",
-        (stock_id,),
+    # ── 3. Deduplicate: reject if same file already has an active job ─
+    pdf_hash = hashlib.sha256(pdf_bytes).hexdigest()
+    active = query_one(
+        """SELECT id FROM extraction_jobs
+           WHERE stock_id = ? AND pdf_hash = ? AND status IN ('queued', 'running')
+           ORDER BY created_at DESC LIMIT 1""",
+        (stock_id, pdf_hash),
     )
-    stock_currency = stock_row["currency"] if stock_row else "USD"
+    if active:
+        active_id = active["id"] if isinstance(active, dict) else active[0]
+        return {
+            "status": "ok",
+            "data": {
+                "job_id": active_id,
+                "upload_id": str(active_id),
+                "status": "running",
+                "message": "An extraction job is already in progress for this file.",
+                "source_file": file.filename,
+            },
+        }
 
-    logger.info(
-        "Persisting extraction: %d statements from pipeline",
-        len(result.statements),
-    )
-    for _dbg_s in result.statements:
-        _dbg_labels = [p.get("label", p.get("col_name", "?")) for p in _dbg_s.periods]
-        _sample_keys = [it.key for it in _dbg_s.items[:3]]
-        _sample_vals = {it.key: list(it.values.keys())[:4] for it in _dbg_s.items[:3]}
-        logger.info(
-            "  stmt type=%s  periods=%s  items=%d  sample_keys=%s  sample_val_keys=%s",
-            _dbg_s.statement_type, _dbg_labels, len(_dbg_s.items), _sample_keys, _sample_vals,
-        )
-
-    with get_connection() as conn:
-        cur = conn.cursor()
-
-        for stmt in result.statements:
-            currency = stmt.currency or stock_currency
-
-            if not stmt.periods or not stmt.items:
-                logger.warning(
-                    "Skipping stmt type=%s: periods=%d, items=%d",
-                    stmt.statement_type, len(stmt.periods), len(stmt.items),
-                )
-                continue
-
-            for period_info in stmt.periods:
-                period_label = period_info.get("label", "")
-                col_name = period_info.get("col_name", period_label)
-
-                # Derive fiscal year
-                fiscal_year = None
-                if period_label and len(period_label) >= 4:
-                    try:
-                        fiscal_year = int(period_label[:4])
-                    except ValueError:
-                        try:
-                            fiscal_year = int(period_label[-4:])
-                        except ValueError:
-                            fiscal_year = date.today().year
-                if not fiscal_year:
-                    fiscal_year = date.today().year
-
-                period_end_date = period_label
-                if len(period_end_date) == 4:
-                    period_end_date = f"{period_end_date}-12-31"
-
-                # Upsert statement
-                existing = query_one(
-                    """SELECT id FROM financial_statements
-                       WHERE stock_id = ? AND statement_type = ? AND period_end_date = ?""",
-                    (stock_id, stmt.statement_type, period_end_date),
-                )
-
-                if existing:
-                    stmt_id = existing["id"]
-                    cur.execute(
-                        """UPDATE financial_statements
-                           SET fiscal_year=?, source_file=?, extracted_by=?,
-                               confidence_score=?, created_at=?
-                           WHERE id=?""",
-                        (fiscal_year, file.filename, "gemini-ai-pipeline",
-                         result.confidence, now, stmt_id),
-                    )
-                    cur.execute(
-                        "DELETE FROM financial_line_items WHERE statement_id = ?",
-                        (stmt_id,),
-                    )
-                else:
-                    cur.execute(
-                        """INSERT INTO financial_statements
-                           (stock_id, statement_type, fiscal_year, fiscal_quarter,
-                            period_end_date, filing_date, source_file, extracted_by,
-                            confidence_score, notes, created_at)
-                           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-                        (
-                            stock_id, stmt.statement_type, fiscal_year, None,
-                            period_end_date, None, file.filename, "gemini-ai-pipeline",
-                            result.confidence,
-                            f"AI-extracted (pipeline, retries={result.retry_count})",
-                            now,
-                        ),
-                    )
-                    stmt_id = cur.lastrowid
-
-                # Insert line items for this period
-                _MISSING = object()
-                seen_codes: set = set()
-                for item in stmt.items:
-                    code = _normalize_key(item.key)
-                    if code in seen_codes:
-                        continue  # already stored for this period
-                    amount = item.values.get(period_label, _MISSING)
-                    if amount is _MISSING:
-                        amount = item.values.get(col_name, _MISSING)
-                    if amount is _MISSING:
-                        all_vals = list(item.values.values())
-                        pidx = stmt.periods.index(period_info)
-                        if pidx < len(all_vals):
-                            amount = all_vals[pidx]
-                    if amount is _MISSING:
-                        continue  # not extracted for this period — skip
-                    if amount is None:
-                        amount = 0.0  # document showed dash/blank
-
-                    cur.execute(
-                        """INSERT INTO financial_line_items
-                           (statement_id, line_item_code, line_item_name,
-                            amount, currency, order_index, is_total)
-                           VALUES (?,?,?,?,?,?,?)""",
-                        (stmt_id, code, item.label_raw, float(amount),
-                         currency, item.order_index, item.is_total),
-                    )
-                    seen_codes.add(code)
-                    total_items += 1
-
-                created_statements.append({
-                    "statement_id": stmt_id,
-                    "statement_type": stmt.statement_type,
-                    "period_end_date": period_end_date,
-                    "fiscal_year": fiscal_year,
-                    "line_items_count": len(stmt.items),
-                    "currency": currency,
-                })
-
-        conn.commit()
-
-    # ── 4b. Save PDF file for future reference ───────────────────────
+    # ── 4. Save PDF immediately ──────────────────────────────────────
     try:
-        _save_pdf_file(stock_id, current_user.user_id, pdf_bytes, file.filename or "upload.pdf")
+        pdf_upload_id = _save_pdf_file(
+            stock_id, current_user.user_id, pdf_bytes,
+            file.filename or "upload.pdf",
+        )
     except Exception as e:
-        logger.warning("PDF file save failed (non-fatal): %s", e)
+        logger.warning("PDF save failed: %s", e)
+        pdf_upload_id = None
 
-    # ── 5. Build audit summary ───────────────────────────────────────
-    audit_summary = {
-        "checks_total": len(result.audit_checks),
-        "checks_passed": sum(1 for c in result.audit_checks if c.passed),
-        "checks_failed": sum(1 for c in result.audit_checks if not c.passed),
-        "retries_used": result.retry_count,
-        "validation_corrections": result.validation_corrections,
-        "details": [
-            {
-                "statement_type": c.statement_type,
-                "period": c.period,
-                "rule": c.total_label,
-                "expected": c.computed_sum,
-                "actual": c.total_value,
-                "passed": c.passed,
-                "detail": c.detail,
-                "discrepancy": c.discrepancy,
-            }
-            for c in result.audit_checks
-        ],
-    }
+    # ── 5. Fetch existing codes for AI reuse ─────────────────────────
+    existing_codes: List[Dict[str, str]] = []
+    try:
+        rows = query_all(
+            """SELECT DISTINCT li.line_item_code, li.line_item_name, fs.statement_type
+               FROM financial_line_items li
+               JOIN financial_statements fs ON li.statement_id = fs.id
+               WHERE fs.stock_id = ?
+               ORDER BY fs.statement_type, li.order_index""",
+            (stock_id,),
+        )
+        seen: set = set()
+        for r in rows:
+            code = r["line_item_code"]
+            if code not in seen:
+                existing_codes.append({
+                    "code": code,
+                    "name": r["line_item_name"],
+                    "type": r["statement_type"],
+                })
+                seen.add(code)
+    except Exception as exc:
+        logger.warning("Could not fetch existing codes: %s", exc)
 
-    logger.info(
-        "Pipeline complete for stock %d: %d statements, %d items, "
-        "confidence=%.1f%%, retries=%d, validation_corrections=%d, cached=%s",
-        stock_id, len(created_statements), total_items,
-        result.confidence * 100, result.retry_count,
-        result.validation_corrections, result.cached,
+    # ── 6. Create extraction job record ──────────────────────────────
+    now = int(time.time())
+    exec_sql(
+        """INSERT INTO extraction_jobs
+           (stock_id, user_id, pdf_upload_id, pdf_hash, source_file, status,
+            stage, model, attempt_count, created_at, updated_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+        (stock_id, current_user.user_id, pdf_upload_id, pdf_hash,
+         file.filename, "queued", "uploading", model, 1, now, now),
     )
+    job_id = query_val(
+        """SELECT id FROM extraction_jobs
+           WHERE stock_id = ? AND user_id = ? AND created_at = ?
+           ORDER BY id DESC LIMIT 1""",
+        (stock_id, current_user.user_id, now),
+    )
+
+    # ── 7. Launch background extraction via BackgroundTasks ──────────
+    background_tasks.add_task(
+        _run_extraction_job_sync,
+        job_id=job_id,
+        stock_id=stock_id,
+        user_id=current_user.user_id,
+        pdf_bytes=pdf_bytes,
+        filename=file.filename or "upload.pdf",
+        model=model,
+        force=force,
+        api_key=api_key,
+        existing_codes=existing_codes,
+    )
+
+    _log_job(job_id, stock_id, "created", filename=file.filename,
+             model=model, pdf_hash=pdf_hash[:12])
 
     return {
         "status": "ok",
         "data": {
-            "message": (
-                f"Successfully extracted {len(created_statements)} statements "
-                f"with {total_items} line items."
-            ),
-            "statements": created_statements,
+            "job_id": job_id,
+            "upload_id": str(job_id),
+            "status": "queued",
+            "message": "File uploaded successfully. Extraction is running…",
             "source_file": file.filename,
-            "pages_processed": result.pages_processed,
-            "model": result.model_used,
-            "confidence": result.confidence,
-            "cached": result.cached,
-            "audit": audit_summary,
+        },
+    }
+
+
+@router.get("/extraction-status/{job_id}")
+async def get_extraction_status(
+    job_id: int,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """
+    Poll extraction job progress.
+
+    Returns current status, stage, progress, and result when done.
+    """
+    _ensure_schema()
+
+    row = query_one(
+        "SELECT * FROM extraction_jobs WHERE id = ?",
+        (job_id,),
+    )
+    if not row:
+        raise NotFoundError("Extraction job not found.")
+
+    r = dict(row) if not isinstance(row, dict) else row
+
+    # Verify ownership
+    if r.get("user_id") != current_user.user_id:
+        raise NotFoundError("Extraction job not found.")
+
+    # Parse result_payload if done
+    result_data = None
+    if r.get("result_payload"):
+        try:
+            result_data = json.loads(r["result_payload"])
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    return {
+        "status": "ok",
+        "data": {
+            "job_id": r["id"],
+            "upload_id": str(r["id"]),
+            "status": r["status"],
+            "stage": r.get("stage", "uploading"),
+            "pages_processed": r.get("pages_processed", 0),
+            "total_pages": r.get("total_pages", 0),
+            "progress_percent": r.get("progress_percent", 0),
+            "model": r.get("model"),
+            "error_message": r.get("error_message"),
+            "result": result_data,
+            "source_file": r.get("source_file"),
+            "pdf_hash": r.get("pdf_hash"),
+            "attempt_count": r.get("attempt_count", 1),
+            "created_at": r.get("created_at"),
+            "started_at": r.get("started_at"),
+            "updated_at": r.get("updated_at"),
+            "last_heartbeat_at": r.get("last_heartbeat_at"),
+            "completed_at": r.get("completed_at"),
         },
     }
 
@@ -1313,122 +2332,20 @@ async def validate_financial_statement(
         }
 
     # Re-persist corrected data to DB
-    now = int(time.time())
-    updated_statements = []
-    total_items = 0
-
     stock_row = query_one(
         "SELECT currency FROM analysis_stocks WHERE id = ?",
         (stock_id,),
     )
     stock_currency = stock_row["currency"] if stock_row else "USD"
 
-    with get_connection() as conn:
-        cur = conn.cursor()
-
-        for stmt in result.statements:
-            currency = stmt.currency or stock_currency
-
-            if not stmt.periods or not stmt.items:
-                continue
-
-            for period_info in stmt.periods:
-                period_label = period_info.get("label", "")
-                col_name = period_info.get("col_name", period_label)
-
-                fiscal_year = None
-                if period_label and len(period_label) >= 4:
-                    try:
-                        fiscal_year = int(period_label[:4])
-                    except ValueError:
-                        try:
-                            fiscal_year = int(period_label[-4:])
-                        except ValueError:
-                            fiscal_year = date.today().year
-                if not fiscal_year:
-                    fiscal_year = date.today().year
-
-                period_end_date = period_label
-                if len(period_end_date) == 4:
-                    period_end_date = f"{period_end_date}-12-31"
-
-                # Upsert statement
-                existing = query_one(
-                    """SELECT id FROM financial_statements
-                       WHERE stock_id = ? AND statement_type = ? AND period_end_date = ?""",
-                    (stock_id, stmt.statement_type, period_end_date),
-                )
-
-                if existing:
-                    stmt_id = existing["id"]
-                    cur.execute(
-                        """UPDATE financial_statements
-                           SET confidence_score=?, created_at=?
-                           WHERE id=?""",
-                        (result.confidence, now, stmt_id),
-                    )
-                    cur.execute(
-                        "DELETE FROM financial_line_items WHERE statement_id = ?",
-                        (stmt_id,),
-                    )
-                else:
-                    cur.execute(
-                        """INSERT INTO financial_statements
-                           (stock_id, statement_type, fiscal_year, fiscal_quarter,
-                            period_end_date, filing_date, source_file, extracted_by,
-                            confidence_score, notes, created_at)
-                           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-                        (
-                            stock_id, stmt.statement_type, fiscal_year, None,
-                            period_end_date, None, file.filename,
-                            "gemini-ai-validated",
-                            result.confidence,
-                            f"AI-validated (corrections={result.validation_corrections})",
-                            now,
-                        ),
-                    )
-                    stmt_id = cur.lastrowid
-
-                _MISSING = object()
-                seen_codes: set = set()
-                for item in stmt.items:
-                    code = _normalize_key(item.key)
-                    if code in seen_codes:
-                        continue
-                    amount = item.values.get(period_label, _MISSING)
-                    if amount is _MISSING:
-                        amount = item.values.get(col_name, _MISSING)
-                    if amount is _MISSING:
-                        all_vals = list(item.values.values())
-                        pidx = stmt.periods.index(period_info)
-                        if pidx < len(all_vals):
-                            amount = all_vals[pidx]
-                    if amount is _MISSING:
-                        continue
-                    if amount is None:
-                        amount = 0.0
-
-                    cur.execute(
-                        """INSERT INTO financial_line_items
-                           (statement_id, line_item_code, line_item_name,
-                            amount, currency, order_index, is_total)
-                           VALUES (?,?,?,?,?,?,?)""",
-                        (stmt_id, code, item.label_raw, float(amount),
-                         currency, item.order_index, item.is_total),
-                    )
-                    seen_codes.add(code)
-                    total_items += 1
-
-                updated_statements.append({
-                    "statement_id": stmt_id,
-                    "statement_type": stmt.statement_type,
-                    "period_end_date": period_end_date,
-                    "fiscal_year": fiscal_year,
-                    "line_items_count": len(stmt.items),
-                    "currency": currency,
-                })
-
-        conn.commit()
+    updated_statements, total_items = _persist_extraction_result(
+        stock_id=stock_id,
+        result=result,
+        stock_currency=stock_currency,
+        source_file=file.filename,
+        extracted_by="gemini-ai-validated",
+        notes_template=f"AI-validated (corrections={result.validation_corrections})",
+    )
 
     logger.info(
         "Validation persisted for stock %d: %d corrections, %d statements, %d items",
@@ -1516,117 +2433,20 @@ async def verify_statement_placement(
         }
 
     # Re-persist corrected data to DB
-    now = int(time.time())
-    updated_statements = []
-    total_items = 0
-
     stock_row = query_one(
         "SELECT currency FROM analysis_stocks WHERE id = ?",
         (stock_id,),
     )
     stock_currency = stock_row["currency"] if stock_row else "USD"
 
-    with get_connection() as conn:
-        cur = conn.cursor()
-
-        for stmt in result.statements:
-            currency = stmt.currency or stock_currency
-
-            if not stmt.periods or not stmt.items:
-                continue
-
-            for period_info in stmt.periods:
-                period_label = period_info.get("label", "")
-                col_name = period_info.get("col_name", period_label)
-
-                fiscal_year = None
-                if period_label and len(period_label) >= 4:
-                    try:
-                        fiscal_year = int(period_label[:4])
-                    except ValueError:
-                        try:
-                            fiscal_year = int(period_label[-4:])
-                        except ValueError:
-                            fiscal_year = date.today().year
-                if not fiscal_year:
-                    fiscal_year = date.today().year
-
-                period_end_date = period_label
-                if len(period_end_date) == 4:
-                    period_end_date = f"{period_end_date}-12-31"
-
-                existing = query_one(
-                    """SELECT id FROM financial_statements
-                       WHERE stock_id = ? AND statement_type = ? AND period_end_date = ?""",
-                    (stock_id, stmt.statement_type, period_end_date),
-                )
-
-                if existing:
-                    stmt_id = existing["id"]
-                    cur.execute(
-                        """UPDATE financial_statements
-                           SET confidence_score=?, extracted_by=?, created_at=?
-                           WHERE id=?""",
-                        (result.confidence, "gemini-ai-verified", now, stmt_id),
-                    )
-                    cur.execute(
-                        "DELETE FROM financial_line_items WHERE statement_id = ?",
-                        (stmt_id,),
-                    )
-                else:
-                    cur.execute(
-                        """INSERT INTO financial_statements
-                           (stock_id, statement_type, fiscal_year, fiscal_quarter,
-                            period_end_date, filing_date, source_file, extracted_by,
-                            confidence_score, notes, created_at)
-                           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-                        (
-                            stock_id, stmt.statement_type, fiscal_year, None,
-                            period_end_date, None, file.filename,
-                            "gemini-ai-verified",
-                            result.confidence,
-                            f"AI-verified (placement={result.placement_corrections})",
-                            now,
-                        ),
-                    )
-                    stmt_id = cur.lastrowid
-
-                for item in stmt.items:
-                    code = _normalize_key(item.key)
-                    _MISSING = object()
-                    amount = item.values.get(period_label, _MISSING)
-                    if amount is _MISSING:
-                        amount = item.values.get(col_name, _MISSING)
-                    if amount is _MISSING:
-                        all_vals = list(item.values.values())
-                        pidx = stmt.periods.index(period_info)
-                        if pidx < len(all_vals):
-                            amount = all_vals[pidx]
-                    if amount is _MISSING:
-                        continue
-                    if amount is None:
-                        amount = 0.0
-
-                    cur.execute(
-                        """INSERT INTO financial_line_items
-                           (statement_id, line_item_code, line_item_name,
-                            amount, currency, order_index, is_total)
-                           VALUES (?,?,?,?,?,?,?)""",
-                        (stmt_id, code, item.label_raw, float(amount),
-                         currency, item.order_index, item.is_total),
-                    )
-                    total_items += 1
-
-                updated_statements.append({
-                    "statement_id": stmt_id,
-                    "statement_type": stmt.statement_type,
-                    "period_end_date": period_end_date,
-                    "fiscal_year": fiscal_year,
-                    "line_items_count": len(stmt.items),
-                    "currency": currency,
-                })
-
-        conn.commit()
+    updated_statements, total_items = _persist_extraction_result(
+        stock_id=stock_id,
+        result=result,
+        stock_currency=stock_currency,
+        source_file=file.filename,
+        extracted_by="gemini-ai-verified",
+        notes_template=f"AI-verified (placement={result.placement_corrections})",
+    )
 
     logger.info(
         "Placement persisted for stock %d: %d corrections, %d statements, %d items",
@@ -1708,117 +2528,20 @@ async def ai_attribute_statement(
         }
 
     # Re-persist corrected data to DB
-    now = int(time.time())
-    updated_statements = []
-    total_items = 0
-
     stock_row = query_one(
         "SELECT currency FROM analysis_stocks WHERE id = ?",
         (stock_id,),
     )
     stock_currency = stock_row["currency"] if stock_row else "USD"
 
-    with get_connection() as conn:
-        cur = conn.cursor()
-
-        for stmt in result.statements:
-            currency = stmt.currency or stock_currency
-
-            if not stmt.periods or not stmt.items:
-                continue
-
-            for period_info in stmt.periods:
-                period_label = period_info.get("label", "")
-                col_name = period_info.get("col_name", period_label)
-
-                fiscal_year = None
-                if period_label and len(period_label) >= 4:
-                    try:
-                        fiscal_year = int(period_label[:4])
-                    except ValueError:
-                        try:
-                            fiscal_year = int(period_label[-4:])
-                        except ValueError:
-                            fiscal_year = date.today().year
-                if not fiscal_year:
-                    fiscal_year = date.today().year
-
-                period_end_date = period_label
-                if len(period_end_date) == 4:
-                    period_end_date = f"{period_end_date}-12-31"
-
-                existing = query_one(
-                    """SELECT id FROM financial_statements
-                       WHERE stock_id = ? AND statement_type = ? AND period_end_date = ?""",
-                    (stock_id, stmt.statement_type, period_end_date),
-                )
-
-                if existing:
-                    stmt_id = existing["id"]
-                    cur.execute(
-                        """UPDATE financial_statements
-                           SET confidence_score=?, extracted_by=?, created_at=?
-                           WHERE id=?""",
-                        (result.confidence, "gemini-ai-attributed", now, stmt_id),
-                    )
-                    cur.execute(
-                        "DELETE FROM financial_line_items WHERE statement_id = ?",
-                        (stmt_id,),
-                    )
-                else:
-                    cur.execute(
-                        """INSERT INTO financial_statements
-                           (stock_id, statement_type, fiscal_year, fiscal_quarter,
-                            period_end_date, filing_date, source_file, extracted_by,
-                            confidence_score, notes, created_at)
-                           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-                        (
-                            stock_id, stmt.statement_type, fiscal_year, None,
-                            period_end_date, None, None,
-                            "gemini-ai-attributed",
-                            result.confidence,
-                            f"AI-attributed (corrections={result.validation_corrections})",
-                            now,
-                        ),
-                    )
-                    stmt_id = cur.lastrowid
-
-                for item in stmt.items:
-                    code = _normalize_key(item.key)
-                    _MISSING = object()
-                    amount = item.values.get(period_label, _MISSING)
-                    if amount is _MISSING:
-                        amount = item.values.get(col_name, _MISSING)
-                    if amount is _MISSING:
-                        all_vals = list(item.values.values())
-                        pidx = stmt.periods.index(period_info)
-                        if pidx < len(all_vals):
-                            amount = all_vals[pidx]
-                    if amount is _MISSING:
-                        continue
-                    if amount is None:
-                        amount = 0.0
-
-                    cur.execute(
-                        """INSERT INTO financial_line_items
-                           (statement_id, line_item_code, line_item_name,
-                            amount, currency, order_index, is_total)
-                           VALUES (?,?,?,?,?,?,?)""",
-                        (stmt_id, code, item.label_raw, float(amount),
-                         currency, item.order_index, item.is_total),
-                    )
-                    total_items += 1
-
-                updated_statements.append({
-                    "statement_id": stmt_id,
-                    "statement_type": stmt.statement_type,
-                    "period_end_date": period_end_date,
-                    "fiscal_year": fiscal_year,
-                    "line_items_count": len(stmt.items),
-                    "currency": currency,
-                })
-
-        conn.commit()
+    updated_statements, total_items = _persist_extraction_result(
+        stock_id=stock_id,
+        result=result,
+        stock_currency=stock_currency,
+        source_file=None,
+        extracted_by="gemini-ai-attributed",
+        notes_template=f"AI-attributed (corrections={result.validation_corrections})",
+    )
 
     logger.info(
         "Attribution persisted for stock %d: %d corrections, %d statements, %d items",
@@ -1858,6 +2581,537 @@ async def clear_extraction_cache(
     )
 
     return {"status": "ok", "data": {"message": "Extraction cache cleared."}}
+
+
+class AiRearrangeRequest(BaseModel):
+    statement_type: str = Field(..., description="income, balance, cashflow, or equity")
+    periods: Optional[List[str]] = Field(None, description="Specific period_end_dates to check")
+    pdf_id: Optional[int] = Field(None, description="Saved PDF id to include images for AI context")
+
+
+@router.post("/stocks/{stock_id}/ai-rearrange")
+async def ai_rearrange(
+    stock_id: int,
+    body: AiRearrangeRequest,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """
+    AI Reconcile — act as auditor to get names, sequence & values right
+    by comparing stored data against the saved PDF.
+    """
+    _ensure_schema()
+    _verify_stock_owner(stock_id, current_user.user_id)
+    logger.info("AI-RECONCILE: stock=%d type=%s pdf_id=%s body_pdf=%s", stock_id, body.statement_type, body.pdf_id, body)
+
+    # Auto-select latest saved PDF if none specified
+    pdf_id = body.pdf_id
+    if pdf_id is None:
+        latest = query_one(
+            "SELECT id FROM pdf_uploads WHERE stock_id = ? ORDER BY created_at DESC LIMIT 1",
+            (stock_id,),
+        )
+        logger.info("AI-RECONCILE: auto-detect latest=%s", latest)
+        if latest:
+            pdf_id = latest["id"] if isinstance(latest, dict) else latest[0]
+    if pdf_id is None:
+        raise BadRequestError("No saved PDF found. Upload a PDF first so the AI can audit against it.")
+
+    logger.info("AI-RECONCILE: using pdf_id=%s", pdf_id)
+
+    from app.core.config import get_settings
+    settings = get_settings()
+    api_key = settings.GEMINI_API_KEY
+
+    try:
+        from app.core.database import add_column_if_missing
+        add_column_if_missing("users", "gemini_api_key", "TEXT")
+        row = query_one(
+            "SELECT gemini_api_key FROM users WHERE id = ?",
+            (current_user.user_id,),
+        )
+        if row and row[0]:
+            api_key = row[0]
+    except Exception:
+        pass
+
+    if not api_key:
+        logger.error("AI-RECONCILE: No Gemini API key found")
+        raise BadRequestError("Gemini API key required for AI reconciliation.")
+
+    logger.info("AI-RECONCILE: calling ai_rearrange_statement with key=%s...", api_key[:8] if api_key else "NONE")
+
+    from app.services.extraction_service import ai_rearrange_statement
+
+    try:
+        result = await ai_rearrange_statement(
+            stock_id=stock_id,
+            statement_type=body.statement_type,
+            api_key=api_key,
+            periods=body.periods,
+            pdf_id=pdf_id,
+        )
+    except ValueError as exc:
+        logger.error("AI-RECONCILE ValueError: %s", exc)
+        raise BadRequestError(str(exc))
+    except Exception as exc:
+        logger.error("AI-RECONCILE error: %s", exc, exc_info=True)
+        raise BadRequestError(f"AI reconciliation failed: {exc}")
+
+    return {"status": "ok", "data": result}
+
+
+# ════════════════════════════════════════════════════════════════════
+# CASH FLOW STAGING
+# ════════════════════════════════════════════════════════════════════
+
+@router.get("/stocks/{stock_id}/cashflow-runs")
+async def list_cashflow_runs(
+    stock_id: int,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """List all cash flow extraction runs for a stock."""
+    _ensure_schema()
+    runs = query_all(
+        """SELECT id, stock_id, pdf_upload_id, source_file, status,
+                  periods_json, reconciliation_summary, created_at, updated_at
+           FROM cashflow_extraction_runs
+           WHERE stock_id = ?
+           ORDER BY created_at DESC""",
+        (stock_id,),
+    )
+    data = []
+    for r in runs:
+        row = dict(r)
+        row["periods"] = json.loads(row.pop("periods_json", "[]") or "[]")
+        summary = row.pop("reconciliation_summary", None)
+        row["reconciliation_summary"] = json.loads(summary) if summary else None
+        data.append(row)
+    return {"status": "ok", "data": data}
+
+
+@router.get("/stocks/{stock_id}/cashflow-runs/{run_id}/rows")
+async def get_cashflow_staged_rows(
+    stock_id: int,
+    run_id: int,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Get staged rows for a specific cash flow extraction run."""
+    _ensure_schema()
+    # Verify ownership
+    run = query_one(
+        "SELECT id FROM cashflow_extraction_runs WHERE id = ? AND stock_id = ?",
+        (run_id, stock_id),
+    )
+    if not run:
+        raise NotFoundError(f"Cash flow run {run_id} not found for stock {stock_id}")
+
+    rows = query_all(
+        """SELECT id, run_id, row_order, label_raw, normalized_code, section,
+                  row_kind, values_json, is_total, confidence,
+                  is_accepted, rejection_reason, created_at
+           FROM cashflow_staged_rows
+           WHERE run_id = ?
+           ORDER BY row_order""",
+        (run_id,),
+    )
+    data = []
+    for r in rows:
+        row = dict(r)
+        row["values"] = json.loads(row.pop("values_json", "{}") or "{}")
+        data.append(row)
+    return {"status": "ok", "data": data}
+
+
+class CashflowRowPatch(BaseModel):
+    is_accepted: Optional[bool] = None
+    rejection_reason: Optional[str] = None
+
+
+@router.patch("/stocks/{stock_id}/cashflow-staged-rows/{row_id}")
+async def patch_cashflow_staged_row(
+    stock_id: int,
+    row_id: int,
+    body: CashflowRowPatch,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Manually accept or reject a staged cash flow row."""
+    _ensure_schema()
+    # Verify ownership through join
+    row = query_one(
+        """SELECT sr.id, sr.run_id
+           FROM cashflow_staged_rows sr
+           JOIN cashflow_extraction_runs cr ON sr.run_id = cr.id
+           WHERE sr.id = ? AND cr.stock_id = ?""",
+        (row_id, stock_id),
+    )
+    if not row:
+        raise NotFoundError(
+            f"Staged row {row_id} not found for stock {stock_id}"
+        )
+
+    updates = []
+    params = []
+    if body.is_accepted is not None:
+        updates.append("is_accepted = ?")
+        params.append(body.is_accepted)
+    if body.rejection_reason is not None:
+        updates.append("rejection_reason = ?")
+        params.append(body.rejection_reason)
+
+    if not updates:
+        return {"status": "ok", "message": "No changes"}
+
+    params.append(row_id)
+    exec_sql(
+        f"UPDATE cashflow_staged_rows SET {', '.join(updates)} WHERE id = ?",
+        tuple(params),
+    )
+    return {"status": "ok", "message": "Row updated"}
+
+
+@router.post("/stocks/{stock_id}/cashflow-runs/{run_id}/commit")
+async def commit_cashflow_run(
+    stock_id: int,
+    run_id: int,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Commit accepted rows from a staged cash flow run to financial_line_items.
+
+    This replaces any existing cashflow line items for the corresponding periods.
+    """
+    _ensure_schema()
+    run = query_one(
+        """SELECT id, stock_id, source_file, periods_json, status
+           FROM cashflow_extraction_runs
+           WHERE id = ? AND stock_id = ?""",
+        (run_id, stock_id),
+    )
+    if not run:
+        raise NotFoundError(f"Cash flow run {run_id} not found for stock {stock_id}")
+
+    if run["status"] == "committed":
+        raise BadRequestError("Run already committed")
+
+    periods = json.loads(run["periods_json"] or "[]")
+    source_file = run["source_file"]
+
+    # Get accepted rows
+    accepted = query_all(
+        """SELECT row_order, label_raw, normalized_code, values_json,
+                  is_total, confidence
+           FROM cashflow_staged_rows
+           WHERE run_id = ? AND is_accepted = 1
+           ORDER BY row_order""",
+        (run_id,),
+    )
+    if not accepted:
+        raise BadRequestError("No accepted rows to commit")
+
+    # Find stock currency
+    stock = query_one("SELECT currency FROM stocks WHERE id = ?", (stock_id,))
+    stock_currency = stock["currency"] if stock else "SAR"
+
+    now = int(time.time())
+
+    # Build existing codes map
+    existing_codes_map: Dict[str, str] = {}
+    try:
+        code_rows = query_all(
+            """SELECT DISTINCT li.line_item_code, fs.statement_type
+               FROM financial_line_items li
+               JOIN financial_statements fs ON li.statement_id = fs.id
+               WHERE fs.stock_id = ?""",
+            (stock_id,),
+        )
+        for r in code_rows:
+            existing_codes_map[r["line_item_code"]] = r["statement_type"]
+    except Exception:
+        pass
+
+    created_stmts = []
+    total_items = 0
+
+    with get_connection() as conn:
+        cur = conn.cursor()
+
+        for period_label in periods:
+            period_end_date = period_label
+            if len(period_end_date) == 4:
+                period_end_date = f"{period_end_date}-12-31"
+
+            fiscal_year = None
+            if period_label and len(period_label) >= 4:
+                try:
+                    fiscal_year = int(period_label[:4])
+                except ValueError:
+                    try:
+                        fiscal_year = int(period_label[-4:])
+                    except ValueError:
+                        fiscal_year = date.today().year
+            if not fiscal_year:
+                fiscal_year = date.today().year
+
+            existing_stmt = query_one(
+                """SELECT id FROM financial_statements
+                   WHERE stock_id = ? AND statement_type = 'cashflow'
+                   AND period_end_date = ?""",
+                (stock_id, period_end_date),
+            )
+
+            if existing_stmt:
+                stmt_id = existing_stmt["id"]
+                cur.execute(
+                    """UPDATE financial_statements
+                       SET fiscal_year=?, source_file=?, extracted_by='staged_commit',
+                           notes=?, created_at=?
+                       WHERE id=?""",
+                    (fiscal_year, source_file,
+                     f"Committed from staged run #{run_id}", now, stmt_id),
+                )
+                cur.execute(
+                    "DELETE FROM financial_line_items WHERE statement_id = ?",
+                    (stmt_id,),
+                )
+            else:
+                cur.execute(
+                    """INSERT INTO financial_statements
+                       (stock_id, statement_type, fiscal_year, fiscal_quarter,
+                        period_end_date, filing_date, source_file, extracted_by,
+                        confidence_score, notes, created_at)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                    (
+                        stock_id, "cashflow", fiscal_year, None,
+                        period_end_date, None, source_file, "staged_commit",
+                        None, f"Committed from staged run #{run_id}", now,
+                    ),
+                )
+                stmt_id = cur.lastrowid
+
+            seen_codes: set = set()
+            for row in accepted:
+                # G) Headers must never be committed as financial line items
+                if row["row_kind"] == "header":
+                    continue
+
+                vals = json.loads(row["values_json"] or "{}")
+                code = _normalize_key(row["normalized_code"] or row["label_raw"])
+                code = _reconcile_code_with_existing(
+                    code, row["label_raw"], existing_codes_map,
+                )
+                if code in seen_codes:
+                    continue
+
+                amount = vals.get(period_label, 0.0)
+                if amount is None:
+                    amount = 0.0
+
+                cur.execute(
+                    """INSERT INTO financial_line_items
+                       (statement_id, line_item_code, line_item_name,
+                        amount, currency, order_index, is_total)
+                       VALUES (?,?,?,?,?,?,?)""",
+                    (stmt_id, code, row["label_raw"], float(amount),
+                     stock_currency, row["row_order"], row["is_total"]),
+                )
+                seen_codes.add(code)
+                total_items += 1
+
+            created_stmts.append({
+                "statement_id": stmt_id,
+                "period_end_date": period_end_date,
+                "fiscal_year": fiscal_year,
+                "line_items_count": len(accepted),
+            })
+
+        # Update run status
+        cur.execute(
+            """UPDATE cashflow_extraction_runs
+               SET status='committed', updated_at=?
+               WHERE id=?""",
+            (now, run_id),
+        )
+        conn.commit()
+
+    return {
+        "status": "ok",
+        "message": f"Committed {total_items} items across {len(created_stmts)} period(s)",
+        "data": {
+            "statements": created_stmts,
+            "total_items": total_items,
+        },
+    }
+
+
+# ════════════════════════════════════════════════════════════════════
+# L) CASH FLOW DEBUG / REVIEW SURFACE
+# ════════════════════════════════════════════════════════════════════
+
+@router.get("/stocks/{stock_id}/cashflow-status")
+async def get_cashflow_status(
+    stock_id: int,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """L) Lightweight debug/review surface for cash flow extraction status.
+
+    Returns:
+    - latest extraction run status
+    - reconciliation status and summary
+    - accepted totals (CFO/CFI/CFF/beginning/ending)
+    - needs_review flag
+    - rejection reasons and errors if failed
+    """
+    _ensure_schema()
+    _verify_stock_owner(stock_id, current_user.user_id)
+
+    # Get latest run
+    latest = query_one(
+        """SELECT id, status, periods_json, reconciliation_summary,
+                  source_file, created_at, updated_at
+           FROM cashflow_extraction_runs
+           WHERE stock_id = ?
+           ORDER BY created_at DESC LIMIT 1""",
+        (stock_id,),
+    )
+
+    if not latest:
+        return {
+            "status": "ok",
+            "data": {
+                "has_extraction": False,
+                "message": "No cash flow extraction runs found for this stock.",
+            },
+        }
+
+    run = dict(latest)
+    run_id = run["id"]
+    run["periods"] = json.loads(run.pop("periods_json", "[]") or "[]")
+    recon_raw = run.pop("reconciliation_summary", None)
+    recon_summary = json.loads(recon_raw) if recon_raw else {}
+
+    # Get row counts
+    row_counts = query_one(
+        """SELECT
+             COUNT(*) as total,
+             SUM(CASE WHEN is_accepted = 1 THEN 1 ELSE 0 END) as accepted,
+             SUM(CASE WHEN is_accepted = 0 THEN 1 ELSE 0 END) as rejected
+           FROM cashflow_staged_rows WHERE run_id = ?""",
+        (run_id,),
+    )
+
+    # Get rejected rows with reasons
+    rejected_rows = query_all(
+        """SELECT label_raw, section, row_kind, rejection_reason
+           FROM cashflow_staged_rows
+           WHERE run_id = ? AND is_accepted = 0
+           ORDER BY row_order""",
+        (run_id,),
+    )
+
+    # Get accepted subtotals for quick view
+    accepted_subtotals = query_all(
+        """SELECT label_raw, normalized_code, section, row_kind, values_json
+           FROM cashflow_staged_rows
+           WHERE run_id = ? AND is_accepted = 1
+             AND (row_kind IN ('subtotal', 'total') OR section = 'cash_bridge')
+           ORDER BY row_order""",
+        (run_id,),
+    )
+    subtotal_data = []
+    for r in accepted_subtotals:
+        vals = json.loads(r["values_json"] or "{}")
+        subtotal_data.append({
+            "label": r["label_raw"],
+            "normalized_code": r["normalized_code"],
+            "section": r["section"],
+            "row_kind": r["row_kind"],
+            "values": vals,
+        })
+
+    return {
+        "status": "ok",
+        "data": {
+            "has_extraction": True,
+            "run_id": run_id,
+            "extraction_status": run["status"],
+            "needs_review": run["status"] == "needs_review",
+            "source_file": run.get("source_file"),
+            "periods": run["periods"],
+            "created_at": run.get("created_at"),
+            "row_counts": dict(row_counts) if row_counts else {},
+            "reconciliation": {
+                "status": recon_summary.get("status"),
+                "warnings": recon_summary.get("warnings", []),
+                "errors": recon_summary.get("errors", []),
+                "summary": recon_summary.get("summary", {}),
+            },
+            "validated_metrics": recon_summary.get("validated_metrics", {}),
+            "accepted_subtotals": subtotal_data,
+            "rejected_rows": [dict(r) for r in rejected_rows],
+        },
+    }
+
+
+# K) Validated FCF endpoint for DCF integration
+@router.get("/stocks/{stock_id}/validated-fcf")
+async def get_validated_fcf(
+    stock_id: int,
+    period_end_date: Optional[str] = Query(None),
+    current_user: TokenData = Depends(get_current_user),
+):
+    """K) Get validated FCF from the cash flow reconciliation pipeline.
+
+    Returns validated CFO, capex, and FCF — computed deterministically
+    from committed/reconciled cash flow data, not raw Gemini output.
+
+    If period_end_date is not provided, returns the latest available.
+    """
+    _ensure_schema()
+    _verify_stock_owner(stock_id, current_user.user_id)
+
+    # Get the latest committed run with metrics
+    latest = query_one(
+        """SELECT id, periods_json, reconciliation_summary, status
+           FROM cashflow_extraction_runs
+           WHERE stock_id = ? AND status IN ('committed', 'reconciled')
+           ORDER BY created_at DESC LIMIT 1""",
+        (stock_id,),
+    )
+
+    result: Dict[str, Any] = {"source": "validated_cashflow_pipeline"}
+
+    if latest:
+        recon_raw = latest["reconciliation_summary"]
+        recon_summary = json.loads(recon_raw) if recon_raw else {}
+        metrics_by_period = recon_summary.get("validated_metrics", {})
+
+        if period_end_date and period_end_date in metrics_by_period:
+            result["period"] = period_end_date
+            result["metrics"] = metrics_by_period[period_end_date]
+        elif metrics_by_period:
+            # Return all periods
+            result["metrics_by_period"] = metrics_by_period
+        else:
+            result["metrics"] = None
+            result["message"] = "No validated metrics in latest run"
+    else:
+        result["metrics"] = None
+        result["message"] = "No committed cash flow runs found"
+
+    # Fallback: try from financial_line_items directly
+    if not result.get("metrics") and not result.get("metrics_by_period"):
+        items = _load_items_for_period(stock_id, period_end_date or "")
+        cfo = items.get("CASH_FROM_OPERATIONS")
+        capex = items.get("CAPITAL_EXPENDITURES") or items.get("CAPEX")
+        if cfo is not None:
+            fcf = (cfo - abs(capex)) if capex is not None else None
+            result["metrics"] = {
+                "cash_from_operations": cfo,
+                "capex_ppe_cash": capex,
+                "free_cash_flow": fcf,
+            }
+            result["source"] = "financial_line_items_fallback"
+
+    return {"status": "ok", "data": result}
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -1984,6 +3238,441 @@ async def get_score_history(
 # VALUATION MODELS
 # ════════════════════════════════════════════════════════════════════
 
+
+@router.get("/stocks/{stock_id}/valuation-defaults")
+async def get_valuation_defaults(
+    stock_id: int,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Return auto-computed default inputs for all 4 valuation models."""
+    _ensure_schema()
+    _verify_stock_owner(stock_id, current_user.user_id)
+
+    # Gather latest metrics
+    rows = query_all(
+        "SELECT metric_name, metric_value FROM stock_metrics WHERE stock_id = ? ORDER BY period_end_date DESC",
+        (stock_id,),
+    )
+    latest: Dict[str, float] = {}
+    for r in rows:
+        name = r[0] if isinstance(r, (tuple, list)) else r["metric_name"]
+        val = r[1] if isinstance(r, (tuple, list)) else r["metric_value"]
+        if name not in latest:
+            latest[name] = val
+
+    # Shares outstanding from analysis_stocks table
+    stock_row = query_one("SELECT outstanding_shares FROM analysis_stocks WHERE id = ?", (stock_id,))
+    shares = (stock_row[0] if isinstance(stock_row, (tuple, list)) else stock_row.get("outstanding_shares", None)) if stock_row else None
+
+    # FCF from cash flow
+    fcf_row = query_one(
+        """SELECT li.amount FROM financial_line_items li
+           JOIN financial_statements fs ON fs.id = li.statement_id
+           WHERE fs.stock_id = ? AND fs.statement_type = 'cashflow'
+             AND fs.fiscal_quarter IS NULL
+             AND UPPER(li.line_item_code) = 'FREE_CASH_FLOW'
+           ORDER BY fs.fiscal_year DESC LIMIT 1""",
+        (stock_id,),
+    )
+    fcf_val = (fcf_row[0] if isinstance(fcf_row, (tuple, list)) else fcf_row.get("amount")) if fcf_row else None
+
+    # If no explicit FCF, compute from CFO - CapEx
+    if fcf_val is None:
+        cfo_row = query_one(
+            """SELECT li.amount FROM financial_line_items li
+               JOIN financial_statements fs ON fs.id = li.statement_id
+               WHERE fs.stock_id = ? AND fs.statement_type = 'cashflow'
+                 AND fs.fiscal_quarter IS NULL
+                 AND UPPER(li.line_item_code) = 'CASH_FROM_OPERATIONS'
+               ORDER BY fs.fiscal_year DESC LIMIT 1""",
+            (stock_id,),
+        )
+        capex_row = query_one(
+            """SELECT li.amount FROM financial_line_items li
+               JOIN financial_statements fs ON fs.id = li.statement_id
+               WHERE fs.stock_id = ? AND fs.statement_type = 'cashflow'
+                 AND fs.fiscal_quarter IS NULL
+                 AND UPPER(li.line_item_code) IN ('CAPITAL_EXPENDITURES', 'CAPEX')
+               ORDER BY fs.fiscal_year DESC LIMIT 1""",
+            (stock_id,),
+        )
+        cfo = (cfo_row[0] if isinstance(cfo_row, (tuple, list)) else cfo_row.get("amount")) if cfo_row else None
+        capex = (capex_row[0] if isinstance(capex_row, (tuple, list)) else capex_row.get("amount")) if capex_row else 0
+        if cfo is not None:
+            fcf_val = cfo - abs(capex or 0)
+
+    # ── FCF History (multi-year) for DCF section ──────────────────
+    fcf_history = []
+    avg_fcf_growth = None
+    # Method 1: explicit FREE_CASH_FLOW per year
+    fcf_hist_rows = query_all(
+        """SELECT fs.fiscal_year, li.amount FROM financial_line_items li
+           JOIN financial_statements fs ON fs.id = li.statement_id
+           WHERE fs.stock_id = ? AND fs.statement_type = 'cashflow'
+             AND fs.fiscal_quarter IS NULL
+             AND UPPER(li.line_item_code) = 'FREE_CASH_FLOW'
+             AND li.amount IS NOT NULL
+           ORDER BY fs.fiscal_year""",
+        (stock_id,),
+    )
+    if fcf_hist_rows:
+        for fr in fcf_hist_rows:
+            fy = fr[0] if isinstance(fr, (tuple, list)) else fr["fiscal_year"]
+            amt = fr[1] if isinstance(fr, (tuple, list)) else fr["amount"]
+            fcf_history.append({"year": fy, "fcf": round(float(amt), 2)})
+    else:
+        # Method 2: compute CFO - |CapEx| per year
+        cfo_rows = query_all(
+            """SELECT fs.fiscal_year, li.amount FROM financial_line_items li
+               JOIN financial_statements fs ON fs.id = li.statement_id
+               WHERE fs.stock_id = ? AND fs.statement_type = 'cashflow'
+                 AND fs.fiscal_quarter IS NULL
+                 AND UPPER(li.line_item_code) = 'CASH_FROM_OPERATIONS'
+                 AND li.amount IS NOT NULL
+               ORDER BY fs.fiscal_year""",
+            (stock_id,),
+        )
+        capex_rows = query_all(
+            """SELECT fs.fiscal_year, li.amount FROM financial_line_items li
+               JOIN financial_statements fs ON fs.id = li.statement_id
+               WHERE fs.stock_id = ? AND fs.statement_type = 'cashflow'
+                 AND fs.fiscal_quarter IS NULL
+                 AND UPPER(li.line_item_code) IN ('CAPITAL_EXPENDITURES', 'CAPEX')
+                 AND li.amount IS NOT NULL
+               ORDER BY fs.fiscal_year""",
+            (stock_id,),
+        )
+        capex_by_year = {}
+        for cr in (capex_rows or []):
+            fy = cr[0] if isinstance(cr, (tuple, list)) else cr["fiscal_year"]
+            amt = cr[1] if isinstance(cr, (tuple, list)) else cr["amount"]
+            capex_by_year[fy] = float(amt)
+        for cr in (cfo_rows or []):
+            fy = cr[0] if isinstance(cr, (tuple, list)) else cr["fiscal_year"]
+            cfo_amt = float(cr[1] if isinstance(cr, (tuple, list)) else cr["amount"])
+            capex_amt = capex_by_year.get(fy, 0)
+            fcf_history.append({"year": fy, "fcf": round(cfo_amt - abs(capex_amt), 2)})
+
+    # Compute average YoY FCF growth rate
+    if len(fcf_history) >= 2:
+        fcf_growth_rates = []
+        for i in range(1, len(fcf_history)):
+            prev = fcf_history[i - 1]["fcf"]
+            curr = fcf_history[i]["fcf"]
+            if prev and prev != 0:
+                fcf_growth_rates.append((curr - prev) / abs(prev))
+        if fcf_growth_rates:
+            avg_fcf_growth = round(sum(fcf_growth_rates) / len(fcf_growth_rates), 4)
+
+    # Dividends per share history (for DDM growth calculation)
+    div_rows = query_all(
+        """SELECT fs.fiscal_year, li.amount FROM financial_line_items li
+           JOIN financial_statements fs ON fs.id = li.statement_id
+           WHERE fs.stock_id = ? AND fs.statement_type = 'cashflow'
+             AND fs.fiscal_quarter IS NULL
+             AND UPPER(li.line_item_code) = 'DIVIDENDS_PAID'
+           ORDER BY fs.fiscal_year""",
+        (stock_id,),
+    )
+    dps_history = []
+    div_growth_rates = []
+    if div_rows and shares and shares > 0:
+        for dr_row in div_rows:
+            fy = dr_row[0] if isinstance(dr_row, (tuple, list)) else dr_row["fiscal_year"]
+            amt = dr_row[1] if isinstance(dr_row, (tuple, list)) else dr_row["amount"]
+            if amt is not None:
+                dps = abs(amt) / shares
+                dps_history.append({"year": fy, "dps": round(dps, 4)})
+        # Compute growth rates between consecutive years
+        for i in range(1, len(dps_history)):
+            prev_dps = dps_history[i - 1]["dps"]
+            curr_dps = dps_history[i]["dps"]
+            if prev_dps > 0:
+                gr = (curr_dps - prev_dps) / prev_dps
+                div_growth_rates.append(gr)
+
+    avg_div_growth = sum(div_growth_rates) / len(div_growth_rates) if div_growth_rates else None
+
+    # Revenue growth (for DCF stage1 default)
+    rev_growth = latest.get("Revenue Growth")
+
+    # Debt and cash (for DCF enterprise-to-equity bridge)
+    # ── Cash: pick best single cash line item from latest balance sheet ──
+    # Priority: TOTAL_DEBT (pre-computed) > CASH_EQUIVALENTS/CASH_SHORT_TERM_INVESTMENTS > lowercase 'cash'
+    total_cash = None
+    cash_row = query_one(
+        """SELECT li.amount FROM financial_line_items li
+           JOIN financial_statements fs ON fs.id = li.statement_id
+           WHERE fs.stock_id = ? AND fs.statement_type = 'balance'
+             AND fs.fiscal_quarter IS NULL
+             AND UPPER(li.line_item_code) IN (
+               'CASH_AND_EQUIVALENTS','CASH_AND_CASH_EQUIVALENTS',
+               'CASH_EQUIVALENTS','CASH_SHORT_TERM_INVESTMENTS',
+               'CASH','CASH_BALANCES')
+             AND li.amount IS NOT NULL
+           ORDER BY fs.fiscal_year DESC,
+                    CASE UPPER(li.line_item_code)
+                      WHEN 'CASH_SHORT_TERM_INVESTMENTS' THEN 1
+                      WHEN 'CASH_EQUIVALENTS' THEN 2
+                      WHEN 'CASH_AND_CASH_EQUIVALENTS' THEN 3
+                      WHEN 'CASH_AND_EQUIVALENTS' THEN 4
+                      WHEN 'CASH_BALANCES' THEN 5
+                      WHEN 'CASH' THEN 6
+                      ELSE 7 END
+           LIMIT 1""",
+        (stock_id,),
+    )
+    if cash_row:
+        total_cash = cash_row[0] if isinstance(cash_row, (tuple, list)) else cash_row.get("amount")
+
+    # ── Debt: prefer pre-computed TOTAL_DEBT, else sum individual debt items ──
+    total_debt = None
+    td_row = query_one(
+        """SELECT li.amount FROM financial_line_items li
+           JOIN financial_statements fs ON fs.id = li.statement_id
+           WHERE fs.stock_id = ? AND fs.statement_type = 'balance'
+             AND fs.fiscal_quarter IS NULL
+             AND UPPER(li.line_item_code) = 'TOTAL_DEBT'
+             AND li.amount IS NOT NULL
+           ORDER BY fs.fiscal_year DESC LIMIT 1""",
+        (stock_id,),
+    )
+    if td_row:
+        total_debt = td_row[0] if isinstance(td_row, (tuple, list)) else td_row.get("amount")
+    else:
+        # Sum individual debt line items from latest year
+        debt_sum_row = query_one(
+            """SELECT SUM(li.amount) as debt_total FROM financial_line_items li
+               JOIN financial_statements fs ON fs.id = li.statement_id
+               WHERE fs.stock_id = ? AND fs.statement_type = 'balance'
+                 AND fs.fiscal_quarter IS NULL
+                 AND fs.fiscal_year = (
+                   SELECT MAX(fs2.fiscal_year) FROM financial_statements fs2
+                   WHERE fs2.stock_id = ? AND fs2.statement_type = 'balance' AND fs2.fiscal_quarter IS NULL)
+                 AND (UPPER(li.line_item_code) IN (
+                       'LONG_TERM_DEBT','SHORT_TERM_DEBT','CURRENT_PORTION_OF_LONG_TERM_DEBT',
+                       'CURRENT_PORTION_LT_DEBT','LONG_TERM_DEBTS','CURRENT_PORTION_OF_LONG_TERM_DEBTS')
+                      OR LOWER(li.line_item_code) LIKE '%borrowing%'
+                      OR LOWER(li.line_item_code) LIKE '%bank_overdraft%'
+                      OR LOWER(li.line_item_code) LIKE '%overdraft%'
+                      OR LOWER(li.line_item_code) LIKE '%bank_facilit%'
+                      OR LOWER(li.line_item_code) LIKE '%islamic_payable%'
+                      OR LOWER(li.line_item_code) LIKE '%due_to_bank%'
+                      OR LOWER(li.line_item_code) LIKE '%short_term_loan%'
+                      OR LOWER(li.line_item_code) LIKE '%murabaha%')
+                 AND li.amount IS NOT NULL""",
+            (stock_id, stock_id),
+        )
+        if debt_sum_row:
+            val = debt_sum_row[0] if isinstance(debt_sum_row, (tuple, list)) else debt_sum_row.get("debt_total")
+            if val is not None:
+                total_debt = abs(val)
+
+    # ── Graham-specific defaults: historical EPS avg growth & yfinance data ───
+    # Helper: detect subunit codes (fils/cents/halala) for division by 1000
+    def _is_subunit_code(code_str: str) -> bool:
+        if not isinstance(code_str, str):
+            return False
+        low = code_str.lower()
+        return 'fils' in low or 'cents' in low or 'halala' in low
+
+    eps_ttm = latest.get("EPS")
+    # Fallback: get EPS directly from income statement line items
+    if eps_ttm is None:
+        eps_li_row = query_one(
+            """SELECT li.line_item_code, li.amount FROM financial_line_items li
+               JOIN financial_statements fs ON fs.id = li.statement_id
+               WHERE fs.stock_id = ? AND fs.statement_type = 'income'
+                 AND fs.fiscal_quarter IS NULL
+                 AND fs.period_end_date NOT LIKE '%/_3M' ESCAPE '/'
+                 AND fs.period_end_date NOT LIKE '%/_6M' ESCAPE '/'
+                 AND fs.period_end_date NOT LIKE '%/_9M' ESCAPE '/'
+                 AND (UPPER(li.line_item_code) IN ('EPS_DILUTED','EPS_BASIC')
+                      OR LOWER(li.line_item_code) LIKE '%earnings_per_share%'
+                      OR LOWER(li.line_item_code) LIKE '%eps_%')
+               ORDER BY fs.fiscal_year DESC LIMIT 1""",
+            (stock_id,),
+        )
+        if eps_li_row:
+            code = eps_li_row.get("line_item_code", "")
+            val = eps_li_row.get("amount")
+            if val is not None and _is_subunit_code(code):
+                val = val / 1000.0
+            eps_ttm = val
+    # Last fallback: compute from Net Income / Shares Outstanding
+    if eps_ttm is None and shares and shares > 0:
+        ni_row = query_one(
+            """SELECT li.amount FROM financial_line_items li
+               JOIN financial_statements fs ON fs.id = li.statement_id
+               WHERE fs.stock_id = ? AND fs.statement_type = 'income'
+                 AND fs.fiscal_quarter IS NULL
+                 AND fs.period_end_date NOT LIKE '%/_3M' ESCAPE '/'
+                 AND fs.period_end_date NOT LIKE '%/_6M' ESCAPE '/'
+                 AND fs.period_end_date NOT LIKE '%/_9M' ESCAPE '/'
+                 AND UPPER(li.line_item_code) = 'NET_INCOME'
+               ORDER BY fs.fiscal_year DESC LIMIT 1""",
+            (stock_id,),
+        )
+        if ni_row:
+            ni_val = ni_row[0] if isinstance(ni_row, (tuple, list)) else ni_row.get("amount")
+            if ni_val is not None:
+                eps_ttm = round(ni_val / shares, 4)
+    graham_growth_avg = None
+    eps_history = []
+    # Fetch multi-year EPS from stock_metrics
+    eps_rows = query_all(
+        """SELECT fiscal_year, metric_value FROM stock_metrics
+           WHERE stock_id = ? AND metric_name = 'EPS'
+             AND fiscal_quarter IS NULL AND metric_value IS NOT NULL
+           ORDER BY fiscal_year""",
+        (stock_id,),
+    )
+    # Fallback: pull EPS directly from income statement line items
+    if not eps_rows:
+        eps_rows_raw = query_all(
+            """SELECT fs.fiscal_year, li.line_item_code, li.amount FROM financial_line_items li
+               JOIN financial_statements fs ON fs.id = li.statement_id
+               WHERE fs.stock_id = ? AND fs.statement_type = 'income'
+                 AND fs.fiscal_quarter IS NULL
+                 AND fs.period_end_date NOT LIKE '%/_3M' ESCAPE '/'
+                 AND fs.period_end_date NOT LIKE '%/_6M' ESCAPE '/'
+                 AND fs.period_end_date NOT LIKE '%/_9M' ESCAPE '/'
+                 AND (UPPER(li.line_item_code) IN ('EPS_DILUTED','EPS_BASIC')
+                      OR LOWER(li.line_item_code) LIKE '%earnings_per_share%'
+                      OR LOWER(li.line_item_code) LIKE '%eps_%')
+                 AND li.amount IS NOT NULL
+               ORDER BY fs.fiscal_year""",
+            (stock_id,),
+        )
+        # Dedupe: keep one EPS per fiscal_year, convert fils/cents if needed
+        seen_years = set()
+        eps_rows = []
+        for er in (eps_rows_raw or []):
+            fy = er[0] if isinstance(er, (tuple, list)) else er["fiscal_year"]
+            if fy not in seen_years:
+                seen_years.add(fy)
+                code = er[1] if isinstance(er, (tuple, list)) else er.get("line_item_code", "")
+                val = er[2] if isinstance(er, (tuple, list)) else er.get("amount")
+                if val is not None and _is_subunit_code(code):
+                    val = val / 1000.0
+                eps_rows.append((fy, val))
+    if eps_rows:
+        for er in eps_rows:
+            fy = er[0] if isinstance(er, (tuple, list)) else er.get("fiscal_year", er.get("fiscal_year"))
+            val = er[1] if isinstance(er, (tuple, list)) else (er.get("metric_value") or er.get("amount"))
+            eps_history.append({"year": fy, "eps": round(val, 4) if val else None})
+        # Average year-over-year EPS growth rate
+        yoy_growth_rates = []
+        for i in range(1, len(eps_history)):
+            prev = eps_history[i - 1]["eps"]
+            curr = eps_history[i]["eps"]
+            if prev and prev > 0 and curr is not None:
+                yoy_growth_rates.append(((curr - prev) / prev) * 100)
+        if yoy_growth_rates:
+            avg_raw = sum(yoy_growth_rates) / len(yoy_growth_rates)
+            # Graham conservatism: cap at 15%, floor at 0%
+            graham_growth_avg = round(min(max(avg_raw, 0), 15), 2)
+
+    # Fetch current price & bond yield from yfinance
+    current_price_yf = None
+    bond_yield_yf = None
+    stock_sym_row = query_one("SELECT symbol FROM analysis_stocks WHERE id = ?", (stock_id,))
+    ticker_sym = (stock_sym_row[0] if isinstance(stock_sym_row, (tuple, list)) else stock_sym_row.get("symbol")) if stock_sym_row else None
+    if ticker_sym:
+        try:
+            import yfinance as yf
+            # Current stock price
+            tk = yf.Ticker(ticker_sym)
+            hist = tk.history(period="5d")
+            if not hist.empty:
+                current_price_yf = round(float(hist["Close"].iloc[-1]), 2)
+            # 10Y Treasury yield (proxy for AAA bond yield)
+            tnx = yf.Ticker("^TNX")
+            tnx_hist = tnx.history(period="5d")
+            if not tnx_hist.empty:
+                bond_yield_yf = round(float(tnx_hist["Close"].iloc[-1]), 2)
+        except Exception as e:
+            logger.warning("yfinance fetch failed for Graham defaults: %s", e)
+
+    defaults = {
+        "eps": eps_ttm,
+        "book_value_per_share": latest.get("Book Value / Share"),
+        "dividends_per_share": latest.get("Dividends / Share"),
+        "fcf": fcf_val,
+        "fcf_history": fcf_history,
+        "avg_fcf_growth": avg_fcf_growth,
+        "shares_outstanding": shares,
+        "revenue_growth": rev_growth,
+        "avg_dividend_growth": round(avg_div_growth, 4) if avg_div_growth is not None else None,
+        "dps_history": dps_history,
+        "total_debt": total_debt,
+        "total_cash": total_cash,
+        "net_margin": latest.get("Net Margin"),
+        "roe": latest.get("ROE"),
+        # Graham-specific
+        "graham_growth_cagr": graham_growth_avg,
+        "eps_history": eps_history,
+        "current_price": current_price_yf,
+        "bond_yield": bond_yield_yf,
+    }
+
+    return {"status": "ok", "data": defaults}
+
+
+@router.get("/stocks/{stock_id}/peer-multiples")
+async def get_peer_multiples(
+    stock_id: int,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Fetch valuation multiples (P/E, P/B, P/S, P/CF, EV/EBITDA) from yfinance
+    for all of the user's analysis stocks, to be used as peer comparables."""
+    _ensure_schema()
+    uid = current_user.user_id
+    _verify_stock_owner(stock_id, uid)
+
+    rows = query_df(
+        "SELECT id, symbol, company_name FROM analysis_stocks WHERE user_id = ? ORDER BY symbol",
+        (uid,),
+    )
+    if rows.empty:
+        return {"status": "ok", "data": {"peers": [], "count": 0}}
+
+    peers = []
+    import yfinance as yf
+
+    for _, row in rows.iterrows():
+        sym = row["symbol"]
+        entry: Dict[str, Any] = {
+            "stock_id": int(row["id"]),
+            "symbol": sym,
+            "company_name": row["company_name"],
+            "pe": None, "pb": None, "ps": None, "pcf": None, "ev_ebitda": None,
+        }
+        try:
+            tk = yf.Ticker(sym)
+            info = tk.info or {}
+            pe = info.get("trailingPE") or info.get("forwardPE")
+            entry["pe"] = round(float(pe), 2) if pe is not None else None
+            pb = info.get("priceToBook")
+            entry["pb"] = round(float(pb), 2) if pb is not None else None
+            ps = info.get("priceToSalesTrailing12Months")
+            entry["ps"] = round(float(ps), 2) if ps is not None else None
+            ocf = info.get("operatingCashflow")
+            mcap = info.get("marketCap")
+            if ocf and mcap and ocf > 0:
+                entry["pcf"] = round(float(mcap) / float(ocf), 2)
+            ev = info.get("enterpriseValue")
+            ebitda = info.get("ebitda")
+            if ev is not None and ebitda and ebitda > 0:
+                entry["ev_ebitda"] = round(float(ev) / float(ebitda), 2)
+        except Exception as e:
+            logger.warning("yfinance peer-multiples fetch failed for %s: %s", sym, e)
+
+        peers.append(entry)
+
+    return {"status": "ok", "data": {"peers": peers, "count": len(peers)}}
+
+
 @router.get("/stocks/{stock_id}/valuations")
 async def get_valuations(
     stock_id: int,
@@ -2009,6 +3698,34 @@ async def get_valuations(
     return {"status": "ok", "data": {"valuations": valuations, "count": len(valuations)}}
 
 
+@router.delete("/stocks/{stock_id}/valuations")
+async def delete_all_valuations(
+    stock_id: int,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Delete all saved valuations for a stock."""
+    _ensure_schema()
+    _verify_stock_owner(stock_id, current_user.user_id)
+    exec_sql("DELETE FROM valuation_models WHERE stock_id = ?", (stock_id,))
+    return {"status": "ok", "message": "All valuations deleted."}
+
+
+@router.delete("/stocks/{stock_id}/valuations/{valuation_id}")
+async def delete_single_valuation(
+    stock_id: int,
+    valuation_id: int,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Delete a single saved valuation."""
+    _ensure_schema()
+    _verify_stock_owner(stock_id, current_user.user_id)
+    row = query_one("SELECT id FROM valuation_models WHERE id = ? AND stock_id = ?", (valuation_id, stock_id))
+    if not row:
+        raise NotFoundError("Valuation not found.")
+    exec_sql("DELETE FROM valuation_models WHERE id = ? AND stock_id = ?", (valuation_id, stock_id))
+    return {"status": "ok", "message": "Valuation deleted."}
+
+
 @router.post("/stocks/{stock_id}/valuations/graham")
 async def run_graham(
     stock_id: int,
@@ -2019,7 +3736,9 @@ async def run_graham(
     _ensure_schema()
     _verify_stock_owner(stock_id, current_user.user_id)
 
-    result = _graham_number(body.eps, body.book_value_per_share, body.multiplier)
+    result = _graham_number(body.eps, body.growth_rate,
+                             body.corporate_yield, body.margin_of_safety,
+                             body.current_price)
     _save_valuation(stock_id, result, current_user.user_id)
     return {"status": "ok", "data": result}
 
@@ -2038,6 +3757,7 @@ async def run_dcf(
         body.fcf, body.growth_rate_stage1, body.growth_rate_stage2,
         body.discount_rate, body.stage1_years, body.stage2_years,
         body.terminal_growth, body.shares_outstanding,
+        body.cash, body.debt,
     )
     _save_valuation(stock_id, result, current_user.user_id)
     return {"status": "ok", "data": result}
@@ -2249,7 +3969,7 @@ def _calculate_all_metrics(
     operating_income = _get("OPERATING_INCOME")
     net_income = _get("NET_INCOME")
     total_assets = _get("TOTAL_ASSETS")
-    total_equity = _get("TOTAL_EQUITY")
+    total_equity = _get("TOTAL_EQUITY") or _get("SHAREHOLDERS_EQUITY")
 
     if revenue and revenue != 0:
         if gross_profit is not None:
@@ -2280,42 +4000,86 @@ def _calculate_all_metrics(
     current_liab = _get("TOTAL_CURRENT_LIABILITIES")
     inventory = _get("INVENTORY")
     cash = _get("CASH_EQUIVALENTS")
+    short_term_inv = _get("SHORT_TERM_INVESTMENTS")
+    ar = _get("ACCOUNTS_RECEIVABLE")
     if current_assets is not None and current_liab and current_liab != 0:
         liq["Current Ratio"] = current_assets / current_liab
-        if inventory is not None:
+        # CFA: Quick Ratio = (Cash + ST Investments + Receivables) / CL
+        quick_assets = (cash or 0) + (short_term_inv or 0) + (ar or 0)
+        if quick_assets > 0:
+            liq["Quick Ratio"] = quick_assets / current_liab
+        elif inventory is not None:
             liq["Quick Ratio"] = (current_assets - inventory) / current_liab
-        if cash is not None:
+        # CFA: Cash Ratio = (Cash + ST Marketable Securities) / CL
+        cash_plus_st = (cash or 0) + (short_term_inv or 0)
+        if cash_plus_st > 0:
+            liq["Cash Ratio"] = cash_plus_st / current_liab
+        elif cash is not None:
             liq["Cash Ratio"] = cash / current_liab
     results["liquidity"] = liq
 
-    # ── leverage
+    # ── leverage (CFA: "debt" = interest-bearing ST + LT debt, NOT total liabilities)
     lev: Dict[str, Optional[float]] = {}
     total_liab = _get("TOTAL_LIABILITIES")
     lt_debt = _get("LONG_TERM_DEBT")
     st_debt = _get("SHORT_TERM_DEBT")
     interest_expense = _get("INTEREST_EXPENSE")
-    if total_liab is not None and total_equity and total_equity != 0:
-        lev["Debt-to-Equity"] = total_liab / total_equity
-    if total_liab is not None and total_assets and total_assets != 0:
-        lev["Debt-to-Assets"] = total_liab / total_assets
+    has_debt_data = lt_debt is not None or st_debt is not None
     total_debt = (lt_debt or 0) + (st_debt or 0)
-    if total_debt and total_equity and total_equity != 0:
-        lev["Total Debt / Equity"] = total_debt / total_equity
-    if ebitda and ebitda != 0 and total_debt:
+    # CFA: Debt-to-Equity = Total Debt / Total Equity
+    if has_debt_data and total_equity and total_equity != 0:
+        lev["Debt-to-Equity"] = total_debt / total_equity
+    # CFA: Debt-to-Assets = Total Debt / Total Assets
+    if has_debt_data and total_assets and total_assets != 0:
+        lev["Debt-to-Assets"] = total_debt / total_assets
+    # CFA: Debt-to-Capital = Total Debt / (Total Debt + Total Equity)
+    if has_debt_data and total_equity is not None and (total_debt + total_equity) != 0:
+        lev["Debt-to-Capital"] = total_debt / (total_debt + total_equity)
+    # CFA: Financial Leverage = Total Liabilities / Total Equity
+    if total_liab is not None and total_equity and total_equity != 0:
+        lev["Financial Leverage"] = total_liab / total_equity
+    if ebitda and ebitda != 0 and has_debt_data and total_debt:
         lev["Debt / EBITDA"] = total_debt / ebitda
+    # CFA: Interest Coverage = EBIT / Interest Expense
     if interest_expense and interest_expense != 0 and operating_income is not None:
         lev["Interest Coverage"] = operating_income / abs(interest_expense)
+    # CFA: Equity Multiplier = Total Assets / Total Equity
     if total_assets and total_equity and total_equity != 0:
         lev["Equity Multiplier"] = total_assets / total_equity
     results["leverage"] = lev
 
-    # ── efficiency
+    # CFA: ROIC = NOPAT / Invested Capital (placed after leverage so total_debt is available)
+    tax_rate = _get("EFFECTIVE_TAX_RATE")
+    if tax_rate is None:
+        income_tax = _get("INCOME_TAX_EXPENSE")
+        pretax = _get("PRETAX_INCOME")
+        if income_tax is not None and pretax and pretax != 0:
+            tax_rate = income_tax / pretax
+    if operating_income is not None and tax_rate is not None:
+        nopat = operating_income * (1.0 - min(max(tax_rate, 0), 1.0))
+        invested_capital = (total_equity or 0) + total_debt - (cash or 0) - (short_term_inv or 0)
+        if invested_capital and invested_capital > 0:
+            prof["ROIC"] = nopat / invested_capital
+            # Re-persist profitability since we added ROIC late
+            results["profitability"] = prof
+
+    # ── efficiency / activity
     eff: Dict[str, Optional[float]] = {}
-    ar = _get("ACCOUNTS_RECEIVABLE")
+    if ar is None:
+        ar = _get("ACCOUNTS_RECEIVABLE")
     ap = _get("ACCOUNTS_PAYABLE")
     cogs = _get("COST_OF_REVENUE")
+    ppe = _get("NET_FIXED_ASSETS") or _get("PROPERTY_PLANT_EQUIPMENT")
     if revenue and total_assets and total_assets != 0:
         eff["Asset Turnover"] = revenue / total_assets
+    # CFA: Fixed Asset Turnover = Revenue / Net PP&E
+    if revenue and ppe and ppe != 0:
+        eff["Fixed Asset Turnover"] = revenue / ppe
+    # CFA: Working Capital Turnover = Revenue / Working Capital
+    if revenue and current_assets is not None and current_liab is not None:
+        working_capital = current_assets - current_liab
+        if working_capital and working_capital != 0:
+            eff["Working Capital Turnover"] = revenue / working_capital
     if revenue and ar and ar != 0:
         eff["Receivables Turnover"] = revenue / ar
         eff["Days Sales Outstanding"] = 365.0 / (revenue / ar)
@@ -2334,27 +4098,88 @@ def _calculate_all_metrics(
 
     # ── valuation (per-share)
     val: Dict[str, Optional[float]] = {}
-    eps = _get("EPS_DILUTED") or _get("EPS_BASIC")
-    shares = _get("SHARES_DILUTED") or _get("SHARES_BASIC") or _get("SHARE_COUNT")
+    eps = _get("EPS_DILUTED") or _get("EPS_BASIC") or _get("eps_basic")
+    shares = (
+        _get("SHARES_DILUTED") or _get("SHARES_BASIC") or _get("SHARE_COUNT")
+        or _get("SHARES_OUTSTANDING_DILUTED") or _get("SHARES_OUTSTANDING_BASIC")
+        or _get("TOTAL_COMMON_SHARES_OUTSTANDING")
+        or _get("FILING_DATE_SHARES_OUTSTANDING")
+    )
     if total_equity is not None and shares and shares != 0:
         val["Book Value / Share"] = total_equity / shares
     if eps is not None:
         val["EPS"] = eps
-    dividends_paid = _get("DIVIDENDS_PAID")
+
+    # --- Payout Ratio (CFA approach with multiple fallbacks) ---
+    # 1) Try total dividends paid from cash-flow statement
+    dividends_paid = (
+        _get("DIVIDENDS_PAID") or _get("COMMON_DIVIDENDS_PAID")
+        or _get("dividends_paid")
+    )
+    dps: Optional[float] = None
     if dividends_paid is not None and shares and shares != 0:
         dps = abs(dividends_paid) / shares
+    # 2) Fall back to DIVIDEND_PER_SHARE line item if available
+    if dps is None:
+        dps = _get("DIVIDEND_PER_SHARE")
+    if dps is not None:
         val["Dividends / Share"] = dps
-        if eps and eps != 0:
-            val["Payout Ratio"] = dps / eps
+
+    # CFA Payout Ratio = DPS / EPS
+    payout: Optional[float] = None
+    if dps is not None and eps and eps != 0:
+        payout = dps / eps
+    # 3) Final fallback: Total Dividends Paid / Net Income
+    if payout is None and dividends_paid is not None and net_income and net_income != 0:
+        payout = abs(dividends_paid) / net_income
+
+    if payout is not None:
+        val["Payout Ratio"] = payout
+        # CFA: Retention Rate = 1 - Payout Ratio
+        val["Retention Rate"] = 1.0 - payout
+        # CFA: Sustainable Growth Rate = ROE × Retention Rate
+        roe = prof.get("ROE")
+        if roe is not None:
+            val["Sustainable Growth Rate"] = roe * (1.0 - payout)
     results["valuation"] = val
 
-    # ── cash flow
+    # ── cash flow (J/K: use validated CFO and validated capex only)
     cfm: Dict[str, Optional[float]] = {}
-    cfo = _get("CASH_FROM_OPERATIONS")
-    capex = _get("CAPITAL_EXPENDITURES") or _get("CAPEX")
-    fcf = _get("FCF")
-    if fcf is None and cfo is not None and capex is not None:
-        fcf = cfo - abs(capex)
+    cfo = _get("CASH_FROM_OPERATIONS") or _get("OPERATING_CASH_FLOW")
+    cfi = _get("CASH_FROM_INVESTING") or _get("INVESTING_CASH_FLOW")
+    cff = _get("CASH_FROM_FINANCING") or _get("FINANCING_CASH_FLOW")
+
+    # J) Capex: look for both PPE and intangibles capex from committed rows
+    capex_ppe = _get("CAPITAL_EXPENDITURES") or _get("CAPEX")
+    capex_intang = None
+    # Try normalized codes that the reconciler would have set
+    for code_name in items:
+        low = code_name.lower()
+        if "intangible" in low and ("capex" in low or "purchase" in low or "payment" in low):
+            capex_intang = items[code_name]
+            break
+
+    total_capex: Optional[float] = None
+    if capex_ppe is not None:
+        total_capex = abs(capex_ppe)
+        cfm["CAPEX PPE"] = capex_ppe
+    if capex_intang is not None:
+        total_capex = (total_capex or 0.0) + abs(capex_intang)
+        cfm["CAPEX Intangibles"] = capex_intang
+
+    # J) FCF = validated CFO - total cash CAPEX (deterministic, not from raw Gemini)
+    fcf: Optional[float] = None
+    if cfo is not None and total_capex is not None:
+        fcf = cfo - total_capex
+    elif cfo is not None and capex_ppe is not None:
+        fcf = cfo - abs(capex_ppe)
+
+    if cfo is not None:
+        cfm["Cash from Operations"] = cfo
+    if cfi is not None:
+        cfm["Cash from Investing"] = cfi
+    if cff is not None:
+        cfm["Cash from Financing"] = cff
     if fcf is not None:
         cfm["Free Cash Flow"] = fcf
         if revenue and revenue != 0:
@@ -2363,7 +4188,47 @@ def _calculate_all_metrics(
             cfm["FCF / Share"] = fcf / shares
     if cfo is not None and net_income and net_income != 0:
         cfm["CFO / Net Income"] = cfo / net_income
+
+    # Free Cash Flow — also pick up from statement line items if not already set
+    if "Free Cash Flow" not in cfm:
+        stmt_fcf = _get("FREE_CASH_FLOW")
+        if stmt_fcf is not None:
+            cfm["Free Cash Flow"] = stmt_fcf
+
+    # FCF Margin fallback: compute from whatever FCF we have
+    if "FCF Margin" not in cfm:
+        final_fcf = cfm.get("Free Cash Flow")
+        if final_fcf is not None and revenue and revenue != 0:
+            cfm["FCF Margin"] = final_fcf / revenue
+    # Also try the pre-computed line item from the statement
+    if "FCF Margin" not in cfm:
+        stmt_fcf_margin = _get("FREE_CASH_FLOW_MARGIN")
+        if stmt_fcf_margin is not None:
+            cfm["FCF Margin"] = stmt_fcf_margin
+
+    # FCF / Share fallback
+    if "FCF / Share" not in cfm:
+        final_fcf = cfm.get("Free Cash Flow")
+        if final_fcf is not None and shares and shares != 0:
+            cfm["FCF / Share"] = final_fcf / shares
+
+    # Levered Free Cash Flow — pick up directly from statement line items
+    lfcf = _get("LEVERED_FREE_CASH_FLOW")
+    if lfcf is not None:
+        cfm["Levered Free Cash Flow"] = lfcf
+
     results["cashflow"] = cfm
+
+    # ── quality / supplemental
+    qual: Dict[str, Optional[float]] = {}
+    # CFA: Accruals Ratio = (Net Income − CFO) / Total Assets — lower is better
+    if net_income is not None and cfo is not None and total_assets and total_assets != 0:
+        qual["Accruals Ratio"] = (net_income - cfo) / total_assets
+    # Net Debt / EBITDA (for risk scoring)
+    net_debt = total_debt - (cash or 0) - (short_term_inv or 0)
+    if ebitda and ebitda != 0:
+        qual["Net Debt / EBITDA"] = net_debt / ebitda
+    results["quality"] = qual
 
     # ── persist
     for category, metrics in results.items():
@@ -2377,6 +4242,7 @@ def _calculate_all_metrics(
 # ── Growth calculation ───────────────────────────────────────────────
 
 def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
+    import statistics
     growth: Dict[str, List[Dict[str, Any]]] = {}
     growth_items = [
         ("REVENUE", "Revenue Growth", "income"),
@@ -2385,28 +4251,44 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
         ("TOTAL_ASSETS", "Total Assets Growth", "balance"),
         ("CASH_FROM_OPERATIONS", "CFO Growth", "cashflow"),
     ]
-    for code, label, stmt_type in growth_items:
+
+    # Helper: fetch by-year series for a line item code
+    def _fetch_series(code: str, stmt_type: str) -> Dict[int, float]:
         rows = query_all(
             """SELECT fs.period_end_date AS period, fs.fiscal_year, li.amount
                FROM financial_line_items li
                JOIN financial_statements fs ON fs.id = li.statement_id
-               WHERE fs.stock_id = ? AND fs.statement_type = ? AND li.line_item_code = ?
-               ORDER BY fs.period_end_date""",
+               WHERE fs.stock_id = ? AND fs.statement_type = ?
+                 AND UPPER(li.line_item_code) = UPPER(?)
+               ORDER BY fs.fiscal_year, fs.period_end_date""",
             (stock_id, stmt_type, code),
         )
-        if len(rows) < 2:
-            continue
-        periods = []
+        by_year: Dict[int, Dict[str, Any]] = {}
         for r in rows:
             if isinstance(r, (tuple, list)):
-                periods.append({"period": r[0], "fiscal_year": r[1], "amount": r[2]})
+                rec = {"period": r[0], "fiscal_year": r[1], "amount": r[2]}
             else:
-                periods.append({"period": r["period"], "fiscal_year": r["fiscal_year"], "amount": r["amount"]})
+                rec = {"period": r["period"], "fiscal_year": r["fiscal_year"], "amount": r["amount"]}
+            fy = rec["fiscal_year"]
+            if fy is not None:
+                by_year[fy] = rec
+        return by_year
+
+    # ── A) Standard YoY growth rates
+    for code, label, stmt_type in growth_items:
+        by_year = _fetch_series(code, stmt_type)
+        sorted_years = sorted(by_year.keys())
+        if len(sorted_years) < 2:
+            continue
 
         rates: List[Dict[str, Any]] = []
-        for i in range(1, len(periods)):
-            prev = periods[i - 1]
-            curr = periods[i]
+        for i in range(1, len(sorted_years)):
+            prev_fy = sorted_years[i - 1]
+            curr_fy = sorted_years[i]
+            if curr_fy - prev_fy != 1:
+                continue
+            prev = by_year[prev_fy]
+            curr = by_year[curr_fy]
             if prev["amount"] and prev["amount"] != 0:
                 g = (curr["amount"] - prev["amount"]) / abs(prev["amount"])
                 rates.append({
@@ -2415,17 +4297,128 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
                     "growth": round(g, 4),
                 })
                 _upsert_metric(
-                    stock_id, curr.get("fiscal_year", 0), curr["period"],
+                    stock_id, curr_fy, curr["period"],
                     "growth", label, round(g, 4),
                 )
         if rates:
             growth[label] = rates
+
+    # Get newest fiscal year from the latest period
+    latest_period = query_one(
+        """SELECT MAX(period_end_date) as p, MAX(fiscal_year) as fy
+           FROM financial_statements WHERE stock_id = ?""",
+        (stock_id,),
+    )
+    if not latest_period:
+        return growth
+    latest_fy = latest_period[1] if isinstance(latest_period, (tuple, list)) else latest_period["fy"]
+    latest_pd = latest_period[0] if isinstance(latest_period, (tuple, list)) else latest_period["p"]
+    if not latest_fy or not latest_pd:
+        return growth
+
+    # ── B) CAGRs (3Y and 5Y) for Revenue and EPS
+    cagr_items = [
+        ("REVENUE", "Revenue", "income"),
+        ("EPS_DILUTED", "EPS", "income"),
+    ]
+    for code, metric_label, stmt_type in cagr_items:
+        by_year = _fetch_series(code, stmt_type)
+        sorted_years = sorted(by_year.keys())
+        for n_years in [3, 5]:
+            target_fy = latest_fy - n_years
+            if target_fy in by_year and latest_fy in by_year:
+                start_val = by_year[target_fy]["amount"]
+                end_val = by_year[latest_fy]["amount"]
+                if start_val and start_val > 0 and end_val and end_val > 0:
+                    cagr = (end_val / start_val) ** (1.0 / n_years) - 1.0
+                    metric_name = f"{metric_label} CAGR {n_years}Y"
+                    _upsert_metric(stock_id, latest_fy, latest_pd,
+                                   "growth", metric_name, round(cagr, 4))
+
+    # ── C) Growth stability (stdev of YoY rates)
+    for label_stub in ["Revenue Growth", "EPS Growth"]:
+        rates_list = growth.get(label_stub, [])
+        # Use last 5 rates max
+        recent_rates = [r["growth"] for r in rates_list[-5:]]
+        if len(recent_rates) >= 3:
+            stdev = statistics.stdev(recent_rates)
+            _upsert_metric(stock_id, latest_fy, latest_pd,
+                           "growth", f"{label_stub} Stability", round(stdev, 4))
+
+    # ── D) Margin trend (3Y delta for Net Margin and Operating Margin)
+    for code, metric_label, stmt_type in [
+        ("NET_INCOME", "Net Margin", "income"),
+        ("OPERATING_INCOME", "Operating Margin", "income"),
+    ]:
+        margin_by_year = _fetch_series(code, stmt_type)
+        revenue_by_year = _fetch_series("REVENUE", "income")
+        if latest_fy in margin_by_year and latest_fy in revenue_by_year:
+            for n_years in [3]:
+                start_fy = latest_fy - n_years
+                if (start_fy in margin_by_year and start_fy in revenue_by_year
+                        and revenue_by_year.get(start_fy, {}).get("amount")
+                        and revenue_by_year[start_fy]["amount"] != 0
+                        and revenue_by_year[latest_fy]["amount"]
+                        and revenue_by_year[latest_fy]["amount"] != 0):
+                    margin_now = margin_by_year[latest_fy]["amount"] / revenue_by_year[latest_fy]["amount"]
+                    margin_then = margin_by_year[start_fy]["amount"] / revenue_by_year[start_fy]["amount"]
+                    delta = margin_now - margin_then  # positive = improving
+                    _upsert_metric(stock_id, latest_fy, latest_pd,
+                                   "growth", f"{metric_label} Trend 3Y", round(delta, 4))
+
+    # ── E) Profit-aware growth flag: revenue growing but margins falling
+    rev_rates = growth.get("Revenue Growth", [])
+    if rev_rates:
+        latest_rev_g = rev_rates[-1]["growth"]
+        # Check if revenue grew but net margin declined
+        nm_trend = None
+        nm_trend_rows = query_all(
+            "SELECT metric_value FROM stock_metrics WHERE stock_id = ? AND metric_name = ? ORDER BY period_end_date DESC LIMIT 1",
+            (stock_id, "Net Margin Trend 3Y"),
+        )
+        if nm_trend_rows:
+            nm_trend = nm_trend_rows[0][0] if isinstance(nm_trend_rows[0], (tuple, list)) else nm_trend_rows[0]["metric_value"]
+        if latest_rev_g > 0.03 and nm_trend is not None and nm_trend < -0.02:
+            # Revenue growing > 3% but net margin declined > 2pp → penalize
+            _upsert_metric(stock_id, latest_fy, latest_pd,
+                           "growth", "Growth Without Profit", 1.0)
+        else:
+            _upsert_metric(stock_id, latest_fy, latest_pd,
+                           "growth", "Growth Without Profit", 0.0)
+
     return growth
 
 
 # ── Score calculation (mirrors MetricsCalculator.compute_stock_score)
 
 def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
+    # ── Auto-recalculate all metrics from financial statements before scoring ──
+    # This ensures newly added formulas (ROIC, Accruals Ratio, Net Debt/EBITDA, etc.)
+    # are applied even if the user hasn't manually re-triggered metric calculation.
+    periods = query_all(
+        """SELECT DISTINCT period_end_date, fiscal_year, fiscal_quarter
+           FROM financial_statements
+           WHERE stock_id = ?
+           ORDER BY period_end_date""",
+        (stock_id,),
+    )
+    for p in periods:
+        if isinstance(p, (tuple, list)):
+            ped, fy, fq = p[0], p[1], p[2]
+        else:
+            ped, fy, fq = p["period_end_date"], p["fiscal_year"], p.get("fiscal_quarter")
+        if ped and fy:
+            try:
+                _calculate_all_metrics(stock_id, ped, fy, fq)
+            except Exception:
+                pass  # non-fatal, keep going
+
+    # Recalculate growth (CAGRs, stability, trends, profit-aware growth)
+    try:
+        _calculate_growth(stock_id)
+    except Exception:
+        pass
+
     rows = query_all(
         "SELECT metric_name, metric_value FROM stock_metrics WHERE stock_id = ? ORDER BY period_end_date DESC",
         (stock_id,),
@@ -2440,11 +4433,30 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
         if name not in latest:
             latest[name] = val
 
-    fund = _score_fundamentals(latest)
-    val = _score_valuation(latest)
-    growth = _score_growth(latest)
-    quality = _score_quality(latest)
-    overall = fund * 0.30 + val * 0.25 + growth * 0.25 + quality * 0.20
+    # Enrich with yfinance market data (volatility, beta, EV/EBIT, P/B, etc.)
+    symbol_row = query_one(
+        "SELECT symbol FROM analysis_stocks WHERE id = ?", (stock_id,)
+    )
+    symbol = None
+    if symbol_row:
+        symbol = symbol_row[0] if isinstance(symbol_row, (tuple, list)) else symbol_row.get("symbol")
+    if symbol:
+        yf_data = _fetch_yfinance_risk_data(symbol)
+        for k, v in yf_data.items():
+            if k not in latest:  # don't overwrite DB metrics
+                latest[k] = v
+
+    # Also try to compute Discount to Intrinsic Value from latest valuation
+    _enrich_intrinsic_discount(stock_id, latest)
+
+    fund, fund_breakdown = _score_fundamentals_detailed(latest)
+    val, val_breakdown = _score_valuation_detailed(latest)
+    growth, growth_breakdown = _score_growth_detailed(latest)
+    quality, quality_breakdown = _score_quality_detailed(latest)
+    risk, risk_breakdown = _score_risk_detailed(latest)
+
+    # New 5-pillar weights: Fund 25%, Quality 20%, Growth 20%, Valuation 20%, Risk 15%
+    overall = fund * 0.25 + quality * 0.20 + growth * 0.20 + val * 0.20 + risk * 0.15
 
     result = {
         "overall_score": round(overall, 1),
@@ -2452,180 +4464,687 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
         "valuation_score": round(val, 1),
         "growth_score": round(growth, 1),
         "quality_score": round(quality, 1),
+        "risk_score": round(risk, 1),
         "details": latest,
+        "score_breakdown": {
+            "fundamental": fund_breakdown,
+            "valuation": val_breakdown,
+            "growth": growth_breakdown,
+            "quality": quality_breakdown,
+            "risk": risk_breakdown,
+        },
     }
 
-    # Persist
+    # Persist (risk_score goes into details JSON since column may not exist yet)
     now = int(time.time())
-    exec_sql(
-        """INSERT INTO stock_scores
-           (stock_id, scoring_date, overall_score, fundamental_score,
-            valuation_score, growth_score, quality_score, details,
-            created_by_user_id, created_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?)""",
-        (
-            stock_id, date.today().isoformat(), result["overall_score"],
-            result["fundamental_score"], result["valuation_score"],
-            result["growth_score"], result["quality_score"],
-            json.dumps(latest), user_id, now,
-        ),
-    )
+    # Try inserting with risk_score column, fall back to without
+    try:
+        exec_sql(
+            """INSERT INTO stock_scores
+               (stock_id, scoring_date, overall_score, fundamental_score,
+                valuation_score, growth_score, quality_score, risk_score, details,
+                created_by_user_id, created_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                stock_id, date.today().isoformat(), result["overall_score"],
+                result["fundamental_score"], result["valuation_score"],
+                result["growth_score"], result["quality_score"],
+                result["risk_score"],
+                json.dumps(latest), user_id, now,
+            ),
+        )
+    except Exception:
+        exec_sql(
+            """INSERT INTO stock_scores
+               (stock_id, scoring_date, overall_score, fundamental_score,
+                valuation_score, growth_score, quality_score, details,
+                created_by_user_id, created_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            (
+                stock_id, date.today().isoformat(), result["overall_score"],
+                result["fundamental_score"], result["valuation_score"],
+                result["growth_score"], result["quality_score"],
+                json.dumps(latest), user_id, now,
+            ),
+        )
     return result
 
 
+def _enrich_intrinsic_discount(stock_id: int, latest: Dict[str, float]) -> None:
+    """Try to compute discount/premium to intrinsic value from last valuation."""
+    try:
+        row = query_one(
+            """SELECT intrinsic_value, parameters FROM valuation_models
+               WHERE stock_id = ? AND intrinsic_value IS NOT NULL
+               ORDER BY created_at DESC LIMIT 1""",
+            (stock_id,),
+        )
+        if not row:
+            return
+        iv = row[0] if isinstance(row, (tuple, list)) else row.get("intrinsic_value")
+        params_str = row[1] if isinstance(row, (tuple, list)) else row.get("parameters")
+        if not iv or iv <= 0:
+            return
+        # Try to get current_price from parameters JSON
+        price = None
+        if params_str:
+            params = json.loads(params_str) if isinstance(params_str, str) else params_str
+            price = params.get("price") or params.get("current_price")
+        # Fallback: get from latest metrics (yfinance may have populated Earnings Yield)
+        if not price and "Earnings Yield" in latest:
+            # Can't reconstruct price without EPS here; skip
+            return
+        if price and price > 0:
+            discount = (iv - price) / iv  # positive = undervalued
+            latest["Discount to Intrinsic Value"] = round(discount, 4)
+    except Exception:
+        pass
+
+
 def _score_fundamentals(m: Dict[str, float]) -> float:
+    return _score_fundamentals_detailed(m)[0]
+
+
+def _score_fundamentals_detailed(m: Dict[str, float]):
+    """Score fundamental strength: ROIC, ROE, margins, leverage, coverage, margin trend."""
     score = 50.0
+    breakdown = []
+
+    def _add(metric, value, pts, reason):
+        nonlocal score
+        score += pts
+        breakdown.append({"metric": metric, "value": value, "points": pts, "reason": reason})
+
+    # ── ROIC (primary return-on-capital) ─ max +15 / min -12
+    roic = m.get("ROIC")
+    if roic is not None:
+        if roic > 0.20:   _add("ROIC", round(roic, 4), 15, "> 20% (exceptional)")
+        elif roic > 0.12: _add("ROIC", round(roic, 4), 10, "> 12% (strong)")
+        elif roic > 0.06: _add("ROIC", round(roic, 4), 4, "> 6% (adequate)")
+        elif roic < 0:    _add("ROIC", round(roic, 4), -12, "< 0% (destroying value)")
+        else:             _add("ROIC", round(roic, 4), 0, "0–6% (weak)")
+    else:
+        _add("ROIC", None, 0, "N/A")
+
+    # ── ROE (complementary) ─ max +8 / min -8
     roe = m.get("ROE")
     if roe is not None:
-        if roe > 0.20:
-            score += 15
-        elif roe > 0.12:
-            score += 10
-        elif roe > 0.05:
-            score += 5
-        elif roe < 0:
-            score -= 15
-    cr = m.get("Current Ratio")
-    if cr is not None:
-        if 1.5 <= cr <= 3.0:
-            score += 10
-        elif cr >= 1.0:
-            score += 5
-        else:
-            score -= 10
-    de = m.get("Debt-to-Equity")
-    if de is not None:
-        if de < 0.5:
-            score += 10
-        elif de < 1.0:
-            score += 5
-        elif de > 2.0:
-            score -= 10
+        if roe > 0.20:   _add("ROE", round(roe, 4), 8, "> 20% (excellent)")
+        elif roe > 0.12: _add("ROE", round(roe, 4), 5, "> 12% (good)")
+        elif roe > 0.05: _add("ROE", round(roe, 4), 2, "> 5% (fair)")
+        elif roe < 0:    _add("ROE", round(roe, 4), -8, "< 0% (negative)")
+        else:            _add("ROE", round(roe, 4), 0, "0–5% (weak)")
+    else:
+        _add("ROE", None, 0, "N/A")
+
+    # ── Net Margin ─ max +8 / min -8
     nm = m.get("Net Margin")
     if nm is not None:
-        if nm > 0.15:
-            score += 10
-        elif nm > 0.05:
-            score += 5
-        elif nm < 0:
-            score -= 10
+        if nm > 0.20:   _add("Net Margin", round(nm, 4), 8, "> 20% (wide moat)")
+        elif nm > 0.10: _add("Net Margin", round(nm, 4), 5, "> 10% (healthy)")
+        elif nm > 0.03: _add("Net Margin", round(nm, 4), 2, "> 3% (thin)")
+        elif nm < 0:    _add("Net Margin", round(nm, 4), -8, "< 0% (loss-making)")
+        else:           _add("Net Margin", round(nm, 4), 0, "0–3% (very thin)")
+    else:
+        _add("Net Margin", None, 0, "N/A")
+
+    # ── Net Margin Trend 3Y ─ max +6 / min -6
+    nm_trend = m.get("Net Margin Trend 3Y")
+    if nm_trend is not None:
+        if nm_trend > 0.03:    _add("Margin Trend 3Y", round(nm_trend, 4), 6, "Expanding > 3pp")
+        elif nm_trend > 0:     _add("Margin Trend 3Y", round(nm_trend, 4), 3, "Slightly expanding")
+        elif nm_trend < -0.03: _add("Margin Trend 3Y", round(nm_trend, 4), -6, "Contracting > 3pp")
+        elif nm_trend < 0:     _add("Margin Trend 3Y", round(nm_trend, 4), -2, "Slightly contracting")
+        else:                  _add("Margin Trend 3Y", round(nm_trend, 4), 0, "Stable")
+    else:
+        _add("Margin Trend 3Y", None, 0, "N/A")
+
+    # ── Current Ratio ─ max +6 / min -6
+    cr = m.get("Current Ratio")
+    if cr is not None:
+        if 1.5 <= cr <= 3.0: _add("Current Ratio", round(cr, 2), 6, "1.5–3.0× (healthy)")
+        elif cr >= 1.0:      _add("Current Ratio", round(cr, 2), 3, "≥ 1.0× (adequate)")
+        else:                _add("Current Ratio", round(cr, 2), -6, "< 1.0× (liquidity risk)")
+    else:
+        _add("Current Ratio", None, 0, "N/A")
+
+    # ── Debt-to-Equity ─ max +6 / min -8
+    de = m.get("Debt-to-Equity")
+    if de is not None:
+        if de < 0.3:     _add("Debt-to-Equity", round(de, 2), 6, "< 0.3× (conservative)")
+        elif de < 0.7:   _add("Debt-to-Equity", round(de, 2), 3, "< 0.7× (moderate)")
+        elif de < 1.5:   _add("Debt-to-Equity", round(de, 2), 0, "0.7–1.5× (acceptable)")
+        elif de > 2.5:   _add("Debt-to-Equity", round(de, 2), -8, "> 2.5× (high leverage)")
+        else:            _add("Debt-to-Equity", round(de, 2), -3, "1.5–2.5× (elevated)")
+    else:
+        _add("Debt-to-Equity", None, 0, "N/A")
+
+    # ── Interest Coverage ─ max +5 / min -8
     ic = m.get("Interest Coverage")
     if ic is not None:
-        if ic > 5:
-            score += 5
-        elif ic < 1.5:
-            score -= 10
-    return max(0.0, min(100.0, score))
+        if ic > 8:       _add("Interest Coverage", round(ic, 2), 5, "> 8× (very safe)")
+        elif ic > 3:     _add("Interest Coverage", round(ic, 2), 2, "> 3× (adequate)")
+        elif ic < 1.5:   _add("Interest Coverage", round(ic, 2), -8, "< 1.5× (distress risk)")
+        else:            _add("Interest Coverage", round(ic, 2), 0, "1.5–3× (tight)")
+    else:
+        _add("Interest Coverage", None, 0, "N/A")
+
+    return max(0.0, min(100.0, score)), {"base": 50, "metrics": breakdown}
 
 
 def _score_valuation(m: Dict[str, float]) -> float:
+    return _score_valuation_detailed(m)[0]
+
+
+def _score_valuation_detailed(m: Dict[str, float]):
+    """Score valuation: earnings yield, P/B, payout ratio, EV/EBIT, discount to intrinsic value."""
     score = 50.0
+    breakdown = []
+
+    def _add(metric, value, pts, reason):
+        nonlocal score
+        score += pts
+        breakdown.append({"metric": metric, "value": value, "points": pts, "reason": reason})
+
+    # ── Earnings Yield (= 1/PE, from EPS & price) ─ max +12 / min -10
+    ey = m.get("Earnings Yield")
+    if ey is not None:
+        if ey > 0.08:    _add("Earnings Yield", round(ey, 4), 12, "> 8% (cheap)")
+        elif ey > 0.05:  _add("Earnings Yield", round(ey, 4), 6, "> 5% (fair)")
+        elif ey > 0.02:  _add("Earnings Yield", round(ey, 4), 0, "2–5% (market average)")
+        elif ey > 0:     _add("Earnings Yield", round(ey, 4), -5, "< 2% (expensive)")
+        else:            _add("Earnings Yield", round(ey, 4), -10, "Negative earnings")
+    else:
+        _add("Earnings Yield", None, 0, "N/A")
+
+    # ── EV / EBIT ─ max +8 / min -8
+    ev_ebit = m.get("EV/EBIT")
+    if ev_ebit is not None and ev_ebit > 0:
+        if ev_ebit < 10:   _add("EV/EBIT", round(ev_ebit, 1), 8, "< 10× (cheap)")
+        elif ev_ebit < 15: _add("EV/EBIT", round(ev_ebit, 1), 4, "10–15× (reasonable)")
+        elif ev_ebit < 25: _add("EV/EBIT", round(ev_ebit, 1), 0, "15–25× (full)")
+        elif ev_ebit < 40: _add("EV/EBIT", round(ev_ebit, 1), -4, "25–40× (rich)")
+        else:              _add("EV/EBIT", round(ev_ebit, 1), -8, "> 40× (very expensive)")
+    else:
+        _add("EV/EBIT", None, 0, "N/A")
+
+    # ── Price / Book ─ max +6 / min -6
+    pb = m.get("P/B")
+    if pb is not None and pb > 0:
+        if pb < 1.0:     _add("P/B", round(pb, 2), 6, "< 1× (below book)")
+        elif pb < 2.0:   _add("P/B", round(pb, 2), 3, "1–2× (reasonable)")
+        elif pb < 5.0:   _add("P/B", round(pb, 2), 0, "2–5× (growth priced in)")
+        else:            _add("P/B", round(pb, 2), -6, "> 5× (premium)")
+    else:
+        _add("P/B", None, 0, "N/A")
+
+    # ── Discount to intrinsic value (from last valuation model) ─ max +12 / min -10
+    disc = m.get("Discount to Intrinsic Value")
+    if disc is not None:
+        # disc > 0 = undervalued, disc < 0 = overvalued (as fraction, e.g. 0.20 = 20% discount)
+        if disc > 0.30:      _add("Intrinsic Discount", round(disc, 4), 12, "> 30% discount (deep value)")
+        elif disc > 0.10:    _add("Intrinsic Discount", round(disc, 4), 6, "10–30% discount (attractive)")
+        elif disc > -0.10:   _add("Intrinsic Discount", round(disc, 4), 0, "Within ±10% (fair)")
+        elif disc > -0.30:   _add("Intrinsic Discount", round(disc, 4), -5, "10–30% premium (expensive)")
+        else:                _add("Intrinsic Discount", round(disc, 4), -10, "> 30% premium (very expensive)")
+    else:
+        _add("Intrinsic Discount", None, 0, "N/A")
+
+    # ── Payout Ratio ─ max +6 / min -6
     pr = m.get("Payout Ratio")
     if pr is not None:
-        if 0.20 <= pr <= 0.60:
-            score += 10
-        elif pr > 1.0:
-            score -= 10
+        if 0.20 <= pr <= 0.60: _add("Payout Ratio", round(pr, 4), 6, "20–60% (sustainable)")
+        elif pr > 1.0:         _add("Payout Ratio", round(pr, 4), -6, "> 100% (unsustainable)")
+        elif pr >= 0:          _add("Payout Ratio", round(pr, 4), 0, "Outside ideal range")
+        else:                  _add("Payout Ratio", round(pr, 4), -3, "Negative (no earnings)")
+    else:
+        _add("Payout Ratio", None, 0, "N/A")
+
+    # ── Book Value / Share ─ max +4 / min 0
     bvps = m.get("Book Value / Share")
-    if bvps is not None and bvps > 0:
-        score += 5
-    return max(0.0, min(100.0, score))
+    if bvps is not None:
+        if bvps > 0: _add("Book Value / Share", round(bvps, 3), 4, "Positive book value")
+        else:        _add("Book Value / Share", round(bvps, 3), 0, "≤ 0 (negative equity)")
+    else:
+        _add("Book Value / Share", None, 0, "N/A")
+
+    return max(0.0, min(100.0, score)), {"base": 50, "metrics": breakdown}
 
 
 def _score_growth(m: Dict[str, float]) -> float:
+    return _score_growth_detailed(m)[0]
+
+
+def _score_growth_detailed(m: Dict[str, float]):
+    """Score growth: CAGRs, trailing YoY, stability, profit-aware quality."""
     score = 50.0
+    breakdown = []
+
+    def _add(metric, value, pts, reason):
+        nonlocal score
+        score += pts
+        breakdown.append({"metric": metric, "value": value, "points": pts, "reason": reason})
+
+    # ── Revenue CAGR (prefer 5Y, fallback 3Y) ─ max +10 / min -8
+    rev_cagr = m.get("Revenue CAGR 5Y") or m.get("Revenue CAGR 3Y")
+    label = "Revenue CAGR 5Y" if m.get("Revenue CAGR 5Y") is not None else "Revenue CAGR 3Y"
+    if rev_cagr is not None:
+        if rev_cagr > 0.15:   _add(label, round(rev_cagr, 4), 10, "> 15% (high growth)")
+        elif rev_cagr > 0.07: _add(label, round(rev_cagr, 4), 6, "> 7% (solid)")
+        elif rev_cagr > 0.02: _add(label, round(rev_cagr, 4), 2, "> 2% (slow growth)")
+        elif rev_cagr < -0.05:_add(label, round(rev_cagr, 4), -8, "< −5% (shrinking)")
+        else:                 _add(label, round(rev_cagr, 4), 0, "−5% to 2% (stagnant)")
+    else:
+        _add("Revenue CAGR", None, 0, "N/A")
+
+    # ── EPS CAGR (prefer 5Y, fallback 3Y) ─ max +10 / min -8
+    eps_cagr = m.get("EPS CAGR 5Y") or m.get("EPS CAGR 3Y")
+    label2 = "EPS CAGR 5Y" if m.get("EPS CAGR 5Y") is not None else "EPS CAGR 3Y"
+    if eps_cagr is not None:
+        if eps_cagr > 0.15:   _add(label2, round(eps_cagr, 4), 10, "> 15% (high growth)")
+        elif eps_cagr > 0.07: _add(label2, round(eps_cagr, 4), 6, "> 7% (solid)")
+        elif eps_cagr > 0:    _add(label2, round(eps_cagr, 4), 2, "> 0% (positive)")
+        elif eps_cagr < -0.10:_add(label2, round(eps_cagr, 4), -8, "< −10% (declining fast)")
+        else:                 _add(label2, round(eps_cagr, 4), -2, "Slightly declining")
+    else:
+        _add("EPS CAGR", None, 0, "N/A")
+
+    # ── Trailing Revenue Growth (YoY) ─ max +8 / min -8
     rg = m.get("Revenue Growth")
     if rg is not None:
-        if rg > 0.10:
-            score += 15
-        elif rg > 0.03:
-            score += 10
-        elif rg < -0.05:
-            score -= 15
+        if rg > 0.10:     _add("Revenue Growth YoY", round(rg, 4), 8, "> 10% (strong)")
+        elif rg > 0.03:   _add("Revenue Growth YoY", round(rg, 4), 4, "> 3% (moderate)")
+        elif rg < -0.05:  _add("Revenue Growth YoY", round(rg, 4), -8, "< −5% (declining)")
+        else:             _add("Revenue Growth YoY", round(rg, 4), 0, "−5% to 3% (flat)")
+    else:
+        _add("Revenue Growth YoY", None, 0, "N/A")
+
+    # ── Trailing EPS Growth (YoY) ─ max +8 / min -8
     eg = m.get("EPS Growth")
     if eg is not None:
-        if eg > 0.10:
-            score += 15
-        elif eg > 0:
-            score += 5
-        elif eg < -0.10:
-            score -= 15
-    return max(0.0, min(100.0, score))
+        if eg > 0.10:     _add("EPS Growth YoY", round(eg, 4), 8, "> 10% (strong)")
+        elif eg > 0:      _add("EPS Growth YoY", round(eg, 4), 3, "> 0% (positive)")
+        elif eg < -0.10:  _add("EPS Growth YoY", round(eg, 4), -8, "< −10% (sharp decline)")
+        else:             _add("EPS Growth YoY", round(eg, 4), -2, "Slightly declining")
+    else:
+        _add("EPS Growth YoY", None, 0, "N/A")
+
+    # ── Revenue Growth Stability (stdev) ─ max +5 / min -5
+    stab = m.get("Revenue Growth Stability")
+    if stab is not None:
+        if stab < 0.05:    _add("Revenue Stability", round(stab, 4), 5, "< 5% σ (very consistent)")
+        elif stab < 0.10:  _add("Revenue Stability", round(stab, 4), 2, "5–10% σ (consistent)")
+        elif stab > 0.25:  _add("Revenue Stability", round(stab, 4), -5, "> 25% σ (erratic)")
+        else:              _add("Revenue Stability", round(stab, 4), 0, "10–25% σ (moderate)")
+    else:
+        _add("Revenue Stability", None, 0, "N/A")
+
+    # ── Profit-Aware Growth penalty ─ max 0 / min -6
+    gwp = m.get("Growth Without Profit")
+    if gwp is not None and gwp > 0:
+        _add("Profit-Aware Growth", 1, -6, "Revenue growing but margins falling")
+    else:
+        _add("Profit-Aware Growth", 0, 0, "No margin deterioration detected")
+
+    return max(0.0, min(100.0, score)), {"base": 50, "metrics": breakdown}
 
 
 def _score_quality(m: Dict[str, float]) -> float:
+    return _score_quality_detailed(m)[0]
+
+
+def _score_quality_detailed(m: Dict[str, float]):
+    """Score earnings quality: cash conversion, FCF margin, accruals, ROIC level."""
     score = 50.0
+    breakdown = []
+
+    def _add(metric, value, pts, reason):
+        nonlocal score
+        score += pts
+        breakdown.append({"metric": metric, "value": value, "points": pts, "reason": reason})
+
+    # ── CFO / Net Income (cash conversion) ─ max +12 / min -10
     cfoni = m.get("CFO / Net Income")
     if cfoni is not None:
-        if cfoni > 1.0:
-            score += 15
-        elif cfoni > 0.8:
-            score += 5
-        elif cfoni < 0.5:
-            score -= 10
+        if cfoni > 1.2:     _add("CFO / Net Income", round(cfoni, 2), 12, "> 1.2× (excellent cash conversion)")
+        elif cfoni > 0.8:   _add("CFO / Net Income", round(cfoni, 2), 6, "> 0.8× (solid)")
+        elif cfoni > 0.5:   _add("CFO / Net Income", round(cfoni, 2), 0, "0.5–0.8× (moderate)")
+        else:               _add("CFO / Net Income", round(cfoni, 2), -10, "< 0.5× (poor cash conversion)")
+    else:
+        _add("CFO / Net Income", None, 0, "N/A")
+
+    # ── FCF Margin ─ max +10 / min -8
     fcf_m = m.get("FCF Margin")
     if fcf_m is not None:
-        if fcf_m > 0.10:
-            score += 10
-        elif fcf_m > 0:
-            score += 5
-        else:
-            score -= 10
-    return max(0.0, min(100.0, score))
+        if fcf_m > 0.15:    _add("FCF Margin", round(fcf_m, 4), 10, "> 15% (exceptional)")
+        elif fcf_m > 0.08:  _add("FCF Margin", round(fcf_m, 4), 5, "> 8% (healthy)")
+        elif fcf_m > 0:     _add("FCF Margin", round(fcf_m, 4), 2, "> 0% (positive)")
+        else:               _add("FCF Margin", round(fcf_m, 4), -8, "≤ 0% (cash burn)")
+    else:
+        _add("FCF Margin", None, 0, "N/A")
+
+    # ── Accruals Ratio (NI − CFO) / Total Assets ─ max +10 / min -10
+    # Lower (more negative) = higher quality; high positive = aggressive accounting
+    ar = m.get("Accruals Ratio")
+    if ar is not None:
+        if ar < -0.05:      _add("Accruals Ratio", round(ar, 4), 10, "< −5% (high quality earnings)")
+        elif ar < 0.03:     _add("Accruals Ratio", round(ar, 4), 4, "< 3% (clean)")
+        elif ar < 0.10:     _add("Accruals Ratio", round(ar, 4), 0, "3–10% (moderate)")
+        else:               _add("Accruals Ratio", round(ar, 4), -10, "> 10% (aggressive accruals)")
+    else:
+        _add("Accruals Ratio", None, 0, "N/A")
+
+    # ── ROIC level (quality of returns) ─ max +8 / min -6
+    roic = m.get("ROIC")
+    if roic is not None:
+        if roic > 0.15:     _add("ROIC (Quality)", round(roic, 4), 8, "> 15% (value creator)")
+        elif roic > 0.08:   _add("ROIC (Quality)", round(roic, 4), 4, "> 8% (above WACC)")
+        elif roic > 0:      _add("ROIC (Quality)", round(roic, 4), 0, "0–8% (marginal)")
+        else:               _add("ROIC (Quality)", round(roic, 4), -6, "< 0% (value destroyer)")
+    else:
+        _add("ROIC (Quality)", None, 0, "N/A")
+
+    # ── Operating Margin Trend 3Y ─ max +5 / min -5
+    om_trend = m.get("Operating Margin Trend 3Y")
+    if om_trend is not None:
+        if om_trend > 0.02:    _add("Op Margin Trend 3Y", round(om_trend, 4), 5, "Expanding > 2pp")
+        elif om_trend > 0:     _add("Op Margin Trend 3Y", round(om_trend, 4), 2, "Slightly expanding")
+        elif om_trend < -0.02: _add("Op Margin Trend 3Y", round(om_trend, 4), -5, "Contracting > 2pp")
+        else:                  _add("Op Margin Trend 3Y", round(om_trend, 4), 0, "Stable / slight decline")
+    else:
+        _add("Op Margin Trend 3Y", None, 0, "N/A")
+
+    return max(0.0, min(100.0, score)), {"base": 50, "metrics": breakdown}
+
+
+def _fetch_yfinance_risk_data(symbol: str) -> Dict[str, float]:
+    """Fetch volatility, drawdown, beta, and market cap from yfinance."""
+    import math
+    risk: Dict[str, float] = {}
+    try:
+        import yfinance as yf
+        ticker = yf.Ticker(symbol)
+        info = ticker.info or {}
+
+        # Market cap
+        mcap = info.get("marketCap")
+        if mcap:
+            risk["Market Cap"] = float(mcap)
+
+        # Beta
+        beta = info.get("beta")
+        if beta is not None:
+            risk["Beta"] = float(beta)
+
+        # Forward P/E (for valuation enrichment)
+        fpe = info.get("forwardPE")
+        if fpe is not None and fpe > 0:
+            risk["Forward PE"] = float(fpe)
+
+        # EV / EBIT from yfinance
+        ev = info.get("enterpriseValue")
+        ebit = info.get("ebit")
+        if ev and ebit and ebit > 0:
+            risk["EV/EBIT"] = float(ev) / float(ebit)
+
+        # Price / Book
+        pb = info.get("priceToBook")
+        if pb is not None:
+            risk["P/B"] = float(pb)
+
+        # Trailing EPS and price → Earnings Yield
+        eps = info.get("trailingEps")
+        price = info.get("currentPrice") or info.get("regularMarketPrice")
+        if eps and price and price > 0:
+            risk["Earnings Yield"] = float(eps) / float(price)
+
+        # 1Y price history → volatility & max drawdown
+        hist = ticker.history(period="1y")
+        if hist is not None and not hist.empty and "Close" in hist.columns:
+            closes = hist["Close"].dropna()
+            if len(closes) > 20:
+                returns = closes.pct_change().dropna()
+                ann_vol = float(returns.std()) * math.sqrt(252)
+                risk["1Y Volatility"] = round(ann_vol, 4)
+
+                # Max drawdown
+                cummax = closes.cummax()
+                drawdown = (closes - cummax) / cummax
+                risk["Max Drawdown 1Y"] = round(float(drawdown.min()), 4)
+    except Exception:
+        pass  # yfinance failures are non-fatal
+    return risk
+
+
+def _score_risk_detailed(m: Dict[str, float]):
+    """Score risk / downside: volatility, drawdown, balance sheet risk, earnings risk, size."""
+    score = 50.0
+    breakdown = []
+
+    def _add(metric, value, pts, reason):
+        nonlocal score
+        score += pts
+        breakdown.append({"metric": metric, "value": value, "points": pts, "reason": reason})
+
+    # ── 1Y Volatility (annualized) ─ max +8 / min -10
+    vol = m.get("1Y Volatility")
+    if vol is not None:
+        if vol < 0.15:      _add("1Y Volatility", round(vol, 4), 8, "< 15% (low risk)")
+        elif vol < 0.25:    _add("1Y Volatility", round(vol, 4), 3, "15–25% (moderate)")
+        elif vol < 0.40:    _add("1Y Volatility", round(vol, 4), -3, "25–40% (elevated)")
+        else:               _add("1Y Volatility", round(vol, 4), -10, "> 40% (very volatile)")
+    else:
+        _add("1Y Volatility", None, 0, "N/A")
+
+    # ── Max Drawdown 1Y ─ max +6 / min -8
+    dd = m.get("Max Drawdown 1Y")
+    if dd is not None:
+        # dd is negative (e.g. -0.20 = -20%)
+        if dd > -0.10:      _add("Max Drawdown 1Y", round(dd, 4), 6, "< 10% (resilient)")
+        elif dd > -0.20:    _add("Max Drawdown 1Y", round(dd, 4), 2, "10–20% (normal)")
+        elif dd > -0.35:    _add("Max Drawdown 1Y", round(dd, 4), -3, "20–35% (significant)")
+        else:               _add("Max Drawdown 1Y", round(dd, 4), -8, "> 35% (severe)")
+    else:
+        _add("Max Drawdown 1Y", None, 0, "N/A")
+
+    # ── Net Debt / EBITDA ─ max +8 / min -10
+    nd_ebitda = m.get("Net Debt / EBITDA")
+    if nd_ebitda is not None:
+        if nd_ebitda < 0:       _add("Net Debt / EBITDA", round(nd_ebitda, 2), 8, "Net cash position")
+        elif nd_ebitda < 1.5:   _add("Net Debt / EBITDA", round(nd_ebitda, 2), 5, "< 1.5× (conservative)")
+        elif nd_ebitda < 3.0:   _add("Net Debt / EBITDA", round(nd_ebitda, 2), 0, "1.5–3× (moderate)")
+        elif nd_ebitda < 5.0:   _add("Net Debt / EBITDA", round(nd_ebitda, 2), -5, "3–5× (elevated)")
+        else:                   _add("Net Debt / EBITDA", round(nd_ebitda, 2), -10, "> 5× (high leverage risk)")
+    else:
+        _add("Net Debt / EBITDA", None, 0, "N/A")
+
+    # ── Interest Coverage (risk lens) ─ max +5 / min -8
+    ic = m.get("Interest Coverage")
+    if ic is not None:
+        if ic > 8:          _add("Interest Coverage (Risk)", round(ic, 2), 5, "> 8× (no debt risk)")
+        elif ic > 3:        _add("Interest Coverage (Risk)", round(ic, 2), 2, "> 3× (manageable)")
+        elif ic > 1.5:      _add("Interest Coverage (Risk)", round(ic, 2), -3, "1.5–3× (tight)")
+        else:               _add("Interest Coverage (Risk)", round(ic, 2), -8, "< 1.5× (debt distress)")
+    else:
+        _add("Interest Coverage (Risk)", None, 0, "N/A")
+
+    # ── Revenue Growth Stability (risk lens) ─ max +5 / min -5
+    stab = m.get("Revenue Growth Stability")
+    if stab is not None:
+        if stab < 0.05:     _add("Revenue Variability", round(stab, 4), 5, "< 5% σ (predictable)")
+        elif stab < 0.10:   _add("Revenue Variability", round(stab, 4), 2, "5–10% σ (stable)")
+        elif stab > 0.25:   _add("Revenue Variability", round(stab, 4), -5, "> 25% σ (unpredictable)")
+        else:               _add("Revenue Variability", round(stab, 4), 0, "10–25% σ (normal)")
+    else:
+        _add("Revenue Variability", None, 0, "N/A")
+
+    # ── Market Cap (size premium) ─ max +5 / min -3
+    mcap = m.get("Market Cap")
+    if mcap is not None:
+        if mcap > 50e9:         _add("Market Cap", round(mcap / 1e9, 1), 5, "> $50B (mega cap)")
+        elif mcap > 10e9:       _add("Market Cap", round(mcap / 1e9, 1), 3, "$10–50B (large cap)")
+        elif mcap > 2e9:        _add("Market Cap", round(mcap / 1e9, 1), 0, "$2–10B (mid cap)")
+        elif mcap > 300e6:      _add("Market Cap", round(mcap / 1e9, 1), -2, "$300M–2B (small cap)")
+        else:                   _add("Market Cap", round(mcap / 1e9, 1), -3, "< $300M (micro cap risk)")
+    else:
+        _add("Market Cap", None, 0, "N/A")
+
+    # ── Beta ─ max +4 / min -5
+    beta = m.get("Beta")
+    if beta is not None:
+        if beta < 0.7:      _add("Beta", round(beta, 2), 4, "< 0.7 (defensive)")
+        elif beta < 1.2:    _add("Beta", round(beta, 2), 2, "0.7–1.2 (market-like)")
+        elif beta < 1.8:    _add("Beta", round(beta, 2), -2, "1.2–1.8 (above-market)")
+        else:               _add("Beta", round(beta, 2), -5, "> 1.8 (high systematic risk)")
+    else:
+        _add("Beta", None, 0, "N/A")
+
+    return max(0.0, min(100.0, score)), {"base": 50, "metrics": breakdown}
 
 
 # ── Valuation model helpers ──────────────────────────────────────────
 
-def _graham_number(eps: float, bvps: float, multiplier: float = 22.5) -> Dict[str, Any]:
-    if eps <= 0 or bvps <= 0:
-        return {"model": "graham", "intrinsic_value": None, "error": "EPS and BVPS must be positive.",
-                "parameters": {"eps": eps, "bvps": bvps, "multiplier": multiplier}}
-    iv = math.sqrt(multiplier * eps * bvps)
-    return {"model": "graham", "intrinsic_value": round(iv, 2),
-            "parameters": {"eps": eps, "bvps": bvps, "multiplier": multiplier},
-            "assumptions": {"max_pe": 15, "max_pb": 1.5}}
+def _graham_number(eps: float, growth_rate: float = 0.0,
+                   corporate_yield: float = 4.4, margin_of_safety: float = 25.0,
+                   current_price: float | None = None) -> Dict[str, Any]:
+    """Graham valuation — computes both Original (8.5+2g) and Revised (7+1g)."""
+    # ── Edge case: EPS ≤ 0 → model not applicable
+    if eps <= 0:
+        return {"model": "graham", "intrinsic_value": None,
+                "error": "N/A – Unprofitable (EPS ≤ 0)",
+                "verdict": "N/A - Unprofitable",
+                "parameters": {"eps": eps, "growth_rate": growth_rate,
+                               "corporate_yield": corporate_yield}}
+
+    # ── Growth rate: already whole-number (e.g. 5 for 5%)
+    # Apply Graham conservatism: cap at 15%, floor at 0%
+    g = min(max(growth_rate, 0), 15)
+
+    # ── Corporate bond yield (Y)
+    # If user passed decimal < 1 interpret as percentage (e.g. 0.042 → 4.2)
+    y_val = corporate_yield if corporate_yield > 1 else corporate_yield * 100
+    if y_val <= 0:
+        y_val = 4.4  # fallback to 1962 baseline
+
+    # ── Original formula: V = EPS × (8.5 + 2g) × 4.4 / Y
+    implied_pe_original = 8.5 + 2 * g
+    iv_original = eps * implied_pe_original * 4.4 / y_val
+
+    # ── Revised formula: V* = EPS × (7 + 1g) × 4.4 / Y
+    implied_pe_revised = 7 + 1 * g
+    iv_revised = eps * implied_pe_revised * 4.4 / y_val
+
+    # Primary intrinsic value = revised (more conservative)
+    intrinsic_value = iv_revised
+
+    # ── Margin of safety (as percentage, e.g. 25 for 25%)
+    mos_decimal = margin_of_safety / 100
+    buy_price_target = intrinsic_value * (1 - mos_decimal)
+
+    # ── Verdict (requires current price)
+    verdict = "N/A - No Current Price"
+    if current_price is not None and intrinsic_value > 0:
+        if current_price <= buy_price_target:
+            verdict = "Undervalued (Buy)"
+        elif current_price <= intrinsic_value:
+            verdict = "Fair Value (Hold)"
+        else:
+            verdict = "Overvalued (Sell/Avoid)"
+
+    return {
+        "model": "graham",
+        "intrinsic_value": round(intrinsic_value, 4),
+        "iv_original": round(iv_original, 4),
+        "iv_revised": round(iv_revised, 4),
+        "implied_pe_original": round(implied_pe_original, 2),
+        "implied_pe_revised": round(implied_pe_revised, 2),
+        "buy_price_target": round(buy_price_target, 4),
+        "current_price": round(current_price, 4) if current_price is not None else None,
+        "verdict": verdict,
+        "acceptable_buy_price": round(buy_price_target, 4),
+        "parameters": {
+            "eps": eps,
+            "growth_rate": g,
+            "aaa_yield": round(y_val, 4),
+            "margin_of_safety": margin_of_safety,
+            "iv_original": round(iv_original, 4),
+            "iv_revised": round(iv_revised, 4),
+            "price": round(current_price, 4) if current_price is not None else None,
+        },
+        "assumptions": {
+            "formula_original": "V = EPS × (8.5 + 2g) × 4.4 / Y",
+            "formula_revised": "V* = EPS × (7 + 1g) × 4.4 / Y",
+            "base_pe_original": 8.5,
+            "base_pe_revised": 7,
+            "no_growth_yield": 4.4,
+            "growth_cap": 15,
+        },
+    }
 
 
-def _dcf(fcf, g1, g2, dr, s1=5, s2=5, tg=0.025, shares=1.0):
+def _dcf(fcf, g1, g2, dr, s1=5, s2=5, tg=0.025, shares=1.0,
+         cash=0.0, debt=0.0):
     if dr <= tg:
         return {"model": "dcf", "intrinsic_value": None, "error": "Discount rate must exceed terminal growth."}
-    projected = []
+    projections = []  # year-by-year table for UI
+    projected_pvs = []
     cf = fcf
     for yr in range(1, s1 + 1):
         cf *= 1 + g1
-        projected.append(cf / ((1 + dr) ** yr))
+        pv = cf / ((1 + dr) ** yr)
+        projected_pvs.append(pv)
+        projections.append({"year": yr, "stage": 1, "fcf": round(cf, 2), "pv": round(pv, 2)})
     for yr in range(s1 + 1, s1 + s2 + 1):
         cf *= 1 + g2
-        projected.append(cf / ((1 + dr) ** yr))
+        pv = cf / ((1 + dr) ** yr)
+        projected_pvs.append(pv)
+        projections.append({"year": yr, "stage": 2, "fcf": round(cf, 2), "pv": round(pv, 2)})
     tv = cf * (1 + tg) / (dr - tg)
     pv_tv = tv / ((1 + dr) ** (s1 + s2))
-    ev = sum(projected) + pv_tv
-    ps = ev / shares if shares else 0
+    sum_pv_fcfs = sum(projected_pvs)
+    ev = sum_pv_fcfs + pv_tv
+    # Enterprise-to-equity bridge
+    equity_value = ev + (cash or 0) - (debt or 0)
+    ps = equity_value / shares if shares else 0
+    tv_pct = (pv_tv / ev * 100) if ev > 0 else 0
     return {"model": "dcf", "intrinsic_value": round(ps, 2), "enterprise_value": round(ev, 2),
-            "pv_terminal": round(pv_tv, 2), "pv_fcfs": round(sum(projected), 2),
+            "equity_value": round(equity_value, 2),
+            "pv_terminal": round(pv_tv, 2), "pv_fcfs": round(sum_pv_fcfs, 2),
+            "terminal_value": round(tv, 2), "tv_pct_of_ev": round(tv_pct, 1),
+            "cash": round(cash or 0, 2), "debt": round(debt or 0, 2),
+            "projections": projections,
             "parameters": {"fcf": fcf, "growth_stage1": g1, "growth_stage2": g2, "discount_rate": dr,
-                           "stage1_years": s1, "stage2_years": s2, "terminal_growth": tg, "shares_outstanding": shares},
+                           "stage1_years": s1, "stage2_years": s2, "terminal_growth": tg,
+                           "shares_outstanding": shares, "cash": cash, "debt": debt},
             "assumptions": {"method": "Two-stage DCF with Gordon Growth terminal value"}}
 
 
 def _ddm(div, gr, rr, hgy=5, hgr=None):
     if rr <= gr:
         return {"model": "ddm", "intrinsic_value": None, "error": "Required return must exceed stable growth."}
+    d1 = div * (1 + gr)
     if hgr is None:
-        iv = div * (1 + gr) / (rr - gr)
+        iv = d1 / (rr - gr)
         return {"model": "ddm", "intrinsic_value": round(iv, 2),
+                "d1": round(d1, 4), "spread": round(rr - gr, 4),
                 "parameters": {"last_dividend": div, "growth_rate": gr, "required_return": rr},
-                "assumptions": {"method": "Gordon Growth (single stage)"}}
+                "assumptions": {"method": "Gordon Growth (single stage)",
+                                "formula": "D₁ / (r − g)"}}
+    # Two-stage DDM
+    projections = []
     pv_div = 0.0
     d = div
     for yr in range(1, hgy + 1):
         d *= 1 + hgr
-        pv_div += d / ((1 + rr) ** yr)
+        pv = d / ((1 + rr) ** yr)
+        pv_div += pv
+        projections.append({"year": yr, "dividend": round(d, 4), "pv": round(pv, 4)})
     tv = d * (1 + gr) / (rr - gr)
     pv_tv = tv / ((1 + rr) ** hgy)
     iv = pv_div + pv_tv
     return {"model": "ddm", "intrinsic_value": round(iv, 2), "pv_dividends": round(pv_div, 2),
-            "pv_terminal": round(pv_tv, 2),
+            "pv_terminal": round(pv_tv, 2), "d1": round(d1, 4),
+            "projections": projections,
             "parameters": {"last_dividend": div, "growth_rate": gr, "required_return": rr,
                            "high_growth_years": hgy, "high_growth_rate": hgr},
             "assumptions": {"method": "Two-stage DDM"}}
@@ -2641,6 +5160,12 @@ def _comparable_multiples(mv, pm, mt="P/E", shares=1.0):
 
 def _save_valuation(stock_id: int, result: Dict[str, Any], user_id: int) -> None:
     now = int(time.time())
+    # Merge computed output into assumptions so history cards can render full detail
+    enriched_assumptions = dict(result.get("assumptions", {}))
+    for key in ("projections", "pv_fcfs", "pv_terminal", "terminal_value",
+                "tv_pct_of_ev", "enterprise_value", "equity_value", "cash", "debt"):
+        if key in result:
+            enriched_assumptions[key] = result[key]
     exec_sql(
         """INSERT INTO valuation_models
            (stock_id, model_type, valuation_date, intrinsic_value,
@@ -2650,7 +5175,7 @@ def _save_valuation(stock_id: int, result: Dict[str, Any], user_id: int) -> None
             stock_id, result["model"], date.today().isoformat(),
             result.get("intrinsic_value"),
             json.dumps(result.get("parameters", {})),
-            json.dumps(result.get("assumptions", {})),
+            json.dumps(enriched_assumptions),
             user_id, now,
         ),
     )

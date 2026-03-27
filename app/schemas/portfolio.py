@@ -35,6 +35,7 @@ class HoldingRow(BaseModel):
     total_pnl_kwd: float
     total_cost_kwd: float
     weight_by_cost: Optional[float] = None
+    allocation_pct: Optional[float] = None
     weighted_dividend_yield_on_cost: Optional[float] = None
 
 

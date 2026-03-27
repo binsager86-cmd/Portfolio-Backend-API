@@ -75,6 +75,7 @@ class ExtractionResult:
     pdf_hash: str = ""
     validation_corrections: int = 0  # Number of corrections from validation pass
     placement_corrections: int = 0   # Number of corrections from placement verification
+    raw_ai_text: str = ""            # First-pass AI response (for debugging)
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -116,6 +117,48 @@ def _get_safe_values(raw_values: Any) -> Dict[str, Optional[float]]:
         )
         return {f"Unknown_{i}": _safe_float(v) for i, v in enumerate(raw_values)}
     return {}
+
+
+# Sentinel for "no value found" — used by _resolve_amount
+_MISSING = object()
+
+
+def _resolve_amount(
+    item: "ExtractedLineItem",
+    period_info: Dict[str, str],
+    stmt_periods: list,
+) -> object:
+    """Resolve the correct amount for *item* in *period_info* using explicit key matching only.
+
+    Returns the numeric value (float | None) or _MISSING if no match is found.
+    Uses period_label → col_name → fuzzy year substring match.
+    NEVER falls back to positional indexing — that is the root cause of year-swap bugs.
+    """
+    period_label = period_info.get("label", "")
+    col_name = period_info.get("col_name", period_label)
+
+    # 1. Exact match on period_label
+    if period_label in item.values:
+        return item.values[period_label]
+
+    # 2. Exact match on col_name
+    if col_name and col_name != period_label and col_name in item.values:
+        return item.values[col_name]
+
+    # 3. Fuzzy year match — e.g. period "2023" matches key "FY2023" or "2023-12-31"
+    year_str = ""
+    for ch_group in (period_label, col_name):
+        import re as _re
+        m = _re.search(r"((?:19|20)\d{2})", ch_group)
+        if m:
+            year_str = m.group(1)
+            break
+    if year_str:
+        for vk in item.values:
+            if year_str in vk:
+                return item.values[vk]
+
+    return _MISSING
 
 
 _TOLERANCE_PCT = 0.02  # 2% tolerance for rounding in audit checks
@@ -355,6 +398,7 @@ VALIDATION_ENABLED = True  # Post-extraction validation pass
 MODEL_FALLBACK_ORDER = [
     "gemini-2.5-flash",     # Primary — free tier compatible
     "gemini-2.5-pro",       # Fallback — complex documents
+    "gemini-2.5-pro-preview-03-25",  # 3.1 Pro — latest model
 ]
 RATE_LIMIT_DELAY = 30   # seconds to wait after 429
 API_MAX_RETRIES = 3     # retries per model before fallback
@@ -508,7 +552,7 @@ def pdf_to_images(pdf_bytes: bytes, dpi: int = 250) -> List[bytes]:
 # PROMPTS
 # ════════════════════════════════════════════════════════════════════
 
-def _build_extraction_prompt(n_pages: int) -> str:
+def _build_extraction_prompt(n_pages: int, existing_codes: Optional[List[Dict[str, str]]] = None) -> str:
     """
     The "Perfect" Self-Correcting Extraction Prompt with Native Visual
     Table Mapping.
@@ -637,6 +681,29 @@ FOR CASH FLOW STATEMENT:
   8. Cash from operations + Cash from investing + Cash from financing
      ≈ Net change in cash (allow ±2% tolerance for FX adjustments).
 
+### CASH FLOW SPECIFIC RULES (CRITICAL)
+When extracting cash flow statements, follow these additional rules:
+- **SECTION HEADERS**: Preserve section header rows exactly as they appear.
+  Mark them with is_total=false.  Typical headers:
+  • "Cash flows from operating activities"
+  • "Cash flows from investing activities"
+  • "Cash flows from financing activities"
+- **SECTION SUBTOTALS**: Every section typically ends with a subtotal like
+  "Net cash from operating activities" or "Cash used in investing activities".
+  Mark these with is_total=true.
+- **SIGNS**: Cash outflows are typically shown in parentheses — e.g.
+  "(53,200)" → record as −53200.  This is critical for investing and
+  financing sections where payments, purchases, and repayments are negative.
+- **BRIDGE ROWS**: Rows like "Net increase/(decrease) in cash",
+  "Cash at beginning of period", "Cash at end of period" should all be
+  extracted.  They form the cash reconciliation bridge.
+- **DO NOT MERGE SUBTOTALS**: If "Cash from operations" appears as both a
+  section total and a bridge line, extract BOTH rows — the reconciler will
+  handle deduplication.
+- **COMPLETE EXTRACTION**: Extract every single row including small items
+  like "Effect of exchange rate changes", "Bank overdrafts", or
+  "Restricted cash". Missing rows cause reconciliation failures.
+
 ### STEP 4: SELF-CORRECTION LOGIC
 If ANY check in Step 3 FAILS:
 - Re-scan the image for the specific rows that caused the failure.
@@ -730,6 +797,31 @@ return ONLY this JSON — no markdown fences, no commentary, no explanation:
 • Verify horizontal alignment — a label and its value must be on the same
   row in the image.  If they are not visually aligned, do NOT pair them.
 """
+    # Inject existing codes so the AI reuses them for continuity
+    if existing_codes:
+        codes_block = "\n".join(
+            f'  - key: "{c["code"]}"  label: "{c["name"]}"  (type: {c["type"]})'
+            for c in existing_codes
+        )
+        prompt += f"""
+
+### EXISTING LINE ITEM KEYS (MANDATORY REUSE)
+This stock ALREADY has financial data with these line item keys from
+previously uploaded reports. You MUST reuse the EXACT same "key" value
+for any line item that matches the same financial concept, even if the
+wording in the new PDF differs slightly.
+
+{codes_block}
+
+RULES FOR REUSE:
+• If a line item in the new PDF matches any of the above concepts,
+  use the EXISTING key — do NOT invent a new variant.
+• Example: if existing key is "provision_for_staff_indemnity" and the
+  new PDF says "Provision for indemnity", use "provision_for_staff_indemnity".
+• Only create a NEW key for line items that genuinely do not exist above.
+• This ensures data continuity across multiple report periods.
+"""
+    return prompt
 
 
 def _build_retry_prompt(
@@ -1761,6 +1853,173 @@ RULES:
 """
 
 
+def _build_cashflow_extraction_prompt(
+    n_pages: int,
+    existing_codes: Optional[List[Dict[str, str]]] = None,
+) -> str:
+    """Dedicated prompt for cash flow statement extraction.
+
+    Uses stricter rules than the generic prompt:
+    - Preserves row order exactly
+    - Does not calculate missing values
+    - Does not convert text headers into zero
+    - Does not merge duplicate labels
+    - Does not infer totals not explicitly shown
+    - Preserves negative signs exactly
+    """
+    prompt = f"""\
+### ROLE
+You are extracting a statement of cash flows from a company financial report.
+You must extract the cash flow statement ONLY — ignore all other statement types.
+
+### OBJECTIVE
+Extract every row from the cash flow statement across {n_pages} page(s).
+Return valid JSON only. Preserve row order exactly as it appears in the document.
+
+### EXTRACTION RULES (MANDATORY)
+1. **ROW ORDER**: Output rows in the exact top-to-bottom order they appear
+   in the document. Do NOT re-sort or regroup.
+2. **DO NOT CALCULATE**: Never compute missing values. If a value is not
+   explicitly shown, use null.
+3. **DO NOT CONVERT HEADERS TO ZERO**: If a row is a section header
+   (e.g. "Cash flows from operating activities"), its numeric values must
+   be null — never convert them to 0.
+4. **DO NOT MERGE DUPLICATES**: If the same label appears twice (e.g.
+   "Net cash from operating activities" as both a section subtotal and a
+   bridge line), extract BOTH rows with their respective values.
+5. **DO NOT INFER TOTALS**: Only extract totals that are explicitly printed
+   in the document. Never calculate a total from sub-items.
+6. **PRESERVE SIGNS EXACTLY**: Parentheses (1,234) means NEGATIVE → −1234.
+   If a value is printed without parentheses, it is positive.
+   Do not flip signs based on your understanding of the item.
+7. **NOTES COLUMN**: Completely ignore any Notes/footnote reference column.
+   Small integers (1-30) next to a label are footnote numbers, not amounts.
+
+### SECTION CLASSIFICATION
+For each row, identify which section it belongs to:
+- **operating**: Items under "Cash flows from operating activities"
+  (depreciation, working capital changes, tax paid, interest paid/received, etc.)
+- **investing**: Items under "Cash flows from investing activities"
+  (property purchases, disposals, investments, deposits, etc.)
+- **financing**: Items under "Cash flows from financing activities"
+  (borrowings, repayments, dividends paid, share issuance, lease payments, etc.)
+- **cash_bridge**: Items that reconcile cash balances
+  (net increase/decrease in cash, cash at beginning/end of period,
+   effect of exchange rate changes)
+
+### ROW KIND CLASSIFICATION
+For each row, identify its kind:
+- **header**: Section heading text only, no numeric values
+  (e.g. "Cash flows from operating activities")
+- **item**: A regular line item with financial amounts
+- **subtotal**: A section's total line (e.g. "Net cash from operating activities")
+- **total**: The grand total / net change line
+
+### OUTPUT FORMAT
+Return ONLY a JSON array (no markdown fences, no commentary):
+
+[
+  {{
+    "statement_type": "cash_flow",
+    "source_pages": [1, 2],
+    "currency": "SAR",
+    "unit_scale": 1,
+    "periods": [
+      {{"label": "2024-12-31", "col_name": "2024"}},
+      {{"label": "2023-12-31", "col_name": "2023"}}
+    ],
+    "items": [
+      {{
+        "label_raw": "Cash flows from operating activities",
+        "key": "cash_flows_from_operating_activities",
+        "section": "operating",
+        "row_kind": "header",
+        "values": {{"2024-12-31": null, "2023-12-31": null}},
+        "is_total": false
+      }},
+      {{
+        "label_raw": "Profit for the year",
+        "key": "net_income",
+        "section": "operating",
+        "row_kind": "item",
+        "values": {{"2024-12-31": 5340000, "2023-12-31": 4890000}},
+        "is_total": false
+      }},
+      {{
+        "label_raw": "Net cash from operating activities",
+        "key": "cash_from_operations",
+        "section": "operating",
+        "row_kind": "subtotal",
+        "values": {{"2024-12-31": 8200000, "2023-12-31": 7100000}},
+        "is_total": true
+      }},
+      {{
+        "label_raw": "Net increase in cash and cash equivalents",
+        "key": "net_change_in_cash",
+        "section": "cash_bridge",
+        "row_kind": "total",
+        "values": {{"2024-12-31": 1500000, "2023-12-31": 900000}},
+        "is_total": true
+      }},
+      {{
+        "label_raw": "Cash and cash equivalents at beginning of year",
+        "key": "beginning_cash",
+        "section": "cash_bridge",
+        "row_kind": "item",
+        "values": {{"2024-12-31": 10000000, "2023-12-31": 9100000}},
+        "is_total": false
+      }},
+      {{
+        "label_raw": "Cash and cash equivalents at end of year",
+        "key": "ending_cash",
+        "section": "cash_bridge",
+        "row_kind": "item",
+        "values": {{"2024-12-31": 11500000, "2023-12-31": 10000000}},
+        "is_total": false
+      }}
+    ],
+    "audit": {{
+      "checks_performed": [],
+      "corrections_made": [],
+      "audit_notes": ""
+    }}
+  }}
+]
+
+### ABSOLUTE RULES
+• "values" must contain numbers or null — NEVER strings.
+• Parentheses (1,234) → −1234. Dash or blank → null.
+• Detect unit_scale from headers (KD'000 → 1000, millions → 1000000).
+• Period labels → ISO dates: "31 December 2024" → "2024-12-31".
+• is_total=true ONLY for subtotals and totals. Headers are NOT totals.
+• Copy every number EXACTLY as printed — do NOT round.
+• Zero values → include as 0. Missing values → null.
+• Return ONE object with ALL periods merged if CF spans multiple pages.
+• Each item's "values" must cover ALL periods.
+• Include "section" and "row_kind" for every item.
+"""
+
+    if existing_codes:
+        cf_codes = [c for c in existing_codes if c.get("type") == "cashflow"]
+        if cf_codes:
+            codes_block = "\n".join(
+                f'  - key: "{c["code"]}"  label: "{c["name"]}"'
+                for c in cf_codes
+            )
+            prompt += f"""
+### EXISTING CASH FLOW KEYS (MANDATORY REUSE)
+This stock already has cash flow data with these exact keys.
+Reuse the EXACT same "key" for matching concepts:
+
+{codes_block}
+
+If the new PDF has the same concept with different wording, use the existing key.
+Only create new keys for genuinely new line items.
+"""
+
+    return prompt
+
+
 async def _targeted_extract(
     api_key: str,
     stmt_type: str,
@@ -1909,6 +2168,36 @@ async def _call_gemini(
 # RAW JSON → TYPED DATACLASSES
 # ════════════════════════════════════════════════════════════════════
 
+def _fuzzy_statement_type(raw_type: str) -> Optional[str]:
+    """Fuzzy-match a statement type string to a canonical type.
+
+    Handles long descriptive names the AI may return that aren't
+    in _TYPE_MAP (e.g. "Consolidated Statement of Financial Position
+    as at 31 December 2023").
+    """
+    t = raw_type.lower().strip()
+
+    # Exact map check first
+    mapped = _TYPE_MAP.get(raw_type) or _TYPE_MAP.get(t)
+    if mapped:
+        return mapped
+
+    # Keyword-based fallback
+    if any(k in t for k in ("cash flow", "cash_flow", "cashflow")):
+        return "cashflow"
+    if any(k in t for k in ("financial position", "balance sheet")):
+        return "balance"
+    if any(k in t for k in (
+        "profit or loss", "profit and loss", "income statement",
+        "statement of income", "comprehensive income",
+    )):
+        return "income"
+    if any(k in t for k in ("changes in equity", "shareholders", "equity")):
+        return "equity"
+
+    return None
+
+
 def _raw_to_statements(raw: list) -> List[ExtractedStatement]:
     """Convert parsed JSON dicts to typed ExtractedStatement objects.
 
@@ -1919,9 +2208,9 @@ def _raw_to_statements(raw: list) -> List[ExtractedStatement]:
     stmts: List[ExtractedStatement] = []
     for entry in raw:
         raw_type = entry.get("statement_type", "").strip()
-        st_type = _TYPE_MAP.get(raw_type) or _TYPE_MAP.get(raw_type.lower(), raw_type.lower())
+        st_type = _fuzzy_statement_type(raw_type)
         if st_type not in ("income", "balance", "cashflow", "equity"):
-            logger.warning("Skipping unknown type: %s", raw_type)
+            logger.warning("Skipping unknown type: %r (no fuzzy match)", raw_type)
             continue
 
         top_items = entry.get("items", [])
@@ -2434,6 +2723,94 @@ def _dict_to_result(d: dict) -> ExtractionResult:
 
 
 # ════════════════════════════════════════════════════════════════════
+# CASH FLOW SPECIFIC EXTRACTION
+# ════════════════════════════════════════════════════════════════════
+
+async def extract_cashflow_to_stage(
+    pdf_bytes: bytes,
+    api_key: str,
+    model_name: str = "gemini-2.5-flash",
+    existing_codes: Optional[List[Dict[str, str]]] = None,
+) -> List[ExtractedStatement]:
+    """Extract ONLY the cash flow statement using dedicated page detection
+    and a cash-flow-specific prompt.
+
+    Steps:
+    1. Detect cash flow pages via keyword heuristics
+    2. Convert only those pages to images
+    3. Send to Gemini with the dedicated CF prompt
+    4. Parse and return statements (no caching, no arithmetic retry)
+
+    The caller (persist layer) handles staging and reconciliation.
+    Falls back to all pages if page detection finds nothing.
+    """
+    from app.services.cashflow_reconciler import detect_cashflow_pages
+
+    # Step 1: Detect cash flow pages
+    cf_page_indices = detect_cashflow_pages(pdf_bytes)
+
+    # Step 2: Convert to images
+    all_images = pdf_to_images(pdf_bytes)
+    if not all_images:
+        raise ValueError("PDF has no pages.")
+
+    if cf_page_indices:
+        # Use only CF pages
+        cf_images = [
+            all_images[i] for i in cf_page_indices
+            if i < len(all_images)
+        ]
+        if not cf_images:
+            cf_images = all_images  # fallback
+        logger.info(
+            "Cash flow extraction: using %d detected CF pages out of %d total",
+            len(cf_images), len(all_images),
+        )
+    else:
+        # Fallback: use all pages
+        cf_images = all_images
+        logger.warning(
+            "Cash flow page detection found no CF pages — using all %d pages",
+            len(all_images),
+        )
+
+    # Step 3: Build CF-specific prompt and extract
+    prompt = _build_cashflow_extraction_prompt(len(cf_images), existing_codes)
+    raw_text = await _call_gemini(api_key, prompt, cf_images, model_name)
+
+    logger.info("CF extraction raw response: %d chars", len(raw_text))
+    raw_json = _unwrap_to_statement_list(_parse_ai_json(raw_text))
+
+    if not raw_json:
+        logger.warning("CF-specific extraction returned no results")
+        return []
+
+    # Step 4: Parse into statements
+    statements = _raw_to_statements(raw_json)
+    statements = _normalize_statements(statements)
+
+    # Only keep cashflow type
+    cf_stmts = [s for s in statements if s.statement_type == "cashflow"]
+
+    # Apply unit_scale
+    for stmt in cf_stmts:
+        if stmt.unit_scale and stmt.unit_scale != 1:
+            for item in stmt.items:
+                item.values = {
+                    k: (v * stmt.unit_scale if v is not None else None)
+                    for k, v in item.values.items()
+                }
+
+    logger.info(
+        "CF extraction complete: %d cashflow statements, %d items",
+        len(cf_stmts),
+        sum(len(s.items) for s in cf_stmts),
+    )
+
+    return cf_stmts
+
+
+# ════════════════════════════════════════════════════════════════════
 # MAIN PIPELINE
 # ════════════════════════════════════════════════════════════════════
 
@@ -2444,6 +2821,7 @@ async def extract_financials(
     filename: str = "upload.pdf",
     model_name: str = "gemini-2.5-flash",
     use_cache: bool = True,
+    existing_codes: Optional[List[Dict[str, str]]] = None,
 ) -> ExtractionResult:
     """
     Full self-reflective extraction pipeline.
@@ -2477,11 +2855,14 @@ async def extract_financials(
     )
 
     # ── Step 3: First extraction pass ────────────────────────────────
-    prompt = _build_extraction_prompt(len(page_images))
+    prompt = _build_extraction_prompt(len(page_images), existing_codes=existing_codes)
     raw_text = await _call_gemini(api_key, prompt, page_images, model_name)
     logger.info("Raw AI response length: %d chars", len(raw_text))
     logger.debug("Raw AI response (first 500): %s", raw_text[:500])
     raw_json = _unwrap_to_statement_list(_parse_ai_json(raw_text))
+
+    # Preserve first-pass raw text for debugging zero-statement results
+    _first_pass_raw_text = raw_text
 
     if not raw_json:
         raise ValueError("AI did not detect any financial statements.")
@@ -2501,6 +2882,15 @@ async def extract_financials(
     statements = _raw_to_statements(raw_json)
     statements = _normalize_statements(statements)
     statements = _merge_same_type_statements(statements)
+
+    if not statements and raw_json:
+        raw_types = [e.get('statement_type', '?') for e in raw_json]
+        raise ValueError(
+            f"AI returned {len(raw_json)} entries with types {raw_types}, "
+            f"but none matched known statement types "
+            f"(income, balance, cashflow, equity). "
+            f"Check the PDF contains standard financial statements."
+        )
 
     logger.info(
         "After _raw_to_statements: %d statements",
@@ -2557,6 +2947,40 @@ async def extract_financials(
             elif isinstance(result, Exception):
                 logger.error("Re-extraction failed for %s: %s", st_type, result)
         statements = _merge_same_type_statements(statements)
+
+    # ── Step 3d: Dedicated cash flow extraction ──────────────────────
+    # Use the CF-specific prompt with page detection for better results.
+    # Replace the generic cashflow extraction with the dedicated one.
+    cf_existing = next(
+        (s for s in statements if s.statement_type == "cashflow"), None,
+    )
+    cf_item_count = len(cf_existing.items) if cf_existing else 0
+
+    try:
+        cf_stmts = await extract_cashflow_to_stage(
+            pdf_bytes=pdf_bytes,
+            api_key=api_key,
+            model_name=model_name,
+            existing_codes=existing_codes,
+        )
+        if cf_stmts:
+            new_cf_count = sum(len(s.items) for s in cf_stmts)
+            if new_cf_count >= cf_item_count:
+                # Replace generic CF with dedicated CF extraction
+                statements = [
+                    s for s in statements if s.statement_type != "cashflow"
+                ] + cf_stmts
+                logger.info(
+                    "Dedicated CF extraction replaced generic: %d → %d items",
+                    cf_item_count, new_cf_count,
+                )
+            else:
+                logger.info(
+                    "Dedicated CF extraction had fewer items (%d vs %d) — keeping generic",
+                    new_cf_count, cf_item_count,
+                )
+    except Exception as exc:
+        logger.warning("Dedicated CF extraction failed (non-fatal): %s", exc)
 
     # Apply unit_scale
     for stmt in statements:
@@ -2627,6 +3051,19 @@ async def extract_financials(
     # ── Step 6: Compute confidence ───────────────────────────────────
     confidence = _calculate_confidence(checks)
 
+    # ── Fallback: if extraction produced 0 statements, try cache ─────
+    if not statements and use_cache:
+        cached_fallback = _get_cached(stock_id, h)
+        if cached_fallback and cached_fallback.statements:
+            logger.warning(
+                "AI returned 0 statements but valid cache exists — "
+                "using cached result (%d statements)",
+                len(cached_fallback.statements),
+            )
+            cached_fallback.retry_count = retry_count
+            cached_fallback.raw_ai_text = _first_pass_raw_text
+            return cached_fallback
+
     result = ExtractionResult(
         statements=statements,
         audit_checks=checks,
@@ -2637,10 +3074,11 @@ async def extract_financials(
         pages_processed=len(page_images),
         pdf_hash=h,
         validation_corrections=0,
+        raw_ai_text=_first_pass_raw_text if not statements else "",
     )
 
-    # ── Step 7: Cache ────────────────────────────────────────────────
-    if use_cache:
+    # ── Step 7: Cache (only if we have statements) ───────────────────
+    if use_cache and statements:
         try:
             _set_cache(stock_id, h, filename, result)
         except Exception as exc:
@@ -3221,3 +3659,395 @@ async def ai_attribute_extraction(
     )
 
     return result
+
+
+# ════════════════════════════════════════════════════════════════════
+# AI RECONCILE — audit names, sequence & values against stored PDF
+# ════════════════════════════════════════════════════════════════════
+
+
+def _build_reconcile_prompt(
+    statement_type: str,
+    db_periods: list[dict],
+) -> str:
+    """Prompt that asks AI to act as auditor: fix names, order AND values."""
+    period_block = json.dumps(db_periods, indent=2, ensure_ascii=False)
+    return f"""You are an Autonomous Financial Data Analyst AND meticulous auditor
+performing a digit-by-digit reconciliation of an **{statement_type}** statement.
+
+I am giving you HIGH-RESOLUTION images of the original PDF financial report
+AND the values currently stored in our database.
+
+CURRENT DATABASE STATE:
+{period_block}
+
+## ADAPTIVE EXTRACTION STRATEGY (apply when reading the PDF):
+
+1. **Header Identification**: Locate "Consolidated Statement" (or similar)
+   titles to identify which table you are looking at (Balance Sheet,
+   Profit or Loss, Cash Flow). Every company has a different structure and
+   row naming — adapt to whatever layout you see.
+
+2. **Column Mapping**: Dynamically identify the year columns. Financial
+   statements usually place the "Current Year" in the first numerical
+   column and the "Comparative Year" in the second. Always map values
+   to their specific year. IGNORE any "Notes" column — it contains
+   small reference integers (1-30), not financial amounts.
+
+3. **Parentheses & Signs**:
+   - Numbers in parentheses `(x,xxx)` MUST be read as **negative** `-xxxx`
+   - Dashes `-` or empty cells = **0**
+   - Rows like "Share of profit/(loss)" — the sign can vary by year.
+
+4. **Row Label Cleaning**: Extract the full text of the row label. Remove
+   leading/trailing whitespace and footnote references. "Cash and bank
+   balances 4" → the label is "Cash and bank balances", the "4" is a
+   footnote reference to ignore.
+
+5. **Structure Preservation**: Maintain the hierarchy of "Current" vs
+   "Non-Current" sections. Items like "Lease liabilities" can appear
+   TWICE — once under Current and once under Non-Current. They are
+   DIFFERENT line items with different values. Capture sub-totals
+   (e.g. "Total Assets") exactly as they appear for cross-verification.
+
+## YOUR MANDATORY PROCESS (follow in order):
+
+### Step 1 — READ the PDF first (ignore the database)
+For every line item visible in the PDF, read the number **digit by digit**.
+Pay extreme attention to:
+- Commas vs periods (thousands separators vs decimals)
+- Whether a number is in parentheses (negative) or not
+- The exact column each number belongs to (which fiscal year)
+- Small digits that could be confused: 0/6/8, 1/7, 3/8, 5/6
+- Numbers that look similar: 364,013 vs 364,913
+- **DIRECT PIXEL VERIFICATION**: Ensure each number is on the same
+  horizontal line as its row label — do not misalign values across rows.
+
+### Step 2 — COMPARE each PDF value against the database value
+For every line item in every period, compare:
+- The value you read from the PDF (Step 1)
+- The value stored in the database (shown above)
+If they differ by even 1, flag it as a correction.
+
+### Step 3 — CHECK names and order
+- Verify each `line_item_name` matches the PDF text exactly
+- Verify the order_index matches the PDF's top-to-bottom sequence
+
+### Step 4 — SELF-AUDIT (mandatory before output)
+Perform arithmetic cross-checks on your PDF-read values:
+- **Balance sheet**: Total assets == Total current + Total non-current assets.
+  Total liabilities + Total equity == Total assets.
+- **Income**: Revenue - Cost == Gross Profit. Check full profit chain.
+- **Cash flow**: Operating + Investing + Financing ≈ Net change in cash.
+If any check fails, re-read that specific area digit by digit before output.
+
+### Step 5 — OUTPUT corrections
+
+OUTPUT EXACTLY THIS JSON (include ONLY items that need a fix):
+{{
+  "name_corrections": [
+    {{"line_item_code": "<CODE>", "correct_name": "<exact text from PDF>"}}
+  ],
+  "order_corrections": [
+    {{"line_item_code": "<CODE>", "correct_order_index": <int>}}
+  ],
+  "value_corrections": [
+    {{"line_item_code": "<CODE>", "corrections": {{"<period_end_date>": <number>}} }}
+  ]
+}}
+
+CRITICAL RULES:
+- For value_corrections, provide the EXACT number you read from the PDF.
+  This may be a completely different number from the database — that is OK.
+  You are correcting the DB to match the PDF.
+- Read EVERY digit carefully. A single wrong digit means the value is wrong.
+- Use EMPTY arrays for categories that need no fix.
+- Names must be the exact text from the PDF — do not translate or abbreviate.
+- order_index is 1-based, matching the PDF's visual top-to-bottom order.
+- Respond with ONLY the JSON object. No markdown fences, no explanation."""
+
+
+async def ai_rearrange_statement(
+    stock_id: int,
+    statement_type: str,
+    api_key: str,
+    periods: list[str] | None = None,
+    pdf_id: int | None = None,
+) -> dict:
+    """AI-powered reconciliation: fix names, order AND values against stored PDF.
+
+    Returns dict with corrections_applied, names_fixed, items_reordered,
+    values_corrected, message, confidence.
+    """
+    from google import genai
+    from app.core.database import query_df, query_one as _q1, get_connection
+
+    # ── 1. Load current DB data (including names + order) ────────────
+    where = "WHERE fs.stock_id = ? AND fs.statement_type = ?"
+    params: list = [stock_id, statement_type]
+    if periods:
+        placeholders = ",".join("?" for _ in periods)
+        where += f" AND fs.period_end_date IN ({placeholders})"
+        params.extend(periods)
+
+    df = query_df(
+        f"""SELECT fs.id AS stmt_id, fs.period_end_date, fs.fiscal_year,
+                   fli.line_item_code, fli.line_item_name, fli.amount,
+                   fli.order_index, fli.id AS li_id
+            FROM financial_statements fs
+            JOIN financial_line_items fli ON fli.statement_id = fs.id
+            {where}
+            ORDER BY fs.period_end_date, fli.order_index""",
+        tuple(params),
+    )
+    if df.empty:
+        raise ValueError(f"No {statement_type} statements found for stock {stock_id}")
+
+    # ── 2. Build structured prompt data WITH names + order ───────────
+    db_periods: list[dict] = []
+    for ped, grp in df.groupby("period_end_date"):
+        items = []
+        for _, row in grp.iterrows():
+            items.append({
+                "line_item_code": row["line_item_code"],
+                "line_item_name": row["line_item_name"],
+                "amount": row["amount"],
+                "order_index": int(row["order_index"]),
+            })
+        db_periods.append({
+            "period_end_date": ped,
+            "fiscal_year": int(grp.iloc[0]["fiscal_year"]),
+            "items": items,
+        })
+
+    prompt = _build_reconcile_prompt(statement_type, db_periods)
+
+    # ── 3. Load stored PDF images (required for audit) ───────────────
+    parts: list = []
+    if pdf_id is not None:
+        pdf_row = _q1(
+            "SELECT filename FROM pdf_uploads WHERE id = ? AND stock_id = ?",
+            (pdf_id, stock_id),
+        )
+        if pdf_row:
+            from pathlib import Path as _Path
+            from PIL import Image as _Image
+            disk_name = pdf_row["filename"] if isinstance(pdf_row, dict) else pdf_row[0]
+            pdf_dir = _Path(__file__).resolve().parents[1] / "uploads" / "pdfs" / str(stock_id)
+            pdf_path = pdf_dir / disk_name
+            if pdf_path.is_file():
+                pdf_bytes = pdf_path.read_bytes()
+                try:
+                    # Always render at high DPI (400) for reconcile — skip cache
+                    images = pdf_to_images(pdf_bytes, dpi=400)
+                    for png in images[:10]:
+                        parts.append(_Image.open(io.BytesIO(png)))
+                except Exception as e:
+                    logger.warning("Could not load PDF images: %s", e)
+
+    if not parts:
+        raise ValueError(
+            "A saved PDF is required for AI reconciliation. "
+            "Please select a stored PDF so the AI can compare against it."
+        )
+
+    parts.append(prompt)
+
+    # ── 4. Call Gemini 3× for multi-pass consensus ───────────────────
+    import re as _re
+    NUM_PASSES = 3
+
+    def _parse_gemini_json(raw: str) -> dict:
+        cleaned = raw.strip()
+        if cleaned.startswith("```"):
+            cleaned = _re.sub(r"^```(?:json)?\s*", "", cleaned)
+            cleaned = _re.sub(r"\s*```$", "", cleaned)
+        try:
+            obj = json.loads(cleaned)
+        except json.JSONDecodeError:
+            m = _re.search(r"\{.*\}", cleaned, _re.DOTALL)
+            obj = json.loads(m.group()) if m else {}
+        return obj if isinstance(obj, dict) else {}
+
+    client = genai.Client(api_key=api_key)
+    all_results: list[dict] = []
+    for pass_num in range(NUM_PASSES):
+        try:
+            resp = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=parts,
+            )
+            parsed = _parse_gemini_json(resp.text or "{}")
+            all_results.append(parsed)
+            logger.info(
+                "Reconcile pass %d/%d: %d name, %d order, %d value corrections",
+                pass_num + 1, NUM_PASSES,
+                len(parsed.get("name_corrections", [])),
+                len(parsed.get("order_corrections", [])),
+                len(parsed.get("value_corrections", [])),
+            )
+        except Exception as e:
+            logger.warning("Reconcile pass %d failed: %s", pass_num + 1, e)
+
+    if not all_results:
+        raise ValueError("All AI reconciliation passes failed.")
+
+    # ── 5. Build consensus (majority vote: 2-of-3 agreement) ────────
+    from collections import Counter
+
+    # 5a. Value corrections — key = (code, period), votes = [amount …]
+    value_votes: dict[tuple, list] = {}
+    for r in all_results:
+        for vc in r.get("value_corrections", []):
+            code = vc.get("line_item_code", "")
+            for ped, val in vc.get("corrections", {}).items():
+                if code and val is not None:
+                    value_votes.setdefault((code, ped), []).append(float(val))
+
+    consensus_values: list[dict] = []
+    for (code, ped), vals in value_votes.items():
+        rounded = [round(v) for v in vals]
+        ctr = Counter(rounded)
+        best_val, count = ctr.most_common(1)[0]
+        if count >= 2:
+            consensus_values.append({
+                "line_item_code": code,
+                "corrections": {ped: best_val},
+            })
+
+    # 5b. Name corrections — key = code, votes = [name …]
+    name_votes: dict[str, list] = {}
+    for r in all_results:
+        for nc in r.get("name_corrections", []):
+            code = nc.get("line_item_code", "")
+            name = nc.get("correct_name", "")
+            if code and name:
+                name_votes.setdefault(code, []).append(name)
+
+    consensus_names: list[dict] = []
+    for code, names in name_votes.items():
+        ctr = Counter(names)
+        best_name, count = ctr.most_common(1)[0]
+        if count >= 2:
+            consensus_names.append({
+                "line_item_code": code,
+                "correct_name": best_name,
+            })
+
+    # 5c. Order corrections — key = code, votes = [index …]
+    order_votes: dict[str, list] = {}
+    for r in all_results:
+        for oc in r.get("order_corrections", []):
+            code = oc.get("line_item_code", "")
+            idx = oc.get("correct_order_index")
+            if code and idx is not None:
+                order_votes.setdefault(code, []).append(int(idx))
+
+    consensus_order: list[dict] = []
+    for code, idxs in order_votes.items():
+        ctr = Counter(idxs)
+        best_idx, count = ctr.most_common(1)[0]
+        if count >= 2:
+            consensus_order.append({
+                "line_item_code": code,
+                "correct_order_index": best_idx,
+            })
+
+    result = {
+        "name_corrections": consensus_names,
+        "order_corrections": consensus_order,
+        "value_corrections": consensus_values,
+    }
+    name_corrections = consensus_names
+    order_corrections = consensus_order
+    value_corrections = consensus_values
+
+    logger.info(
+        "Reconcile consensus (%d passes): %d name, %d order, %d value",
+        len(all_results), len(name_corrections),
+        len(order_corrections), len(value_corrections),
+    )
+
+    # ── 6. Build lookups ────────────────────────────────────────────
+    # (period_end_date, line_item_code) → li_id  (for value fixes)
+    li_lookup: dict = {}
+    # line_item_code → [li_id, ...]  (for name/order fixes across all periods)
+    code_to_ids: dict = {}
+    for _, row in df.iterrows():
+        li_lookup[(row["period_end_date"], row["line_item_code"])] = row["li_id"]
+        code_to_ids.setdefault(row["line_item_code"], []).append(row["li_id"])
+
+    # ── 7. Apply all corrections ────────────────────────────────────
+    applied_names = 0
+    applied_order = 0
+    applied_values = 0
+
+    with get_connection() as conn:
+        cur = conn.cursor()
+
+        # Fix names
+        for nc in name_corrections:
+            code = nc.get("line_item_code", "")
+            new_name = nc.get("correct_name", "")
+            if code and new_name and code in code_to_ids:
+                for li_id in code_to_ids[code]:
+                    cur.execute(
+                        "UPDATE financial_line_items SET line_item_name = ? WHERE id = ?",
+                        (new_name, int(li_id)),
+                    )
+                applied_names += 1
+
+        # Fix order
+        for oc in order_corrections:
+            code = oc.get("line_item_code", "")
+            new_idx = oc.get("correct_order_index")
+            if code and new_idx is not None and code in code_to_ids:
+                for li_id in code_to_ids[code]:
+                    cur.execute(
+                        "UPDATE financial_line_items SET order_index = ? WHERE id = ?",
+                        (int(new_idx), int(li_id)),
+                    )
+                applied_order += 1
+
+        # Fix values
+        for vc in value_corrections:
+            code = vc.get("line_item_code", "")
+            for ped, new_val in vc.get("corrections", {}).items():
+                li_id = li_lookup.get((ped, code))
+                if li_id is not None and new_val is not None:
+                    cur.execute(
+                        "UPDATE financial_line_items SET amount = ? WHERE id = ?",
+                        (float(new_val), int(li_id)),
+                    )
+                    applied_values += 1
+
+        conn.commit()
+
+    total = applied_names + applied_order + applied_values
+    parts_msg = []
+    if applied_names:
+        parts_msg.append(f"{applied_names} names fixed")
+    if applied_order:
+        parts_msg.append(f"{applied_order} items reordered")
+    if applied_values:
+        parts_msg.append(f"{applied_values} values corrected")
+
+    logger.info(
+        "AI reconcile for stock %d %s: names=%d order=%d values=%d",
+        stock_id, statement_type, applied_names, applied_order, applied_values,
+    )
+
+    return {
+        "corrections_applied": total,
+        "names_fixed": applied_names,
+        "items_reordered": applied_order,
+        "values_corrected": applied_values,
+        "passes_completed": len(all_results),
+        "corrections": result,
+        "message": (
+            f"Reconciliation complete ({len(all_results)}-pass consensus) — {', '.join(parts_msg)}."
+            if total > 0
+            else f"All items verified ({len(all_results)}-pass consensus) — names, order, and values match the PDF."
+        ),
+        "confidence": 0.90 if total == 0 else 0.80,
+    }

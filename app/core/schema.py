@@ -110,6 +110,17 @@ def ensure_all_tables() -> None:
                 yf_ticker           TEXT
             )
         """)
+        # Additive columns for stocks (may be missing from older schemas)
+        for col, ctype in [
+            ("yf_ticker", "TEXT"),
+            ("price_source", "TEXT"),
+            ("tradingview_symbol", "TEXT"),
+            ("tradingview_exchange", "TEXT"),
+            ("market_cap", "REAL"),
+            ("sector", "TEXT"),
+            ("industry", "TEXT"),
+        ]:
+            add_column_if_missing("stocks", col, ctype)
         logger.info("✅  stocks table ensured")
     except Exception as e:
         logger.warning("⚠️  stocks table creation skipped: %s", e)
@@ -144,10 +155,20 @@ def ensure_all_tables() -> None:
                 created_at          INTEGER
             )
         """)
-        # Additive columns used by trading recalculations
-        for col in ("avg_cost_at_txn", "realized_pnl_at_txn",
-                     "cost_basis_at_txn", "shares_held_at_txn"):
-            add_column_if_missing("transactions", col, "REAL")
+        # Additive columns — ensure all columns exist even if table
+        # was created from an older Streamlit schema
+        for col, ctype in [
+            ("category", "TEXT"),
+            ("source", "TEXT"),
+            ("fx_rate_at_txn", "REAL"),
+            ("is_deleted", "INTEGER"),
+            ("deleted_at", "INTEGER"),
+            ("avg_cost_at_txn", "REAL"),
+            ("realized_pnl_at_txn", "REAL"),
+            ("cost_basis_at_txn", "REAL"),
+            ("shares_held_at_txn", "REAL"),
+        ]:
+            add_column_if_missing("transactions", col, ctype)
         logger.info("✅  transactions table ensured")
     except Exception as e:
         logger.warning("⚠️  transactions table creation skipped: %s", e)

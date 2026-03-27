@@ -18,47 +18,66 @@ def start_scheduler() -> None:
     """
     Initialize and start the APScheduler background scheduler.
 
-    Adds the daily price update job based on settings.
+    Always schedules the stale extraction-job sweep.
+    Adds the daily price update job when PRICE_UPDATE_ENABLED is set.
     """
     global _scheduler
 
     settings = get_settings()
 
-    if not settings.PRICE_UPDATE_ENABLED:
-        logger.info("⏸  Price scheduler disabled (PRICE_UPDATE_ENABLED=False)")
-        return
-
     try:
         from apscheduler.schedulers.background import BackgroundScheduler
         from apscheduler.triggers.cron import CronTrigger
+        from apscheduler.triggers.interval import IntervalTrigger
     except ImportError:
         logger.warning(
-            "apscheduler not installed — daily price scheduler will NOT run.\n"
+            "apscheduler not installed — scheduler will NOT run.\n"
             "  Install with: pip install apscheduler"
         )
         return
 
-    from app.cron.price_updater import run_price_update
-
     _scheduler = BackgroundScheduler(daemon=True)
-    trigger = CronTrigger(
-        hour=settings.PRICE_UPDATE_HOUR,
-        minute=settings.PRICE_UPDATE_MINUTE,
-        timezone="Asia/Kuwait",
-    )
-    _scheduler.add_job(
-        run_price_update,
-        trigger=trigger,
-        id="daily_price_update",
-        name="Daily price update",
-        replace_existing=True,
-    )
+
+    # ── Periodic stale extraction-job sweep (every 5 min) ────────
+    try:
+        from app.api.v1.fundamental import recover_stale_jobs
+        _scheduler.add_job(
+            recover_stale_jobs,
+            trigger=IntervalTrigger(minutes=5),
+            id="stale_extraction_sweep",
+            name="Stale extraction job sweep",
+            replace_existing=True,
+        )
+        logger.info("🔄 Stale extraction-job sweep scheduled (every 5 min)")
+    except Exception as exc:
+        logger.warning("Could not schedule stale-job sweep: %s", exc)
+
+    # ── Daily price update (optional) ────────────────────────────
+    if settings.PRICE_UPDATE_ENABLED:
+        from app.cron.price_updater import run_price_update
+
+        price_trigger = CronTrigger(
+            hour=settings.PRICE_UPDATE_HOUR,
+            minute=settings.PRICE_UPDATE_MINUTE,
+            timezone="Asia/Kuwait",
+        )
+        _scheduler.add_job(
+            run_price_update,
+            trigger=price_trigger,
+            id="daily_price_update",
+            name="Daily price update",
+            replace_existing=True,
+        )
+        logger.info(
+            "🕐 Price update scheduled — daily at %02d:%02d Asia/Kuwait",
+            settings.PRICE_UPDATE_HOUR,
+            settings.PRICE_UPDATE_MINUTE,
+        )
+    else:
+        logger.info("⏸  Price scheduler disabled (PRICE_UPDATE_ENABLED=False)")
+
     _scheduler.start()
-    logger.info(
-        "🕐 Price scheduler started — runs daily at %02d:%02d Asia/Kuwait",
-        settings.PRICE_UPDATE_HOUR,
-        settings.PRICE_UPDATE_MINUTE,
-    )
+    logger.info("🕐 Scheduler started")
 
 
 def stop_scheduler() -> None:

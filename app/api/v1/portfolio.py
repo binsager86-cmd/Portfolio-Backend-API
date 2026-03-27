@@ -134,9 +134,13 @@ async def portfolio_holdings(
     # ── Recalculate allocation: MV_kwd / total_portfolio_value_kwd ────
     # Allocation = each stock's market value as a percentage of the
     # full portfolio (stocks + cash).  Cash takes the remainder.
+    # Stored as allocation_pct (separate from weight_by_cost which is cost-based).
     if total_portfolio_value_kwd > 0:
         for h in all_holdings:
-            h["weight_by_cost"] = float(h.get("market_value_kwd", 0)) / total_portfolio_value_kwd
+            h["allocation_pct"] = float(h.get("market_value_kwd", 0)) / total_portfolio_value_kwd
+    else:
+        for h in all_holdings:
+            h["allocation_pct"] = 0.0
 
     return {
         "status": "ok",

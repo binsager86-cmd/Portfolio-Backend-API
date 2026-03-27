@@ -2,7 +2,7 @@
 Mobile Migration — FastAPI Backend  (v1 architecture)
 
 Main application entry point.
-Run with:  uvicorn app.main:app --reload --port 8002
+Run with:  uvicorn app.main:app --reload --port 8004
 """
 
 import logging
@@ -61,6 +61,17 @@ async def lifespan(app: FastAPI):
         from app.core.schema import ensure_all_tables
         ensure_all_tables()
 
+        # ── Extraction jobs: ensure table + recover stale jobs ───
+        try:
+            from app.api.v1.fundamental import _ensure_schema as _ensure_fundamental_schema
+            from app.api.v1.fundamental import recover_stale_jobs
+            _ensure_fundamental_schema()
+            recovered = recover_stale_jobs()
+            if recovered:
+                logger.info("♻️  Recovered %d stale extraction job(s) at startup", recovered)
+        except Exception as e:
+            logger.warning("Extraction job recovery skipped: %s", e)
+
         # ── Backfill yf_ticker for existing stocks ───────────────
         try:
             from app.core.database import exec_sql, query_df
@@ -102,8 +113,8 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("🔧 Running in DEVELOPMENT mode (CORS=*, verbose errors)")
 
-    logger.info("🚀  Backend API starting on http://localhost:8002")
-    logger.info("📖  Swagger docs at http://localhost:8002/docs")
+    logger.info("🚀  Backend API starting on http://localhost:8004")
+    logger.info("📖  Swagger docs at http://localhost:8004/docs")
 
     yield  # app is running
 
@@ -148,7 +159,8 @@ _dev_origins = [
     "http://localhost:8082",   # Expo web (alt port)
     "http://localhost:19006",  # Expo web (alt port)
     "http://localhost:3000",   # dev fallback
-    "http://localhost:8004",   # Swagger UI
+    "http://127.0.0.1:8004",  # Local backend
+    "http://localhost:8004",   # Local backend (alt)
     "http://192.168.1.5:8081", # LAN mobile browser
     "http://127.0.0.1:8081",
     "http://127.0.0.1:8082",
