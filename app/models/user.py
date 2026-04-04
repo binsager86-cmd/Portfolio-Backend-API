@@ -19,6 +19,9 @@ class User(Base):
     name: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     created_at: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
+    # Admin flag
+    is_admin: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+
     # Account lockout fields
     failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     locked_until: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # unix timestamp

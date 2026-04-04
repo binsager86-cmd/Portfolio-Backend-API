@@ -447,6 +447,7 @@ def ensure_all_tables() -> None:
         add_column_if_missing("users", "last_failed_login", "INTEGER")
         add_column_if_missing("users", "email", "TEXT")
         add_column_if_missing("users", "google_sub", "TEXT")
+        add_column_if_missing("users", "is_admin", "INTEGER DEFAULT 0")
 
         # -- stocks --
         add_column_if_missing("stocks", "yf_ticker", "TEXT")

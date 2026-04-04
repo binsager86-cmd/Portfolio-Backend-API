@@ -19,6 +19,7 @@ from app.api.v1.stocks import router as stocks_router
 from app.api.v1.tracker import router as tracker_router
 from app.api.v1.fundamental import router as fundamental_router
 from app.api.v1.trading import router as trading_router
+from app.api.v1.admin import router as admin_router
 
 v1_router = APIRouter(prefix="/api/v1")
 
@@ -37,3 +38,4 @@ v1_router.include_router(stocks_router)
 v1_router.include_router(tracker_router)
 v1_router.include_router(fundamental_router)
 v1_router.include_router(trading_router)
+v1_router.include_router(admin_router)

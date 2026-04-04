@@ -55,6 +55,7 @@ class UserInfo(BaseModel):
     user_id: int
     username: str
     name: Optional[str] = None
+    is_admin: bool = False
 
 
 class TokenResponse(BaseModel):
@@ -66,6 +67,7 @@ class TokenResponse(BaseModel):
     user_id: int
     username: str
     name: Optional[str] = None
+    is_admin: bool = False
 
 
 class RefreshRequest(BaseModel):

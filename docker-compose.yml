@@ -17,9 +17,9 @@ services:
       - SECRET_KEY=${SECRET_KEY:-change_this_to_a_random_string_before_production}
       - CRON_SECRET_KEY=${CRON_SECRET_KEY:-}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:19006,http://localhost:8081}
-      - PRICE_UPDATE_ENABLED=true
-      - PRICE_UPDATE_HOUR=17
-      - PRICE_UPDATE_MINUTE=0
+      - PRICE_UPDATE_ENABLED=${PRICE_UPDATE_ENABLED:-true}
+      - PRICE_UPDATE_HOUR=${PRICE_UPDATE_HOUR:-14}
+      - PRICE_UPDATE_MINUTE=${PRICE_UPDATE_MINUTE:-0}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
     volumes:
       - db-data:/data

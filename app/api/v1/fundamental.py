@@ -60,6 +60,7 @@ def _ensure_schema() -> None:
                 description TEXT,
                 website TEXT,
                 outstanding_shares REAL,
+                summary_margin_of_safety REAL DEFAULT 15.0,
                 created_at INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL,
                 UNIQUE(user_id, symbol)
@@ -226,6 +227,19 @@ def _ensure_schema() -> None:
         "CREATE INDEX IF NOT EXISTS idx_valuation_models_stock ON valuation_models(stock_id)",
         "CREATE INDEX IF NOT EXISTS idx_stock_scores_stock ON stock_scores(stock_id)",
         "CREATE INDEX IF NOT EXISTS idx_pdf_uploads_stock ON pdf_uploads(stock_id)",
+        f"""CREATE TABLE IF NOT EXISTS peer_companies (
+                id {_PK},
+                stock_id INTEGER NOT NULL,
+                peer_symbol TEXT NOT NULL,
+                peer_name TEXT NOT NULL,
+                sector TEXT,
+                pe REAL, pb REAL, ps REAL, pcf REAL, ev_ebitda REAL,
+                eps REAL, price REAL,
+                fetched_at INTEGER NOT NULL,
+                UNIQUE(stock_id, peer_symbol),
+                FOREIGN KEY (stock_id) REFERENCES analysis_stocks(id)
+            )""",
+        "CREATE INDEX IF NOT EXISTS idx_peer_companies_stock ON peer_companies(stock_id)",
     ]
 
     try:
@@ -237,6 +251,7 @@ def _ensure_schema() -> None:
     # ── Schema migrations (add columns to existing tables) ──
     _MIGRATIONS = [
         "ALTER TABLE stock_scores ADD COLUMN risk_score REAL",
+        "ALTER TABLE analysis_stocks ADD COLUMN summary_margin_of_safety REAL DEFAULT 15.0",
     ]
     for mig in _MIGRATIONS:
         try:
@@ -571,6 +586,7 @@ class StockUpdate(BaseModel):
     description: Optional[str] = None
     website: Optional[str] = None
     outstanding_shares: Optional[float] = None
+    summary_margin_of_safety: Optional[float] = None
 
 
 class StatementCreate(BaseModel):
@@ -649,6 +665,16 @@ class DCFRequest(BaseModel):
     shares_outstanding: float = 1.0
     cash: float = 0.0
     debt: float = 0.0
+    # Optional WACC components (for display in result card)
+    wacc_used: bool = False
+    wacc_risk_free_rate: Optional[float] = None
+    wacc_beta: Optional[float] = None
+    wacc_equity_risk_premium: Optional[float] = None
+    wacc_cost_of_equity: Optional[float] = None
+    wacc_cost_of_debt: Optional[float] = None
+    wacc_tax_rate: Optional[float] = None
+    wacc_weight_equity: Optional[float] = None
+    wacc_weight_debt: Optional[float] = None
 
 
 class DDMRequest(BaseModel):
@@ -1074,6 +1100,634 @@ async def delete_all_statements(
     }
 
 
+# ── Fetch statements from macrotrends.net (US stocks, 10+ years) ─────
+
+_MT_FIELD_MAP_INCOME = {
+    "Revenue": ("revenue", "Revenue"),
+    "Cost Of Goods Sold": ("cost_of_revenue", "Cost of Revenue"),
+    "Gross Profit": ("gross_profit", "Gross Profit"),
+    "Research And Development Expenses": ("research_development", "Research & Development"),
+    "SG&A Expenses": ("sga", "SG&A"),
+    "Other Operating Income Or Expenses": ("other_operating_expenses", "Other Operating Expenses"),
+    "Operating Expenses": ("total_operating_expenses", "Total Operating Expenses"),
+    "Operating Income": ("operating_income", "Operating Income"),
+    "Total Non-Operating Income/Expense": ("non_operating_income", "Non-Operating Income"),
+    "Pre-Tax Income": ("income_before_tax", "Pretax Income"),
+    "Income Taxes": ("income_tax", "Income Tax"),
+    "Income After Taxes": ("income_after_tax", "Income After Taxes"),
+    "Other Income": ("other_income", "Other Income"),
+    "Income From Continuous Operations": ("earnings_continuing_ops", "Earnings from Continuing Ops"),
+    "Income From Discontinued Operations": ("earnings_discontinued_ops", "Earnings from Discontinued Ops"),
+    "Net Income": ("net_income", "Net Income"),
+    "EBITDA": ("ebitda", "EBITDA"),
+    "EBIT": ("ebit", "EBIT"),
+    "Basic Shares Outstanding": ("shares_outstanding", "Shares Outstanding"),
+    "Shares Outstanding": ("shares_diluted", "Shares Diluted"),
+    "Basic EPS": ("eps_basic", "EPS (Basic)"),
+    "EPS - Earnings Per Share": ("eps_diluted", "EPS (Diluted)"),
+}
+
+_MT_FIELD_MAP_BALANCE = {
+    "Cash On Hand": ("cash", "Cash & Equivalents"),
+    "Receivables": ("accounts_receivable", "Accounts Receivable"),
+    "Inventory": ("inventory", "Inventory"),
+    "Pre-Paid Expenses": ("prepaid_expenses", "Prepaid Expenses"),
+    "Other Current Assets": ("other_current_assets", "Other Current Assets"),
+    "Total Current Assets": ("total_current_assets", "Total Current Assets"),
+    "Property, Plant, And Equipment": ("ppe_net", "Property, Plant & Equipment"),
+    "Long-Term Investments": ("long_term_investments", "Long-Term Investments"),
+    "Goodwill And Intangible Assets": ("goodwill", "Goodwill & Intangible Assets"),
+    "Other Long-Term Assets": ("other_long_term_assets", "Other Long-Term Assets"),
+    "Total Long-Term Assets": ("total_long_term_assets", "Total Long-Term Assets"),
+    "Total Assets": ("total_assets", "Total Assets"),
+    "Total Current Liabilities": ("total_current_liabilities", "Total Current Liabilities"),
+    "Long Term Debt": ("long_term_debt", "Long-Term Debt"),
+    "Other Non-Current Liabilities": ("other_non_current_liabilities", "Other Non-Current Liabilities"),
+    "Total Long-Term Liabilities": ("total_long_term_liabilities", "Total Long-Term Liabilities"),
+    "Total Liabilities": ("total_liabilities", "Total Liabilities"),
+    "Common Stock Net": ("share_capital", "Share Capital"),
+    "Retained Earnings (Accumulated Deficit)": ("retained_earnings", "Retained Earnings"),
+    "Comprehensive Income": ("comprehensive_income", "Comprehensive Income"),
+    "Other Share Holders Equity": ("other_equity", "Other Shareholders' Equity"),
+    "Share Holder Equity": ("total_equity", "Total Equity"),
+    "Total Liabilities And Share Holders Equity": ("total_liabilities_equity", "Total Liabilities & Equity"),
+}
+
+_MT_FIELD_MAP_CASHFLOW = {
+    "Net Income/Loss": ("net_income_cf", "Net Income"),
+    "Total Depreciation And Amortization - Cash Flow": ("depreciation_cf", "Depreciation & Amortization"),
+    "Other Non-Cash Items": ("other_non_cash", "Other Non-Cash Items"),
+    "Total Non-Cash Items": ("total_non_cash", "Total Non-Cash Items"),
+    "Change In Accounts Receivable": ("change_receivables", "Change in Receivables"),
+    "Change In Inventories": ("change_inventories", "Change in Inventories"),
+    "Change In Accounts Payable": ("change_payables", "Change in Payables"),
+    "Change In Assets/Liabilities": ("change_assets_liabilities", "Change in Assets/Liabilities"),
+    "Total Change In Assets/Liabilities": ("total_change_assets_liabilities", "Total Change in Assets/Liabilities"),
+    "Cash Flow From Operating Activities": ("cash_from_operations", "Cash from Operations"),
+    "Net Change In Property, Plant, And Equipment": ("capital_expenditures", "Capital Expenditures"),
+    "Net Change In Intangible Assets": ("change_intangibles", "Change in Intangibles"),
+    "Net Acquisitions/Divestitures": ("acquisitions", "Acquisitions/Divestitures"),
+    "Net Change In Short-term Investments": ("change_short_term_investments", "Change in Short-Term Investments"),
+    "Net Change In Long-Term Investments": ("change_long_term_investments", "Change in Long-Term Investments"),
+    "Net Change In Investments - Total": ("change_investments_total", "Change in Investments Total"),
+    "Investing Activities - Other": ("investing_other", "Investing Other"),
+    "Cash Flow From Investing Activities": ("cash_from_investing", "Cash from Investing"),
+    "Net Long-Term Debt": ("net_debt_issued", "Net Long-Term Debt"),
+    "Net Current Debt": ("net_current_debt", "Net Current Debt"),
+    "Debt Issuance/Retirement Net - Total": ("net_debt_total", "Net Debt Total"),
+    "Net Common Equity Issued/Repurchased": ("shares_repurchased", "Shares Issued/Repurchased"),
+    "Net Total Equity Issued/Repurchased": ("net_equity_total", "Net Equity Total"),
+    "Total Common And Preferred Stock Dividends Paid": ("dividends_paid", "Dividends Paid"),
+    "Financial Activities - Other": ("financing_other", "Financing Other"),
+    "Cash Flow From Financial Activities": ("cash_from_financing", "Cash from Financing"),
+    "Net Cash Flow": ("net_change_in_cash", "Net Change in Cash"),
+    "Free Cash Flow": ("free_cash_flow", "Free Cash Flow"),
+}
+
+_MT_STMT_MAP = {
+    "income":   ("https://www.macrotrends.net/stocks/charts/{sym}/{slug}/income-statement", _MT_FIELD_MAP_INCOME),
+    "balance":  ("https://www.macrotrends.net/stocks/charts/{sym}/{slug}/balance-sheet", _MT_FIELD_MAP_BALANCE),
+    "cashflow": ("https://www.macrotrends.net/stocks/charts/{sym}/{slug}/cash-flow-statement", _MT_FIELD_MAP_CASHFLOW),
+}
+
+# Maximum years to fetch from macrotrends (user requested 10)
+_MT_MAX_YEARS = 10
+
+
+def _mt_resolve_slug(symbol: str, client: "httpx.Client") -> Optional[str]:
+    """Get the macrotrends company slug by following the redirect.
+
+    macrotrends.net/stocks/charts/AAPL/ → 301 → .../AAPL/apple/
+    """
+    url = f"https://www.macrotrends.net/stocks/charts/{symbol.upper()}/"
+    try:
+        # HEAD first (lighter)
+        resp = client.head(url, follow_redirects=False)
+        if resp.status_code in (301, 302, 303, 307, 308):
+            loc = resp.headers.get("location", "")
+            parts = loc.rstrip("/").split("/")
+            if len(parts) >= 2:
+                return parts[-1]
+
+        # Fallback: GET without following redirects
+        resp = client.get(url, follow_redirects=False)
+        if resp.status_code in (301, 302, 303, 307, 308):
+            loc = resp.headers.get("location", "")
+            parts = loc.rstrip("/").split("/")
+            if len(parts) >= 2:
+                return parts[-1]
+
+        # Last resort: follow redirect and parse final URL
+        if resp.status_code == 200:
+            final = str(resp.url).rstrip("/").split("/")
+            if len(final) >= 2:
+                return final[-1]
+    except Exception as exc:
+        logger.warning("macrotrends slug resolution failed for %s: %s", symbol, exc)
+    return None
+
+
+def _mt_parse_financial_data(html: str) -> Optional[list]:
+    """Extract originalData from macrotrends.net page.
+
+    Returns list of dicts like:
+    [{"field_name": "<a href='...'>Revenue</a>", "2024-09-30": "391035.00", ...}, ...]
+    """
+    import re as _re
+    import json as _json
+
+    m = _re.search(r'var\s+originalData\s*=\s*(\[.*?\]);\s*$', html, _re.MULTILINE | _re.DOTALL)
+    if not m:
+        m = _re.search(r'var\s+originalData\s*=\s*(\[.*?\]);', html, _re.DOTALL)
+    if not m:
+        return None
+    try:
+        return _json.loads(m.group(1))
+    except (ValueError, _json.JSONDecodeError) as exc:
+        logger.warning("macrotrends JSON parse error: %s", exc)
+        return None
+
+
+def _fetch_us_statements(stock_id: int, symbol: str, user_id: int) -> dict:
+    """Fetch financial statements from macrotrends.net for a US stock.
+
+    Returns {"status": "ok", "data": {...}} or raises HTTPException.
+    """
+    import httpx as _httpx
+    import re as _re
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+
+    now = int(time.time())
+    saved_summary = []
+    base = symbol.upper()
+
+    with _httpx.Client(headers=headers, timeout=30, follow_redirects=True) as client:
+        # Resolve the slug (e.g. AAPL -> apple)
+        slug = _mt_resolve_slug(base, client)
+        if not slug:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Could not find {base} on macrotrends.net.",
+            )
+
+        for stmt_type, (url_tpl, field_map) in _MT_STMT_MAP.items():
+            url = url_tpl.format(sym=base, slug=slug)
+            try:
+                resp = client.get(url)
+                if resp.status_code != 200:
+                    logger.warning("macrotrends %s returned %s for %s", stmt_type, resp.status_code, base)
+                    continue
+            except Exception as exc:
+                logger.warning("macrotrends fetch error for %s/%s: %s", base, stmt_type, exc)
+                continue
+
+            data = _mt_parse_financial_data(resp.text)
+            if not data:
+                logger.warning("macrotrends: no originalData for %s/%s", base, stmt_type)
+                continue
+
+            # Get date columns (keys matching YYYY-MM-DD)
+            first_row = data[0]
+            date_keys = sorted(
+                [k for k in first_row.keys() if _re.match(r'20\d{2}-\d{2}-\d{2}', k)],
+                reverse=True,
+            )
+
+            # Limit to most recent N years
+            date_keys = date_keys[:_MT_MAX_YEARS]
+
+            periods_saved = 0
+            for period_end_date in date_keys:
+                try:
+                    fy = int(period_end_date[:4])
+                except ValueError:
+                    continue
+
+                # Collect line items
+                line_items = []
+                order = 1
+                for row_data in data:
+                    raw_name = row_data.get("field_name", "")
+                    # Strip HTML tags to get clean field name
+                    clean_name = _re.sub(r'<[^>]+>', '', raw_name).strip()
+
+                    if clean_name not in field_map:
+                        continue
+
+                    canonical_code, display_name = field_map[clean_name]
+                    raw_val = row_data.get(period_end_date)
+                    if raw_val is None or raw_val == "":
+                        continue
+
+                    try:
+                        amount = float(str(raw_val).replace(",", ""))
+                    except (ValueError, TypeError):
+                        continue
+
+                    line_items.append({
+                        "code": canonical_code,
+                        "name": display_name,
+                        "amount": amount,
+                        "currency": "USD",
+                        "order": order,
+                        "is_total": canonical_code in (
+                            "total_assets", "total_equity", "total_liabilities",
+                            "total_current_assets", "total_current_liabilities",
+                            "total_liabilities_equity", "total_operating_expenses",
+                            "total_long_term_assets", "total_long_term_liabilities",
+                        ),
+                    })
+                    order += 1
+
+                if not line_items:
+                    continue
+
+                # Upsert: check existing statement
+                existing = query_one(
+                    """SELECT id FROM financial_statements
+                       WHERE stock_id = ? AND statement_type = ? AND period_end_date = ?""",
+                    (stock_id, stmt_type, period_end_date),
+                )
+
+                source_label = f"macrotrends.net/{base}/{slug}"
+
+                with get_connection() as conn:
+                    cur = conn.cursor()
+                    if existing:
+                        stmt_id = existing["id"] if isinstance(existing, dict) else existing[0]
+                        cur.execute(
+                            """UPDATE financial_statements
+                               SET fiscal_year=?, extracted_by=?, source_file=?,
+                                   confidence_score=?, notes=?, created_at=?
+                               WHERE id=?""",
+                            (fy, "macrotrends.net", source_label,
+                             1.0, "Fetched from macrotrends.net", now, stmt_id),
+                        )
+                        cur.execute("DELETE FROM financial_line_items WHERE statement_id = ?", (stmt_id,))
+                    else:
+                        cur.execute(
+                            """INSERT INTO financial_statements
+                               (stock_id, statement_type, fiscal_year, fiscal_quarter,
+                                period_end_date, source_file, extracted_by,
+                                confidence_score, notes, created_at)
+                               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                            (stock_id, stmt_type, fy, None, period_end_date,
+                             source_label, "macrotrends.net",
+                             1.0, "Fetched from macrotrends.net", now),
+                        )
+                        stmt_id = cur.lastrowid
+
+                    for item in line_items:
+                        cur.execute(
+                            """INSERT INTO financial_line_items
+                               (statement_id, line_item_code, line_item_name,
+                                amount, currency, order_index, is_total)
+                               VALUES (?,?,?,?,?,?,?)""",
+                            (stmt_id, item["code"], item["name"],
+                             item["amount"], item["currency"],
+                             item["order"], item["is_total"]),
+                        )
+                    conn.commit()
+                periods_saved += 1
+
+            if periods_saved > 0:
+                saved_summary.append({
+                    "statement_type": stmt_type,
+                    "periods_saved": periods_saved,
+                })
+
+    if not saved_summary:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No financial data found on macrotrends.net for {base}.",
+        )
+
+    total_periods = sum(s["periods_saved"] for s in saved_summary)
+    return {
+        "status": "ok",
+        "data": {
+            "message": f"Fetched {total_periods} period(s) across {len(saved_summary)} statement type(s) from macrotrends.net.",
+            "summary": saved_summary,
+            "source": f"https://www.macrotrends.net/stocks/charts/{base}/{slug}/income-statement",
+        },
+    }
+
+
+# ── Fetch statements from stockanalysis.com ──────────────────────────
+
+# Field mapping: stockanalysis.com JS key -> (canonical_code, display_name)
+_SA_FIELD_MAP_INCOME = {
+    "revenue": ("revenue", "Revenue"),
+    "revenueRE": ("revenue", "Revenue"),
+    "rentalRevenue": ("rental_revenue", "Rental Revenue"),
+    "costrev": ("cost_of_revenue", "Cost of Revenue"),
+    "grossProfit": ("gross_profit", "Gross Profit"),
+    "sgna": ("sga", "SG&A"),
+    "sgnaRE": ("sga", "SG&A"),
+    "propertyExpenses": ("property_expenses", "Property Expenses"),
+    "otherOpex": ("other_operating_expenses", "Other Operating Expenses"),
+    "otherOperatingExpensesRE": ("other_operating_expenses", "Other Operating Expenses"),
+    "totalOpex": ("total_operating_expenses", "Total Operating Expenses"),
+    "totalOperatingExpensesRE": ("total_operating_expenses", "Total Operating Expenses"),
+    "opinc": ("operating_income", "Operating Income"),
+    "operatingIncomeRE": ("operating_income", "Operating Income"),
+    "intexp": ("interest_expense", "Interest Expense"),
+    "pretax": ("income_before_tax", "Pretax Income"),
+    "taxexp": ("income_tax", "Income Tax"),
+    "netinc": ("net_income", "Net Income"),
+    "netinccmn": ("net_income_common", "Net Income to Common"),
+    "epsBasic": ("eps_basic", "EPS (Basic)"),
+    "epsdil": ("eps_diluted", "EPS (Diluted)"),
+    "ebitda": ("ebitda", "EBITDA"),
+    "ebit": ("ebit", "EBIT"),
+    "sharesBasic": ("shares_outstanding", "Shares Outstanding"),
+    "sharesDiluted": ("shares_diluted", "Shares Diluted"),
+    "dps": ("dividends_per_share", "Dividends Per Share"),
+    "depAmorEbitda": ("depreciation_amortization", "Depreciation & Amortization"),
+    "minorityInterest": ("minority_interest", "Minority Interest"),
+    "earningContinuing": ("earnings_continuing_ops", "Earnings from Continuing Ops"),
+}
+
+_SA_FIELD_MAP_BALANCE = {
+    "cashneq": ("cash", "Cash & Equivalents"),
+    "shortTermInvestments": ("short_term_investments", "Short-Term Investments"),
+    "accountsReceivable": ("accounts_receivable", "Accounts Receivable"),
+    "inventory": ("inventory", "Inventory"),
+    "totalCurrentAssets": ("total_current_assets", "Total Current Assets"),
+    "netPPE": ("ppe_net", "Property, Plant & Equipment"),
+    "goodwill": ("goodwill", "Goodwill"),
+    "intangibles": ("intangible_assets", "Intangible Assets"),
+    "assets": ("total_assets", "Total Assets"),
+    "accountsPayable": ("accounts_payable", "Accounts Payable"),
+    "shortTermDebt": ("short_term_debt", "Short-Term Debt"),
+    "totalCurrentLiabilities": ("total_current_liabilities", "Total Current Liabilities"),
+    "longTermDebt": ("long_term_debt", "Long-Term Debt"),
+    "totalLiabilities": ("total_liabilities", "Total Liabilities"),
+    "totalLiabilitiesRE": ("total_liabilities", "Total Liabilities"),
+    "commonStock": ("share_capital", "Share Capital"),
+    "additionalPaidInCapital": ("additional_paid_in_capital", "Additional Paid-In Capital"),
+    "retearn": ("retained_earnings", "Retained Earnings"),
+    "totalCommonEquity": ("total_common_equity", "Total Common Equity"),
+    "equity": ("total_equity", "Total Equity"),
+    "debt": ("total_debt", "Total Debt"),
+    "bvps": ("book_value_per_share", "Book Value Per Share"),
+    "tangibleBookValue": ("tangible_book_value", "Tangible Book Value"),
+    "longTermInvestmentsRE": ("long_term_investments", "Long-Term Investments"),
+    "tradingAssetSecurities": ("trading_securities", "Trading Securities"),
+    "treasuryStock": ("treasury_stock", "Treasury Stock"),
+    "netcash": ("net_cash", "Net Cash / Debt"),
+    "capitalLeases": ("capital_leases", "Capital Leases"),
+    "liabilitiesequity": ("total_liabilities_equity", "Total Liabilities & Equity"),
+    "minorityInterestBS": ("minority_interest_bs", "Minority Interest"),
+}
+
+_SA_FIELD_MAP_CASHFLOW = {
+    "netIncomeCF": ("net_income_cf", "Net Income"),
+    "totalDepAmorCF": ("depreciation_cf", "Depreciation & Amortization"),
+    "ncfo": ("cash_from_operations", "Cash from Operations"),
+    "capex": ("capital_expenditures", "Capital Expenditures"),
+    "ncfi": ("cash_from_investing", "Cash from Investing"),
+    "ncff": ("cash_from_financing", "Cash from Financing"),
+    "debtIssuedTotal": ("debt_issued", "Debt Issued"),
+    "debtRepaidTotal": ("debt_repaid", "Debt Repaid"),
+    "commonDividendCF": ("dividends_paid", "Dividends Paid"),
+    "ncf": ("net_change_in_cash", "Net Change in Cash"),
+    "leveredFCF": ("free_cash_flow", "Free Cash Flow"),
+    "unleveredFCF": ("unlevered_fcf", "Unlevered Free Cash Flow"),
+    "cashInterestPaid": ("interest_paid", "Interest Paid"),
+    "commonIssued": ("shares_issued", "Shares Issued"),
+    "commonRepurchased": ("shares_repurchased", "Shares Repurchased"),
+    "netDebtIssued": ("net_debt_issued", "Net Debt Issued"),
+    "acquisitionRealEstateAssets": ("acquisition_re_assets", "RE Asset Acquisitions"),
+    "saleRealEstateAssets": ("sale_re_assets", "RE Asset Sales"),
+    "changeWorkingCapital": ("change_working_capital", "Change in Working Capital"),
+}
+
+_SA_STMT_MAP = {
+    "income":   ("https://stockanalysis.com/quote/kwse/{sym}/financials/", _SA_FIELD_MAP_INCOME),
+    "balance":  ("https://stockanalysis.com/quote/kwse/{sym}/financials/balance-sheet/", _SA_FIELD_MAP_BALANCE),
+    "cashflow": ("https://stockanalysis.com/quote/kwse/{sym}/financials/cash-flow-statement/", _SA_FIELD_MAP_CASHFLOW),
+}
+
+
+def _sa_parse_financial_data(html: str) -> Optional[Dict]:
+    """Extract the financialData object from stockanalysis.com SvelteKit page."""
+    import re as _re
+
+    m = _re.search(r'financialData:\{(.*?)\},(?:mapData|columns)', html, _re.DOTALL)
+    if not m:
+        m = _re.search(r'financialData:\{(.+)', html, _re.DOTALL)
+        if not m:
+            return None
+
+    raw = m.group(1)
+    result: Dict[str, Any] = {}
+
+    dk = _re.search(r'datekey:\[([^\]]+)\]', raw)
+    if dk:
+        result["datekey"] = [s.strip().strip('"') for s in dk.group(1).split(",")]
+
+    fy = _re.search(r'fiscalYear:\[([^\]]+)\]', raw)
+    if fy:
+        result["fiscalYear"] = [s.strip().strip('"') for s in fy.group(1).split(",")]
+
+    for fm in _re.finditer(r'(\w+):\[([^\]]*)\]', raw):
+        name = fm.group(1)
+        if name in ("datekey", "fiscalYear", "fiscalQuarter"):
+            continue
+        vals = []
+        for v in fm.group(2).split(","):
+            v = v.strip()
+            if v in ("null", "void 0", ""):
+                vals.append(None)
+            else:
+                try:
+                    vals.append(float(v))
+                except ValueError:
+                    vals.append(None)
+        result[name] = vals
+
+    return result if result.get("datekey") else None
+
+
+@router.post("/stocks/{stock_id}/fetch-statements-online")
+async def fetch_statements_online(
+    stock_id: int,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Fetch financial statements online for a stock.
+
+    - Kuwait stocks: scraped from stockanalysis.com
+    - US stocks: scraped from macrotrends.net (up to 10 years)
+
+    Upserts into financial_statements + financial_line_items.
+    """
+    import httpx as _httpx
+
+    _ensure_schema()
+    _verify_stock_owner(stock_id, current_user.user_id)
+
+    # Resolve symbol from stock_id
+    row = query_one("SELECT symbol FROM analysis_stocks WHERE id = ?", (stock_id,))
+    if not row:
+        raise NotFoundError("Analysis Stock", str(stock_id))
+    symbol = row["symbol"] if isinstance(row, dict) else row[0]
+
+    # Determine yf_ticker to check if it's a Kuwait stock
+    resolved = _resolve_yf_ticker(symbol, current_user.user_id)
+    is_kuwait = resolved.upper().endswith(".KW")
+
+    # Route US stocks to macrotrends (10 years of data)
+    if not is_kuwait:
+        return _fetch_us_statements(stock_id, symbol, current_user.user_id)
+
+    base = resolved.replace(".KW", "").upper()
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+
+    now = int(time.time())
+    saved_summary = []
+
+    for stmt_type, (url_tpl, field_map) in _SA_STMT_MAP.items():
+        url = url_tpl.format(sym=base)
+        try:
+            resp = _httpx.get(url, headers=headers, timeout=20, follow_redirects=True)
+            if resp.status_code != 200:
+                logger.warning("stockanalysis.com %s returned %s for %s", stmt_type, resp.status_code, base)
+                continue
+        except Exception as exc:
+            logger.warning("stockanalysis.com fetch error for %s/%s: %s", base, stmt_type, exc)
+            continue
+
+        data = _sa_parse_financial_data(resp.text)
+        if not data:
+            logger.warning("stockanalysis.com: no financialData for %s/%s", base, stmt_type)
+            continue
+
+        datekeys = data.get("datekey", [])
+        fiscal_years = data.get("fiscalYear", [])
+
+        # Process each period (skip TTM)
+        periods_saved = 0
+        for idx, dk in enumerate(datekeys):
+            if dk == "TTM":
+                continue
+
+            period_end_date = dk  # e.g. "2024-12-31"
+            try:
+                fy = int(fiscal_years[idx])
+            except (IndexError, ValueError):
+                continue
+
+            # Collect line items for this period
+            line_items = []
+            seen_codes = set()
+            order = 1
+            for sa_key, (canonical_code, display_name) in field_map.items():
+                if sa_key not in data:
+                    continue
+                # Skip duplicate canonical codes (e.g. revenue vs revenueRE)
+                if canonical_code in seen_codes:
+                    continue
+                vals = data[sa_key]
+                if idx >= len(vals) or vals[idx] is None:
+                    continue
+                seen_codes.add(canonical_code)
+                line_items.append({
+                    "code": canonical_code,
+                    "name": display_name,
+                    "amount": vals[idx],
+                    "currency": "KWD",
+                    "order": order,
+                    "is_total": canonical_code in (
+                        "total_assets", "total_equity", "total_liabilities",
+                        "total_current_assets", "total_current_liabilities",
+                        "total_liabilities_equity", "total_operating_expenses",
+                        "total_common_equity",
+                    ),
+                })
+                order += 1
+
+            if not line_items:
+                continue
+
+            # Upsert: check existing statement
+            existing = query_one(
+                """SELECT id FROM financial_statements
+                   WHERE stock_id = ? AND statement_type = ? AND period_end_date = ?""",
+                (stock_id, stmt_type, period_end_date),
+            )
+
+            with get_connection() as conn:
+                cur = conn.cursor()
+                if existing:
+                    stmt_id = existing["id"] if isinstance(existing, dict) else existing[0]
+                    cur.execute(
+                        """UPDATE financial_statements
+                           SET fiscal_year=?, extracted_by=?, source_file=?,
+                               confidence_score=?, notes=?, created_at=?
+                           WHERE id=?""",
+                        (fy, "stockanalysis.com", f"stockanalysis.com/kwse/{base}",
+                         1.0, "Fetched from stockanalysis.com", now, stmt_id),
+                    )
+                    cur.execute("DELETE FROM financial_line_items WHERE statement_id = ?", (stmt_id,))
+                else:
+                    cur.execute(
+                        """INSERT INTO financial_statements
+                           (stock_id, statement_type, fiscal_year, fiscal_quarter,
+                            period_end_date, source_file, extracted_by,
+                            confidence_score, notes, created_at)
+                           VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                        (stock_id, stmt_type, fy, None, period_end_date,
+                         f"stockanalysis.com/kwse/{base}", "stockanalysis.com",
+                         1.0, "Fetched from stockanalysis.com", now),
+                    )
+                    stmt_id = cur.lastrowid
+
+                for item in line_items:
+                    cur.execute(
+                        """INSERT INTO financial_line_items
+                           (statement_id, line_item_code, line_item_name,
+                            amount, currency, order_index, is_total)
+                           VALUES (?,?,?,?,?,?,?)""",
+                        (stmt_id, item["code"], item["name"],
+                         item["amount"], item["currency"],
+                         item["order"], item["is_total"]),
+                    )
+                conn.commit()
+            periods_saved += 1
+
+        if periods_saved > 0:
+            saved_summary.append({
+                "statement_type": stmt_type,
+                "periods_saved": periods_saved,
+            })
+
+    if not saved_summary:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No financial data found on stockanalysis.com for {base}.",
+        )
+
+    total_periods = sum(s["periods_saved"] for s in saved_summary)
+    return {
+        "status": "ok",
+        "data": {
+            "message": f"Fetched {total_periods} period(s) across {len(saved_summary)} statement type(s) from stockanalysis.com.",
+            "summary": saved_summary,
+            "source": f"https://stockanalysis.com/quote/kwse/{base}/financials/",
+        },
+    }
+
+
 @router.post("/stocks/{stock_id}/statements/reorder-items")
 async def reorder_line_items(
     stock_id: int,
@@ -1411,6 +2065,17 @@ _CANONICAL_CODES: Dict[str, str] = {
     "net_increase_decrease_in_cash": "net_change_in_cash",
     "changes_in_working_capital": "changes_in_working_capital",
     "changes_working_capital": "changes_in_working_capital",
+    # Free Cash Flow variants
+    "free_cash_flow": "free_cash_flow",
+    "fcf": "free_cash_flow",
+    "unlevered_free_cash_flow": "free_cash_flow",
+    "levered_free_cash_flow": "levered_free_cash_flow",
+    "free_cash_flow_margin": "free_cash_flow_margin",
+    "fcf_margin": "free_cash_flow_margin",
+    "free_cash_flow_per_share": "free_cash_flow_per_share",
+    "fcf_per_share": "free_cash_flow_per_share",
+    "free_cash_flow_growth": "free_cash_flow_growth",
+    "operating_cash_flow": "cash_from_operations",
     # Equity statement
     "shares_outstanding": "shares_diluted", "share_count": "share_count",
     "shares_basic": "shares_basic", "shares_diluted": "shares_diluted",
@@ -3260,9 +3925,11 @@ async def get_valuation_defaults(
         if name not in latest:
             latest[name] = val
 
-    # Shares outstanding from analysis_stocks table
-    stock_row = query_one("SELECT outstanding_shares FROM analysis_stocks WHERE id = ?", (stock_id,))
+    # Shares outstanding, exchange, and summary MoS from analysis_stocks table
+    stock_row = query_one("SELECT outstanding_shares, summary_margin_of_safety, exchange FROM analysis_stocks WHERE id = ?", (stock_id,))
     shares = (stock_row[0] if isinstance(stock_row, (tuple, list)) else stock_row.get("outstanding_shares", None)) if stock_row else None
+    summary_mos = (stock_row[1] if isinstance(stock_row, (tuple, list)) else stock_row.get("summary_margin_of_safety", 15.0)) if stock_row else 15.0
+    stock_exchange = (stock_row[2] if isinstance(stock_row, (tuple, list)) else stock_row.get("exchange", "US")) if stock_row else "US"
 
     # FCF from cash flow
     fcf_row = query_one(
@@ -3270,7 +3937,7 @@ async def get_valuation_defaults(
            JOIN financial_statements fs ON fs.id = li.statement_id
            WHERE fs.stock_id = ? AND fs.statement_type = 'cashflow'
              AND fs.fiscal_quarter IS NULL
-             AND UPPER(li.line_item_code) = 'FREE_CASH_FLOW'
+             AND UPPER(li.line_item_code) IN ('FREE_CASH_FLOW', 'UNLEVERED_FREE_CASH_FLOW', 'LEVERED_FREE_CASH_FLOW')
            ORDER BY fs.fiscal_year DESC LIMIT 1""",
         (stock_id,),
     )
@@ -3310,7 +3977,7 @@ async def get_valuation_defaults(
            JOIN financial_statements fs ON fs.id = li.statement_id
            WHERE fs.stock_id = ? AND fs.statement_type = 'cashflow'
              AND fs.fiscal_quarter IS NULL
-             AND UPPER(li.line_item_code) = 'FREE_CASH_FLOW'
+             AND UPPER(li.line_item_code) IN ('FREE_CASH_FLOW', 'UNLEVERED_FREE_CASH_FLOW', 'LEVERED_FREE_CASH_FLOW')
              AND li.amount IS NOT NULL
            ORDER BY fs.fiscal_year""",
         (stock_id,),
@@ -3327,7 +3994,7 @@ async def get_valuation_defaults(
                JOIN financial_statements fs ON fs.id = li.statement_id
                WHERE fs.stock_id = ? AND fs.statement_type = 'cashflow'
                  AND fs.fiscal_quarter IS NULL
-                 AND UPPER(li.line_item_code) = 'CASH_FROM_OPERATIONS'
+                 AND UPPER(li.line_item_code) IN ('CASH_FROM_OPERATIONS', 'OPERATING_CASH_FLOW')
                  AND li.amount IS NOT NULL
                ORDER BY fs.fiscal_year""",
             (stock_id,),
@@ -3573,24 +4240,87 @@ async def get_valuation_defaults(
             # Graham conservatism: cap at 15%, floor at 0%
             graham_growth_avg = round(min(max(avg_raw, 0), 15), 2)
 
-    # Fetch current price & bond yield from yfinance
+    # Fetch current price, bond yield & WACC components from yfinance
     current_price_yf = None
     bond_yield_yf = None
+    wacc_data: Dict[str, Any] = {}
     stock_sym_row = query_one("SELECT symbol FROM analysis_stocks WHERE id = ?", (stock_id,))
     ticker_sym = (stock_sym_row[0] if isinstance(stock_sym_row, (tuple, list)) else stock_sym_row.get("symbol")) if stock_sym_row else None
     if ticker_sym:
+        ticker_sym = _resolve_yf_ticker(ticker_sym, current_user.user_id)
+        _kw = ticker_sym.upper().endswith(".KW")
         try:
             import yfinance as yf
             # Current stock price
             tk = yf.Ticker(ticker_sym)
             hist = tk.history(period="5d")
             if not hist.empty:
-                current_price_yf = round(float(hist["Close"].iloc[-1]), 2)
-            # 10Y Treasury yield (proxy for AAA bond yield)
+                _cprice = float(hist["Close"].iloc[-1])
+                if _kw:
+                    _cprice = _cprice / 1000.0
+                current_price_yf = round(_cprice, 2)
+            # 10Y Treasury yield (proxy for AAA bond yield / risk-free rate)
             tnx = yf.Ticker("^TNX")
             tnx_hist = tnx.history(period="5d")
             if not tnx_hist.empty:
                 bond_yield_yf = round(float(tnx_hist["Close"].iloc[-1]), 2)
+
+            # ── WACC components ──────────────────────────────────
+            info = tk.info or {}
+            beta = info.get("beta")
+            market_cap = info.get("marketCap")
+            yf_total_debt = info.get("totalDebt")
+            interest_expense = info.get("interestExpense")  # annual
+            income_before_tax = info.get("incomeBeforeTax")
+            income_tax = info.get("incomeTaxExpense")
+
+            risk_free = (bond_yield_yf / 100.0) if bond_yield_yf else None
+            equity_risk_premium = 0.055  # historical average ~5.5%
+
+            # Cost of equity (CAPM)
+            cost_of_equity = None
+            if risk_free is not None and beta is not None:
+                cost_of_equity = round(risk_free + float(beta) * equity_risk_premium, 4)
+
+            # Cost of debt (interest / total debt)
+            cost_of_debt = None
+            if interest_expense and yf_total_debt and yf_total_debt > 0:
+                cost_of_debt = round(abs(float(interest_expense)) / float(yf_total_debt), 4)
+
+            # Tax rate
+            tax_rate = None
+            if income_before_tax and income_tax and income_before_tax > 0:
+                tax_rate = round(abs(float(income_tax)) / float(income_before_tax), 4)
+
+            # Weights
+            weight_equity = None
+            weight_debt = None
+            if market_cap and yf_total_debt is not None:
+                total_value = float(market_cap) + float(yf_total_debt or 0)
+                if total_value > 0:
+                    weight_equity = round(float(market_cap) / total_value, 4)
+                    weight_debt = round(float(yf_total_debt or 0) / total_value, 4)
+
+            # WACC = (E/V × Re) + (D/V × Rd × (1-T))
+            wacc_value = None
+            if cost_of_equity is not None and weight_equity is not None:
+                eq_part = weight_equity * cost_of_equity
+                debt_part = 0.0
+                if cost_of_debt is not None and weight_debt is not None and tax_rate is not None:
+                    debt_part = weight_debt * cost_of_debt * (1 - tax_rate)
+                wacc_value = round(eq_part + debt_part, 4)
+
+            wacc_data = {
+                "wacc": wacc_value,
+                "wacc_risk_free_rate": risk_free,
+                "wacc_beta": round(float(beta), 4) if beta is not None else None,
+                "wacc_equity_risk_premium": equity_risk_premium,
+                "wacc_cost_of_equity": cost_of_equity,
+                "wacc_cost_of_debt": cost_of_debt,
+                "wacc_tax_rate": tax_rate,
+                "wacc_weight_equity": weight_equity,
+                "wacc_weight_debt": weight_debt,
+            }
         except Exception as e:
             logger.warning("yfinance fetch failed for Graham defaults: %s", e)
 
@@ -3614,6 +4344,9 @@ async def get_valuation_defaults(
         "eps_history": eps_history,
         "current_price": current_price_yf,
         "bond_yield": bond_yield_yf,
+        "summary_margin_of_safety": summary_mos if summary_mos is not None else 15.0,
+        "exchange": stock_exchange or "US",
+        **wacc_data,
     }
 
     return {"status": "ok", "data": defaults}
@@ -3624,52 +4357,407 @@ async def get_peer_multiples(
     stock_id: int,
     current_user: TokenData = Depends(get_current_user),
 ):
-    """Fetch valuation multiples (P/E, P/B, P/S, P/CF, EV/EBITDA) from yfinance
-    for all of the user's analysis stocks, to be used as peer comparables."""
+    """Return stored peer companies with their multiples for a stock."""
     _ensure_schema()
     uid = current_user.user_id
     _verify_stock_owner(stock_id, uid)
 
     rows = query_df(
-        "SELECT id, symbol, company_name FROM analysis_stocks WHERE user_id = ? ORDER BY symbol",
-        (uid,),
+        "SELECT id, peer_symbol, peer_name, sector, pe, pb, ps, pcf, ev_ebitda, eps, price "
+        "FROM peer_companies WHERE stock_id = ? ORDER BY peer_symbol",
+        (stock_id,),
     )
-    if rows.empty:
-        return {"status": "ok", "data": {"peers": [], "count": 0}}
-
     peers = []
+    if not rows.empty:
+        for _, r in rows.iterrows():
+            peers.append({
+                "stock_id": int(r["id"]),
+                "symbol": r["peer_symbol"],
+                "company_name": r["peer_name"],
+                "pe": r["pe"], "pb": r["pb"], "ps": r["ps"],
+                "pcf": r["pcf"], "ev_ebitda": r["ev_ebitda"],
+                "eps": r["eps"], "price": r["price"],
+            })
+    return {"status": "ok", "data": {"peers": peers, "count": len(peers)}}
+
+
+def _stockanalysis_multiples(symbol: str) -> Dict[str, Any]:
+    """Fetch multiples from stockanalysis.com for a Kuwait (KWSE) stock.
+
+    Parses the embedded SvelteKit bootstrap data from the statistics page.
+    Returns dict with pe, pb, ps, pcf, ev_ebitda, eps, price, company_name.
+    """
+    import re as _re
+    import httpx
+
+    base = _re.sub(r'\.KW$', '', symbol, flags=_re.IGNORECASE).upper()
+    url = f"https://stockanalysis.com/quote/kwse/{base}/statistics/"
+
+    entry: Dict[str, Any] = {
+        "pe": None, "pb": None, "ps": None, "pcf": None,
+        "ev_ebitda": None, "eps": None, "price": None,
+        "company_name": None,
+    }
+
+    try:
+        resp = httpx.get(url, timeout=15, follow_redirects=True, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        })
+        if resp.status_code != 200:
+            logger.warning("stockanalysis.com returned %s for %s", resp.status_code, base)
+            return entry
+
+        text = resp.text
+
+        m = _re.search(
+            r'data:\s*(\[\{type:"data".*?\}]),\s*form:\s*null', text, _re.DOTALL,
+        )
+        if not m:
+            logger.warning("stockanalysis.com: no SvelteKit data found for %s", base)
+            return entry
+
+        raw_js = m.group(1)
+
+        def _get(field_id: str) -> Optional[float]:
+            pat = _re.compile(r'\{id:"' + _re.escape(field_id) + r'"[^}]*hover:"([^"]*)"')
+            match = pat.search(raw_js)
+            if match:
+                v = match.group(1).replace(",", "").replace("%", "").strip()
+                if v and v.lower() not in ("n/a", "\u2014"):
+                    try:
+                        return float(v)
+                    except ValueError:
+                        pass
+            return None
+
+        def _r(v: Optional[float], dp: int = 2) -> Optional[float]:
+            return round(v, dp) if v is not None else None
+
+        entry["pe"] = _r(_get("pe"))
+        entry["pb"] = _r(_get("pb"))
+        entry["ps"] = _r(_get("ps"))
+        entry["pcf"] = _r(_get("pocf"))
+        entry["ev_ebitda"] = _r(_get("evEbitda"))
+        entry["eps"] = _r(_get("eps"), 4)
+
+        price_m = _re.search(r'quote:\{[^}]*\bp:([\d.]+)', raw_js)
+        if price_m:
+            entry["price"] = round(float(price_m.group(1)), 4)
+
+        name_m = _re.search(r'nameFull:"([^"]+)"', raw_js)
+        if name_m:
+            entry["company_name"] = name_m.group(1)
+
+    except Exception as e:
+        logger.warning("stockanalysis.com fetch failed for %s: %s", base, e)
+
+    return entry
+
+
+def _yf_multiples(sym: str) -> Dict[str, Any]:
+    """Fetch multiples + eps + price for a single symbol.
+
+    For Kuwait (.KW) stocks, uses stockanalysis.com as the primary source
+    (more accurate ratios, no fils/KWD conversion issues).
+    Falls back to yfinance if stockanalysis.com fails.
+
+    Returns dict with keys: pe, pb, ps, pcf, ev_ebitda, eps, price,
+    and optionally company_name (from stockanalysis.com).
+    """
+    import yfinance as yf
+    resolved = _resolve_yf_ticker(sym)
+    _kw = resolved.upper().endswith(".KW")
+
+    # Try stockanalysis.com first for Kuwait stocks
+    if _kw:
+        sa = _stockanalysis_multiples(resolved)
+        # Check if we got meaningful data (at least P/E or P/B)
+        if sa.get("pe") is not None or sa.get("pb") is not None:
+            return {
+                "pe": sa["pe"], "pb": sa["pb"], "ps": sa["ps"],
+                "pcf": sa["pcf"], "ev_ebitda": sa["ev_ebitda"],
+                "eps": sa["eps"], "price": sa["price"],
+                "company_name": sa.get("company_name"),
+            }
+        logger.info("stockanalysis.com had no data for %s, falling back to yfinance", sym)
+
+    entry: Dict[str, Any] = {
+        "pe": None, "pb": None, "ps": None, "pcf": None,
+        "ev_ebitda": None, "eps": None, "price": None,
+    }
+    try:
+        tk = yf.Ticker(resolved)
+        info = tk.info or {}
+        pe = info.get("trailingPE") or info.get("forwardPE")
+        entry["pe"] = round(float(pe), 2) if pe is not None else None
+        pb = info.get("priceToBook")
+        if pb is not None:
+            pb = float(pb)
+            if _kw:
+                pb = pb / 1000.0  # yfinance mixes fils price with KWD book value
+            entry["pb"] = round(pb, 2)
+        ps = info.get("priceToSalesTrailing12Months")
+        if ps is not None:
+            entry["ps"] = round(float(ps), 2)
+        ocf = info.get("operatingCashflow")
+        mcap = info.get("marketCap")
+        if ocf and mcap and ocf > 0:
+            entry["pcf"] = round(float(mcap) / float(ocf), 2)
+        ev = info.get("enterpriseValue")
+        ebitda = info.get("ebitda")
+        if ev is not None and ebitda and ebitda > 0:
+            entry["ev_ebitda"] = round(float(ev) / float(ebitda), 2)
+        eps_val = info.get("trailingEps") or info.get("forwardEps")
+        entry["eps"] = round(float(eps_val), 2) if eps_val is not None else None
+        price_val = info.get("currentPrice") or info.get("regularMarketPrice") or info.get("previousClose")
+        if price_val is not None:
+            p = float(price_val)
+            if _kw:
+                p = p / 1000.0
+            entry["price"] = round(p, 2)
+    except Exception as e:
+        logger.warning("yfinance multiples fetch failed for %s: %s", sym, e)
+    return entry
+
+
+@router.post("/stocks/{stock_id}/peer-multiples/fetch")
+async def fetch_sector_peers(
+    stock_id: int,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Discover peer companies in the same sector via yfinance and persist them."""
+    _ensure_schema()
+    uid = current_user.user_id
+    _verify_stock_owner(stock_id, uid)
+
+    # Get the stock's symbol and stored sector
+    stock_row = query_one(
+        "SELECT symbol, sector FROM analysis_stocks WHERE id = ? AND user_id = ?",
+        (stock_id, uid),
+    )
+    if not stock_row:
+        raise NotFoundError("Stock not found")
+
+    symbol = stock_row["symbol"]
     import yfinance as yf
 
-    for _, row in rows.iterrows():
-        sym = row["symbol"]
-        entry: Dict[str, Any] = {
-            "stock_id": int(row["id"]),
-            "symbol": sym,
-            "company_name": row["company_name"],
-            "pe": None, "pb": None, "ps": None, "pcf": None, "ev_ebitda": None,
-        }
+    # Get the stock's sector from yfinance (authoritative)
+    yf_sym = _resolve_yf_ticker(symbol, uid)
+    tk = yf.Ticker(yf_sym)
+    info = tk.info or {}
+    sector = info.get("sector") or stock_row.get("sector") or ""
+    industry = info.get("industry") or ""
+
+    if not sector:
+        raise BadRequestError("Cannot determine sector for this stock. Update the stock's sector or check the ticker symbol.")
+
+    # Update the stock's sector/industry in DB if we got it from yfinance
+    if info.get("sector"):
+        exec_sql(
+            "UPDATE analysis_stocks SET sector = ?, industry = ? WHERE id = ?",
+            (sector, industry, stock_id),
+        )
+
+    # Use yfinance screener to find companies in the same sector & country
+    from yfinance import EquityQuery
+
+    peer_symbols: List[str] = []
+    stock_exchange = info.get("exchange", "")
+    stock_country = info.get("country", "")
+
+    # Map country name → Yahoo region code
+    _COUNTRY_TO_REGION = {
+        "United States": "us", "Canada": "ca", "United Kingdom": "gb",
+        "Germany": "de", "France": "fr", "Switzerland": "ch",
+        "Japan": "jp", "China": "cn", "Hong Kong": "hk",
+        "India": "in", "Australia": "au", "South Korea": "kr",
+        "Brazil": "br", "Mexico": "mx", "Singapore": "sg",
+        "Taiwan": "tw", "Netherlands": "nl", "Sweden": "se",
+        "Norway": "no", "Denmark": "dk", "Finland": "fi",
+        "Spain": "es", "Italy": "it", "Ireland": "ie",
+        "Israel": "il", "South Africa": "za", "New Zealand": "nz",
+        "Belgium": "be", "Austria": "at", "Portugal": "pt",
+        "Indonesia": "id", "Malaysia": "my", "Thailand": "th",
+        "Philippines": "ph", "Turkey": "tr", "Poland": "pl",
+        "Saudi Arabia": "sa", "United Arab Emirates": "ae",
+        "Kuwait": "kw", "Qatar": "qa", "Bahrain": "bh",
+        "Oman": "om", "Argentina": "ar", "Chile": "cl",
+        "Colombia": "co", "Peru": "pe", "Egypt": "eg",
+    }
+    region = _COUNTRY_TO_REGION.get(stock_country, "")
+
+    # Build base filters: same sector + same country/region
+    def _build_query(extra_filters: list) -> "EquityQuery":
+        filters = list(extra_filters)
+        if region:
+            filters.append(EquityQuery("eq", ["region", region]))
+        else:
+            # Fallback: restrict to same exchange if country unknown
+            filters.append(EquityQuery("eq", ["exchange", stock_exchange]))
+        return EquityQuery("and", filters)
+
+    # Step 1: Try industry peers first (most specific)
+    try:
+        if industry:
+            q = _build_query([
+                EquityQuery("eq", ["industry", industry]),
+                EquityQuery("gt", ["intradaymarketcap", 100_000_000]),
+            ])
+            resp = yf.screen(q, size=15, sortField="intradaymarketcap", sortAsc=False)
+            if resp and "quotes" in resp:
+                peer_symbols = [qt["symbol"] for qt in resp["quotes"]
+                                if qt.get("symbol") and qt["symbol"] != symbol][:10]
+    except Exception as e:
+        logger.warning("yfinance industry screener failed for %s: %s", symbol, e)
+
+    # Step 2: Fill remaining slots with sector-level peers
+    if len(peer_symbols) < 10:
         try:
-            tk = yf.Ticker(sym)
-            info = tk.info or {}
-            pe = info.get("trailingPE") or info.get("forwardPE")
-            entry["pe"] = round(float(pe), 2) if pe is not None else None
-            pb = info.get("priceToBook")
-            entry["pb"] = round(float(pb), 2) if pb is not None else None
-            ps = info.get("priceToSalesTrailing12Months")
-            entry["ps"] = round(float(ps), 2) if ps is not None else None
-            ocf = info.get("operatingCashflow")
-            mcap = info.get("marketCap")
-            if ocf and mcap and ocf > 0:
-                entry["pcf"] = round(float(mcap) / float(ocf), 2)
-            ev = info.get("enterpriseValue")
-            ebitda = info.get("ebitda")
-            if ev is not None and ebitda and ebitda > 0:
-                entry["ev_ebitda"] = round(float(ev) / float(ebitda), 2)
+            q = _build_query([
+                EquityQuery("eq", ["sector", sector]),
+                EquityQuery("gt", ["intradaymarketcap", 500_000_000]),
+            ])
+            resp = yf.screen(q, size=20, sortField="intradaymarketcap", sortAsc=False)
+            if resp and "quotes" in resp:
+                existing = set(peer_symbols) | {symbol}
+                for qt in resp["quotes"]:
+                    s = qt.get("symbol")
+                    if s and s not in existing:
+                        peer_symbols.append(s)
+                        if len(peer_symbols) >= 10:
+                            break
         except Exception as e:
-            logger.warning("yfinance peer-multiples fetch failed for %s: %s", sym, e)
+            logger.warning("yfinance sector screener fallback failed for %s: %s", symbol, e)
 
-        peers.append(entry)
+    if not peer_symbols:
+        return {"status": "ok", "data": {"peers": [], "count": 0}}
 
+    # Fetch multiples for each peer and persist
+    now = int(time.time())
+    saved_peers = []
+    for psym in peer_symbols:
+        mults = _yf_multiples(psym)
+        # Use company_name from stockanalysis.com if available
+        peer_name = mults.pop("company_name", None) or psym
+        if peer_name == psym:
+            try:
+                tk_peer = yf.Ticker(_resolve_yf_ticker(psym))
+                peer_info = tk_peer.info or {}
+                peer_name = peer_info.get("shortName") or peer_info.get("longName") or psym
+            except Exception:
+                pass
+
+        exec_sql(
+            "INSERT INTO peer_companies (stock_id, peer_symbol, peer_name, sector, pe, pb, ps, pcf, ev_ebitda, eps, price, fetched_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(stock_id, peer_symbol) DO UPDATE SET "
+            "peer_name=excluded.peer_name, sector=excluded.sector, pe=excluded.pe, pb=excluded.pb, "
+            "ps=excluded.ps, pcf=excluded.pcf, ev_ebitda=excluded.ev_ebitda, "
+            "eps=excluded.eps, price=excluded.price, fetched_at=excluded.fetched_at",
+            (stock_id, psym, peer_name, sector,
+             mults["pe"], mults["pb"], mults["ps"], mults["pcf"], mults["ev_ebitda"],
+             mults["eps"], mults["price"], now),
+        )
+
+    # Return stored peers
+    rows = query_df(
+        "SELECT id, peer_symbol, peer_name, sector, pe, pb, ps, pcf, ev_ebitda, eps, price "
+        "FROM peer_companies WHERE stock_id = ? ORDER BY peer_symbol",
+        (stock_id,),
+    )
+    for _, r in rows.iterrows():
+        saved_peers.append({
+            "stock_id": int(r["id"]),
+            "symbol": r["peer_symbol"],
+            "company_name": r["peer_name"],
+            "pe": r["pe"], "pb": r["pb"], "ps": r["ps"],
+            "pcf": r["pcf"], "ev_ebitda": r["ev_ebitda"],
+            "eps": r["eps"], "price": r["price"],
+        })
+    return {"status": "ok", "data": {"peers": saved_peers, "count": len(saved_peers)}}
+
+
+@router.delete("/stocks/{stock_id}/peer-multiples/{peer_id}")
+async def delete_peer_company(
+    stock_id: int,
+    peer_id: int,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Remove a specific peer company from a stock's peer list."""
+    _ensure_schema()
+    _verify_stock_owner(stock_id, current_user.user_id)
+    exec_sql("DELETE FROM peer_companies WHERE id = ? AND stock_id = ?", (peer_id, stock_id))
+    return {"status": "ok", "data": {"message": "Peer removed"}}
+
+
+class AddPeerBody(BaseModel):
+    symbol: str
+
+
+@router.post("/stocks/{stock_id}/peer-multiples/add")
+async def add_peer_company(
+    stock_id: int,
+    body: AddPeerBody,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Add a single peer company by symbol — fetch its multiples."""
+    _ensure_schema()
+    uid = current_user.user_id
+    _verify_stock_owner(stock_id, uid)
+
+    import yfinance as yf
+
+    sym = body.symbol.strip().upper()
+    if not sym:
+        raise BadRequestError("Symbol is required")
+
+    mults = _yf_multiples(sym)
+    # Use company_name from stockanalysis.com if available
+    peer_name = mults.pop("company_name", None) or sym
+    sector = ""
+
+    # Fallback to yfinance for name and sector
+    if peer_name == sym or not sector:
+        try:
+            resolved = _resolve_yf_ticker(sym)
+            tk = yf.Ticker(resolved)
+            info = tk.info or {}
+            if peer_name == sym:
+                peer_name = info.get("shortName") or info.get("longName") or sym
+            sector = info.get("sector") or sector
+        except Exception:
+            pass
+
+    now = int(time.time())
+    exec_sql(
+        "INSERT INTO peer_companies (stock_id, peer_symbol, peer_name, sector, pe, pb, ps, pcf, ev_ebitda, eps, price, fetched_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+        "ON CONFLICT(stock_id, peer_symbol) DO UPDATE SET "
+        "peer_name=excluded.peer_name, sector=excluded.sector, pe=excluded.pe, pb=excluded.pb, "
+        "ps=excluded.ps, pcf=excluded.pcf, ev_ebitda=excluded.ev_ebitda, "
+        "eps=excluded.eps, price=excluded.price, fetched_at=excluded.fetched_at",
+        (stock_id, sym, peer_name, sector,
+         mults["pe"], mults["pb"], mults["ps"], mults["pcf"], mults["ev_ebitda"],
+         mults["eps"], mults["price"], now),
+    )
+
+    # Return updated peer list
+    rows = query_df(
+        "SELECT id, peer_symbol, peer_name, sector, pe, pb, ps, pcf, ev_ebitda, eps, price "
+        "FROM peer_companies WHERE stock_id = ? ORDER BY peer_symbol",
+        (stock_id,),
+    )
+    peers = []
+    if not rows.empty:
+        for _, r in rows.iterrows():
+            peers.append({
+                "stock_id": int(r["id"]),
+                "symbol": r["peer_symbol"],
+                "company_name": r["peer_name"],
+                "pe": r["pe"], "pb": r["pb"], "ps": r["ps"],
+                "pcf": r["pcf"], "ev_ebitda": r["ev_ebitda"],
+                "eps": r["eps"], "price": r["price"],
+            })
     return {"status": "ok", "data": {"peers": peers, "count": len(peers)}}
 
 
@@ -3758,6 +4846,16 @@ async def run_dcf(
         body.discount_rate, body.stage1_years, body.stage2_years,
         body.terminal_growth, body.shares_outstanding,
         body.cash, body.debt,
+        wacc_components={
+            "risk_free_rate": body.wacc_risk_free_rate,
+            "beta": body.wacc_beta,
+            "equity_risk_premium": body.wacc_equity_risk_premium,
+            "cost_of_equity": body.wacc_cost_of_equity,
+            "cost_of_debt": body.wacc_cost_of_debt,
+            "tax_rate": body.wacc_tax_rate,
+            "weight_equity": body.wacc_weight_equity,
+            "weight_debt": body.wacc_weight_debt,
+        } if body.wacc_used else None,
     )
     _save_valuation(stock_id, result, current_user.user_id)
     return {"status": "ok", "data": result}
@@ -3909,7 +5007,11 @@ def _verify_stock_owner(stock_id: int, user_id: int) -> None:
 # ── Metrics calculation (mirrors MetricsCalculator) ──────────────────
 
 def _load_items_for_period(stock_id: int, period_end_date: str) -> Dict[str, float]:
-    """Flatten all line items across all statement types for one period."""
+    """Flatten all line items across all statement types for one period.
+
+    Keys are uppercased so callers can use ``_get("REVENUE")`` regardless
+    of whether the DB stores ``revenue`` or ``REVENUE``.
+    """
     rows = query_all(
         """SELECT li.line_item_code, li.amount
            FROM financial_line_items li
@@ -3917,7 +5019,14 @@ def _load_items_for_period(stock_id: int, period_end_date: str) -> Dict[str, flo
            WHERE fs.stock_id = ? AND fs.period_end_date = ?""",
         (stock_id, period_end_date),
     )
-    return {r[0] if isinstance(r, (tuple, list)) else r["line_item_code"]: (r[1] if isinstance(r, (tuple, list)) else r["amount"]) for r in rows}
+    items: Dict[str, float] = {}
+    for r in rows:
+        code = (r[0] if isinstance(r, (tuple, list)) else r["line_item_code"]).upper()
+        amount = r[1] if isinstance(r, (tuple, list)) else r["amount"]
+        # Keep first occurrence (don't overwrite with duplicates)
+        if code not in items:
+            items[code] = amount
+    return items
 
 
 def _upsert_metric(
@@ -3964,7 +5073,7 @@ def _calculate_all_metrics(
 
     # ── profitability
     prof: Dict[str, Optional[float]] = {}
-    revenue = _get("REVENUE")
+    revenue = _get("REVENUE") or _get("TOTAL_REVENUE") or _get("NET_REVENUE") or _get("TOTAL_SALES")
     gross_profit = _get("GROSS_PROFIT")
     operating_income = _get("OPERATING_INCOME")
     net_income = _get("NET_INCOME")
@@ -3978,6 +5087,15 @@ def _calculate_all_metrics(
             prof["Operating Margin"] = operating_income / revenue
         if net_income is not None:
             prof["Net Margin"] = net_income / revenue
+    # Fallback: use pre-computed margin line items from the statement
+    if "Net Margin" not in prof:
+        pm = _get("PROFIT_MARGIN") or _get("NET_MARGIN")
+        if pm is not None:
+            prof["Net Margin"] = pm
+    if "Operating Margin" not in prof:
+        om = _get("OPERATING_MARGIN")
+        if om is not None:
+            prof["Operating Margin"] = om
     if total_assets and total_assets != 0 and net_income is not None:
         prof["ROA"] = net_income / total_assets
     if total_equity and total_equity != 0 and net_income is not None:
@@ -4002,6 +5120,26 @@ def _calculate_all_metrics(
     cash = _get("CASH_EQUIVALENTS")
     short_term_inv = _get("SHORT_TERM_INVESTMENTS")
     ar = _get("ACCOUNTS_RECEIVABLE")
+
+    # Synthesize current assets/liabilities from components when aggregates are missing
+    if current_assets is None:
+        ca_parts = [
+            cash, short_term_inv, ar,
+            _get("OTHER_RECEIVABLES"), _get("PREPAID_EXPENSES"),
+            _get("OTHER_CURRENT_ASSETS"), inventory,
+        ]
+        known = [v for v in ca_parts if v is not None]
+        if known:
+            current_assets = sum(known)
+    if current_liab is None:
+        cl_parts = [
+            _get("ACCOUNTS_PAYABLE"), _get("CURRENT_PORTION_OF_LONG_TERM_DEBT"),
+            _get("CURRENT_PORTION_OF_LEASES"), _get("CURRENT_INCOME_TAXES_PAYABLE"),
+            _get("CURRENT_UNEARNED_REVENUE"), _get("OTHER_CURRENT_LIABILITIES"),
+        ]
+        known = [v for v in cl_parts if v is not None]
+        if known:
+            current_liab = sum(known)
     if current_assets is not None and current_liab and current_liab != 0:
         liq["Current Ratio"] = current_assets / current_liab
         # CFA: Quick Ratio = (Cash + ST Investments + Receivables) / CL
@@ -4191,7 +5329,7 @@ def _calculate_all_metrics(
 
     # Free Cash Flow — also pick up from statement line items if not already set
     if "Free Cash Flow" not in cfm:
-        stmt_fcf = _get("FREE_CASH_FLOW")
+        stmt_fcf = _get("FREE_CASH_FLOW") or _get("UNLEVERED_FREE_CASH_FLOW") or _get("LEVERED_FREE_CASH_FLOW")
         if stmt_fcf is not None:
             cfm["Free Cash Flow"] = stmt_fcf
 
@@ -4245,38 +5383,59 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
     import statistics
     growth: Dict[str, List[Dict[str, Any]]] = {}
     growth_items = [
-        ("REVENUE", "Revenue Growth", "income"),
+        ("REVENUE", "Revenue Growth", "income"),  # also searches TOTAL_REVENUE below
         ("NET_INCOME", "Net Income Growth", "income"),
         ("EPS_DILUTED", "EPS Growth", "income"),
         ("TOTAL_ASSETS", "Total Assets Growth", "balance"),
-        ("CASH_FROM_OPERATIONS", "CFO Growth", "cashflow"),
+        ("CASH_FROM_OPERATIONS", "Operating Cash Flow Growth", "cashflow"),
+        ("FREE_CASH_FLOW", "FCF Growth", "cashflow"),
     ]
 
-    # Helper: fetch by-year series for a line item code
-    def _fetch_series(code: str, stmt_type: str) -> Dict[int, float]:
-        rows = query_all(
-            """SELECT fs.period_end_date AS period, fs.fiscal_year, li.amount
-               FROM financial_line_items li
-               JOIN financial_statements fs ON fs.id = li.statement_id
-               WHERE fs.stock_id = ? AND fs.statement_type = ?
-                 AND UPPER(li.line_item_code) = UPPER(?)
-               ORDER BY fs.fiscal_year, fs.period_end_date""",
-            (stock_id, stmt_type, code),
-        )
+    # FCF has many names across different statements/sources;
+    # try all variants when looking up a code.
+    _FCF_ALIASES = [
+        "FREE_CASH_FLOW",
+        "UNLEVERED_FREE_CASH_FLOW",
+        "LEVERED_FREE_CASH_FLOW",
+    ]
+
+    # Helper: fetch by-year series for a line item code.
+    # If `codes` (list) is provided, tries each code in order and merges results.
+    def _fetch_series(code: str, stmt_type: str, codes: list = None) -> Dict[int, float]:
+        search_codes = codes or [code]
         by_year: Dict[int, Dict[str, Any]] = {}
-        for r in rows:
-            if isinstance(r, (tuple, list)):
-                rec = {"period": r[0], "fiscal_year": r[1], "amount": r[2]}
-            else:
-                rec = {"period": r["period"], "fiscal_year": r["fiscal_year"], "amount": r["amount"]}
-            fy = rec["fiscal_year"]
-            if fy is not None:
-                by_year[fy] = rec
+        for c in search_codes:
+            rows = query_all(
+                """SELECT fs.period_end_date AS period, fs.fiscal_year, li.amount
+                   FROM financial_line_items li
+                   JOIN financial_statements fs ON fs.id = li.statement_id
+                   WHERE fs.stock_id = ? AND fs.statement_type = ?
+                     AND UPPER(li.line_item_code) = UPPER(?)
+                   ORDER BY fs.fiscal_year, fs.period_end_date""",
+                (stock_id, stmt_type, c),
+            )
+            for r in rows:
+                if isinstance(r, (tuple, list)):
+                    rec = {"period": r[0], "fiscal_year": r[1], "amount": r[2]}
+                else:
+                    rec = {"period": r["period"], "fiscal_year": r["fiscal_year"], "amount": r["amount"]}
+                fy = rec["fiscal_year"]
+                # Keep first code's data for each year (don't overwrite)
+                if fy is not None and fy not in by_year:
+                    by_year[fy] = rec
         return by_year
 
     # ── A) Standard YoY growth rates
     for code, label, stmt_type in growth_items:
-        by_year = _fetch_series(code, stmt_type)
+        # For FCF + OCF, try multiple alias codes to cover naming variations
+        if code == "FREE_CASH_FLOW":
+            by_year = _fetch_series(code, stmt_type, codes=_FCF_ALIASES)
+        elif code == "CASH_FROM_OPERATIONS":
+            by_year = _fetch_series(code, stmt_type, codes=["CASH_FROM_OPERATIONS", "OPERATING_CASH_FLOW"])
+        elif code == "REVENUE":
+            by_year = _fetch_series(code, stmt_type, codes=["REVENUE", "TOTAL_REVENUE", "NET_REVENUE"])
+        else:
+            by_year = _fetch_series(code, stmt_type)
         sorted_years = sorted(by_year.keys())
         if len(sorted_years) < 2:
             continue
@@ -4303,6 +5462,45 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
         if rates:
             growth[label] = rates
 
+    # ── A2) FCF fallback: compute as CFO - CapEx when FREE_CASH_FLOW line item is missing
+    if "FCF Growth" not in growth:
+        cfo_by_year = _fetch_series("CASH_FROM_OPERATIONS", "cashflow")
+        capex_by_year = _fetch_series("CAPITAL_EXPENDITURES", "cashflow")
+        common_years = sorted(set(cfo_by_year.keys()) & set(capex_by_year.keys()))
+        if len(common_years) >= 2:
+            fcf_by_year = {}
+            for fy in common_years:
+                cfo_amt = cfo_by_year[fy]["amount"]
+                capex_amt = capex_by_year[fy]["amount"]
+                if cfo_amt is not None and capex_amt is not None:
+                    fcf_by_year[fy] = {
+                        "period": cfo_by_year[fy]["period"],
+                        "fiscal_year": fy,
+                        "amount": cfo_amt - abs(capex_amt),
+                    }
+            sorted_fy = sorted(fcf_by_year.keys())
+            rates_fcf: List[Dict[str, Any]] = []
+            for i in range(1, len(sorted_fy)):
+                prev_fy = sorted_fy[i - 1]
+                curr_fy = sorted_fy[i]
+                if curr_fy - prev_fy != 1:
+                    continue
+                prev_amt = fcf_by_year[prev_fy]["amount"]
+                curr_amt = fcf_by_year[curr_fy]["amount"]
+                if prev_amt and prev_amt != 0:
+                    g = (curr_amt - prev_amt) / abs(prev_amt)
+                    rates_fcf.append({
+                        "period": fcf_by_year[curr_fy]["period"],
+                        "prev_period": fcf_by_year[prev_fy]["period"],
+                        "growth": round(g, 4),
+                    })
+                    _upsert_metric(
+                        stock_id, curr_fy, fcf_by_year[curr_fy]["period"],
+                        "growth", "FCF Growth", round(g, 4),
+                    )
+            if rates_fcf:
+                growth["FCF Growth"] = rates_fcf
+
     # Get newest fiscal year from the latest period
     latest_period = query_one(
         """SELECT MAX(period_end_date) as p, MAX(fiscal_year) as fy
@@ -4322,7 +5520,10 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
         ("EPS_DILUTED", "EPS", "income"),
     ]
     for code, metric_label, stmt_type in cagr_items:
-        by_year = _fetch_series(code, stmt_type)
+        if code == "REVENUE":
+            by_year = _fetch_series(code, stmt_type, codes=["REVENUE", "TOTAL_REVENUE", "NET_REVENUE"])
+        else:
+            by_year = _fetch_series(code, stmt_type)
         sorted_years = sorted(by_year.keys())
         for n_years in [3, 5]:
             target_fy = latest_fy - n_years
@@ -4351,7 +5552,7 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
         ("OPERATING_INCOME", "Operating Margin", "income"),
     ]:
         margin_by_year = _fetch_series(code, stmt_type)
-        revenue_by_year = _fetch_series("REVENUE", "income")
+        revenue_by_year = _fetch_series("REVENUE", "income", codes=["REVENUE", "TOTAL_REVENUE", "NET_REVENUE"])
         if latest_fy in margin_by_year and latest_fy in revenue_by_year:
             for n_years in [3]:
                 start_fy = latest_fy - n_years
@@ -4433,7 +5634,7 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
         if name not in latest:
             latest[name] = val
 
-    # Enrich with yfinance market data (volatility, beta, EV/EBIT, P/B, etc.)
+    # Enrich with yfinance current price + volatility/beta
     symbol_row = query_one(
         "SELECT symbol FROM analysis_stocks WHERE id = ?", (stock_id,)
     )
@@ -4441,10 +5642,56 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
     if symbol_row:
         symbol = symbol_row[0] if isinstance(symbol_row, (tuple, list)) else symbol_row.get("symbol")
     if symbol:
-        yf_data = _fetch_yfinance_risk_data(symbol)
+        yf_ticker = _resolve_yf_ticker(symbol, user_id)
+        yf_data = _fetch_yfinance_risk_data(yf_ticker)
         for k, v in yf_data.items():
             if k not in latest:  # don't overwrite DB metrics
                 latest[k] = v
+
+        # Derive ratios from DB metrics + yfinance price
+        cp = latest.get("Current Price")
+        if cp and cp > 0:
+            bvps = latest.get("Book Value / Share")
+            if bvps and bvps > 0:
+                latest["P/B"] = round(cp / bvps, 4)
+
+            eps = latest.get("EPS")
+            if eps and eps > 0:
+                latest["Earnings Yield"] = round(eps / cp, 6)
+
+            # Fetch shares, EBIT, total debt, cash from balance sheet line items
+            li_row = query_one("""
+                SELECT
+                    (SELECT li2.amount FROM financial_line_items li2
+                     JOIN financial_statements fs2 ON li2.statement_id = fs2.id
+                     WHERE fs2.stock_id = ? AND li2.line_item_code IN
+                           ('TOTAL_COMMON_SHARES_OUTSTANDING','DILUTED_SHARES_OUTSTANDING','BASIC_SHARES_OUTSTANDING')
+                     ORDER BY fs2.period_end_date DESC LIMIT 1) AS shares,
+                    (SELECT li2.amount FROM financial_line_items li2
+                     JOIN financial_statements fs2 ON li2.statement_id = fs2.id
+                     WHERE fs2.stock_id = ? AND li2.line_item_code = 'EBIT'
+                     ORDER BY fs2.period_end_date DESC LIMIT 1) AS ebit,
+                    (SELECT li2.amount FROM financial_line_items li2
+                     JOIN financial_statements fs2 ON li2.statement_id = fs2.id
+                     WHERE fs2.stock_id = ? AND li2.line_item_code = 'TOTAL_DEBT'
+                     ORDER BY fs2.period_end_date DESC LIMIT 1) AS total_debt,
+                    (SELECT li2.amount FROM financial_line_items li2
+                     JOIN financial_statements fs2 ON li2.statement_id = fs2.id
+                     WHERE fs2.stock_id = ? AND li2.line_item_code = 'CASH_EQUIVALENTS'
+                     ORDER BY fs2.period_end_date DESC LIMIT 1) AS cash
+            """, (stock_id, stock_id, stock_id, stock_id))
+            if li_row:
+                shares = li_row[0] if isinstance(li_row, (tuple, list)) else li_row.get("shares")
+                ebit = li_row[1] if isinstance(li_row, (tuple, list)) else li_row.get("ebit")
+                total_debt = li_row[2] if isinstance(li_row, (tuple, list)) else li_row.get("total_debt")
+                cash = li_row[3] if isinstance(li_row, (tuple, list)) else li_row.get("cash")
+
+                if shares and shares > 0:
+                    latest["Market Cap"] = cp * shares
+
+                    if ebit and ebit > 0:
+                        ev = cp * shares + (total_debt or 0) - (cash or 0)
+                        latest["EV/EBIT"] = round(ev / ebit, 2)
 
     # Also try to compute Discount to Intrinsic Value from latest valuation
     _enrich_intrinsic_discount(stock_id, latest)
@@ -4455,8 +5702,12 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
     quality, quality_breakdown = _score_quality_detailed(latest)
     risk, risk_breakdown = _score_risk_detailed(latest)
 
-    # New 5-pillar weights: Fund 25%, Quality 20%, Growth 20%, Valuation 20%, Risk 15%
-    overall = fund * 0.25 + quality * 0.20 + growth * 0.20 + val * 0.20 + risk * 0.15
+    # Positive pillars sum to 100%: Fund 30%, Quality 25%, Growth 25%, Valuation 20%
+    base_score = fund * 0.30 + quality * 0.25 + growth * 0.25 + val * 0.20
+    # Risk is a deduction only (up to -15%): higher risk_score = safer = less penalty
+    # risk=100 → 0% penalty, risk=50 → 7.5% penalty, risk=0 → 15% penalty
+    risk_penalty = (1.0 - risk / 100.0) * 0.15
+    overall = base_score * (1.0 - risk_penalty)
 
     result = {
         "overall_score": round(overall, 1),
@@ -4465,6 +5716,7 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
         "growth_score": round(growth, 1),
         "quality_score": round(quality, 1),
         "risk_score": round(risk, 1),
+        "risk_penalty_pct": round(risk_penalty * 100, 1),
         "details": latest,
         "score_breakdown": {
             "fundamental": fund_breakdown,
@@ -4511,32 +5763,50 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
 
 
 def _enrich_intrinsic_discount(stock_id: int, latest: Dict[str, float]) -> None:
-    """Try to compute discount/premium to intrinsic value from last valuation."""
+    """Compute discount/premium using average IV across all models (matches frontend)."""
     try:
-        row = query_one(
-            """SELECT intrinsic_value, parameters FROM valuation_models
+        # Get latest IV per model_type (same logic as frontend avgIV)
+        rows = query_all(
+            """SELECT model_type, intrinsic_value, parameters
+               FROM valuation_models
                WHERE stock_id = ? AND intrinsic_value IS NOT NULL
-               ORDER BY created_at DESC LIMIT 1""",
+               ORDER BY created_at DESC""",
             (stock_id,),
         )
-        if not row:
+        if not rows:
             return
-        iv = row[0] if isinstance(row, (tuple, list)) else row.get("intrinsic_value")
-        params_str = row[1] if isinstance(row, (tuple, list)) else row.get("parameters")
-        if not iv or iv <= 0:
+
+        # Keep only the latest per model_type
+        seen: Dict[str, float] = {}
+        price_candidates: list = []
+        for r in rows:
+            mt = r[0] if isinstance(r, (tuple, list)) else r.get("model_type")
+            iv_val = r[1] if isinstance(r, (tuple, list)) else r.get("intrinsic_value")
+            p_str = r[2] if isinstance(r, (tuple, list)) else r.get("parameters")
+            if mt in seen or not iv_val or iv_val <= 0:
+                continue
+            seen[mt] = float(iv_val)
+            # Collect price from parameters for fallback
+            if p_str:
+                params = json.loads(p_str) if isinstance(p_str, str) else p_str
+                p = params.get("price") or params.get("current_price")
+                if p and float(p) > 0:
+                    price_candidates.append(float(p))
+
+        if not seen:
             return
-        # Try to get current_price from parameters JSON
-        price = None
-        if params_str:
-            params = json.loads(params_str) if isinstance(params_str, str) else params_str
-            price = params.get("price") or params.get("current_price")
-        # Fallback: get from latest metrics (yfinance may have populated Earnings Yield)
-        if not price and "Earnings Yield" in latest:
-            # Can't reconstruct price without EPS here; skip
-            return
+
+        avg_iv = sum(seen.values()) / len(seen)
+
+        # Determine current price: prefer live price already enriched, then param fallback
+        price = latest.get("Current Price")
+        if (not price or price <= 0) and price_candidates:
+            price = price_candidates[0]
+
         if price and price > 0:
-            discount = (iv - price) / iv  # positive = undervalued
+            discount = (avg_iv - price) / avg_iv  # positive = undervalued
             latest["Discount to Intrinsic Value"] = round(discount, 4)
+            latest["Intrinsic Value"] = round(avg_iv, 2)
     except Exception:
         pass
 
@@ -4678,17 +5948,22 @@ def _score_valuation_detailed(m: Dict[str, float]):
     else:
         _add("P/B", None, 0, "N/A")
 
-    # ── Discount to intrinsic value (from last valuation model) ─ max +12 / min -10
+    # ── Intrinsic vs Price (from last valuation model) ─ max +18 / min -15
     disc = m.get("Discount to Intrinsic Value")
+    iv = m.get("Intrinsic Value")
+    cp = m.get("Current Price")
+    iv_str = f" — IV {iv:.2f} vs Price {cp:.2f}" if iv and cp else ""
     if disc is not None:
         # disc > 0 = undervalued, disc < 0 = overvalued (as fraction, e.g. 0.20 = 20% discount)
-        if disc > 0.30:      _add("Intrinsic Discount", round(disc, 4), 12, "> 30% discount (deep value)")
-        elif disc > 0.10:    _add("Intrinsic Discount", round(disc, 4), 6, "10–30% discount (attractive)")
-        elif disc > -0.10:   _add("Intrinsic Discount", round(disc, 4), 0, "Within ±10% (fair)")
-        elif disc > -0.30:   _add("Intrinsic Discount", round(disc, 4), -5, "10–30% premium (expensive)")
-        else:                _add("Intrinsic Discount", round(disc, 4), -10, "> 30% premium (very expensive)")
+        if disc > 0.40:      _add("Intrinsic vs Price", round(disc, 4), 18, f"> 40% undervalued (deep value){iv_str}")
+        elif disc > 0.20:    _add("Intrinsic vs Price", round(disc, 4), 12, f"20–40% undervalued (attractive){iv_str}")
+        elif disc > 0.10:    _add("Intrinsic vs Price", round(disc, 4), 6, f"10–20% undervalued (moderate margin){iv_str}")
+        elif disc > -0.10:   _add("Intrinsic vs Price", round(disc, 4), 0, f"Within ±10% (fairly valued){iv_str}")
+        elif disc > -0.20:   _add("Intrinsic vs Price", round(disc, 4), -5, f"10–20% overvalued{iv_str}")
+        elif disc > -0.40:   _add("Intrinsic vs Price", round(disc, 4), -10, f"20–40% overvalued (expensive){iv_str}")
+        else:                _add("Intrinsic vs Price", round(disc, 4), -15, f"> 40% overvalued (very expensive){iv_str}")
     else:
-        _add("Intrinsic Discount", None, 0, "N/A")
+        _add("Intrinsic vs Price", None, 0, "N/A — run a valuation model first")
 
     # ── Payout Ratio ─ max +6 / min -6
     pr = m.get("Payout Ratio")
@@ -4857,46 +6132,64 @@ def _score_quality_detailed(m: Dict[str, float]):
     return max(0.0, min(100.0, score)), {"base": 50, "metrics": breakdown}
 
 
+def _resolve_yf_ticker(symbol: str, user_id: int = None) -> str:
+    """Resolve a raw symbol to its yfinance-compatible ticker.
+
+    Priority: 1) stocks table yf_ticker, 2) KUWAIT_STOCKS list, 3) raw symbol.
+    """
+    # Try the stocks table (populated when user added the stock)
+    if user_id:
+        row = query_one(
+            "SELECT yf_ticker FROM stocks WHERE symbol = ? AND user_id = ? AND yf_ticker IS NOT NULL",
+            (symbol, user_id),
+        )
+    else:
+        row = query_one(
+            "SELECT yf_ticker FROM stocks WHERE symbol = ? AND yf_ticker IS NOT NULL LIMIT 1",
+            (symbol,),
+        )
+    if row:
+        yft = row[0] if isinstance(row, (tuple, list)) else row.get("yf_ticker")
+        if yft:
+            return yft
+
+    # Check the hardcoded stock lists (covers peers not in the user's portfolio)
+    from app.data.stock_lists import KUWAIT_STOCKS
+    upper = symbol.upper()
+    for s in KUWAIT_STOCKS:
+        if s["symbol"].upper() == upper:
+            return s["yf_ticker"]
+
+    return symbol
+
+
 def _fetch_yfinance_risk_data(symbol: str) -> Dict[str, float]:
-    """Fetch volatility, drawdown, beta, and market cap from yfinance."""
+    """Fetch current price, beta, volatility & drawdown from yfinance.
+
+    All ratios (P/B, Earnings Yield, EV/EBIT, etc.) are computed from
+    DB data in _compute_stock_score — yfinance only provides price +
+    price-history-derived metrics.
+    """
     import math
-    risk: Dict[str, float] = {}
+    _kw = symbol.upper().endswith(".KW")
+    data: Dict[str, float] = {}
     try:
         import yfinance as yf
         ticker = yf.Ticker(symbol)
         info = ticker.info or {}
 
-        # Market cap
-        mcap = info.get("marketCap")
-        if mcap:
-            risk["Market Cap"] = float(mcap)
+        # Current price (only price gets /1000 for .KW)
+        price = info.get("currentPrice") or info.get("regularMarketPrice")
+        if price and price > 0:
+            price = float(price)
+            if _kw:
+                price = price / 1000.0
+            data["Current Price"] = round(price, 2)
 
         # Beta
         beta = info.get("beta")
         if beta is not None:
-            risk["Beta"] = float(beta)
-
-        # Forward P/E (for valuation enrichment)
-        fpe = info.get("forwardPE")
-        if fpe is not None and fpe > 0:
-            risk["Forward PE"] = float(fpe)
-
-        # EV / EBIT from yfinance
-        ev = info.get("enterpriseValue")
-        ebit = info.get("ebit")
-        if ev and ebit and ebit > 0:
-            risk["EV/EBIT"] = float(ev) / float(ebit)
-
-        # Price / Book
-        pb = info.get("priceToBook")
-        if pb is not None:
-            risk["P/B"] = float(pb)
-
-        # Trailing EPS and price → Earnings Yield
-        eps = info.get("trailingEps")
-        price = info.get("currentPrice") or info.get("regularMarketPrice")
-        if eps and price and price > 0:
-            risk["Earnings Yield"] = float(eps) / float(price)
+            data["Beta"] = float(beta)
 
         # 1Y price history → volatility & max drawdown
         hist = ticker.history(period="1y")
@@ -4905,15 +6198,15 @@ def _fetch_yfinance_risk_data(symbol: str) -> Dict[str, float]:
             if len(closes) > 20:
                 returns = closes.pct_change().dropna()
                 ann_vol = float(returns.std()) * math.sqrt(252)
-                risk["1Y Volatility"] = round(ann_vol, 4)
+                data["1Y Volatility"] = round(ann_vol, 4)
 
                 # Max drawdown
                 cummax = closes.cummax()
                 drawdown = (closes - cummax) / cummax
-                risk["Max Drawdown 1Y"] = round(float(drawdown.min()), 4)
+                data["Max Drawdown 1Y"] = round(float(drawdown.min()), 4)
     except Exception:
         pass  # yfinance failures are non-fatal
-    return risk
+    return data
 
 
 def _score_risk_detailed(m: Dict[str, float]):
@@ -5083,7 +6376,7 @@ def _graham_number(eps: float, growth_rate: float = 0.0,
 
 
 def _dcf(fcf, g1, g2, dr, s1=5, s2=5, tg=0.025, shares=1.0,
-         cash=0.0, debt=0.0):
+         cash=0.0, debt=0.0, wacc_components=None):
     if dr <= tg:
         return {"model": "dcf", "intrinsic_value": None, "error": "Discount rate must exceed terminal growth."}
     projections = []  # year-by-year table for UI
@@ -5107,15 +6400,18 @@ def _dcf(fcf, g1, g2, dr, s1=5, s2=5, tg=0.025, shares=1.0,
     equity_value = ev + (cash or 0) - (debt or 0)
     ps = equity_value / shares if shares else 0
     tv_pct = (pv_tv / ev * 100) if ev > 0 else 0
+    params = {"fcf": fcf, "growth_stage1": g1, "growth_stage2": g2, "discount_rate": dr,
+              "stage1_years": s1, "stage2_years": s2, "terminal_growth": tg,
+              "shares_outstanding": shares, "cash": cash, "debt": debt}
+    if wacc_components:
+        params["wacc"] = wacc_components
     return {"model": "dcf", "intrinsic_value": round(ps, 2), "enterprise_value": round(ev, 2),
             "equity_value": round(equity_value, 2),
             "pv_terminal": round(pv_tv, 2), "pv_fcfs": round(sum_pv_fcfs, 2),
             "terminal_value": round(tv, 2), "tv_pct_of_ev": round(tv_pct, 1),
             "cash": round(cash or 0, 2), "debt": round(debt or 0, 2),
             "projections": projections,
-            "parameters": {"fcf": fcf, "growth_stage1": g1, "growth_stage2": g2, "discount_rate": dr,
-                           "stage1_years": s1, "stage2_years": s2, "terminal_growth": tg,
-                           "shares_outstanding": shares, "cash": cash, "debt": debt},
+            "parameters": params,
             "assumptions": {"method": "Two-stage DCF with Gordon Growth terminal value"}}
 
 

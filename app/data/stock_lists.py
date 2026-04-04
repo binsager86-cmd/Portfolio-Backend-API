@@ -34,10 +34,12 @@ KUWAIT_STOCKS: List[Dict[str, str]] = [
     {"symbol": "NIH", "name": "National International Holding Company K.S.C.P.", "yf_ticker": "NIH.KW"},
     {"symbol": "NOOR", "name": "Noor Financial Investment Company - KPSC", "yf_ticker": "NOOR.KW"},
     {"symbol": "SECH", "name": "The Securities House K.S.C.P.", "yf_ticker": "SECH.KW"},
+    {"symbol": "TAMINV", "name": "Tamdeen Investment Co K.P.S.C.", "yf_ticker": "TAMINV.KW"},
     {"symbol": "TIJARA", "name": "Tijara & Real Estate Investment Company K.S.C.P.", "yf_ticker": "TIJARA.KW"},
 
     # ── REAL ESTATE ──
     {"symbol": "ALDEERA", "name": "Al-Deera Holding Company K.P.S.C.", "yf_ticker": "ALDEERA.KW"},
+    {"symbol": "ALTIJARIA", "name": "Commercial Real Estate Company K.P.S.C.", "yf_ticker": "ALTIJARIA.KW"},
     {"symbol": "AQAR", "name": "Aqar Real Estate Investments Company K.S.C. (Public)", "yf_ticker": "AQAR.KW"},
     {"symbol": "ARGAN", "name": "Al Argan International Real Estate Company - K.S.C.P.", "yf_ticker": "ARGAN.KW"},
     {"symbol": "ARKAN", "name": "Arkan Al-Kuwait Real Estate Company K.S.C.P.", "yf_ticker": "ARKAN.KW"},
@@ -49,6 +51,7 @@ KUWAIT_STOCKS: List[Dict[str, str]] = [
     {"symbol": "MAZAYA", "name": "Al-Mazaya Holding Company - K.S.C. (Public)", "yf_ticker": "MAZAYA.KW"},
     {"symbol": "MUNSHAAT", "name": "Munshaat Real Estate Projects Company K.S.C.P.", "yf_ticker": "MUNSHAAT.KW"},
     {"symbol": "SANAM", "name": "SANAM Group Holding Company K.P.S.C", "yf_ticker": "SANAM.KW"},
+    {"symbol": "TAM", "name": "Tamdeen Real Estate Co K.S.C.", "yf_ticker": "TAM.KW"},
     {"symbol": "SOKOUK", "name": "Sokouk Holding Company K.S.C.P.", "yf_ticker": "SOKOUK.KW"},
     {"symbol": "URC", "name": "United Real Estate Company K.S.C.P.", "yf_ticker": "URC.KW"},
 

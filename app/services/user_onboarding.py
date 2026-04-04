@@ -99,7 +99,7 @@ def _create_initial_cash_balances(user_id: int) -> None:
     portfolio_currencies = {p["name"]: p["currency"] for p in DEFAULT_PORTFOLIOS}
     for name, ccy in portfolio_currencies.items():
         existing = query_val(
-            "SELECT id FROM portfolio_cash WHERE user_id = ? AND portfolio = ?",
+            "SELECT 1 FROM portfolio_cash WHERE user_id = ? AND portfolio = ?",
             (user_id, name),
         )
         if existing:

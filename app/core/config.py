@@ -48,12 +48,25 @@ class Settings(BaseSettings):
 
     # Cron / Scheduler
     CRON_SECRET_KEY: str = ""           # Required for POST /api/cron/update-prices
-    PRICE_UPDATE_HOUR: int = 17         # Hour (24h) in Asia/Kuwait to run daily
+    PRICE_UPDATE_HOUR: int = 14         # Hour (24h) in Asia/Kuwait to run daily
     PRICE_UPDATE_MINUTE: int = 0
     PRICE_UPDATE_ENABLED: bool = True   # Set False to disable the built-in scheduler
 
     # AI / Gemini (optional)
     GEMINI_API_KEY: str = ""            # Google Gemini API key for AI analysis
+
+    # SMTP / Email (for password reset OTP)
+    SMTP_HOST: str = ""                 # e.g. "smtp.gmail.com"
+    SMTP_PORT: int = 587                # 587 for STARTTLS, 465 for SSL
+    SMTP_USER: str = ""                 # e.g. "you@gmail.com"
+    SMTP_PASSWORD: str = ""             # Gmail App Password or SMTP password
+    SMTP_FROM_EMAIL: str = ""           # Sender address (defaults to SMTP_USER)
+    SMTP_FROM_NAME: str = "Portfolio Tracker"
+    SMTP_USE_TLS: bool = True           # True=STARTTLS (587), False=SSL (465)
+
+    # Password reset
+    OTP_EXPIRE_MINUTES: int = 10        # OTP code validity window
+    OTP_MAX_ATTEMPTS: int = 5           # Max verification attempts per OTP
 
     @property
     def is_production(self) -> bool:

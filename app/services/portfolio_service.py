@@ -553,6 +553,28 @@ class PortfolioService:
                 except Exception as exc:
                     logger.debug("portfolio_cash upsert skipped: %s", exc)
 
+            # Zero out any non-manual portfolios that had no activity
+            # (e.g. all transactions deleted → aggregate returned no rows)
+            computed_portfolios = set(balances.keys())
+            try:
+                cur.execute(
+                    "SELECT portfolio FROM portfolio_cash "
+                    "WHERE user_id = ? AND COALESCE(manual_override, 0) = 0",
+                    (self.user_id,),
+                )
+                for row in cur.fetchall():
+                    pf = row[0]
+                    if pf and pf not in computed_portfolios:
+                        cur.execute(
+                            "UPDATE portfolio_cash SET balance = 0, last_updated = ? "
+                            "WHERE user_id = ? AND portfolio = ?",
+                            (now, self.user_id, pf),
+                        )
+                        balances[pf] = 0.0
+                        logger.info("Zeroed stale cash for portfolio %s", pf)
+            except Exception as exc:
+                logger.debug("stale portfolio_cash cleanup skipped: %s", exc)
+
             conn.commit()
             return balances
 

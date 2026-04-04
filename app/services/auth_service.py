@@ -34,18 +34,18 @@ logger = logging.getLogger(__name__)
 def authenticate_user(username: str, password: str) -> Optional[dict]:
     """
     Verify credentials against the users table.
-    Returns a dict with id, username, name on success, else None.
+    Returns a dict with id, username, name, is_admin on success, else None.
     """
     row = query_one(
-        "SELECT id, username, password_hash, name FROM users WHERE username = ?",
+        "SELECT id, username, password_hash, name, COALESCE(is_admin, 0) FROM users WHERE username = ?",
         (username,),
     )
     if row is None:
         return None
 
-    uid, uname, pw_hash, name = row
+    uid, uname, pw_hash, name, is_admin = row
     if not verify_password(password, pw_hash):
         return None
 
-    return {"id": uid, "username": uname, "name": name}
+    return {"id": uid, "username": uname, "name": name, "is_admin": bool(is_admin)}
 

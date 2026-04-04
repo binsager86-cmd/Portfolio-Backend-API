@@ -340,8 +340,29 @@ async def create_transaction(
         ),
     )
 
-    # Return the created transaction
+    # ── Auto-create stock record if missing (so price updater can find it)
     from app.core.database import query_val as _qv
+    sym_upper = txn.stock_symbol.strip().upper()
+    existing_stock = _qv(
+        "SELECT id FROM stocks WHERE TRIM(symbol) = ? AND user_id = ?",
+        (sym_upper, current_user.user_id),
+    )
+    if not existing_stock and txn.txn_type in ("Buy", "Sell"):
+        ccy = "USD" if txn.portfolio == "USA" else "KWD"
+        # Resolve yf_ticker from reference lists
+        from app.services.price_service import _yahoo_symbol
+        yf_ticker = _yahoo_symbol(sym_upper, ccy)
+        exec_sql(
+            """INSERT INTO stocks
+               (user_id, symbol, name, portfolio, currency, current_price,
+                yf_ticker, price_source, created_at)
+               VALUES (?, ?, ?, ?, ?, 0.0, ?, 'AUTO', ?)""",
+            (current_user.user_id, sym_upper, sym_upper, txn.portfolio,
+             ccy, yf_ticker, int(time.time())),
+        )
+        logger.info("Auto-created stock record for %s (yf: %s)", sym_upper, yf_ticker)
+
+    # Return the created transaction
     new_id = _qv(
         "SELECT id FROM transactions WHERE user_id = ? ORDER BY id DESC LIMIT 1",
         (current_user.user_id,),

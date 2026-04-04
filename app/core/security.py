@@ -48,6 +48,7 @@ class TokenData(BaseModel):
     token_type: str = TOKEN_TYPE_ACCESS
     jti: Optional[str] = None
     exp: Optional[int] = None
+    is_admin: bool = False
 
 
 class TokenResponse(BaseModel):
@@ -59,6 +60,7 @@ class TokenResponse(BaseModel):
     user_id: int
     username: str
     name: Optional[str] = None
+    is_admin: bool = False
 
 
 class RefreshRequest(BaseModel):
@@ -131,6 +133,7 @@ def create_access_token(
     user_id: int,
     username: str,
     expires_delta: Optional[timedelta] = None,
+    is_admin: bool = False,
 ) -> str:
     """Create a signed JWT access token (short-lived)."""
     expire = datetime.now(timezone.utc) + (
@@ -142,6 +145,7 @@ def create_access_token(
         "type": TOKEN_TYPE_ACCESS,
         "exp": expire,
         "jti": uuid.uuid4().hex,
+        "is_admin": is_admin,
     }
     return jwt.encode(payload, _settings.SECRET_KEY, algorithm=_settings.JWT_ALGORITHM)
 
@@ -188,13 +192,14 @@ def decode_access_token(token: str) -> TokenData:
     token_type = payload.get("type", TOKEN_TYPE_ACCESS)
     jti = payload.get("jti")
     exp = payload.get("exp")
+    is_admin = bool(payload.get("is_admin", False))
 
     if not user_id:
         raise JWTError("Missing subject")
     if token_type != TOKEN_TYPE_ACCESS:
         raise JWTError(f"Expected access token, got {token_type}")
 
-    return TokenData(user_id=user_id, username=username, token_type=token_type, jti=jti, exp=exp)
+    return TokenData(user_id=user_id, username=username, token_type=token_type, jti=jti, exp=exp, is_admin=is_admin)
 
 
 def decode_refresh_token(token: str) -> TokenData:
