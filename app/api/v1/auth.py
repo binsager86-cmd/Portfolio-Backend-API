@@ -26,6 +26,7 @@ from app.core.config import get_settings
 from app.core.exceptions import UnauthorizedError, ConflictError, BadRequestError
 from pydantic import BaseModel, Field, field_validator
 from app.core.database import query_one, query_val, exec_sql, column_exists
+from app.core.config import get_settings as _get_settings
 from app.api.deps import get_current_user
 from app.schemas.user import (
     LoginRequest,
@@ -522,36 +523,20 @@ def _ensure_password_resets_table():
         except Exception:
             pass
 
-    try:
-        exec_sql("""
-            CREATE TABLE IF NOT EXISTS password_resets (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                email TEXT NOT NULL,
-                otp_code TEXT NOT NULL,
-                attempts INTEGER DEFAULT 0,
-                used INTEGER DEFAULT 0,
-                created_at INTEGER NOT NULL,
-                expires_at INTEGER NOT NULL
-            )
-        """)
-    except Exception:
-        # PostgreSQL uses SERIAL instead of AUTOINCREMENT
-        try:
-            exec_sql("""
-                CREATE TABLE IF NOT EXISTS password_resets (
-                    id SERIAL PRIMARY KEY,
-                    user_id INTEGER NOT NULL,
-                    email TEXT NOT NULL,
-                    otp_code TEXT NOT NULL,
-                    attempts INTEGER DEFAULT 0,
-                    used INTEGER DEFAULT 0,
-                    created_at INTEGER NOT NULL,
-                    expires_at INTEGER NOT NULL
-                )
-            """)
-        except Exception:
-            pass  # table already exists
+    _s = _get_settings()
+    pk = "SERIAL PRIMARY KEY" if _s.use_postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"
+    exec_sql(f"""
+        CREATE TABLE IF NOT EXISTS password_resets (
+            id {pk},
+            user_id INTEGER NOT NULL,
+            email TEXT NOT NULL,
+            otp_code TEXT NOT NULL,
+            attempts INTEGER DEFAULT 0,
+            used INTEGER DEFAULT 0,
+            created_at INTEGER NOT NULL,
+            expires_at INTEGER NOT NULL
+        )
+    """)
 
 
 def _generate_otp() -> str:

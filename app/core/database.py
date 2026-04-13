@@ -151,13 +151,13 @@ class _PgCursorProxy:
         is_insert = stripped.upper().lstrip().startswith("INSERT")
         if is_insert and "RETURNING" not in stripped.upper():
             translated = stripped + " RETURNING id"
-        result = self._cur.execute(translated, params)
+        self._cur.execute(translated, params)
         if is_insert:
             row = self._cur.fetchone()
             self._lastrowid = row[0] if row else None
         else:
             self._lastrowid = None
-        return result
+        return self  # allow chaining like SQLite cursor
 
     def fetchone(self):
         return self._cur.fetchone()

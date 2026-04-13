@@ -28,7 +28,7 @@ router = APIRouter(prefix="/dividends", tags=["Dividends"])
 async def list_dividends(
     stock_symbol: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
-    page_size: int = Query(100, ge=1, le=500),
+    page_size: int = Query(100, ge=1, le=10000),
     current_user: TokenData = Depends(get_current_user),
 ):
     """

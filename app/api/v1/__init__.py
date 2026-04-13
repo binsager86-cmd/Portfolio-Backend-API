@@ -20,6 +20,9 @@ from app.api.v1.tracker import router as tracker_router
 from app.api.v1.fundamental import router as fundamental_router
 from app.api.v1.trading import router as trading_router
 from app.api.v1.admin import router as admin_router
+from app.api.v1.news import router as news_router
+from app.api.v1.market import router as market_router
+from app.api.v1.notifications import router as notifications_router
 
 v1_router = APIRouter(prefix="/api/v1")
 
@@ -39,3 +42,6 @@ v1_router.include_router(tracker_router)
 v1_router.include_router(fundamental_router)
 v1_router.include_router(trading_router)
 v1_router.include_router(admin_router)
+v1_router.include_router(news_router)
+v1_router.include_router(market_router)
+v1_router.include_router(notifications_router)

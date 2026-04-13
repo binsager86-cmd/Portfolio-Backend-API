@@ -16,7 +16,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Query, UploadFile, File
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, File
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
@@ -244,7 +244,10 @@ def _ensure_schema() -> None:
 
     try:
         for ddl in _TABLES:
-            exec_sql(ddl)
+            try:
+                exec_sql(ddl)
+            except Exception as e:
+                logger.warning("⚠️  DDL skipped: %s", e)
     except Exception as e:
         logger.warning("⚠️  Analysis schema creation skipped: %s", e)
 
@@ -1100,6 +1103,34 @@ async def delete_all_statements(
     }
 
 
+# ── Helper: convert camelCase SA keys to readable display names ──────
+
+_SA_METADATA_KEYS = {"datekey", "fiscalYear", "fiscalQuarter"}
+
+# SA keys that represent ratios/growth metrics — exclude from statement line items
+_SA_RATIO_KEYS = {
+    "revenueGrowth", "netIncomeGrowth", "epsGrowth", "fcfGrowth",
+    "dividendGrowth", "grossMargin", "operatingMargin", "profitMargin",
+    "fcfMargin", "ebitdaMargin", "ebitMargin", "effectiveTaxRate",
+    "sharesYoY", "ocfGrowth", "netCashGrowth", "totalcashGrowth",
+}
+
+
+def _camel_to_display(key: str) -> str:
+    """Convert camelCase key to 'Title Case Display Name'.
+
+    e.g. 'stockBasedCompensation' -> 'Stock Based Compensation'
+         'netIncomeCF' -> 'Net Income CF'
+         'totalOpex' -> 'Total Opex'
+    """
+    import re as _re
+    # Insert space before uppercase letters that follow lowercase letters or
+    # before a run of uppercase letters followed by a lowercase letter
+    spaced = _re.sub(r'([a-z])([A-Z])', r'\1 \2', key)
+    spaced = _re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1 \2', spaced)
+    return spaced[:1].upper() + spaced[1:]
+
+
 # ── Fetch statements from macrotrends.net (US stocks, 10+ years) ─────
 
 _MT_FIELD_MAP_INCOME = {
@@ -1249,7 +1280,10 @@ def _mt_parse_financial_data(html: str) -> Optional[list]:
 
 
 def _fetch_us_statements(stock_id: int, symbol: str, user_id: int) -> dict:
-    """Fetch financial statements from macrotrends.net for a US stock.
+    """Fetch financial statements from stockanalysis.com for a US stock.
+
+    Uses the same SvelteKit page format as Kuwait stocks, but with
+    /stocks/{sym}/ URLs instead of /quote/kwse/{sym}/.
 
     Returns {"status": "ok", "data": {...}} or raises HTTPException.
     """
@@ -1266,154 +1300,335 @@ def _fetch_us_statements(stock_id: int, symbol: str, user_id: int) -> dict:
     saved_summary = []
     base = symbol.upper()
 
-    with _httpx.Client(headers=headers, timeout=30, follow_redirects=True) as client:
-        # Resolve the slug (e.g. AAPL -> apple)
-        slug = _mt_resolve_slug(base, client)
-        if not slug:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Could not find {base} on macrotrends.net.",
-            )
+    # US stocks use /stocks/{sym}/ on stockanalysis.com
+    us_stmt_map = {
+        "income":   (f"https://stockanalysis.com/stocks/{base.lower()}/financials/", _SA_FIELD_MAP_INCOME),
+        "balance":  (f"https://stockanalysis.com/stocks/{base.lower()}/financials/balance-sheet/", _SA_FIELD_MAP_BALANCE),
+        "cashflow": (f"https://stockanalysis.com/stocks/{base.lower()}/financials/cash-flow-statement/", _SA_FIELD_MAP_CASHFLOW),
+    }
 
-        for stmt_type, (url_tpl, field_map) in _MT_STMT_MAP.items():
-            url = url_tpl.format(sym=base, slug=slug)
+    for stmt_type, (url, field_map) in us_stmt_map.items():
+        try:
+            resp = _httpx.get(url, headers=headers, timeout=20, follow_redirects=True)
+            if resp.status_code != 200:
+                logger.warning("stockanalysis.com %s returned %s for US/%s", stmt_type, resp.status_code, base)
+                continue
+        except Exception as exc:
+            logger.warning("stockanalysis.com fetch error for US/%s/%s: %s", base, stmt_type, exc)
+            continue
+
+        data = _sa_parse_financial_data(resp.text)
+        if not data:
+            logger.warning("stockanalysis.com: no financialData for US/%s/%s", base, stmt_type)
+            continue
+
+        datekeys = data.get("datekey", [])
+        fiscal_years = data.get("fiscalYear", [])
+
+        # Process each period (skip TTM), limit to 10 years
+        periods_saved = 0
+        for idx, dk in enumerate(datekeys):
+            if dk == "TTM":
+                continue
+            if periods_saved >= _MT_MAX_YEARS:
+                break
+
+            period_end_date = dk  # e.g. "2024-12-31"
             try:
-                resp = client.get(url)
-                if resp.status_code != 200:
-                    logger.warning("macrotrends %s returned %s for %s", stmt_type, resp.status_code, base)
+                fy = int(fiscal_years[idx])
+            except (IndexError, ValueError):
+                continue
+
+            # Collect line items for this period
+            line_items = []
+            seen_codes = set()
+            order = 1
+            for sa_key, (canonical_code, display_name) in field_map.items():
+                if sa_key not in data:
                     continue
-            except Exception as exc:
-                logger.warning("macrotrends fetch error for %s/%s: %s", base, stmt_type, exc)
+                if canonical_code in seen_codes:
+                    continue
+                vals = data[sa_key]
+                if idx >= len(vals) or vals[idx] is None:
+                    continue
+                seen_codes.add(canonical_code)
+                line_items.append({
+                    "code": canonical_code,
+                    "name": display_name,
+                    "amount": vals[idx],
+                    "currency": "USD",
+                    "order": order,
+                    "is_total": canonical_code in (
+                        "total_assets", "total_equity", "total_liabilities",
+                        "total_current_assets", "total_current_liabilities",
+                        "total_liabilities_equity", "total_operating_expenses",
+                        "total_common_equity",
+                    ),
+                })
+                order += 1
+
+            # ── Include ALL remaining fields not in field_map ────────
+            mapped_sa_keys = set(field_map.keys())
+            for extra_key, vals in data.items():
+                if extra_key in _SA_METADATA_KEYS:
+                    continue
+                if extra_key in _SA_RATIO_KEYS:
+                    continue
+                if extra_key in mapped_sa_keys:
+                    continue
+                if not isinstance(vals, list):
+                    continue
+                if extra_key in seen_codes:
+                    continue
+                if idx >= len(vals) or vals[idx] is None:
+                    continue
+                seen_codes.add(extra_key)
+                line_items.append({
+                    "code": extra_key,
+                    "name": _camel_to_display(extra_key),
+                    "amount": vals[idx],
+                    "currency": "USD",
+                    "order": order,
+                    "is_total": False,
+                })
+                order += 1
+
+            if not line_items:
                 continue
 
-            data = _mt_parse_financial_data(resp.text)
-            if not data:
-                logger.warning("macrotrends: no originalData for %s/%s", base, stmt_type)
-                continue
-
-            # Get date columns (keys matching YYYY-MM-DD)
-            first_row = data[0]
-            date_keys = sorted(
-                [k for k in first_row.keys() if _re.match(r'20\d{2}-\d{2}-\d{2}', k)],
-                reverse=True,
+            # Upsert: check existing statement
+            existing = query_one(
+                """SELECT id FROM financial_statements
+                   WHERE stock_id = ? AND statement_type = ? AND period_end_date = ?""",
+                (stock_id, stmt_type, period_end_date),
             )
 
-            # Limit to most recent N years
-            date_keys = date_keys[:_MT_MAX_YEARS]
+            source_label = f"stockanalysis.com/stocks/{base.lower()}"
 
-            periods_saved = 0
-            for period_end_date in date_keys:
+            with get_connection() as conn:
+                cur = conn.cursor()
+                if existing:
+                    stmt_id = existing["id"] if isinstance(existing, dict) else existing[0]
+                    cur.execute(
+                        """UPDATE financial_statements
+                           SET fiscal_year=?, extracted_by=?, source_file=?,
+                               confidence_score=?, notes=?, created_at=?
+                           WHERE id=?""",
+                        (fy, "stockanalysis.com", source_label,
+                         1.0, "Fetched from stockanalysis.com", now, stmt_id),
+                    )
+                    cur.execute("DELETE FROM financial_line_items WHERE statement_id = ?", (stmt_id,))
+                else:
+                    cur.execute(
+                        """INSERT INTO financial_statements
+                           (stock_id, statement_type, fiscal_year, fiscal_quarter,
+                            period_end_date, source_file, extracted_by,
+                            confidence_score, notes, created_at)
+                           VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                        (stock_id, stmt_type, fy, None, period_end_date,
+                         source_label, "stockanalysis.com",
+                         1.0, "Fetched from stockanalysis.com", now),
+                    )
+                    stmt_id = cur.lastrowid
+
+                for item in line_items:
+                    cur.execute(
+                        """INSERT INTO financial_line_items
+                           (statement_id, line_item_code, line_item_name,
+                            amount, currency, order_index, is_total)
+                           VALUES (?,?,?,?,?,?,?)""",
+                        (stmt_id, item["code"], item["name"],
+                         item["amount"], item["currency"],
+                         item["order"], item["is_total"]),
+                    )
+                conn.commit()
+            periods_saved += 1
+
+        if periods_saved > 0:
+            saved_summary.append({
+                "statement_type": stmt_type,
+                "periods_saved": periods_saved,
+            })
+
+    # ── Supplement with macrotrends.net for older years (up to 10 total) ──
+    # Also merges missing line items into existing sparse periods from SA.
+    try:
+        # Build lookup of existing periods → (statement_id, set_of_codes)
+        period_info_by_type: Dict[str, Dict[str, tuple]] = {}  # stmt_type → {period → (stmt_id, {codes})}
+        for s in saved_summary:
+            stmts = query_df(
+                "SELECT id, period_end_date FROM financial_statements WHERE stock_id = ? AND statement_type = ?",
+                (stock_id, s["statement_type"]),
+            )
+            info: Dict[str, tuple] = {}
+            if not stmts.empty:
+                for _, row in stmts.iterrows():
+                    sid = row["id"]
+                    ped = row["period_end_date"]
+                    codes_df = query_df(
+                        "SELECT line_item_code FROM financial_line_items WHERE statement_id = ?",
+                        (sid,),
+                    )
+                    existing_codes = set(codes_df["line_item_code"].tolist()) if not codes_df.empty else set()
+                    info[ped] = (sid, existing_codes)
+            period_info_by_type[s["statement_type"]] = info
+
+        slug = _mt_resolve_slug(base, _httpx.Client(headers=headers, timeout=20, follow_redirects=True))
+        if slug:
+            mt_saved = 0
+            for stmt_type, (url_tpl, field_map) in _MT_STMT_MAP.items():
+                period_info = period_info_by_type.get(stmt_type, {})
+                existing_years = {p[:4] for p in period_info.keys()}
+                total_years = len(existing_years)
+
+                url = url_tpl.format(sym=base, slug=slug)
                 try:
-                    fy = int(period_end_date[:4])
-                except ValueError:
+                    resp = _httpx.get(url, headers=headers, timeout=20, follow_redirects=True)
+                    if resp.status_code != 200:
+                        continue
+                except Exception:
                     continue
 
-                # Collect line items
-                line_items = []
-                order = 1
-                for row_data in data:
-                    raw_name = row_data.get("field_name", "")
-                    # Strip HTML tags to get clean field name
-                    clean_name = _re.sub(r'<[^>]+>', '', raw_name).strip()
+                rows_data = _mt_parse_financial_data(resp.text)
+                if not rows_data:
+                    continue
 
-                    if clean_name not in field_map:
-                        continue
+                # Extract date columns from first row
+                date_cols = [k for k in rows_data[0].keys() if k not in ("field_name", "popup_icon")]
+                date_cols.sort(reverse=True)
 
-                    canonical_code, display_name = field_map[clean_name]
-                    raw_val = row_data.get(period_end_date)
-                    if raw_val is None or raw_val == "":
-                        continue
+                import re as _re
+
+                for date_col in date_cols:
+                    year_str = date_col[:4]
+
+                    # For NEW years: check total limit
+                    is_new_year = year_str not in existing_years
+                    if is_new_year and total_years >= _MT_MAX_YEARS:
+                        break
+
+                    # Find matching existing period for this year
+                    existing_stmt_id = None
+                    existing_codes: set = set()
+                    for ep, (sid, codes) in period_info.items():
+                        if ep == date_col or ep.startswith(year_str):
+                            existing_stmt_id = sid
+                            existing_codes = codes
+                            break
 
                     try:
-                        amount = float(str(raw_val).replace(",", ""))
-                    except (ValueError, TypeError):
+                        fy = int(year_str)
+                    except ValueError:
                         continue
 
-                    line_items.append({
-                        "code": canonical_code,
-                        "name": display_name,
-                        "amount": amount,
-                        "currency": "USD",
-                        "order": order,
-                        "is_total": canonical_code in (
-                            "total_assets", "total_equity", "total_liabilities",
-                            "total_current_assets", "total_current_liabilities",
-                            "total_liabilities_equity", "total_operating_expenses",
-                            "total_long_term_assets", "total_long_term_liabilities",
-                        ),
-                    })
-                    order += 1
+                    line_items = []
+                    order = 1
+                    for row in rows_data:
+                        raw_name = _re.sub(r'<[^>]+>', '', row.get("field_name", "")).strip()
+                        val_str = row.get(date_col, "")
+                        if not val_str or val_str.strip() == "":
+                            continue
+                        try:
+                            amount = float(val_str.replace(",", ""))
+                        except (ValueError, TypeError):
+                            continue
 
-                if not line_items:
-                    continue
+                        if raw_name in field_map:
+                            code, display = field_map[raw_name]
+                        else:
+                            code = raw_name.lower().replace(" ", "_").replace(",", "").replace("-", "_")
+                            display = raw_name
 
-                # Upsert: check existing statement
-                existing = query_one(
-                    """SELECT id FROM financial_statements
-                       WHERE stock_id = ? AND statement_type = ? AND period_end_date = ?""",
-                    (stock_id, stmt_type, period_end_date),
-                )
+                        # Skip codes already present in this period (from SA)
+                        if code in existing_codes:
+                            continue
 
-                source_label = f"macrotrends.net/{base}/{slug}"
+                        # Per-share items are NOT in millions on macrotrends
+                        _MT_NO_SCALE = {
+                            "eps_basic", "eps_diluted",
+                            "dividends_per_share", "book_value_per_share",
+                        }
+                        if code in _MT_NO_SCALE:
+                            scaled = amount
+                        else:
+                            scaled = amount * 1_000_000  # macrotrends values are in millions
+                        line_items.append({
+                            "code": code, "name": display,
+                            "amount": scaled,
+                            "currency": "USD", "order": order, "is_total": False,
+                        })
+                        order += 1
 
-                with get_connection() as conn:
-                    cur = conn.cursor()
-                    if existing:
-                        stmt_id = existing["id"] if isinstance(existing, dict) else existing[0]
-                        cur.execute(
-                            """UPDATE financial_statements
-                               SET fiscal_year=?, extracted_by=?, source_file=?,
-                                   confidence_score=?, notes=?, created_at=?
-                               WHERE id=?""",
-                            (fy, "macrotrends.net", source_label,
-                             1.0, "Fetched from macrotrends.net", now, stmt_id),
-                        )
-                        cur.execute("DELETE FROM financial_line_items WHERE statement_id = ?", (stmt_id,))
+                    if not line_items:
+                        continue
+
+                    source_label = f"macrotrends.net/{base}/{slug}"
+                    with get_connection() as conn:
+                        cur = conn.cursor()
+                        if existing_stmt_id:
+                            # Merge: add missing line items to existing statement
+                            stmt_id = existing_stmt_id
+                            # Get max existing order_index
+                            max_ord = query_one(
+                                "SELECT MAX(order_index) as mx FROM financial_line_items WHERE statement_id = ?",
+                                (stmt_id,),
+                            )
+                            start_order = ((max_ord["mx"] if isinstance(max_ord, dict) else max_ord[0]) or 0) + 1
+                        else:
+                            # Create new statement
+                            cur.execute(
+                                """INSERT INTO financial_statements
+                                   (stock_id, statement_type, fiscal_year, fiscal_quarter,
+                                    period_end_date, source_file, extracted_by,
+                                    confidence_score, notes, created_at)
+                                   VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                                (stock_id, stmt_type, fy, None, date_col,
+                                 source_label, "macrotrends.net",
+                                 0.9, "Fetched from macrotrends.net (older years)", now),
+                            )
+                            stmt_id = cur.lastrowid
+                            start_order = 1
+
+                        for i, item in enumerate(line_items):
+                            cur.execute(
+                                """INSERT INTO financial_line_items
+                                   (statement_id, line_item_code, line_item_name,
+                                    amount, currency, order_index, is_total)
+                                   VALUES (?,?,?,?,?,?,?)""",
+                                (stmt_id, item["code"], item["name"],
+                                 item["amount"], item["currency"],
+                                 start_order + i, item["is_total"]),
+                            )
+                        conn.commit()
+
+                    if is_new_year:
+                        existing_years.add(year_str)
+                        total_years += 1
+                    mt_saved += 1
+
+                # Update saved_summary
+                if mt_saved > 0:
+                    existing_entry = next((s for s in saved_summary if s["statement_type"] == stmt_type), None)
+                    if existing_entry:
+                        existing_entry["periods_saved"] += mt_saved
                     else:
-                        cur.execute(
-                            """INSERT INTO financial_statements
-                               (stock_id, statement_type, fiscal_year, fiscal_quarter,
-                                period_end_date, source_file, extracted_by,
-                                confidence_score, notes, created_at)
-                               VALUES (?,?,?,?,?,?,?,?,?,?)""",
-                            (stock_id, stmt_type, fy, None, period_end_date,
-                             source_label, "macrotrends.net",
-                             1.0, "Fetched from macrotrends.net", now),
-                        )
-                        stmt_id = cur.lastrowid
-
-                    for item in line_items:
-                        cur.execute(
-                            """INSERT INTO financial_line_items
-                               (statement_id, line_item_code, line_item_name,
-                                amount, currency, order_index, is_total)
-                               VALUES (?,?,?,?,?,?,?)""",
-                            (stmt_id, item["code"], item["name"],
-                             item["amount"], item["currency"],
-                             item["order"], item["is_total"]),
-                        )
-                    conn.commit()
-                periods_saved += 1
-
-            if periods_saved > 0:
-                saved_summary.append({
-                    "statement_type": stmt_type,
-                    "periods_saved": periods_saved,
-                })
+                        saved_summary.append({"statement_type": stmt_type, "periods_saved": mt_saved})
+    except Exception as exc:
+        logger.warning("macrotrends supplement failed for %s: %s", base, exc)
 
     if not saved_summary:
         raise HTTPException(
             status_code=404,
-            detail=f"No financial data found on macrotrends.net for {base}.",
+            detail=f"No financial data found for {base}.",
         )
 
     total_periods = sum(s["periods_saved"] for s in saved_summary)
     return {
         "status": "ok",
         "data": {
-            "message": f"Fetched {total_periods} period(s) across {len(saved_summary)} statement type(s) from macrotrends.net.",
+            "message": f"Fetched {total_periods} period(s) across {len(saved_summary)} statement type(s).",
             "summary": saved_summary,
-            "source": f"https://www.macrotrends.net/stocks/charts/{base}/{slug}/income-statement",
+            "source": f"stockanalysis.com + macrotrends.net",
         },
     }
 
@@ -1422,90 +1637,192 @@ def _fetch_us_statements(stock_id: int, symbol: str, user_id: int) -> dict:
 
 # Field mapping: stockanalysis.com JS key -> (canonical_code, display_name)
 _SA_FIELD_MAP_INCOME = {
+    # Revenue
     "revenue": ("revenue", "Revenue"),
     "revenueRE": ("revenue", "Revenue"),
     "rentalRevenue": ("rental_revenue", "Rental Revenue"),
+    # Cost of revenue
     "costrev": ("cost_of_revenue", "Cost of Revenue"),
+    "cor": ("cost_of_revenue", "Cost of Revenue"),
+    # Gross profit
     "grossProfit": ("gross_profit", "Gross Profit"),
+    # SG&A / R&D
     "sgna": ("sga", "SG&A"),
     "sgnaRE": ("sga", "SG&A"),
+    "rnd": ("research_development", "Research & Development"),
     "propertyExpenses": ("property_expenses", "Property Expenses"),
+    # Operating expenses
     "otherOpex": ("other_operating_expenses", "Other Operating Expenses"),
     "otherOperatingExpensesRE": ("other_operating_expenses", "Other Operating Expenses"),
     "totalOpex": ("total_operating_expenses", "Total Operating Expenses"),
     "totalOperatingExpensesRE": ("total_operating_expenses", "Total Operating Expenses"),
+    "totalOperatingExpenses": ("total_operating_expenses", "Total Operating Expenses"),
+    # Operating income
     "opinc": ("operating_income", "Operating Income"),
     "operatingIncomeRE": ("operating_income", "Operating Income"),
+    "operatingIncome": ("operating_income", "Operating Income"),
+    # Non-operating income
+    "totalNonOperatingIncome": ("non_operating_income", "Non-Operating Income"),
     "intexp": ("interest_expense", "Interest Expense"),
+    # Pretax / tax
     "pretax": ("income_before_tax", "Pretax Income"),
     "taxexp": ("income_tax", "Income Tax"),
+    "income_statement_provision_for_income_taxes": ("income_tax", "Income Tax"),
+    # Net income
     "netinc": ("net_income", "Net Income"),
+    "netIncome": ("net_income", "Net Income"),
     "netinccmn": ("net_income_common", "Net Income to Common"),
+    # EPS
     "epsBasic": ("eps_basic", "EPS (Basic)"),
     "epsdil": ("eps_diluted", "EPS (Diluted)"),
+    "epsDiluted": ("eps_diluted", "EPS (Diluted)"),
+    # EBITDA / EBIT
     "ebitda": ("ebitda", "EBITDA"),
     "ebit": ("ebit", "EBIT"),
+    # Shares
     "sharesBasic": ("shares_outstanding", "Shares Outstanding"),
     "sharesDiluted": ("shares_diluted", "Shares Diluted"),
+    # Per-share
     "dps": ("dividends_per_share", "Dividends Per Share"),
+    # Other
     "depAmorEbitda": ("depreciation_amortization", "Depreciation & Amortization"),
     "minorityInterest": ("minority_interest", "Minority Interest"),
     "earningContinuing": ("earnings_continuing_ops", "Earnings from Continuing Ops"),
+    # Derived amounts (not ratios)
+    "fcf": ("free_cash_flow", "Free Cash Flow"),
+    "fcfps": ("fcf_per_share", "FCF Per Share"),
 }
 
 _SA_FIELD_MAP_BALANCE = {
+    # Cash & equivalents
     "cashneq": ("cash", "Cash & Equivalents"),
+    "totalcash": ("cash", "Cash & Equivalents"),
+    # Investments
     "shortTermInvestments": ("short_term_investments", "Short-Term Investments"),
-    "accountsReceivable": ("accounts_receivable", "Accounts Receivable"),
-    "inventory": ("inventory", "Inventory"),
-    "totalCurrentAssets": ("total_current_assets", "Total Current Assets"),
-    "netPPE": ("ppe_net", "Property, Plant & Equipment"),
-    "goodwill": ("goodwill", "Goodwill"),
-    "intangibles": ("intangible_assets", "Intangible Assets"),
-    "assets": ("total_assets", "Total Assets"),
-    "accountsPayable": ("accounts_payable", "Accounts Payable"),
-    "shortTermDebt": ("short_term_debt", "Short-Term Debt"),
-    "totalCurrentLiabilities": ("total_current_liabilities", "Total Current Liabilities"),
-    "longTermDebt": ("long_term_debt", "Long-Term Debt"),
-    "totalLiabilities": ("total_liabilities", "Total Liabilities"),
-    "totalLiabilitiesRE": ("total_liabilities", "Total Liabilities"),
-    "commonStock": ("share_capital", "Share Capital"),
-    "additionalPaidInCapital": ("additional_paid_in_capital", "Additional Paid-In Capital"),
-    "retearn": ("retained_earnings", "Retained Earnings"),
-    "totalCommonEquity": ("total_common_equity", "Total Common Equity"),
-    "equity": ("total_equity", "Total Equity"),
-    "debt": ("total_debt", "Total Debt"),
-    "bvps": ("book_value_per_share", "Book Value Per Share"),
-    "tangibleBookValue": ("tangible_book_value", "Tangible Book Value"),
+    "investmentsc": ("short_term_investments", "Short-Term Investments"),
     "longTermInvestmentsRE": ("long_term_investments", "Long-Term Investments"),
     "tradingAssetSecurities": ("trading_securities", "Trading Securities"),
+    # Current assets
+    "accountsReceivable": ("accounts_receivable", "Accounts Receivable"),
+    "balance_sheet_accounts_receivable": ("accounts_receivable", "Accounts Receivable"),
+    "inventory": ("inventory", "Inventory"),
+    "assetsc": ("total_current_assets", "Total Current Assets"),
+    "totalCurrentAssets": ("total_current_assets", "Total Current Assets"),
+    "balance_sheet_other_current_assets": ("other_current_assets", "Other Current Assets"),
+    # Long-term assets
+    "netPPE": ("ppe_net", "Property, Plant & Equipment"),
+    "balance_sheet_net_property_plant_and_equipment": ("ppe_net", "Property, Plant & Equipment"),
+    "goodwill": ("goodwill", "Goodwill"),
+    "balance_sheet_goodwill": ("goodwill", "Goodwill"),
+    "intangibles": ("intangible_assets", "Intangible Assets"),
+    "otherIntangibles": ("other_intangibles", "Other Intangibles"),
+    "balance_sheet_other_long_term_assets": ("other_long_term_assets", "Other Long-Term Assets"),
+    "balance_sheet_long_term_investments": ("long_term_investments", "Long-Term Investments"),
+    # Total assets
+    "assets": ("total_assets", "Total Assets"),
+    # Current liabilities
+    "accountsPayable": ("accounts_payable", "Accounts Payable"),
+    "balance_sheet_accounts_payable": ("accounts_payable", "Accounts Payable"),
+    "shortTermDebt": ("short_term_debt", "Short-Term Debt"),
+    "balance_sheet_current_portion_of_long_term_debt": ("short_term_debt", "Current Portion of Long-Term Debt"),
+    "balance_sheet_accrued_expenses": ("accrued_expenses", "Accrued Expenses"),
+    "balance_sheet_unearned_revenue": ("unearned_revenue", "Unearned Revenue"),
+    "balance_sheet_other_current_liabilities": ("other_current_liabilities", "Other Current Liabilities"),
+    "liabilitiesc": ("total_current_liabilities", "Total Current Liabilities"),
+    "totalCurrentLiabilities": ("total_current_liabilities", "Total Current Liabilities"),
+    # Long-term liabilities
+    "longTermDebt": ("long_term_debt", "Long-Term Debt"),
+    "balance_sheet_long_term_debt": ("long_term_debt", "Long-Term Debt"),
+    "longTermLeases": ("long_term_leases", "Long-Term Leases"),
+    "balance_sheet_other_long_term_liabilities": ("other_non_current_liabilities", "Other Non-Current Liabilities"),
+    "balance_sheet_total_long_term_liabilities": ("total_long_term_liabilities", "Total Long-Term Liabilities"),
+    # Total liabilities
+    "totalLiabilities": ("total_liabilities", "Total Liabilities"),
+    "totalLiabilitiesRE": ("total_liabilities", "Total Liabilities"),
+    "liabilities": ("total_liabilities", "Total Liabilities"),
+    # Equity
+    "commonStock": ("share_capital", "Share Capital"),
+    "balance_sheet_common_stock": ("share_capital", "Share Capital"),
+    "additionalPaidInCapital": ("additional_paid_in_capital", "Additional Paid-In Capital"),
+    "retearn": ("retained_earnings", "Retained Earnings"),
+    "balance_sheet_retained_earnings": ("retained_earnings", "Retained Earnings"),
+    "balance_sheet_accumulated_other_comprehensive_income": ("comprehensive_income", "Accumulated Other Comprehensive Income"),
+    "totalCommonEquity": ("total_common_equity", "Total Common Equity"),
+    "equity": ("total_equity", "Total Equity"),
     "treasuryStock": ("treasury_stock", "Treasury Stock"),
-    "netcash": ("net_cash", "Net Cash / Debt"),
-    "capitalLeases": ("capital_leases", "Capital Leases"),
-    "liabilitiesequity": ("total_liabilities_equity", "Total Liabilities & Equity"),
     "minorityInterestBS": ("minority_interest_bs", "Minority Interest"),
+    # Totals
+    "liabilitiesequity": ("total_liabilities_equity", "Total Liabilities & Equity"),
+    # Derived amounts
+    "debt": ("total_debt", "Total Debt"),
+    "netcash": ("net_cash", "Net Cash / Debt"),
+    "netCash": ("net_cash", "Net Cash / Debt"),
+    "capitalLeases": ("capital_leases", "Capital Leases"),
+    # Per-share
+    "bvps": ("book_value_per_share", "Book Value Per Share"),
+    "bookValuePerShare": ("book_value_per_share", "Book Value Per Share"),
+    "bookValue": ("book_value", "Book Value"),
+    "tangibleBookValue": ("tangible_book_value", "Tangible Book Value"),
+    "tangibleBookValuePerShare": ("tangible_book_value_per_share", "Tangible Book Value Per Share"),
+    "netCashPerShare": ("net_cash_per_share", "Net Cash Per Share"),
 }
 
 _SA_FIELD_MAP_CASHFLOW = {
+    # Net income
     "netIncomeCF": ("net_income_cf", "Net Income"),
+    "cash_flow_statement_net_income": ("net_income_cf", "Net Income"),
+    # Depreciation
     "totalDepAmorCF": ("depreciation_cf", "Depreciation & Amortization"),
+    "cash_flow_statement_depreciation_and_amortization": ("depreciation_cf", "Depreciation & Amortization"),
+    # Stock-based compensation
+    "sbcomp": ("stock_based_compensation", "Stock-Based Compensation"),
+    # Working capital changes
+    "changeWorkingCapital": ("change_working_capital", "Change in Working Capital"),
+    "changeInReceivables": ("change_receivables", "Change in Receivables"),
+    "cash_flow_statement_changes_in_accounts_payable": ("change_payables", "Change in Payables"),
+    "cash_flow_statement_changes_in_inventories": ("change_inventories", "Change in Inventories"),
+    "cash_flow_statement_changes_in_income_taxes_payable": ("change_taxes_payable", "Change in Taxes Payable"),
+    "cash_flow_statement_changes_in_unearned_revenue": ("change_unearned_revenue", "Change in Unearned Revenue"),
+    "cash_flow_statement_changes_in_other_operating_activities": ("other_operating_activities", "Other Operating Activities"),
+    "cash_flow_statement_other_adjustments": ("other_adjustments", "Other Adjustments"),
+    # Operating cash flow
     "ncfo": ("cash_from_operations", "Cash from Operations"),
+    # Investing
     "capex": ("capital_expenditures", "Capital Expenditures"),
+    "cash_flow_statement_payments_for_business_acquisitions": ("acquisitions", "Acquisitions"),
+    "cash_flow_statement_purchases_of_investments": ("purchases_investments", "Purchases of Investments"),
+    "cash_flow_statement_proceeds_from_sale_of_investments": ("sales_investments", "Sales of Investments"),
+    "cash_flow_statement_other_investing_activities": ("investing_other", "Other Investing Activities"),
     "ncfi": ("cash_from_investing", "Cash from Investing"),
-    "ncff": ("cash_from_financing", "Cash from Financing"),
+    # Financing
     "debtIssuedTotal": ("debt_issued", "Debt Issued"),
+    "debtissuedlongterm": ("debt_issued_long_term", "Long-Term Debt Issued"),
+    "debtissuedshortterm": ("debt_issued_short_term", "Short-Term Debt Issued"),
     "debtRepaidTotal": ("debt_repaid", "Debt Repaid"),
+    "debtrepaidlongterm": ("debt_repaid_long_term", "Long-Term Debt Repaid"),
+    "netDebtIssued": ("net_debt_issued", "Net Debt Issued"),
+    "netdebtissuedlongterm": ("net_debt_issued_long_term", "Net Long-Term Debt Issued"),
+    "netdebtissuedshortterm": ("net_debt_issued_short_term", "Net Short-Term Debt Issued"),
     "commonDividendCF": ("dividends_paid", "Dividends Paid"),
+    "commondividendcf": ("dividends_paid", "Dividends Paid"),
+    "commonIssued": ("shares_issued", "Shares Issued"),
+    "commonissued": ("shares_issued", "Shares Issued"),
+    "commonRepurchased": ("shares_repurchased", "Shares Repurchased"),
+    "commonrepurchased": ("shares_repurchased", "Shares Repurchased"),
+    "netstockissued": ("net_equity_total", "Net Stock Issued / Repurchased"),
+    "otherfinancing": ("financing_other", "Other Financing Activities"),
+    "ncff": ("cash_from_financing", "Cash from Financing"),
+    # Exchange rate effect
+    "cash_flow_statement_effect_of_exchange_rate_changes_on_cash_and_cash_equivalents": ("exchange_rate_effect", "Effect of Exchange Rate Changes"),
+    # Net change in cash
     "ncf": ("net_change_in_cash", "Net Change in Cash"),
+    # Free cash flow
     "leveredFCF": ("free_cash_flow", "Free Cash Flow"),
     "unleveredFCF": ("unlevered_fcf", "Unlevered Free Cash Flow"),
+    # Other
     "cashInterestPaid": ("interest_paid", "Interest Paid"),
-    "commonIssued": ("shares_issued", "Shares Issued"),
-    "commonRepurchased": ("shares_repurchased", "Shares Repurchased"),
-    "netDebtIssued": ("net_debt_issued", "Net Debt Issued"),
     "acquisitionRealEstateAssets": ("acquisition_re_assets", "RE Asset Acquisitions"),
     "saleRealEstateAssets": ("sale_re_assets", "RE Asset Sales"),
-    "changeWorkingCapital": ("change_working_capital", "Change in Working Capital"),
 }
 
 _SA_STMT_MAP = {
@@ -1562,8 +1879,8 @@ async def fetch_statements_online(
 ):
     """Fetch financial statements online for a stock.
 
-    - Kuwait stocks: scraped from stockanalysis.com
-    - US stocks: scraped from macrotrends.net (up to 10 years)
+    - Kuwait stocks: scraped from stockanalysis.com (/quote/kwse/{sym}/)
+    - US stocks: scraped from stockanalysis.com (/stocks/{sym}/)
 
     Upserts into financial_statements + financial_line_items.
     """
@@ -1582,7 +1899,7 @@ async def fetch_statements_online(
     resolved = _resolve_yf_ticker(symbol, current_user.user_id)
     is_kuwait = resolved.upper().endswith(".KW")
 
-    # Route US stocks to macrotrends (10 years of data)
+    # Route US stocks to stockanalysis.com (/stocks/ path)
     if not is_kuwait:
         return _fetch_us_statements(stock_id, symbol, current_user.user_id)
 
@@ -1653,6 +1970,32 @@ async def fetch_statements_online(
                         "total_liabilities_equity", "total_operating_expenses",
                         "total_common_equity",
                     ),
+                })
+                order += 1
+
+            # ── Include ALL remaining fields not in field_map ────────
+            mapped_sa_keys = set(field_map.keys())
+            for extra_key, vals in data.items():
+                if extra_key in _SA_METADATA_KEYS:
+                    continue
+                if extra_key in _SA_RATIO_KEYS:
+                    continue
+                if extra_key in mapped_sa_keys:
+                    continue
+                if not isinstance(vals, list):
+                    continue
+                if extra_key in seen_codes:
+                    continue
+                if idx >= len(vals) or vals[idx] is None:
+                    continue
+                seen_codes.add(extra_key)
+                line_items.append({
+                    "code": extra_key,
+                    "name": _camel_to_display(extra_key),
+                    "amount": vals[idx],
+                    "currency": "KWD",
+                    "order": order,
+                    "is_total": False,
                 })
                 order += 1
 
@@ -3904,6 +4247,81 @@ async def get_score_history(
 # ════════════════════════════════════════════════════════════════════
 
 
+def _fetch_beta_from_stockanalysis(symbol: str) -> Optional[float]:
+    """Scrape beta from stockanalysis.com overview page for a KW stock.
+
+    URL: https://stockanalysis.com/quote/kwse/{SYMBOL}/
+    The page embeds beta in the statistics table.
+    Returns None on any failure (network, parsing, not found).
+    """
+    import re as _re
+    try:
+        import httpx as _httpx
+        url = f"https://stockanalysis.com/quote/kwse/{symbol}/"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "text/html,application/xhtml+xml",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+        resp = _httpx.get(url, headers=headers, timeout=15, follow_redirects=True)
+        if resp.status_code != 200:
+            logger.warning("stockanalysis.com beta: %s returned %s", symbol, resp.status_code)
+            return None
+        # Beta appears in the page data — look for "Beta" followed by a number
+        m = _re.search(r'Beta[^0-9\-]*?([\-]?[0-9]+\.?[0-9]*)', resp.text)
+        if m:
+            val = float(m.group(1))
+            logger.info("stockanalysis.com beta for %s = %.4f", symbol, val)
+            return round(val, 4)
+        logger.warning("stockanalysis.com: beta not found in page for %s", symbol)
+        return None
+    except Exception as exc:
+        logger.warning("stockanalysis.com beta fetch error for %s: %s", symbol, exc)
+        return None
+
+
+def _compute_tax_rate_from_statements(stock_id: int, user_id: int) -> Optional[float]:
+    """Compute effective tax rate from the user's uploaded income statements.
+
+    Looks for income_tax and income_before_tax (or pretax_income) line items
+    in the most recent annual period.  Returns decimal (e.g. 0.15 for 15%).
+    """
+    try:
+        rows = query_all(
+            """
+            SELECT li.code, li.value, fs.period_end
+            FROM financial_line_items li
+            JOIN financial_statements fs ON li.statement_id = fs.id
+            WHERE fs.stock_id = ? AND fs.user_id = ? AND fs.statement_type = 'income'
+              AND li.code IN ('income_tax', 'income_before_tax', 'pretax_income')
+            ORDER BY fs.period_end DESC
+            """,
+            (stock_id, user_id),
+        )
+        if not rows:
+            return None
+        # Group by period — take values from the latest period
+        latest_period = rows[0]["period_end"] if isinstance(rows[0], dict) else rows[0][2]
+        tax_val = None
+        pretax_val = None
+        for r in rows:
+            p = r["period_end"] if isinstance(r, dict) else r[2]
+            if p != latest_period:
+                break
+            code = r["code"] if isinstance(r, dict) else r[0]
+            val = r["value"] if isinstance(r, dict) else r[1]
+            if code == "income_tax" and val is not None:
+                tax_val = float(val)
+            if code in ("income_before_tax", "pretax_income") and val is not None:
+                pretax_val = float(val)
+        if tax_val is not None and pretax_val and pretax_val > 0:
+            return round(abs(tax_val) / pretax_val, 4)
+        return None
+    except Exception as exc:
+        logger.warning("tax rate from statements failed for stock %s: %s", stock_id, exc)
+        return None
+
+
 @router.get("/stocks/{stock_id}/valuation-defaults")
 async def get_valuation_defaults(
     stock_id: int,
@@ -4246,6 +4664,7 @@ async def get_valuation_defaults(
     wacc_data: Dict[str, Any] = {}
     stock_sym_row = query_one("SELECT symbol FROM analysis_stocks WHERE id = ?", (stock_id,))
     ticker_sym = (stock_sym_row[0] if isinstance(stock_sym_row, (tuple, list)) else stock_sym_row.get("symbol")) if stock_sym_row else None
+    raw_symbol = ticker_sym  # preserve original symbol before yf resolution
     if ticker_sym:
         ticker_sym = _resolve_yf_ticker(ticker_sym, current_user.user_id)
         _kw = ticker_sym.upper().endswith(".KW")
@@ -4268,6 +4687,14 @@ async def get_valuation_defaults(
             # ── WACC components ──────────────────────────────────
             info = tk.info or {}
             beta = info.get("beta")
+
+            # For Kuwait stocks, prefer beta from stockanalysis.com
+            # (yfinance often has unreliable beta for KW tickers)
+            if _kw and raw_symbol:
+                sa_beta = _fetch_beta_from_stockanalysis(raw_symbol.replace(".KW", "").upper())
+                if sa_beta is not None:
+                    beta = sa_beta
+
             market_cap = info.get("marketCap")
             yf_total_debt = info.get("totalDebt")
             interest_expense = info.get("interestExpense")  # annual
@@ -4291,6 +4718,9 @@ async def get_valuation_defaults(
             tax_rate = None
             if income_before_tax and income_tax and income_before_tax > 0:
                 tax_rate = round(abs(float(income_tax)) / float(income_before_tax), 4)
+            # Fallback: compute tax rate from user's uploaded income statements
+            if tax_rate is None:
+                tax_rate = _compute_tax_rate_from_statements(stock_id, current_user.user_id)
 
             # Weights
             weight_equity = None

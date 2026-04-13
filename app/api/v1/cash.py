@@ -155,9 +155,11 @@ async def create_deposit(
 
     # Recalculate portfolio cash — deposit_delta ensures manual overrides
     # are incremented by the deposit amount instead of being skipped.
+    # Withdrawals subtract from cash, deposits add.
+    effective_delta = -dep.amount if dep.source == "withdrawal" else dep.amount
     svc = PortfolioService(current_user.user_id)
     svc.recalc_portfolio_cash(
-        deposit_delta=dep.amount, delta_portfolio=dep.portfolio,
+        deposit_delta=effective_delta, delta_portfolio=dep.portfolio,
     )
 
     # Return fresh overview totals so frontend can update immediately
@@ -188,9 +190,9 @@ async def update_deposit(
     current_user: TokenData = Depends(get_current_user),
 ):
     """Update a cash deposit."""
-    # Read old amount + portfolio to compute delta for manual-override update
+    # Read old amount, portfolio, and source to compute delta for manual-override update
     old_row = query_one(
-        "SELECT id, amount, portfolio FROM cash_deposits WHERE id = ? AND user_id = ? AND COALESCE(is_deleted, 0) = 0",
+        "SELECT id, amount, portfolio, source FROM cash_deposits WHERE id = ? AND user_id = ? AND COALESCE(is_deleted, 0) = 0",
         (deposit_id, current_user.user_id),
     )
     if not old_row:
@@ -198,6 +200,7 @@ async def update_deposit(
 
     old_amount = float(old_row["amount"] or 0)
     old_portfolio = old_row["portfolio"]
+    old_source = (old_row.get("source") or "deposit").lower()
 
     updates = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
     if not updates:
@@ -213,6 +216,7 @@ async def update_deposit(
 
     new_amount = float(updates.get("amount", old_amount))
     new_portfolio = updates.get("portfolio", old_portfolio)
+    new_source = (updates.get("source", old_source) or "deposit").lower()
 
     log_event(
         CASH_UPDATE,
@@ -223,16 +227,20 @@ async def update_deposit(
         request=request,
     )
 
+    # Compute effective cash amounts (withdrawals are negative)
+    old_effective = -old_amount if old_source == "withdrawal" else old_amount
+    new_effective = -new_amount if new_source == "withdrawal" else new_amount
+
     # Recalculate portfolio cash — pass delta so manual overrides are updated
     svc = PortfolioService(current_user.user_id)
     if old_portfolio != new_portfolio:
-        # Portfolio changed: subtract from old, add to new
-        svc.recalc_portfolio_cash(deposit_delta=-old_amount, delta_portfolio=old_portfolio)
-        svc.recalc_portfolio_cash(deposit_delta=new_amount, delta_portfolio=new_portfolio)
+        # Portfolio changed: reverse old effect, apply new effect
+        svc.recalc_portfolio_cash(deposit_delta=-old_effective, delta_portfolio=old_portfolio)
+        svc.recalc_portfolio_cash(deposit_delta=new_effective, delta_portfolio=new_portfolio)
     else:
-        # Same portfolio: delta = new_amount - old_amount
+        # Same portfolio: delta = new effective - old effective
         svc.recalc_portfolio_cash(
-            deposit_delta=new_amount - old_amount, delta_portfolio=new_portfolio,
+            deposit_delta=new_effective - old_effective, delta_portfolio=new_portfolio,
         )
 
     # Return fresh overview totals so frontend can update immediately
@@ -269,7 +277,7 @@ async def delete_deposit(
     """Soft-delete a cash deposit."""
     # Read amount + portfolio before deleting so we can subtract from manual override
     existing = query_one(
-        "SELECT id, amount, portfolio FROM cash_deposits WHERE id = ? AND user_id = ? AND COALESCE(is_deleted, 0) = 0",
+        "SELECT id, amount, portfolio, source FROM cash_deposits WHERE id = ? AND user_id = ? AND COALESCE(is_deleted, 0) = 0",
         (deposit_id, current_user.user_id),
     )
     if not existing:
@@ -277,6 +285,7 @@ async def delete_deposit(
 
     del_amount = float(existing["amount"] or 0)
     del_portfolio = existing["portfolio"]
+    del_source = (existing.get("source") or "deposit").lower()
 
     now = int(time.time())
     exec_sql(
@@ -292,10 +301,12 @@ async def delete_deposit(
         request=request,
     )
 
-    # Recalculate portfolio cash — subtract deleted amount from manual override
+    # Recalculate portfolio cash — reverse the effect of the deleted record.
+    # Deleting a deposit subtracts; deleting a withdrawal adds back.
+    del_delta = del_amount if del_source == "withdrawal" else -del_amount
     svc = PortfolioService(current_user.user_id)
     svc.recalc_portfolio_cash(
-        deposit_delta=-del_amount, delta_portfolio=del_portfolio,
+        deposit_delta=del_delta, delta_portfolio=del_portfolio,
     )
 
     # Return fresh overview totals so frontend can update immediately
@@ -330,9 +341,9 @@ async def restore_deposit(
     current_user: TokenData = Depends(get_current_user),
 ):
     """Restore a soft-deleted deposit."""
-    # Read amount + portfolio so we can add back to manual override
+    # Read amount, portfolio, and source so we can add back to manual override
     existing = query_one(
-        "SELECT id, amount, portfolio FROM cash_deposits WHERE id = ? AND user_id = ? AND is_deleted = 1",
+        "SELECT id, amount, portfolio, source FROM cash_deposits WHERE id = ? AND user_id = ? AND is_deleted = 1",
         (deposit_id, current_user.user_id),
     )
     if not existing:
@@ -340,6 +351,7 @@ async def restore_deposit(
 
     restore_amount = float(existing["amount"] or 0)
     restore_portfolio = existing["portfolio"]
+    restore_source = (existing.get("source") or "deposit").lower()
 
     exec_sql(
         "UPDATE cash_deposits SET is_deleted = 0, deleted_at = NULL WHERE id = ? AND user_id = ?",
@@ -354,10 +366,12 @@ async def restore_deposit(
         request=request,
     )
 
-    # Recalculate portfolio cash — add restored amount back to manual override
+    # Recalculate portfolio cash — restore the effect of the record.
+    # Restoring a deposit adds; restoring a withdrawal subtracts.
+    restore_delta = -restore_amount if restore_source == "withdrawal" else restore_amount
     svc = PortfolioService(current_user.user_id)
     svc.recalc_portfolio_cash(
-        deposit_delta=restore_amount, delta_portfolio=restore_portfolio,
+        deposit_delta=restore_delta, delta_portfolio=restore_portfolio,
     )
 
     # Return fresh overview totals so frontend can update immediately

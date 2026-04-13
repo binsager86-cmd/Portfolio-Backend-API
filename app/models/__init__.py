@@ -23,6 +23,7 @@ from app.models.snapshot import (
     StocksMaster,
 )
 from app.models.audit import AuditLog, TokenBlacklist
+from app.models.news import NewsArticle
 
 __all__ = [
     "User",
@@ -44,4 +45,5 @@ __all__ = [
     "StocksMaster",
     "AuditLog",
     "TokenBlacklist",
+    "NewsArticle",
 ]

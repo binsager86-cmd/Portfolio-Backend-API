@@ -32,6 +32,7 @@ from app.services.portfolio_service import (
 from app.services.fx_service import PORTFOLIO_CCY, get_usd_kwd_rate, convert_to_kwd
 from app.services.audit_service import (
     log_event, TXN_CREATE, TXN_UPDATE, TXN_DELETE, TXN_RESTORE,
+    ADMIN_ACTION,
 )
 from app.schemas.portfolio import TransactionCreate, TransactionUpdate
 
@@ -720,3 +721,73 @@ async def holdings_export(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="holdings_{today}.xlsx"'},
     )
+
+
+# ── Reset Account (delete all data) ─────────────────────────────────
+
+@router.post("/reset-account")
+async def reset_account(
+    request: Request,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """
+    Hard-delete ALL portfolio data for the current user, essentially
+    resetting the account to a fresh state.  The user record itself
+    is preserved so they can log in again.
+
+    Tables cleared (in dependency order):
+      pfm_assets, pfm_liabilities, pfm_income_expenses, pfm_snapshots,
+      position_snapshots, portfolio_snapshots, portfolio_cash,
+      portfolio_transactions, ledger_entries, external_accounts,
+      cash_deposits, transactions, stocks, portfolios, user_settings,
+      securities_master, security_aliases
+    """
+    uid = current_user.user_id
+
+    # Order matters: child rows first to avoid FK issues if any exist
+    tables = [
+        "pfm_assets",
+        "pfm_liabilities",
+        "pfm_income_expenses",
+        "pfm_snapshots",
+        "position_snapshots",
+        "portfolio_snapshots",
+        "portfolio_cash",
+        "portfolio_transactions",
+        "ledger_entries",
+        "external_accounts",
+        "cash_deposits",
+        "transactions",
+        "stocks",
+        "portfolios",
+        "user_settings",
+        "securities_master",
+        "security_aliases",
+    ]
+
+    deleted = {}
+    for table in tables:
+        try:
+            exec_sql(f"DELETE FROM {table} WHERE user_id = ?", (uid,))
+            deleted[table] = "cleared"
+        except Exception as exc:
+            logger.warning("reset-account: could not clear %s: %s", table, exc)
+            deleted[table] = "skipped"
+
+    log_event(
+        ADMIN_ACTION,
+        user_id=uid,
+        resource_type="account",
+        details={"action": "reset_account", "deleted": deleted},
+        request=request,
+    )
+
+    logger.info("🗑️  Account reset for user %s — %s", uid, deleted)
+
+    return {
+        "status": "ok",
+        "data": {
+            "message": "Account reset successfully",
+            "deleted": deleted,
+        },
+    }

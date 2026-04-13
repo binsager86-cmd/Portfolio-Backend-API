@@ -351,8 +351,7 @@ class PortfolioService:
 
             yield_pct = (cash_div / total_cost) if total_cost > 0 else 0.0
             total_pnl = round(unreal + realized_pnl + cash_div, 3)
-            denom = total_cost + abs(realized_pnl)
-            pnl_pct = (total_pnl / denom) if denom > 0 else 0.0
+            pnl_pct = (total_pnl / total_cost) if total_cost > 0 else 0.0
 
             display_name = meta.get("name") or sym
 
@@ -450,7 +449,11 @@ class PortfolioService:
             agg_sql = """
                 SELECT portfolio, SUM(net_change) AS total_change
                 FROM (
-                    SELECT portfolio, COALESCE(amount,0) AS net_change
+                    SELECT portfolio,
+                           CASE WHEN LOWER(COALESCE(source,'deposit')) = 'withdrawal'
+                                THEN -1 * COALESCE(amount,0)
+                                ELSE COALESCE(amount,0)
+                           END AS net_change
                     FROM cash_deposits
                     WHERE user_id = ?
                       AND COALESCE(include_in_analysis,1) = 1
@@ -758,8 +761,8 @@ class PortfolioService:
             # --- Deposits per portfolio (from cash_deposits) ---
             dep_sql = """
                 SELECT portfolio,
-                       COALESCE(SUM(CASE WHEN amount >= 0 THEN amount ELSE 0 END), 0) AS deposits,
-                       COALESCE(SUM(CASE WHEN amount <  0 THEN ABS(amount) ELSE 0 END), 0) AS withdrawals
+                       COALESCE(SUM(CASE WHEN LOWER(COALESCE(source,'deposit')) != 'withdrawal' THEN amount ELSE 0 END), 0) AS deposits,
+                       COALESCE(SUM(CASE WHEN LOWER(COALESCE(source,'deposit')) = 'withdrawal' THEN amount ELSE 0 END), 0) AS withdrawals
                 FROM cash_deposits
                 WHERE user_id = ?
                   AND COALESCE(include_in_analysis, 1) = 1

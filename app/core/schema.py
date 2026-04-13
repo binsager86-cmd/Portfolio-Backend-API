@@ -361,6 +361,10 @@ def ensure_all_tables() -> None:
                 created_at      INTEGER
             )
         """)
+        # Backfill columns added after initial schema
+        add_column_if_missing("pfm_snapshots", "total_assets", "REAL DEFAULT 0")
+        add_column_if_missing("pfm_snapshots", "total_liabilities", "REAL DEFAULT 0")
+        add_column_if_missing("pfm_snapshots", "net_worth", "REAL DEFAULT 0")
         logger.info("✅  PFM tables ensured")
     except Exception as e:
         logger.warning("⚠️  PFM tables creation skipped: %s", e)
@@ -439,7 +443,63 @@ def ensure_all_tables() -> None:
     except Exception as e:
         logger.warning("⚠️  Supplementary tables creation skipped: %s", e)
 
-    # ── 13. Additive column migrations ───────────────────────────────
+    # ── 13. News Articles ────────────────────────────────────────────
+    try:
+        exec_sql(f"""
+            CREATE TABLE IF NOT EXISTS news_articles (
+                id              {PK},
+                news_id         TEXT UNIQUE NOT NULL,
+                title           TEXT NOT NULL,
+                summary         TEXT,
+                source          TEXT NOT NULL DEFAULT 'boursa_kuwait',
+                category        TEXT NOT NULL DEFAULT 'company_announcement',
+                published_at    TIMESTAMP NOT NULL,
+                url             TEXT,
+                related_symbols TEXT,
+                sentiment       TEXT NOT NULL DEFAULT 'neutral',
+                impact          TEXT NOT NULL DEFAULT 'informational',
+                language        TEXT NOT NULL DEFAULT 'en',
+                is_verified     INTEGER NOT NULL DEFAULT 1,
+                attachments_json TEXT,
+                fetched_at      TIMESTAMP NOT NULL
+            )
+        """)
+        logger.info("✅  news_articles table ensured")
+    except Exception as e:
+        logger.warning("⚠️  news_articles table creation skipped: %s", e)
+
+    # ── 14. Market Data Cache ────────────────────────────────────────
+    try:
+        exec_sql(f"""
+            CREATE TABLE IF NOT EXISTS market_data (
+                id              {PK},
+                trade_date      TEXT NOT NULL,
+                data_json       TEXT NOT NULL,
+                fetched_at      INTEGER NOT NULL,
+                UNIQUE(trade_date)
+            )
+        """)
+        logger.info("✅  market_data table ensured")
+    except Exception as e:
+        logger.warning("⚠️  market_data table creation skipped: %s", e)
+
+    # ── 15. Push Tokens (Expo push notification tokens) ──────────────
+    try:
+        exec_sql(f"""
+            CREATE TABLE IF NOT EXISTS push_tokens (
+                id              {PK},
+                user_id         INTEGER NOT NULL,
+                token           TEXT UNIQUE NOT NULL,
+                platform        TEXT NOT NULL DEFAULT 'unknown',
+                created_at      TIMESTAMP NOT NULL,
+                updated_at      TIMESTAMP NOT NULL
+            )
+        """)
+        logger.info("✅  push_tokens table ensured")
+    except Exception as e:
+        logger.warning("⚠️  push_tokens table creation skipped: %s", e)
+
+    # ── 16. Additive column migrations ───────────────────────────────
     try:
         # -- users --
         add_column_if_missing("users", "failed_login_attempts", "INTEGER DEFAULT 0")
@@ -448,6 +508,9 @@ def ensure_all_tables() -> None:
         add_column_if_missing("users", "email", "TEXT")
         add_column_if_missing("users", "google_sub", "TEXT")
         add_column_if_missing("users", "is_admin", "INTEGER DEFAULT 0")
+
+        # -- ensure "Admin" user has admin privileges --
+        exec_sql("UPDATE users SET is_admin = 1 WHERE username = 'Admin' AND COALESCE(is_admin, 0) = 0")
 
         # -- stocks --
         add_column_if_missing("stocks", "yf_ticker", "TEXT")
@@ -478,12 +541,22 @@ def ensure_all_tables() -> None:
     except Exception as e:
         logger.warning("⚠️  Additive column migrations skipped: %s", e)
 
-    # ── 14. PostgreSQL: drop stale NOT NULL constraints ──────────────
+    # ── 17. PostgreSQL: drop stale NOT NULL constraints ──────────────
     # Production PG tables may have been created with older schemas that
     # used NOT NULL on columns now expected to be nullable.  SQLite has
     # no ALTER COLUMN, so this block is PG-only.
     if settings.use_postgres:
         _drop_stale_not_null_constraints()
+
+    # ── 18. Production indexes ───────────────────────────────────────
+    # PostgreSQL does NOT auto-index foreign-key columns.  These indexes
+    # ensure common query patterns are fast on both SQLite and PG.
+    _ensure_indexes()
+
+    # ── 19. PostgreSQL: upgrade REAL → DOUBLE PRECISION ──────────────
+    # PG REAL is 4-byte (~7 digits); financial data needs 8-byte (~15).
+    if settings.use_postgres:
+        _upgrade_real_to_float8()
 
     logger.info("🏁  Schema initialization complete — all tables ensured")
 
@@ -533,3 +606,122 @@ def _drop_stale_not_null_constraints() -> None:
             except Exception:
                 pass  # column already nullable or doesn't exist — fine
     logger.info("✅  PostgreSQL NOT NULL constraints relaxed on optional columns")
+
+
+def _ensure_indexes() -> None:
+    """Create performance indexes for production workloads.
+
+    PostgreSQL does NOT auto-index foreign-key columns.  These indexes
+    ensure common query patterns (filter by user_id, date, symbol) are
+    fast on both SQLite and PostgreSQL.
+    """
+    indexes = [
+        # Auth & users
+        ("idx_token_bl_user",        "token_blacklist",        "user_id"),
+        ("idx_audit_user",           "audit_log",              "user_id"),
+        ("idx_audit_created",        "audit_log",              "created_at"),
+        # Portfolios
+        ("idx_portfolios_user",      "portfolios",             "user_id"),
+        # Stocks
+        ("idx_stocks_user",          "stocks",                 "user_id"),
+        ("idx_stocks_symbol",        "stocks",                 "symbol"),
+        # Transactions
+        ("idx_txn_user",             "transactions",           "user_id"),
+        ("idx_txn_symbol",           "transactions",           "stock_symbol"),
+        ("idx_txn_user_ptf",         "transactions",           "user_id, portfolio"),
+        ("idx_txn_date",             "transactions",           "txn_date"),
+        # Cash deposits
+        ("idx_cashdep_user",         "cash_deposits",          "user_id"),
+        ("idx_cashdep_user_ptf",     "cash_deposits",          "user_id, portfolio"),
+        # Portfolio cash
+        ("idx_ptfcash_user",         "portfolio_cash",         "user_id"),
+        # Portfolio snapshots
+        ("idx_snap_user",            "portfolio_snapshots",    "user_id"),
+        ("idx_snap_date",            "portfolio_snapshots",    "snapshot_date"),
+        ("idx_snap_user_date",       "portfolio_snapshots",    "user_id, snapshot_date"),
+        # Position snapshots
+        ("idx_possn_user",           "position_snapshots",     "user_id"),
+        ("idx_possn_symbol",         "position_snapshots",     "stock_symbol"),
+        ("idx_possn_date",           "position_snapshots",     "snapshot_date"),
+        # Securities
+        ("idx_secmaster_user",       "securities_master",      "user_id"),
+        ("idx_secalias_secid",       "security_aliases",       "security_id"),
+        # PFM
+        ("idx_pfmsnap_user",         "pfm_snapshots",          "user_id"),
+        ("idx_pfmasset_snap",        "pfm_assets",             "snapshot_id"),
+        ("idx_pfmliab_snap",         "pfm_liabilities",        "snapshot_id"),
+        ("idx_pfminc_snap",          "pfm_income_expenses",    "snapshot_id"),
+        # News
+        ("idx_news_published",       "news_articles",          "published_at"),
+        ("idx_news_category",        "news_articles",          "category"),
+        # Push tokens
+        ("idx_pushtok_user",         "push_tokens",            "user_id"),
+        # External accounts & portfolio transactions
+        ("idx_extacc_user",          "external_accounts",      "user_id"),
+        ("idx_ptxn_user",            "portfolio_transactions", "user_id"),
+        ("idx_ptxn_ptf",             "portfolio_transactions", "portfolio_id"),
+        ("idx_ptxn_date",            "portfolio_transactions", "txn_date"),
+    ]
+
+    for idx_name, table, columns in indexes:
+        try:
+            exec_sql(
+                f"CREATE INDEX IF NOT EXISTS {idx_name} ON {table} ({columns})"
+            )
+        except Exception:
+            pass  # table may not exist yet on partial schema
+    logger.info("✅  Production indexes ensured")
+
+
+def _upgrade_real_to_float8() -> None:
+    """Upgrade REAL (4-byte) columns to DOUBLE PRECISION (8-byte) on PG.
+
+    PostgreSQL REAL is only 4-byte (~7 significant digits).  For financial
+    data (portfolio values, costs, prices) DOUBLE PRECISION (8-byte, ~15
+    digits) provides the accuracy needed in production.
+
+    Idempotent — running on an already-upgraded column is harmless.
+    """
+    upgrades: dict[str, list[str]] = {
+        "stocks": ["current_price", "market_cap"],
+        "transactions": [
+            "shares", "purchase_cost", "sell_value", "bonus_shares",
+            "cash_dividend", "reinvested_dividend", "fees",
+            "price_override", "planned_cum_shares", "fx_rate_at_txn",
+            "avg_cost_at_txn", "realized_pnl_at_txn",
+            "cost_basis_at_txn", "shares_held_at_txn",
+        ],
+        "cash_deposits": ["amount", "fx_rate_at_deposit"],
+        "portfolio_cash": ["balance"],
+        "portfolio_snapshots": [
+            "portfolio_value", "daily_movement", "beginning_difference",
+            "deposit_cash", "accumulated_cash", "net_gain",
+            "change_percent", "roi_percent", "twr_percent", "mwrr_percent",
+        ],
+        "position_snapshots": [
+            "total_shares", "total_cost", "avg_cost",
+            "realized_pnl", "cash_dividends_received",
+        ],
+        "pfm_snapshots": ["total_assets", "total_liabilities", "net_worth"],
+        "pfm_assets": ["quantity", "price", "value_kwd"],
+        "pfm_liabilities": ["amount_kwd"],
+        "pfm_income_expenses": ["monthly_amount"],
+        "external_accounts": ["current_balance"],
+        "portfolio_transactions": [
+            "amount", "shares", "price_per_share", "fees", "fx_rate",
+        ],
+        "ledger_entries": [
+            "quantity", "price_per_unit", "total_value", "fees",
+        ],
+    }
+
+    for table, cols in upgrades.items():
+        for col in cols:
+            try:
+                exec_sql(
+                    f'ALTER TABLE "{table}" ALTER COLUMN "{col}" '
+                    f"TYPE DOUBLE PRECISION"
+                )
+            except Exception:
+                pass  # column doesn't exist or already correct type
+    logger.info("✅  PostgreSQL REAL → DOUBLE PRECISION upgrade applied")

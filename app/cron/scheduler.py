@@ -23,9 +23,13 @@ _scheduler = None
 _lock_fd = None  # file descriptor for cross-worker lock
 
 
-def _run_daily_price_then_snapshot(user_id: int = 1) -> dict:
+def _run_daily_price_then_snapshot(user_id: int | None = None) -> dict:
     """
     Combined daily job: refresh prices, then save snapshot.
+
+    If *user_id* is None (the default for the scheduler), runs for
+    **every** user that has at least one stock — so all users benefit
+    from the automated daily update.
 
     By running both in a single job we guarantee ordering
     (snapshot always uses the freshest prices).
@@ -33,12 +37,28 @@ def _run_daily_price_then_snapshot(user_id: int = 1) -> dict:
     so the /status endpoint reflects the last scheduler run.
     """
     import time
+    from app.core.database import query_all
     from app.cron.price_updater import run_price_update
     from app.cron.snapshot_saver import run_snapshot_save
 
-    price_result = run_price_update(user_id=user_id)
+    # Determine which users to process
+    if user_id is not None:
+        user_ids = [user_id]
+    else:
+        rows = query_all(
+            "SELECT DISTINCT user_id FROM stocks WHERE symbol IS NOT NULL AND symbol != ''"
+        )
+        user_ids = [int(r[0]) for r in rows] if rows else [1]
+        logger.info("🔄 Scheduler: updating prices for %d user(s): %s", len(user_ids), user_ids)
 
-    snapshot_result = run_snapshot_save(user_id=user_id)
+    all_price_results = {}
+    all_snapshot_results = {}
+
+    for uid in user_ids:
+        price_result = run_price_update(user_id=uid)
+        snapshot_result = run_snapshot_save(user_id=uid)
+        all_price_results[uid] = price_result
+        all_snapshot_results[uid] = snapshot_result
 
     # Update the cron API status tracking so /status shows scheduler runs
     try:
@@ -46,17 +66,22 @@ def _run_daily_price_then_snapshot(user_id: int = 1) -> dict:
         _last_run.update({
             "timestamp": int(time.time()),
             "source": "scheduler",
-            "result": price_result.to_dict() if hasattr(price_result, "to_dict") else price_result,
+            "user_ids": user_ids,
+            "result": {
+                uid: r.to_dict() if hasattr(r, "to_dict") else r
+                for uid, r in all_price_results.items()
+            },
         })
         _last_snapshot_run.update({
             "timestamp": int(time.time()),
             "source": "scheduler",
-            "result": snapshot_result,
+            "user_ids": user_ids,
+            "result": all_snapshot_results,
         })
     except Exception:
         pass  # non-critical — don't let tracking break the job
 
-    return {"price": price_result, "snapshot": snapshot_result}
+    return {"price": all_price_results, "snapshot": all_snapshot_results}
 
 
 def _acquire_scheduler_lock() -> bool:
@@ -132,6 +157,14 @@ def start_scheduler() -> None:
     except Exception as exc:
         logger.warning("Could not schedule stale-job sweep: %s", exc)
 
+    # ── News polling (adaptive: 15s market hours / 5m off-hours) ───
+    try:
+        from app.cron.news_poller import start_news_poller
+        start_news_poller()
+        logger.info("📰 Adaptive news poller started (15s market / 5m off-hours)")
+    except Exception as exc:
+        logger.warning("Could not start news poller: %s", exc)
+
     # ── Daily price update + snapshot save ────────────────────────
     if settings.PRICE_UPDATE_ENABLED:
         price_trigger = CronTrigger(
@@ -159,8 +192,14 @@ def start_scheduler() -> None:
 
 
 def stop_scheduler() -> None:
-    """Gracefully shut down the scheduler and release the lock."""
+    """Gracefully shut down the scheduler, news poller, and release the lock."""
     global _scheduler, _lock_fd
+    # Stop news poller thread
+    try:
+        from app.cron.news_poller import stop_news_poller
+        stop_news_poller()
+    except Exception:
+        pass
     if _scheduler is not None:
         _scheduler.shutdown(wait=False)
         logger.info("🕐 Price scheduler stopped")

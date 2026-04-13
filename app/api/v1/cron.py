@@ -11,6 +11,7 @@ from typing import Optional
 from fastapi import APIRouter, Header, Query, HTTPException
 
 from app.core.config import get_settings
+from app.core.database import query_all
 from app.services.price_service import update_all_prices
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,20 @@ router = APIRouter(prefix="/cron", tags=["Cron / Scheduler"])
 # ── In-memory last-run tracking ──────────────────────────────────────
 _last_run: dict = {}
 _last_snapshot_run: dict = {}
+
+
+def _resolve_user_ids(user_id: int) -> list[int]:
+    """Return a list of user IDs to process.
+
+    ``user_id=0`` means **all users** that have at least one stock.
+    Any positive value means just that single user.
+    """
+    if user_id > 0:
+        return [user_id]
+    rows = query_all(
+        "SELECT DISTINCT user_id FROM stocks WHERE symbol IS NOT NULL AND symbol != ''"
+    )
+    return [int(r[0]) for r in rows] if rows else [1]
 
 
 def _verify_cron_key(
@@ -43,28 +58,39 @@ def _verify_cron_key(
 async def trigger_price_update(
     x_cron_key: Optional[str] = Header(None, alias="X-Cron-Key"),
     key: Optional[str] = Query(None),
-    user_id: int = Query(1, description="User whose stocks to update"),
+    user_id: int = Query(0, description="User whose stocks to update (0 = all users)"),
     only_holdings: bool = Query(True, description="Only update stocks with positive holdings"),
 ):
     """
     Trigger a full price refresh.
 
     Pass CRON_SECRET_KEY as Header ``X-Cron-Key`` or query ``?key=``.
+    Use ``user_id=0`` (default) to update prices for **all** users.
     """
     _verify_cron_key(x_cron_key, key)
 
-    logger.info("🚀 Price update triggered (user_id=%d)", user_id)
-    result = update_all_prices(user_id=user_id, only_with_holdings=only_holdings)
+    user_ids = _resolve_user_ids(user_id)
+    logger.info("🚀 Price update triggered for user_ids=%s", user_ids)
+
+    all_results = {}
+    total_updated = 0
+    total_found = 0
+    for uid in user_ids:
+        result = update_all_prices(user_id=uid, only_with_holdings=only_holdings)
+        all_results[uid] = result.to_dict()
+        total_updated += result.updated
+        total_found += result.stocks_found
 
     _last_run.update({
         "timestamp": int(time.time()),
-        "result": result.to_dict(),
+        "user_ids": user_ids,
+        "result": all_results,
     })
 
     return {
         "status": "ok",
-        "message": f"Updated {result.updated}/{result.stocks_found} prices in {result.elapsed_sec:.1f}s",
-        "data": result.to_dict(),
+        "message": f"Updated {total_updated}/{total_found} prices across {len(user_ids)} user(s)",
+        "data": all_results,
     }
 
 
@@ -85,64 +111,95 @@ async def cron_status():
 async def trigger_snapshot_save(
     x_cron_key: Optional[str] = Header(None, alias="X-Cron-Key"),
     key: Optional[str] = Query(None),
-    user_id: int = Query(1, description="User whose snapshot to save"),
+    user_id: int = Query(0, description="User whose snapshot to save (0 = all users)"),
 ):
     """
     Trigger a portfolio snapshot save (same as the Save Snapshot button).
 
     Pass CRON_SECRET_KEY as Header ``X-Cron-Key`` or query ``?key=``.
+    Use ``user_id=0`` (default) to save snapshots for **all** users.
     """
     _verify_cron_key(x_cron_key, key)
 
     from app.cron.snapshot_saver import run_snapshot_save
 
-    logger.info("📸 Snapshot save triggered via API (user_id=%d)", user_id)
-    result = run_snapshot_save(user_id=user_id)
+    user_ids = _resolve_user_ids(user_id)
+    logger.info("📸 Snapshot save triggered via API for user_ids=%s", user_ids)
 
-    _last_snapshot_run.update(result)
+    all_results = {}
+    for uid in user_ids:
+        all_results[uid] = run_snapshot_save(user_id=uid)
 
-    if result.get("success"):
+    _last_snapshot_run.update({
+        "timestamp": int(time.time()),
+        "user_ids": user_ids,
+        "result": all_results,
+    })
+
+    failures = [uid for uid, r in all_results.items() if not r.get("success")]
+    if failures:
         return {
-            "status": "ok",
-            "message": f"Snapshot {result.get('action', 'saved')} for {result.get('snapshot_date')} — value: {result.get('portfolio_value', 0):.3f} KWD",
-            "data": result,
+            "status": "partial" if len(failures) < len(user_ids) else "error",
+            "message": f"Snapshot save failed for user(s): {failures}",
+            "data": all_results,
         }
-    else:
-        raise HTTPException(status_code=500, detail=result.get("error", "Snapshot save failed"))
+    return {
+        "status": "ok",
+        "message": f"Snapshots saved for {len(user_ids)} user(s)",
+        "data": all_results,
+    }
 
 
 @router.post("/update-prices-and-snapshot")
 async def trigger_price_update_and_snapshot(
     x_cron_key: Optional[str] = Header(None, alias="X-Cron-Key"),
     key: Optional[str] = Query(None),
-    user_id: int = Query(1, description="User whose stocks to update and snapshot to save"),
+    user_id: int = Query(0, description="User whose stocks to update and snapshot to save (0 = all users)"),
 ):
     """
     Trigger a full price refresh followed by a snapshot save.
 
     This is the same as the daily scheduled job — useful for manual testing
     or external cron services.
+    Use ``user_id=0`` (default) to process **all** users.
     """
     _verify_cron_key(x_cron_key, key)
 
     from app.cron.snapshot_saver import run_snapshot_save
 
-    logger.info("🚀 Price update + snapshot triggered via API (user_id=%d)", user_id)
+    user_ids = _resolve_user_ids(user_id)
+    logger.info("🚀 Price update + snapshot triggered via API for user_ids=%s", user_ids)
 
-    price_result = update_all_prices(user_id=user_id)
+    all_price_results = {}
+    all_snapshot_results = {}
+    total_updated = 0
+    total_found = 0
+
+    for uid in user_ids:
+        price_result = update_all_prices(user_id=uid)
+        all_price_results[uid] = price_result.to_dict()
+        total_updated += price_result.updated
+        total_found += price_result.stocks_found
+
+        snapshot_result = run_snapshot_save(user_id=uid)
+        all_snapshot_results[uid] = snapshot_result
+
     _last_run.update({
         "timestamp": int(time.time()),
-        "result": price_result.to_dict(),
+        "user_ids": user_ids,
+        "result": all_price_results,
     })
-
-    snapshot_result = run_snapshot_save(user_id=user_id)
-    _last_snapshot_run.update(snapshot_result)
+    _last_snapshot_run.update({
+        "timestamp": int(time.time()),
+        "user_ids": user_ids,
+        "result": all_snapshot_results,
+    })
 
     return {
         "status": "ok",
-        "message": f"Prices updated ({price_result.updated}/{price_result.stocks_found}), snapshot {snapshot_result.get('action', 'saved')}",
+        "message": f"Prices updated ({total_updated}/{total_found}), snapshots saved for {len(user_ids)} user(s)",
         "data": {
-            "prices": price_result.to_dict(),
-            "snapshot": snapshot_result,
+            "prices": all_price_results,
+            "snapshots": all_snapshot_results,
         },
     }

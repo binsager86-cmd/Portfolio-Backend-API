@@ -116,7 +116,7 @@ class TransactionUpdate(BaseModel):
     stock_symbol: Optional[str] = Field(None, min_length=1, max_length=50)
     txn_date: Optional[str] = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$")
     txn_type: Optional[str] = None
-    shares: Optional[float] = Field(None, gt=0)
+    shares: Optional[float] = Field(None, ge=0)
     purchase_cost: Optional[float] = Field(None, ge=0)
     sell_value: Optional[float] = Field(None, ge=0)
     bonus_shares: Optional[float] = Field(None, ge=0)

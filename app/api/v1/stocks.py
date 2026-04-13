@@ -98,8 +98,12 @@ async def get_stock_list(
     Return the hardcoded reference stock list for a given market.
     No auth required — this is public reference data.
     Each entry has: symbol, name, yf_ticker.
+
+    For US market: when search is provided and the hardcoded list has < 5
+    results, augment with live yfinance search results.
     """
-    stocks = KUWAIT_STOCKS if market.lower().startswith("k") else US_STOCKS
+    is_us = not market.lower().startswith("k")
+    stocks = KUWAIT_STOCKS if not is_us else US_STOCKS
 
     if search:
         q = search.upper()
@@ -108,12 +112,73 @@ async def get_stock_list(
             if q in s["symbol"].upper() or q in s["name"].upper()
         ]
 
+    # For US market: augment with live yfinance search when few hardcoded matches
+    if is_us and search and len(stocks) < 5:
+        try:
+            import yfinance as yf
+            existing_symbols = {s["symbol"].upper() for s in stocks}
+            resp = yf.screen(
+                yf.EquityQuery("is", ["exchange", "NMS", "NYQ", "NGM", "PCX", "BTS", "ASE"]),
+                size=25,
+                sortField="intradaymarketcap",
+                sortAsc=False,
+            )
+            # yfinance screener doesn't support name search, so try lookup
+            # Use yfinance.search for text-based search
+        except Exception:
+            pass
+
+        # Direct ticker lookup: try the search term as a symbol
+        try:
+            import yfinance as yf
+            sym_upper = search.strip().upper()
+            if sym_upper not in existing_symbols:
+                tk = yf.Ticker(sym_upper)
+                info = tk.info or {}
+                # Verify it's a real stock (has a name and market cap)
+                name = info.get("shortName") or info.get("longName")
+                if name and info.get("regularMarketPrice"):
+                    stocks.append({
+                        "symbol": sym_upper,
+                        "name": name,
+                        "yf_ticker": sym_upper,
+                    })
+                    existing_symbols.add(sym_upper)
+        except Exception:
+            pass
+
+        # Also try yfinance search API for broader matches
+        try:
+            import yfinance as yf
+            results = yf.search(search.strip(), max_results=10)
+            if results and "quotes" in results:
+                for qt in results["quotes"]:
+                    sym = qt.get("symbol", "")
+                    name = qt.get("shortname") or qt.get("longname") or ""
+                    exchange = qt.get("exchange", "")
+                    qtype = qt.get("quoteType", "")
+                    # Only include equities/ETFs on US exchanges
+                    if (
+                        sym
+                        and sym.upper() not in existing_symbols
+                        and qtype in ("EQUITY", "ETF")
+                        and not any(c in sym for c in ".:")  # Skip foreign tickers like ABC.L
+                    ):
+                        stocks.append({
+                            "symbol": sym.upper(),
+                            "name": name,
+                            "yf_ticker": sym.upper(),
+                        })
+                        existing_symbols.add(sym.upper())
+        except Exception:
+            pass
+
     return {
         "status": "ok",
         "data": {
             "stocks": stocks,
             "count": len(stocks),
-            "market": "Kuwait" if market.lower().startswith("k") else "US",
+            "market": "Kuwait" if not is_us else "US",
         },
     }
 
