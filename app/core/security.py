@@ -71,6 +71,7 @@ class RefreshRequest(BaseModel):
 class RefreshResponse(BaseModel):
     """Returned by the token refresh endpoint."""
     access_token: str
+    refresh_token: Optional[str] = None
     token_type: str = "bearer"
     expires_in: int = _settings.JWT_EXPIRE_MINUTES * 60
 
