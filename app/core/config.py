@@ -10,7 +10,9 @@ from pydantic_settings import BaseSettings
 
 # Resolve project paths
 BASE_DIR = Path(__file__).resolve().parent.parent.parent  # backend-api/
-ENV_FILE = BASE_DIR / ".env"
+# Prefer .env, fall back to .env.production (deployed repos may lack .env)
+_env = BASE_DIR / ".env"
+ENV_FILE = _env if _env.exists() else BASE_DIR / ".env.production"
 
 
 class Settings(BaseSettings):
@@ -27,7 +29,7 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str = "change_this_to_a_random_string_before_production"
     JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRE_MINUTES: int = 30               # Short-lived access tokens (was 1440)
+    JWT_EXPIRE_MINUTES: int = 360              # Access tokens last 6 hours
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30        # Long-lived refresh tokens
     BCRYPT_ROUNDS: int = 12                    # bcrypt work factor
     LEGACY_PLAINTEXT_LOGIN: bool = False       # Allow plaintext password fallback (dev migration only)

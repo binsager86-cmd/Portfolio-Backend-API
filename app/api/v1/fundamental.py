@@ -6601,41 +6601,52 @@ def _fetch_yfinance_risk_data(symbol: str) -> Dict[str, float]:
     price-history-derived metrics.
     """
     import math
+    import signal
+    import threading
+
     _kw = symbol.upper().endswith(".KW")
     data: Dict[str, float] = {}
-    try:
-        import yfinance as yf
-        ticker = yf.Ticker(symbol)
-        info = ticker.info or {}
 
-        # Current price (only price gets /1000 for .KW)
-        price = info.get("currentPrice") or info.get("regularMarketPrice")
-        if price and price > 0:
-            price = float(price)
-            if _kw:
-                price = price / 1000.0
-            data["Current Price"] = round(price, 2)
+    def _fetch():
+        nonlocal data
+        try:
+            import yfinance as yf
+            ticker = yf.Ticker(symbol)
+            info = ticker.info or {}
 
-        # Beta
-        beta = info.get("beta")
-        if beta is not None:
-            data["Beta"] = float(beta)
+            # Current price (only price gets /1000 for .KW)
+            price = info.get("currentPrice") or info.get("regularMarketPrice")
+            if price and price > 0:
+                price = float(price)
+                if _kw:
+                    price = price / 1000.0
+                data["Current Price"] = round(price, 2)
 
-        # 1Y price history → volatility & max drawdown
-        hist = ticker.history(period="1y")
-        if hist is not None and not hist.empty and "Close" in hist.columns:
-            closes = hist["Close"].dropna()
-            if len(closes) > 20:
-                returns = closes.pct_change().dropna()
-                ann_vol = float(returns.std()) * math.sqrt(252)
-                data["1Y Volatility"] = round(ann_vol, 4)
+            # Beta
+            beta = info.get("beta")
+            if beta is not None:
+                data["Beta"] = float(beta)
 
-                # Max drawdown
-                cummax = closes.cummax()
-                drawdown = (closes - cummax) / cummax
-                data["Max Drawdown 1Y"] = round(float(drawdown.min()), 4)
-    except Exception:
-        pass  # yfinance failures are non-fatal
+            # 1Y price history → volatility & max drawdown
+            hist = ticker.history(period="1y")
+            if hist is not None and not hist.empty and "Close" in hist.columns:
+                closes = hist["Close"].dropna()
+                if len(closes) > 20:
+                    returns = closes.pct_change().dropna()
+                    ann_vol = float(returns.std()) * math.sqrt(252)
+                    data["1Y Volatility"] = round(ann_vol, 4)
+
+                    # Max drawdown
+                    cummax = closes.cummax()
+                    drawdown = (closes - cummax) / cummax
+                    data["Max Drawdown 1Y"] = round(float(drawdown.min()), 4)
+        except Exception:
+            pass  # yfinance failures are non-fatal
+
+    # Run with a 15-second timeout to avoid hanging the request
+    t = threading.Thread(target=_fetch, daemon=True)
+    t.start()
+    t.join(timeout=15)
     return data
 
 
