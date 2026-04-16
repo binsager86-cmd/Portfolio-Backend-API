@@ -4136,6 +4136,17 @@ async def get_metrics(
     _ensure_schema()
     _verify_stock_owner(stock_id, current_user.user_id)
 
+    # Auto-compute growth-derived metrics (CAGR, stability, trends) if missing
+    has_growth = query_val(
+        "SELECT COUNT(*) FROM stock_metrics WHERE stock_id = ? AND metric_type = 'growth' AND metric_name LIKE '%CAGR%'",
+        (stock_id,),
+    )
+    if not has_growth:
+        try:
+            _calculate_growth(stock_id)
+        except Exception:
+            pass
+
     if metric_type:
         df = query_df(
             """SELECT * FROM stock_metrics
@@ -4179,6 +4190,13 @@ async def calculate_metrics(
 
     if not results:
         raise BadRequestError("No line items found for that period. Upload statements first.")
+
+    # Also compute growth-derived metrics (CAGR, stability, margin trends)
+    # so they appear in the metrics table without requiring a separate Growth tab visit.
+    try:
+        _calculate_growth(stock_id)
+    except Exception:
+        pass  # non-fatal — per-period metrics already saved
 
     return {"status": "ok", "data": {"metrics": results}}
 
@@ -5960,11 +5978,19 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
             if target_fy in by_year and latest_fy in by_year:
                 start_val = by_year[target_fy]["amount"]
                 end_val = by_year[latest_fy]["amount"]
-                if start_val and start_val > 0 and end_val and end_val > 0:
+                # CAGR valid when both values are positive
+                if start_val and end_val and start_val > 0 and end_val > 0:
                     cagr = (end_val / start_val) ** (1.0 / n_years) - 1.0
                     metric_name = f"{metric_label} CAGR {n_years}Y"
                     _upsert_metric(stock_id, latest_fy, latest_pd,
                                    "growth", metric_name, round(cagr, 4))
+                # Handle negative-to-positive or positive-to-negative via
+                # simple annualised growth rate (not geometric CAGR)
+                elif start_val and end_val and start_val != 0:
+                    annualised = ((end_val - start_val) / abs(start_val)) / n_years
+                    metric_name = f"{metric_label} CAGR {n_years}Y"
+                    _upsert_metric(stock_id, latest_fy, latest_pd,
+                                   "growth", metric_name, round(annualised, 4))
 
     # ── C) Growth stability (stdev of YoY rates)
     for label_stub in ["Revenue Growth", "EPS Growth"]:
