@@ -461,8 +461,11 @@ async def change_password(
 
 def _ensure_api_key_column():
     """Additive migration: add gemini_api_key column if missing."""
-    if not column_exists("users", "gemini_api_key"):
-        exec_sql("ALTER TABLE users ADD COLUMN gemini_api_key TEXT DEFAULT ''")
+    try:
+        if not column_exists("users", "gemini_api_key"):
+            exec_sql("ALTER TABLE users ADD COLUMN gemini_api_key TEXT DEFAULT ''")
+    except Exception:
+        pass  # column may already exist from concurrent request or schema init
 
 
 class ApiKeyRequest(BaseModel):

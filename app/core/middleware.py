@@ -1,12 +1,16 @@
 """
-Security Middleware — hardens every HTTP response.
+Middleware — security headers, request size limits, correlation ID, timing.
 
 Includes:
   1. Security headers (CSP, HSTS, X-Frame-Options, etc.)
   2. Request body size limit (DoS prevention)
+  3. Correlation ID (X-Correlation-ID) for request tracing
+  4. Request timing (X-Response-Time-Ms)
 """
 
 import logging
+import time
+import uuid
 
 from fastapi import Request, Response, status
 from fastapi.responses import JSONResponse
@@ -108,3 +112,51 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
             )
 
         return await call_next(request)
+
+
+class CorrelationIDMiddleware(BaseHTTPMiddleware):
+    """
+    Generates a unique correlation ID for every request.
+
+    - Reuses X-Correlation-ID from the client if provided.
+    - Stores the ID in request.state for downstream access.
+    - Echoes it back in the response header.
+    """
+
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        cid = request.headers.get("x-correlation-id") or uuid.uuid4().hex[:16]
+        request.state.correlation_id = cid
+
+        response = await call_next(request)
+        response.headers["X-Correlation-ID"] = cid
+        return response
+
+
+class RequestTimingMiddleware(BaseHTTPMiddleware):
+    """
+    Measures request processing time and adds X-Response-Time-Ms header.
+    Logs slow requests (>1s) as warnings.
+    """
+
+    SLOW_THRESHOLD_MS = 1000
+
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        start = time.perf_counter()
+        response = await call_next(request)
+        elapsed_ms = (time.perf_counter() - start) * 1000
+
+        response.headers["X-Response-Time-Ms"] = f"{elapsed_ms:.1f}"
+
+        if elapsed_ms > self.SLOW_THRESHOLD_MS:
+            logger.warning(
+                "Slow request: %s %s took %.0fms",
+                request.method,
+                request.url.path,
+                elapsed_ms,
+            )
+
+        return response

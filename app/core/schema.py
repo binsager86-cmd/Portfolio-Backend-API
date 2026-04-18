@@ -10,7 +10,7 @@ Supports both SQLite (AUTOINCREMENT) and PostgreSQL (SERIAL).
 
 import logging
 from app.core.config import get_settings
-from app.core.database import exec_sql, add_column_if_missing
+from app.core.database import exec_sql, add_column_if_missing, query_one
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +107,9 @@ def ensure_all_tables() -> None:
                 market_cap          REAL,
                 sector              TEXT,
                 industry            TEXT,
-                yf_ticker           TEXT
+                yf_ticker           TEXT,
+                pe_ratio            REAL,
+                created_at          INTEGER
             )
         """)
         # Additive columns for stocks (may be missing from older schemas)
@@ -119,6 +121,8 @@ def ensure_all_tables() -> None:
             ("market_cap", "REAL"),
             ("sector", "TEXT"),
             ("industry", "TEXT"),
+            ("pe_ratio", "REAL"),
+            ("created_at", "INTEGER"),
         ]:
             add_column_if_missing("stocks", col, ctype)
         logger.info("✅  stocks table ensured")
@@ -167,6 +171,7 @@ def ensure_all_tables() -> None:
             ("realized_pnl_at_txn", "REAL"),
             ("cost_basis_at_txn", "REAL"),
             ("shares_held_at_txn", "REAL"),
+            ("source_reference", "TEXT"),
         ]:
             add_column_if_missing("transactions", col, ctype)
         logger.info("✅  transactions table ensured")
@@ -475,11 +480,37 @@ def ensure_all_tables() -> None:
                 id              {PK},
                 trade_date      TEXT NOT NULL,
                 data_json       TEXT NOT NULL,
-                fetched_at      INTEGER NOT NULL,
-                UNIQUE(trade_date)
+                fetched_at      INTEGER NOT NULL
             )
         """)
         logger.info("✅  market_data table ensured")
+
+        # Migrate: remove UNIQUE constraint on trade_date if present (allows multiple snapshots per day)
+        try:
+            row = query_one(
+                "SELECT sql FROM sqlite_master WHERE type='table' AND name='market_data'"
+            )
+            if row and "UNIQUE" in (row["sql"] or ""):
+                exec_sql("ALTER TABLE market_data RENAME TO market_data_old")
+                exec_sql(f"""
+                    CREATE TABLE market_data (
+                        id              {PK},
+                        trade_date      TEXT NOT NULL,
+                        data_json       TEXT NOT NULL,
+                        fetched_at      INTEGER NOT NULL
+                    )
+                """)
+                exec_sql("INSERT INTO market_data (trade_date, data_json, fetched_at) SELECT trade_date, data_json, fetched_at FROM market_data_old")
+                exec_sql("DROP TABLE market_data_old")
+                logger.info("✅  market_data: removed UNIQUE constraint on trade_date")
+        except Exception as mig_e:
+            logger.warning("⚠️  market_data migration skipped: %s", mig_e)
+
+        # Ensure index for efficient date-based queries
+        try:
+            exec_sql("CREATE INDEX IF NOT EXISTS idx_market_data_trade_date ON market_data(trade_date, fetched_at DESC)")
+        except Exception:
+            pass
     except Exception as e:
         logger.warning("⚠️  market_data table creation skipped: %s", e)
 
@@ -508,6 +539,7 @@ def ensure_all_tables() -> None:
         add_column_if_missing("users", "email", "TEXT")
         add_column_if_missing("users", "google_sub", "TEXT")
         add_column_if_missing("users", "is_admin", "INTEGER DEFAULT 0")
+        add_column_if_missing("users", "gemini_api_key", "TEXT DEFAULT ''")
 
         # -- ensure "Admin" user has admin privileges --
         exec_sql("UPDATE users SET is_admin = 1 WHERE username = 'Admin' AND COALESCE(is_admin, 0) = 0")

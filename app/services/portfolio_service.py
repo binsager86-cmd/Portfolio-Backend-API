@@ -34,43 +34,6 @@ from app.services.fx_service import (
 logger = logging.getLogger(__name__)
 
 
-# ── P/E Ratio Cache ──────────────────────────────────────────────────
-
-_pe_cache: Dict[str, Tuple[Optional[float], float]] = {}  # {yf_ticker: (pe, timestamp)}
-_PE_TTL = 3600 * 24  # 24-hour TTL
-
-
-def _fetch_pe_ratio(yf_ticker: str) -> Optional[float]:
-    """Fetch trailing P/E ratio for a single ticker with 24h in-memory cache."""
-    now = time.time()
-    if yf_ticker in _pe_cache:
-        pe, ts = _pe_cache[yf_ticker]
-        if now - ts < _PE_TTL:
-            return pe
-    try:
-        import yfinance as yf
-        t = yf.Ticker(yf_ticker)
-        info = t.info
-        pe = info.get("trailingPE") or info.get("forwardPE")
-        if pe is not None:
-            pe = round(float(pe), 2)
-        _pe_cache[yf_ticker] = (pe, now)
-        return pe
-    except Exception as exc:
-        logger.debug("P/E fetch failed for %s: %s", yf_ticker, exc)
-        _pe_cache[yf_ticker] = (None, now)
-        return None
-
-
-def _yahoo_symbol_from_meta(symbol: str, currency: str, yf_ticker: Optional[str] = None) -> str:
-    """Derive Yahoo Finance ticker from symbol + currency if yf_ticker not stored."""
-    if yf_ticker:
-        return yf_ticker
-    if currency == "KWD" and not symbol.endswith(".KW"):
-        return f"{symbol}.KW"
-    return symbol
-
-
 # ── Helpers ──────────────────────────────────────────────────────────
 
 def _soft_delete_filter(table_alias: str = "") -> str:
@@ -119,9 +82,9 @@ def compute_holdings_avg_cost(tx: pd.DataFrame) -> dict:
     cost = 0.0
     realized_pnl = 0.0
 
-    cash_div = float(t.get("cash_dividend", pd.Series([0])).fillna(0).sum())
-    bonus_total = float(t.get("bonus_shares", pd.Series([0])).fillna(0).sum())
-    reinv = float(t.get("reinvested_dividend", pd.Series([0])).fillna(0).sum())
+    cash_div = float(t.get("cash_dividend", pd.Series([0], dtype=float)).fillna(0).sum())
+    bonus_total = float(t.get("bonus_shares", pd.Series([0], dtype=float)).fillna(0).sum())
+    reinv = float(t.get("reinvested_dividend", pd.Series([0], dtype=float)).fillna(0).sum())
 
     for _, r in t.iterrows():
         typ = str(r.get("txn_type", ""))
@@ -283,8 +246,10 @@ class PortfolioService:
 
         # Fetch stock metadata
         stock_lookup: Dict[str, dict] = {}
+        has_pe_col = column_exists("stocks", "pe_ratio")
         if unique_symbols:
             ph = ",".join(["?" for _ in unique_symbols])
+            pe_select = ", pe_ratio" if has_pe_col else ""
             meta_df = query_df(
                 f"""
                 SELECT
@@ -294,7 +259,7 @@ class PortfolioService:
                     COALESCE(portfolio,'KFH')    AS portfolio,
                     COALESCE(currency,'KWD')     AS currency,
                     tradingview_symbol, tradingview_exchange,
-                    yf_ticker
+                    yf_ticker{pe_select}
                 FROM stocks
                 WHERE TRIM(symbol) IN ({ph}) AND user_id = ?
                 """,
@@ -308,6 +273,7 @@ class PortfolioService:
                         "portfolio": srow["portfolio"],
                         "currency": srow["currency"],
                         "yf_ticker": srow.get("yf_ticker") or None,
+                        "pe_ratio": srow.get("pe_ratio") or None,
                     }
 
         # Build rows per symbol
@@ -355,11 +321,8 @@ class PortfolioService:
 
             display_name = meta.get("name") or sym
 
-            # P/E ratio from yfinance (cached 24h)
-            yf_sym = _yahoo_symbol_from_meta(
-                sym, currency, meta.get("yf_ticker")
-            )
-            pe_ratio = _fetch_pe_ratio(yf_sym)
+            # P/E ratio from stocks table (updated with daily price refresh)
+            pe_ratio = meta.get("pe_ratio")
 
             mkt_val_kwd = convert_to_kwd(mkt_value, currency)
             unreal_kwd = convert_to_kwd(unreal, currency)

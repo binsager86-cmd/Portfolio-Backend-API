@@ -368,7 +368,7 @@ def get_market_data(force_refresh: bool = False) -> dict:
 
     if not force_refresh:
         row = query_one(
-            "SELECT data_json, fetched_at FROM market_data WHERE trade_date = ?",
+            "SELECT data_json, fetched_at FROM market_data WHERE trade_date = ? ORDER BY fetched_at DESC LIMIT 1",
             (today,),
         )
         if row:
@@ -383,14 +383,11 @@ def get_market_data(force_refresh: bool = False) -> dict:
         data["_fetched_at"] = int(time.time())
         data["_trade_date"] = today
 
-        # Upsert cache
+        # Append snapshot (preserve historical data)
         exec_sql(
             """
             INSERT INTO market_data (trade_date, data_json, fetched_at)
             VALUES (?, ?, ?)
-            ON CONFLICT(trade_date) DO UPDATE SET
-                data_json = excluded.data_json,
-                fetched_at = excluded.fetched_at
             """,
             (today, json.dumps(data), int(time.time())),
         )
@@ -401,7 +398,7 @@ def get_market_data(force_refresh: bool = False) -> dict:
         logger.error("Market data scrape failed: %s", e, exc_info=True)
         # Fall back to most recent cached data
         row = query_one(
-            "SELECT data_json, fetched_at FROM market_data ORDER BY trade_date DESC LIMIT 1"
+            "SELECT data_json, fetched_at FROM market_data ORDER BY trade_date DESC, fetched_at DESC LIMIT 1"
         )
         if row:
             cached = json.loads(row["data_json"])
@@ -410,3 +407,58 @@ def get_market_data(force_refresh: bool = False) -> dict:
             cached["_fetched_at"] = row["fetched_at"]
             return cached
         raise
+
+
+def get_market_history(
+    start_date: str | None = None,
+    end_date: str | None = None,
+    limit: int = 30,
+) -> list[dict]:
+    """
+    Return historical market snapshots (latest per trade date, most recent first).
+
+    Parameters
+    ----------
+    start_date : optional YYYY-MM-DD
+    end_date   : optional YYYY-MM-DD
+    limit      : max rows (default 30)
+    """
+    from app.core.database import query_df
+
+    conditions = []
+    params: list = []
+    if start_date:
+        conditions.append("trade_date >= ?")
+        params.append(start_date)
+    if end_date:
+        conditions.append("trade_date <= ?")
+        params.append(end_date)
+
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+    # Get the latest snapshot per trade date
+    df = query_df(
+        f"""
+        SELECT trade_date, data_json, fetched_at
+        FROM market_data
+        {where}
+        ORDER BY trade_date DESC, fetched_at DESC
+        """,
+        tuple(params),
+    )
+
+    if df.empty:
+        return []
+
+    # Keep only the latest snapshot per trade date
+    df = df.drop_duplicates(subset="trade_date", keep="first")
+    df = df.head(limit)
+
+    rows = []
+    for _, r in df.iterrows():
+        data = json.loads(r["data_json"])
+        data["_trade_date"] = r["trade_date"]
+        data["_fetched_at"] = r["fetched_at"]
+        rows.append(data)
+
+    return rows

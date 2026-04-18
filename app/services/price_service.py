@@ -15,7 +15,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Optional, Dict
 
-from app.core.database import get_conn
+from app.core.database import get_conn, column_exists
 
 logger = logging.getLogger(__name__)
 
@@ -204,6 +204,11 @@ def update_all_prices(
         result.stocks_found = len(stocks)
         logger.info("Price updater: found %d stocks to update", len(stocks))
 
+        # Ensure pe_ratio column exists
+        if not column_exists("stocks", "pe_ratio"):
+            cur.execute("ALTER TABLE stocks ADD COLUMN pe_ratio REAL")
+            conn.commit()
+
         # ── Fetch & write prices ─────────────────────────────────────
         for stock_id, symbol, currency, stored_yf_ticker, _ in stocks:
             try:
@@ -227,15 +232,26 @@ def update_all_prices(
                 raw_price = float(hist["Close"].dropna().iloc[-1])
                 price = _normalise_kwd_price(raw_price, currency)
 
+                # Fetch P/E ratio from ticker info
+                pe_ratio = None
+                try:
+                    info = ticker.info
+                    pe_val = info.get("trailingPE") or info.get("forwardPE")
+                    if pe_val is not None:
+                        pe_ratio = round(float(pe_val), 2)
+                except Exception as pe_exc:
+                    logger.debug("P/E fetch failed for %s: %s", yahoo_sym, pe_exc)
+
                 cur.execute(
                     """
                     UPDATE stocks
                     SET current_price = ?,
                         last_updated  = ?,
-                        price_source  = 'YAHOO'
+                        price_source  = 'YAHOO',
+                        pe_ratio      = ?
                     WHERE id = ? AND user_id = ?
                     """,
-                    (round(price, 6), int(time.time()), stock_id, user_id),
+                    (round(price, 6), int(time.time()), pe_ratio, stock_id, user_id),
                 )
                 conn.commit()
 

@@ -310,7 +310,7 @@ async def list_snapshots(
         tuple(params),
     )
 
-    records = df.fillna(0).to_dict(orient="records") if not df.empty else []
+    records = df.fillna(0).infer_objects(copy=False).to_dict(orient="records") if not df.empty else []
 
     return {
         "status": "ok",
@@ -352,7 +352,7 @@ async def list_position_snapshots(
         tuple(params),
     )
 
-    records = df.fillna(0).to_dict(orient="records") if not df.empty else []
+    records = df.fillna(0).infer_objects(copy=False).to_dict(orient="records") if not df.empty else []
 
     return {
         "status": "ok",

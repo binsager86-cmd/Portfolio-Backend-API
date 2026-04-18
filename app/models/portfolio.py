@@ -69,6 +69,7 @@ class Stock(Base):
     market_cap = Column(Float, nullable=True)
     sector = Column(String(100), nullable=True)
     industry = Column(String(100), nullable=True)
+    pe_ratio = Column(Float, nullable=True)
 
     user = relationship("User", back_populates="stocks")
 

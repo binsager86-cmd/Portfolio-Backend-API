@@ -8,6 +8,9 @@ Run with:  uvicorn app.main:app --reload --port 8004
 import logging
 from contextlib import asynccontextmanager
 
+import pandas as pd
+pd.set_option("future.no_silent_downcasting", True)
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -18,7 +21,13 @@ from app.core.config import get_settings
 from app.core.database import check_db_exists
 from app.core.limiter import limiter
 from app.core.exceptions import APIError, api_error_handler, unhandled_exception_handler
-from app.core.middleware import SecurityHeadersMiddleware, RequestSizeLimitMiddleware, PrivateNetworkAccessMiddleware
+from app.core.middleware import (
+    SecurityHeadersMiddleware,
+    RequestSizeLimitMiddleware,
+    PrivateNetworkAccessMiddleware,
+    CorrelationIDMiddleware,
+    RequestTimingMiddleware,
+)
 from app.core.json_response import SafeJSONResponse
 
 # Versioned API router (all /api/v1/* routes)
@@ -33,10 +42,8 @@ from app.api.cron import router as cron_router_legacy
 from app.cron.scheduler import start_scheduler, stop_scheduler
 
 # ── Logging ──────────────────────────────────────────────────────────
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s  %(levelname)-8s  %(name)s  %(message)s",
-)
+from app.core.logging_config import setup_logging
+setup_logging()
 logger = logging.getLogger(__name__)
 
 settings = get_settings()
@@ -148,6 +155,10 @@ app.add_exception_handler(Exception, unhandled_exception_handler)
 # ── Security Middleware ──────────────────────────────────────────────
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestSizeLimitMiddleware)
+
+# ── Observability Middleware ─────────────────────────────────────────
+app.add_middleware(CorrelationIDMiddleware)
+app.add_middleware(RequestTimingMiddleware)
 
 # ── CORS Middleware ──────────────────────────────────────────────────
 # NOTE: allow_origins=["*"] + allow_credentials=True is spec-invalid.
