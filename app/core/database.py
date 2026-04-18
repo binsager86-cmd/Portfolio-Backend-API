@@ -43,11 +43,24 @@ _SQLALCHEMY_URL = _settings.sqlalchemy_url
 if _USE_PG:
     engine = create_engine(
         _SQLALCHEMY_URL,
-        pool_size=5,
-        max_overflow=10,
-        pool_pre_ping=True,
+        pool_size=10,               # Base pool connections
+        max_overflow=20,             # Burst capacity beyond pool_size
+        pool_pre_ping=True,          # Detect stale connections before use
+        pool_recycle=1800,           # Recycle connections every 30 min
+        pool_timeout=30,             # Wait up to 30s for a connection
         echo=False,
+        connect_args={
+            "options": "-c statement_timeout=30000 -c lock_timeout=10000",
+        },
     )
+
+    @event.listens_for(engine, "connect")
+    def _set_pg_session_defaults(dbapi_conn, connection_record):
+        """Set PostgreSQL session defaults for production discipline."""
+        cursor = dbapi_conn.cursor()
+        cursor.execute("SET work_mem = '16MB';")
+        cursor.execute("SET idle_in_transaction_session_timeout = '60000';")
+        cursor.close()
 else:
     engine = create_engine(
         _SQLALCHEMY_URL,

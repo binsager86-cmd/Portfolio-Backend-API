@@ -8,7 +8,7 @@ so the frontend never needs to do currency math.
 import io
 import time
 import logging
-from typing import Optional
+from typing import List, Optional
 from datetime import date
 
 import pandas as pd
@@ -69,13 +69,38 @@ def _txn_cash_delta(txn_type: str, purchase_cost: float, sell_value: float,
 
 # ── Overview ─────────────────────────────────────────────────────────
 
+# Lightweight subset of overview fields for fast initial render
+_OVERVIEW_SUMMARY_KEYS = {
+    "total_value_kwd", "total_cost_kwd", "total_pnl_kwd", "total_pnl_pct",
+    "total_market_value_kwd", "cash_kwd", "num_holdings", "portfolio_count",
+    "usd_kwd_rate",
+}
+
+
 @router.get("/overview")
-async def portfolio_overview(current_user: TokenData = Depends(get_current_user)):
+async def portfolio_overview(
+    fields: Optional[str] = Query(
+        None,
+        description="Comma-separated field names to include. Use 'summary' for "
+                    "a lightweight subset (total_value, pnl, cash, holdings count).",
+    ),
+    current_user: TokenData = Depends(get_current_user),
+):
     """
     Complete portfolio overview — transaction aggregates, market values,
     cash balances, and calculated metrics.  All monetary values in KWD.
+
+    Pass `?fields=summary` for a small payload suitable for dashboard cards.
     """
     data = get_complete_overview(current_user.user_id)
+
+    if fields:
+        if fields.strip().lower() == "summary":
+            allowed = _OVERVIEW_SUMMARY_KEYS
+        else:
+            allowed = {f.strip() for f in fields.split(",")}
+        data = {k: v for k, v in data.items() if k in allowed}
+
     return {"status": "ok", "data": data}
 
 

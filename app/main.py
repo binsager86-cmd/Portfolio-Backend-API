@@ -187,13 +187,9 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
+    # Chrome Private Network Access: localhost:8081 → 127.0.0.1:8004
+    allow_private_network=not settings.is_production,
 )
-
-# ── Private Network Access ──────────────────────────────────────────
-# Must be added AFTER CORSMiddleware so it runs outermost (Starlette
-# processes middleware in reverse-add order). CORSMiddleware short-circuits
-# OPTIONS preflights, so this middleware wraps it to append the PNA header.
-app.add_middleware(PrivateNetworkAccessMiddleware)
 
 
 # ── Routes ───────────────────────────────────────────────────────────

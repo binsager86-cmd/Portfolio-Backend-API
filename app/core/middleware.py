@@ -4,8 +4,8 @@ Middleware — security headers, request size limits, correlation ID, timing.
 Includes:
   1. Security headers (CSP, HSTS, X-Frame-Options, etc.)
   2. Request body size limit (DoS prevention)
-  3. Correlation ID (X-Correlation-ID) for request tracing
-  4. Request timing (X-Response-Time-Ms)
+  3. Correlation ID (X-Correlation-ID) for request tracing + contextvar logging
+  4. Request timing (X-Response-Time-Ms) with structured per-request latency logs
 """
 
 import logging
@@ -17,6 +17,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from app.core.config import get_settings
+from app.core.logging_config import correlation_id_var
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +121,7 @@ class CorrelationIDMiddleware(BaseHTTPMiddleware):
 
     - Reuses X-Correlation-ID from the client if provided.
     - Stores the ID in request.state for downstream access.
+    - Sets the correlation_id contextvar so all log lines include it.
     - Echoes it back in the response header.
     """
 
@@ -128,16 +130,28 @@ class CorrelationIDMiddleware(BaseHTTPMiddleware):
     ) -> Response:
         cid = request.headers.get("x-correlation-id") or uuid.uuid4().hex[:16]
         request.state.correlation_id = cid
+        token = correlation_id_var.set(cid)
 
-        response = await call_next(request)
-        response.headers["X-Correlation-ID"] = cid
-        return response
+        try:
+            response = await call_next(request)
+            response.headers["X-Correlation-ID"] = cid
+            return response
+        finally:
+            correlation_id_var.reset(token)
+
+
+_timing_logger = logging.getLogger("app.request")
+
+# Paths to skip in access logs (noisy health checks, static files)
+_SKIP_LOG_PATHS = frozenset({"/health", "/api/health", "/favicon.ico", "/openapi.json"})
 
 
 class RequestTimingMiddleware(BaseHTTPMiddleware):
     """
     Measures request processing time and adds X-Response-Time-Ms header.
-    Logs slow requests (>1s) as warnings.
+
+    Emits structured per-request access log with method, path, status,
+    duration, and client info. Warns on slow requests (>1s).
     """
 
     SLOW_THRESHOLD_MS = 1000
@@ -151,12 +165,24 @@ class RequestTimingMiddleware(BaseHTTPMiddleware):
 
         response.headers["X-Response-Time-Ms"] = f"{elapsed_ms:.1f}"
 
-        if elapsed_ms > self.SLOW_THRESHOLD_MS:
-            logger.warning(
-                "Slow request: %s %s took %.0fms",
+        path = request.url.path
+        if path not in _SKIP_LOG_PATHS:
+            level = logging.WARNING if elapsed_ms > self.SLOW_THRESHOLD_MS else logging.INFO
+            _timing_logger.log(
+                level,
+                "%s %s %s %.0fms",
                 request.method,
-                request.url.path,
+                path,
+                response.status_code,
                 elapsed_ms,
+                extra={
+                    "method": request.method,
+                    "path": path,
+                    "status_code": response.status_code,
+                    "duration_ms": round(elapsed_ms, 1),
+                    "client_ip": request.client.host if request.client else "",
+                    "user_agent": (request.headers.get("user-agent") or "")[:120],
+                },
             )
 
         return response
