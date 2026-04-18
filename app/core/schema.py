@@ -485,26 +485,28 @@ def ensure_all_tables() -> None:
         """)
         logger.info("✅  market_data table ensured")
 
-        # Migrate: remove UNIQUE constraint on trade_date if present (allows multiple snapshots per day)
-        try:
-            row = query_one(
-                "SELECT sql FROM sqlite_master WHERE type='table' AND name='market_data'"
-            )
-            if row and "UNIQUE" in (row["sql"] or ""):
-                exec_sql("ALTER TABLE market_data RENAME TO market_data_old")
-                exec_sql(f"""
-                    CREATE TABLE market_data (
-                        id              {PK},
-                        trade_date      TEXT NOT NULL,
-                        data_json       TEXT NOT NULL,
-                        fetched_at      INTEGER NOT NULL
-                    )
-                """)
-                exec_sql("INSERT INTO market_data (trade_date, data_json, fetched_at) SELECT trade_date, data_json, fetched_at FROM market_data_old")
-                exec_sql("DROP TABLE market_data_old")
-                logger.info("✅  market_data: removed UNIQUE constraint on trade_date")
-        except Exception as mig_e:
-            logger.warning("⚠️  market_data migration skipped: %s", mig_e)
+        # SQLite-only migration: remove UNIQUE(trade_date) if present.
+        # PostgreSQL uses separate migration tooling and should skip sqlite_master introspection.
+        if not settings.use_postgres:
+            try:
+                row = query_one(
+                    "SELECT sql FROM sqlite_master WHERE type='table' AND name='market_data'"
+                )
+                if row and "UNIQUE" in (row["sql"] or ""):
+                    exec_sql("ALTER TABLE market_data RENAME TO market_data_old")
+                    exec_sql(f"""
+                        CREATE TABLE market_data (
+                            id              {PK},
+                            trade_date      TEXT NOT NULL,
+                            data_json       TEXT NOT NULL,
+                            fetched_at      INTEGER NOT NULL
+                        )
+                    """)
+                    exec_sql("INSERT INTO market_data (trade_date, data_json, fetched_at) SELECT trade_date, data_json, fetched_at FROM market_data_old")
+                    exec_sql("DROP TABLE market_data_old")
+                    logger.info("✅  market_data: removed UNIQUE constraint on trade_date")
+            except Exception as mig_e:
+                logger.warning("⚠️  market_data migration skipped: %s", mig_e)
 
         # Ensure index for efficient date-based queries
         try:

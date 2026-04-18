@@ -76,8 +76,9 @@ class Settings(BaseSettings):
 
     @property
     def use_postgres(self) -> bool:
-        """True when a PostgreSQL DATABASE_URL is configured."""
-        return bool(self.DATABASE_URL and self.DATABASE_URL.startswith("postgresql"))
+        """True when DATABASE_URL is a PostgreSQL connection string."""
+        url = (self.DATABASE_URL or "").strip()
+        return url.startswith("postgresql://") or url.startswith("postgres://")
 
     class Config:
         env_file = str(ENV_FILE)
@@ -104,7 +105,11 @@ class Settings(BaseSettings):
         SQLite file from DATABASE_PATH.
         """
         if self.use_postgres:
-            return self.DATABASE_URL
+            # Some platforms still provide postgres://; SQLAlchemy expects postgresql://
+            url = self.DATABASE_URL.strip()
+            if url.startswith("postgres://"):
+                return "postgresql://" + url[len("postgres://"):]
+            return url
         return f"sqlite:///{self.database_abs_path}"
 
 
