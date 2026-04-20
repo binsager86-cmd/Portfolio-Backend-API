@@ -15,10 +15,12 @@ so existing route imports continue to work unmodified.
 """
 
 import logging
+import re
 import time
 from datetime import date, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
+import httpx
 import numpy as np
 import pandas as pd
 
@@ -42,6 +44,57 @@ def _soft_delete_filter(table_alias: str = "") -> str:
         return ""
     prefix = f"{table_alias}." if table_alias else ""
     return f" AND COALESCE({prefix}is_deleted, 0) = 0"
+
+
+def _parse_stockanalysis_pe(page_text: str) -> Optional[float]:
+    """Extract P/E ratio from StockAnalysis statistics page HTML payload."""
+    # StockAnalysis embeds stats in Svelte payload fragments like: id:"pe" ... hover:"12.34"
+    m = re.search(r'id:"pe"[^}]*hover:"([^\"]+)"', page_text)
+    if not m:
+        return None
+    raw = (m.group(1) or "").replace(",", "").replace("%", "").strip()
+    if not raw or raw.lower() in {"n/a", "na", "-", "—"}:
+        return None
+    try:
+        val = float(raw)
+    except ValueError:
+        return None
+    return round(val, 2) if val > 0 else None
+
+
+def _fetch_pe_from_stockanalysis(symbol: str, currency: str) -> Optional[float]:
+    """Fetch P/E from stockanalysis.com statistics page for KW and US stocks."""
+    base = re.sub(r"\.KW$", "", (symbol or "").strip(), flags=re.IGNORECASE)
+    if not base:
+        return None
+
+    is_us = (currency or "").upper() == "USD"
+    if is_us:
+        # US path: /stocks/{symbol}/statistics/
+        url = f"https://stockanalysis.com/stocks/{base.lower()}/statistics/"
+    else:
+        # Kuwait path: /quote/kwse/{SYMBOL}/statistics/
+        url = f"https://stockanalysis.com/quote/kwse/{base.upper()}/statistics/"
+
+    try:
+        resp = httpx.get(
+            url,
+            timeout=12,
+            follow_redirects=True,
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+                )
+            },
+        )
+        if resp.status_code != 200:
+            logger.debug("StockAnalysis P/E: %s returned %s", url, resp.status_code)
+            return None
+        return _parse_stockanalysis_pe(resp.text)
+    except Exception as exc:
+        logger.debug("StockAnalysis P/E fetch failed for %s: %s", symbol, exc)
+        return None
 
 
 # ── Standalone WAC engine (testable without class) ───────────────────
@@ -321,8 +374,23 @@ class PortfolioService:
 
             display_name = meta.get("name") or sym
 
-            # P/E ratio from stocks table (updated with daily price refresh)
+            # P/E ratio from stocks table. If missing, fetch from StockAnalysis and persist.
             pe_ratio = meta.get("pe_ratio")
+            if pe_ratio is None:
+                fetched_pe = _fetch_pe_from_stockanalysis(sym, currency)
+                if fetched_pe is not None:
+                    pe_ratio = fetched_pe
+                    try:
+                        exec_sql(
+                            """
+                            UPDATE stocks
+                            SET pe_ratio = ?, last_updated = ?
+                            WHERE TRIM(symbol) = ? AND user_id = ?
+                            """,
+                            (fetched_pe, int(time.time()), sym, self.user_id),
+                        )
+                    except Exception as exc:
+                        logger.debug("Unable to persist StockAnalysis P/E for %s: %s", sym, exc)
 
             mkt_val_kwd = convert_to_kwd(mkt_value, currency)
             unreal_kwd = convert_to_kwd(unreal, currency)
