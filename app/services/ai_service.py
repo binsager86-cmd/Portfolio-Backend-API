@@ -14,6 +14,22 @@ from app.core.config import get_settings
 logger = logging.getLogger(__name__)
 
 
+def _extract_response_text(resp: object) -> str:
+    """Best-effort text extraction across Gemini SDK response shapes."""
+    text = getattr(resp, "text", None)
+    if isinstance(text, str) and text.strip():
+        return text
+    candidates = getattr(resp, "candidates", None) or []
+    for cand in candidates:
+        content = getattr(cand, "content", None)
+        parts = getattr(content, "parts", None) or []
+        for part in parts:
+            part_text = getattr(part, "text", None)
+            if isinstance(part_text, str) and part_text.strip():
+                return part_text
+    return ""
+
+
 async def analyze_portfolio(
     user_id: int,
     prompt: Optional[str] = None,
@@ -118,27 +134,49 @@ async def analyze_portfolio(
             f"Portfolio Data:\n{context}"
         )
 
-    # Call Gemini API
+    # Call Gemini API (prefer new google-genai SDK used in requirements)
     try:
-        import google.generativeai as genai
+        from google import genai
 
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-2.5-flash")
-        response = model.generate_content(full_prompt)
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=full_prompt,
+        )
+        analysis_text = _extract_response_text(response)
+        if not analysis_text:
+            raise ValueError("Empty response from Gemini model.")
 
         return {
-            "analysis": response.text,
+            "analysis": analysis_text,
             "model": "gemini-2.5-flash",
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "cached": False,
         }
 
     except ImportError:
-        logger.error("google-generativeai package not installed")
-        raise ValueError(
-            "AI analysis requires the google-generativeai package. "
-            "Install with: pip install google-generativeai"
-        )
+        # Backward compatibility for environments still using legacy SDK
+        try:
+            import google.generativeai as legacy_genai
+
+            legacy_genai.configure(api_key=api_key)
+            model = legacy_genai.GenerativeModel("gemini-2.5-flash")
+            response = model.generate_content(full_prompt)
+            analysis_text = _extract_response_text(response)
+            if not analysis_text:
+                raise ValueError("Empty response from Gemini model.")
+
+            return {
+                "analysis": analysis_text,
+                "model": "gemini-2.5-flash",
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "cached": False,
+            }
+        except ImportError:
+            logger.error("Neither google-genai nor google-generativeai is installed")
+            raise ValueError(
+                "AI analysis requires Gemini SDK. Install with: pip install google-genai"
+            )
     except Exception as exc:
         logger.error("Gemini API error: %s", exc)
         raise ValueError(f"AI analysis failed: {exc}")

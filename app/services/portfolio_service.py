@@ -300,9 +300,11 @@ class PortfolioService:
         # Fetch stock metadata
         stock_lookup: Dict[str, dict] = {}
         has_pe_col = column_exists("stocks", "pe_ratio")
+        has_prev_close_col = column_exists("stocks", "previous_close")
         if unique_symbols:
             ph = ",".join(["?" for _ in unique_symbols])
             pe_select = ", pe_ratio" if has_pe_col else ""
+            prev_close_select = ", previous_close" if has_prev_close_col else ""
             meta_df = query_df(
                 f"""
                 SELECT
@@ -312,7 +314,7 @@ class PortfolioService:
                     COALESCE(portfolio,'KFH')    AS portfolio,
                     COALESCE(currency,'KWD')     AS currency,
                     tradingview_symbol, tradingview_exchange,
-                    yf_ticker{pe_select}
+                    yf_ticker{pe_select}{prev_close_select}
                 FROM stocks
                 WHERE TRIM(symbol) IN ({ph}) AND user_id = ?
                 """,
@@ -327,6 +329,7 @@ class PortfolioService:
                         "currency": srow["currency"],
                         "yf_ticker": srow.get("yf_ticker") or None,
                         "pe_ratio": srow.get("pe_ratio") or None,
+                        "previous_close": srow.get("previous_close") if has_prev_close_col else None,
                     }
 
         # Build rows per symbol
@@ -355,6 +358,8 @@ class PortfolioService:
             total_cost = round(h["cost_basis"], 3)
             avg_cost = round(h["avg_cost"], 6)
             mkt_price = cp
+            previous_close = safe_float(meta.get("previous_close", 0), 0.0)
+            previous_close = previous_close if previous_close > 0 else None
             mkt_value = round(qty * mkt_price, 3)
 
             # Unrealized P&L = (Market Price − Avg Cost) × Shares
@@ -404,6 +409,7 @@ class PortfolioService:
                 "shares_qty": qty,
                 "avg_cost": avg_cost,
                 "total_cost": total_cost,
+                "previous_close": previous_close,
                 "market_price": mkt_price,
                 "market_value": mkt_value,
                 "unrealized_pnl": unreal,

@@ -1,5 +1,5 @@
 """
-Fundamental Analysis API v1 — package entry point.
+Fundamental Analysis API v1 ظ¤ package entry point.
 
 Transitional: imports everything from the legacy monolith so existing
 ``from app.api.v1.fundamental import router`` keeps working.

@@ -109,6 +109,7 @@ def ensure_all_tables() -> None:
                 industry            TEXT,
                 yf_ticker           TEXT,
                 pe_ratio            REAL,
+                previous_close      REAL,
                 created_at          INTEGER
             )
         """)
@@ -122,6 +123,7 @@ def ensure_all_tables() -> None:
             ("sector", "TEXT"),
             ("industry", "TEXT"),
             ("pe_ratio", "REAL"),
+            ("previous_close", "REAL"),
             ("created_at", "INTEGER"),
         ]:
             add_column_if_missing("stocks", col, ctype)

@@ -15,7 +15,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Optional, Dict
 
-from app.core.database import get_conn, column_exists
+from app.core.database import get_conn, add_column_if_missing
 
 logger = logging.getLogger(__name__)
 
@@ -204,10 +204,9 @@ def update_all_prices(
         result.stocks_found = len(stocks)
         logger.info("Price updater: found %d stocks to update", len(stocks))
 
-        # Ensure pe_ratio column exists
-        if not column_exists("stocks", "pe_ratio"):
-            cur.execute("ALTER TABLE stocks ADD COLUMN pe_ratio REAL")
-            conn.commit()
+        # Ensure additive columns exist across SQLite/PostgreSQL
+        add_column_if_missing("stocks", "pe_ratio", "REAL")
+        add_column_if_missing("stocks", "previous_close", "REAL")
 
         # ── Fetch & write prices ─────────────────────────────────────
         for stock_id, symbol, currency, stored_yf_ticker, _ in stocks:
@@ -229,8 +228,12 @@ def update_all_prices(
                     result.details.append({"symbol": symbol, "status": "no_data"})
                     continue
 
-                raw_price = float(hist["Close"].dropna().iloc[-1])
+                closes = hist["Close"].dropna()
+                raw_price = float(closes.iloc[-1])
                 price = _normalise_kwd_price(raw_price, currency)
+                previous_close = None
+                if len(closes) >= 2:
+                    previous_close = _normalise_kwd_price(float(closes.iloc[-2]), currency)
 
                 # Fetch P/E ratio from ticker info
                 pe_ratio = None
@@ -248,10 +251,11 @@ def update_all_prices(
                     SET current_price = ?,
                         last_updated  = ?,
                         price_source  = 'YAHOO',
-                        pe_ratio      = ?
+                        pe_ratio      = ?,
+                        previous_close = ?
                     WHERE id = ? AND user_id = ?
                     """,
-                    (round(price, 6), int(time.time()), pe_ratio, stock_id, user_id),
+                    (round(price, 6), int(time.time()), pe_ratio, previous_close, stock_id, user_id),
                 )
                 conn.commit()
 

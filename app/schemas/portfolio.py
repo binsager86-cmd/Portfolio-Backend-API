@@ -18,6 +18,7 @@ class HoldingRow(BaseModel):
     shares_qty: float
     avg_cost: float
     total_cost: float
+    previous_close: Optional[float] = None
     market_price: float
     market_value: float
     unrealized_pnl: float
