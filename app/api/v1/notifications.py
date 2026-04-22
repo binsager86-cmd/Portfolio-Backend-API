@@ -9,6 +9,7 @@ Endpoints:
 
 import logging
 from datetime import datetime
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -17,6 +18,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db
 from app.core.security import TokenData
 from app.models.push_token import PushToken
+from app.services import notification_prefs as prefs_service
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +35,13 @@ class RegisterTokenRequest(BaseModel):
 class RegisterTokenResponse(BaseModel):
     ok: bool
     message: str
+
+
+class NotificationPrefs(BaseModel):
+    newsNotifications: Optional[bool] = None
+    portfolioUpdates: Optional[bool] = None
+    priceAlerts: Optional[bool] = None
+    dailyPriceUpdates: Optional[bool] = None
 
 
 # ── Endpoints ────────────────────────────────────────────────────────
@@ -84,6 +93,26 @@ async def unregister_push_token(
     ).delete()
     db.commit()
     return {"ok": True, "deleted": deleted}
+
+
+@router.get("/preferences")
+async def get_notification_preferences(
+    current_user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return the current user's notification preferences (defaults if none set)."""
+    return prefs_service.get_prefs(db, current_user.user_id)
+
+
+@router.put("/preferences")
+async def update_notification_preferences(
+    body: NotificationPrefs,
+    current_user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Upsert the current user's notification preferences (partial allowed)."""
+    partial = {k: v for k, v in body.dict().items() if v is not None}
+    return prefs_service.set_prefs(db, current_user.user_id, partial)
 
 
 @router.get("/status")

@@ -113,6 +113,17 @@ def notify_users_for_article(
         if not user_id_list:
             return {"sent": 0, "failed": 0, "reason": "no_holders"}
 
+        # Honor each user's notification preferences — drop anyone who
+        # disabled the "News Notifications" toggle in Settings.
+        try:
+            from app.services.notification_prefs import filter_users_by_pref
+            user_id_list = filter_users_by_pref(db, user_id_list, "newsNotifications")
+        except Exception as e:
+            logger.warning("notification pref filter failed (sending to all): %s", e)
+
+        if not user_id_list:
+            return {"sent": 0, "failed": 0, "reason": "opted_out"}
+
         # Get push tokens for those users
         tokens = (
             db.query(PushToken.token)
