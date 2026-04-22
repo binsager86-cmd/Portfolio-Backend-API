@@ -20,10 +20,12 @@ Endpoints:
 import json
 import logging
 from datetime import datetime, timedelta
+from email.utils import format_datetime, parsedate_to_datetime
+from hashlib import md5
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -554,6 +556,30 @@ def _db_row_to_item(row: NewsArticle) -> dict:
     }
 
 
+def _content_hash(item: dict) -> str:
+    """
+    Compute a stable fingerprint for an article. Priority:
+      1. guid (if present)
+      2. url/link (if present)
+      3. md5(title + publishedAt + url)
+
+    Used as a fallback dedupe key in case the upstream NewsId is missing,
+    reused, or changes for the same article.
+    """
+    guid = item.get("guid") or item.get("Guid")
+    if guid:
+        return md5(str(guid).encode("utf-8")).hexdigest()
+    link = item.get("url") or item.get("link")
+    if link:
+        return md5(str(link).encode("utf-8")).hexdigest()
+    payload = "|".join([
+        str(item.get("title", "")),
+        str(item.get("publishedAt", "")),
+        str(link or ""),
+    ])
+    return md5(payload.encode("utf-8")).hexdigest()
+
+
 def _persist_articles(db: Session, items: list[dict]) -> int:
     """Upsert news items into the DB. Returns count of new articles inserted.
 
@@ -573,10 +599,25 @@ def _persist_articles(db: Session, items: list[dict]) -> int:
         ).all()
         existing.update(r[0] for r in rows)
 
+    # Secondary dedupe: collect existing content hashes to catch the same
+    # article re-published with a different NewsId.
+    item_hashes = {it.get("id", ""): _content_hash(it) for it in items if it.get("id")}
+    hash_values = [h for h in item_hashes.values() if h]
+    existing_hashes: set[str] = set()
+    for i in range(0, len(hash_values), chunk_size):
+        chunk = hash_values[i: i + chunk_size]
+        rows = db.query(NewsArticle.content_hash).filter(
+            NewsArticle.content_hash.in_(chunk)
+        ).all()
+        existing_hashes.update(r[0] for r in rows if r[0])
+
     inserted = 0
     for it in items:
         nid = it.get("id", "")
         if not nid or nid in existing:
+            continue
+        chash = item_hashes.get(nid) or _content_hash(it)
+        if chash in existing_hashes:
             continue
 
         symbols_str = ",".join(it.get("relatedSymbols", []))
@@ -602,8 +643,10 @@ def _persist_articles(db: Session, items: list[dict]) -> int:
             is_verified=1 if it.get("isVerified", True) else 0,
             attachments_json=attachments_str,
             fetched_at=datetime.utcnow(),
+            content_hash=chash,
         )
         db.add(article)
+        existing_hashes.add(chash)
         inserted += 1
 
         # Commit in batches of 500 for large imports
@@ -721,6 +764,8 @@ async def _fetch_all_boursa_sources(lang_code: str) -> list[dict]:
 
 @router.get("/feed")
 async def news_feed(
+    request: Request,
+    response: Response,
     symbols: Optional[str] = Query(None, description="Comma-separated tickers"),
     categories: Optional[str] = Query(None, description="Comma-separated category filters"),
     cursor: Optional[str] = Query(None, description="Pagination cursor (offset)"),
@@ -735,6 +780,11 @@ async def news_feed(
     Returns paginated articles from the DB. Live items from Boursa
     are fetched in the background and persisted for future requests.
     Full history is loaded via the /fetch-all endpoint.
+
+    Conditional GET:
+      Sets `Last-Modified` and `ETag` based on the most recent article matching
+      the filters. Honours `If-None-Match` and `If-Modified-Since` and replies
+      with `304 Not Modified` when nothing has changed, saving bandwidth.
     """
     # Trigger background live fetch to keep DB fresh
     # Live data is fetched via /fetch-all or the cron scheduler;
@@ -761,11 +811,54 @@ async def news_feed(
 
     total = query.count()
 
+    # ── Compute Last-Modified / ETag from latest matching article ──
+    # Cheap query: just the newest published_at + news_id for this filter set.
+    latest = (
+        query.with_entities(NewsArticle.published_at, NewsArticle.news_id)
+        .first()
+    )
+    last_modified_dt: Optional[datetime] = latest[0] if latest else None
+    latest_id: Optional[str] = latest[1] if latest else None
+    # ETag combines newest id + total + paging coords so any change invalidates.
+    etag_seed = f"{latest_id or ''}|{total}|{cursor or ''}|{limit}|{lang or ''}"
+    etag = 'W/"' + md5(etag_seed.encode("utf-8")).hexdigest() + '"'
+
+    inm = request.headers.get("if-none-match")
+    if inm and inm == etag:
+        response.status_code = 304
+        response.headers["ETag"] = etag
+        if last_modified_dt:
+            response.headers["Last-Modified"] = format_datetime(last_modified_dt, usegmt=True)
+        response.headers["Cache-Control"] = "private, max-age=15"
+        return Response(status_code=304, headers=dict(response.headers))
+
+    if last_modified_dt:
+        ims = request.headers.get("if-modified-since")
+        if ims:
+            try:
+                ims_dt = parsedate_to_datetime(ims)
+                # parsedate_to_datetime returns tz-aware; normalise both sides.
+                lm_naive = last_modified_dt.replace(tzinfo=None)
+                ims_naive = ims_dt.replace(tzinfo=None) if ims_dt.tzinfo else ims_dt
+                if lm_naive <= ims_naive:
+                    response.status_code = 304
+                    response.headers["ETag"] = etag
+                    response.headers["Last-Modified"] = format_datetime(last_modified_dt, usegmt=True)
+                    response.headers["Cache-Control"] = "private, max-age=15"
+                    return Response(status_code=304, headers=dict(response.headers))
+            except (TypeError, ValueError):
+                pass  # malformed header — just serve normally
+
     # ── Cursor-based pagination (offset) ──
     offset = int(cursor) if cursor else 0
     rows = query.offset(offset).limit(limit).all()
     items = [_db_row_to_item(row) for row in rows]
     next_cursor = str(offset + limit) if offset + limit < total else None
+
+    response.headers["ETag"] = etag
+    if last_modified_dt:
+        response.headers["Last-Modified"] = format_datetime(last_modified_dt, usegmt=True)
+    response.headers["Cache-Control"] = "private, max-age=15"
 
     return {
         "items": items,

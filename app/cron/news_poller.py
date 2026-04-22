@@ -305,6 +305,7 @@ def _persist_and_collect_new(db, items: list[dict]) -> list[dict]:
         return []
 
     from app.models.news import NewsArticle
+    from app.api.v1.news import _content_hash
 
     # Check which IDs already exist
     news_ids = [it["id"] for it in items if it.get("id")]
@@ -317,10 +318,25 @@ def _persist_and_collect_new(db, items: list[dict]) -> list[dict]:
         ).all()
         existing.update(r[0] for r in rows)
 
+    # Secondary dedupe by content_hash to catch the same article re-published
+    # under a new NewsId.
+    item_hashes = {it.get("id", ""): _content_hash(it) for it in items if it.get("id")}
+    hash_values = [h for h in item_hashes.values() if h]
+    existing_hashes: set[str] = set()
+    for i in range(0, len(hash_values), chunk_size):
+        chunk = hash_values[i: i + chunk_size]
+        rows = db.query(NewsArticle.content_hash).filter(
+            NewsArticle.content_hash.in_(chunk)
+        ).all()
+        existing_hashes.update(r[0] for r in rows if r[0])
+
     new_articles = []
     for it in items:
         nid = it.get("id", "")
         if not nid or nid in existing:
+            continue
+        chash = item_hashes.get(nid) or _content_hash(it)
+        if chash in existing_hashes:
             continue
 
         symbols_str = ",".join(it.get("relatedSymbols", []))
@@ -346,8 +362,10 @@ def _persist_and_collect_new(db, items: list[dict]) -> list[dict]:
             is_verified=1 if it.get("isVerified", True) else 0,
             attachments_json=attachments_str,
             fetched_at=datetime.utcnow(),
+            content_hash=chash,
         )
         db.add(article)
+        existing_hashes.add(chash)
         new_articles.append(it)
 
     if new_articles:

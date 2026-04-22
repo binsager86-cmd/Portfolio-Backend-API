@@ -27,3 +27,6 @@ class NewsArticle(Base):
     is_verified = Column(Integer, nullable=False, default=1)  # boolean as int for SQLite compat
     attachments_json = Column(Text, nullable=True)  # JSON string
     fetched_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    # Secondary dedupe fingerprint: md5(guid|link|title+pubdate+link). Indexed for
+    # fast "have I seen this before?" checks when news_id is missing or unstable.
+    content_hash = Column(String(32), nullable=True, index=True)

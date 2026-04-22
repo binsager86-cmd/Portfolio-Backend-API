@@ -68,6 +68,14 @@ async def lifespan(app: FastAPI):
         from app.core.schema import ensure_all_tables
         ensure_all_tables()
 
+        # ── Additive migration: news_articles.content_hash for dedupe fallback ──
+        try:
+            from app.core.database import add_column_if_missing, exec_sql
+            add_column_if_missing("news_articles", "content_hash", "TEXT")
+            exec_sql("CREATE INDEX IF NOT EXISTS ix_news_articles_content_hash ON news_articles(content_hash)")
+        except Exception as e:
+            logger.warning("news_articles.content_hash migration skipped: %s", e)
+
         # ── Extraction jobs: ensure table + recover stale jobs ───
         try:
             from app.api.v1.fundamental import _ensure_schema as _ensure_fundamental_schema
