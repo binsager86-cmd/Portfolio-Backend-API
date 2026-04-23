@@ -485,6 +485,17 @@ def _assess_impact(news_type: str, category: str) -> str:
     return "informational"
 
 
+def _boursa_news_view_url(news_id: str, lang: str) -> str | None:
+    """Public Boursa Kuwait news viewer page — works for any NewsId, even
+    historical items where the Url field was not provided by the upstream
+    API. Used as a fallback so the "Open Source" action is never a dead end.
+    """
+    if not news_id:
+        return None
+    lang_seg = "ar" if lang in ("ar", "A") else "en"
+    return f"https://www.boursakuwait.com.kw/{lang_seg}/news/view#{news_id}"
+
+
 def _map_item(raw: dict, lang: str = "en") -> dict:
     """Map a Boursa Kuwait announcement JSON to our NewsItem schema.
 
@@ -513,14 +524,19 @@ def _map_item(raw: dict, lang: str = "en") -> dict:
     if pdf_url:
         attachments.append({"type": "pdf", "url": pdf_url})
 
+    news_id = str(raw.get("NewsId", ""))
+    # Always provide an openable source URL: prefer the direct PDF, fall back
+    # to Boursa Kuwait's public news-viewer page (works for every NewsId).
+    source_url = pdf_url or _boursa_news_view_url(news_id, lang)
+
     return {
-        "id": str(raw.get("NewsId", "")),
+        "id": news_id,
         "title": title,
         "summary": title,
         "source": "boursa_kuwait",
         "category": category,
         "publishedAt": _parse_date(str(raw.get("PostedDate", ""))),
-        "url": pdf_url or None,
+        "url": source_url,
         "relatedSymbols": [ticker] if ticker else [],
         "sentiment": "neutral",
         "impact": _assess_impact(news_type, category),
@@ -539,6 +555,14 @@ def _db_row_to_item(row: NewsArticle) -> dict:
         except (json.JSONDecodeError, TypeError):
             attachments = None
 
+    # Fall back to the Boursa Kuwait news-viewer page for historical items
+    # that were imported without a direct PDF URL (RT=3516 doesn't return one).
+    source_url = row.url or (
+        _boursa_news_view_url(row.news_id, row.language)
+        if row.source == "boursa_kuwait"
+        else None
+    )
+
     return {
         "id": row.news_id,
         "title": row.title,
@@ -546,7 +570,7 @@ def _db_row_to_item(row: NewsArticle) -> dict:
         "source": row.source,
         "category": row.category,
         "publishedAt": row.published_at.isoformat() if row.published_at else None,
-        "url": row.url,
+        "url": source_url,
         "relatedSymbols": row.related_symbols.split(",") if row.related_symbols else [],
         "sentiment": row.sentiment,
         "impact": row.impact,

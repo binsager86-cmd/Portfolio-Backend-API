@@ -49,6 +49,8 @@ class RealizedProfitDetail(BaseModel):
     avg_cost_at_txn: float = 0.0
     realized_pnl: float = 0.0
     realized_pnl_kwd: float = 0.0
+    dividends_allocated_kwd: float = 0.0
+    net_pnl_kwd: float = 0.0
     currency: str = "KWD"
     source: str = "calculated"  # "stored" | "calculated"
 

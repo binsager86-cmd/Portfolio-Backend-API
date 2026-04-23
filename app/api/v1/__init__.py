@@ -23,6 +23,7 @@ from app.api.v1.admin import router as admin_router
 from app.api.v1.news import router as news_router
 from app.api.v1.market import router as market_router
 from app.api.v1.notifications import router as notifications_router
+from app.api.v1.users import router as users_router
 
 v1_router = APIRouter(prefix="/api/v1")
 
@@ -45,3 +46,4 @@ v1_router.include_router(admin_router)
 v1_router.include_router(news_router)
 v1_router.include_router(market_router)
 v1_router.include_router(notifications_router)
+v1_router.include_router(users_router)

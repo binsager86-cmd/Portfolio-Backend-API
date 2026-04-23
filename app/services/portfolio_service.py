@@ -665,8 +665,51 @@ class PortfolioService:
                 "total_realized_kwd": 0.0,
                 "total_profit_kwd": 0.0,
                 "total_loss_kwd": 0.0,
+                "total_dividends_allocated_kwd": 0.0,
                 "details": [],
             }
+
+        # Pre-compute per-(symbol, portfolio) totals so each sell can be
+        # credited a proportional share of the dividends collected on that
+        # position. A sell is considered a "win" by the UI when
+        # realized_pnl_kwd + dividends_allocated_kwd >= 0 — matching the
+        # investor's net experience including income, not just price P&L.
+        try:
+            dividends_kwd_per_pos: dict[tuple[str, str], float] = {}
+            shares_bought_per_pos: dict[tuple[str, str], float] = {}
+            for _, r in df.iterrows():
+                key = (str(r["stock_symbol"]).strip(), str(r.get("portfolio", "KFH")))
+                ccy = r.get("currency", "KWD")
+                # Dividends are recorded on Buy rows (cash_dividend column).
+                # Use raw column from df via re-query is overkill; pull from
+                # transactions via a lightweight aggregate query below.
+                shares_bought_per_pos.setdefault(key, 0.0)
+                if str(r.get("txn_type")) == "Buy":
+                    shares_bought_per_pos[key] += safe_float(r.get("shares"), 0.0)
+
+            soft_del2 = _soft_delete_filter()
+            div_sql = f"""
+                SELECT
+                    stock_symbol,
+                    COALESCE(portfolio, 'KFH') AS portfolio,
+                    SUM(COALESCE(cash_dividend, 0)) AS total_div,
+                    COALESCE((SELECT currency FROM stocks s
+                              WHERE UPPER(s.symbol) = UPPER(t.stock_symbol)
+                                AND s.user_id = t.user_id LIMIT 1), 'KWD') AS currency
+                FROM transactions t
+                WHERE t.user_id = ? {soft_del2}
+                GROUP BY stock_symbol, COALESCE(portfolio, 'KFH')
+            """
+            div_df = query_df(div_sql, (self.user_id,))
+            for _, r in div_df.iterrows():
+                key = (str(r["stock_symbol"]).strip(), str(r["portfolio"]))
+                dividends_kwd_per_pos[key] = convert_to_kwd(
+                    safe_float(r.get("total_div"), 0.0),
+                    r.get("currency", "KWD"),
+                )
+        except Exception:
+            dividends_kwd_per_pos = {}
+            shares_bought_per_pos = {}
 
         has_stored = (
             "realized_pnl_at_txn" in df.columns
@@ -676,7 +719,18 @@ class PortfolioService:
         total_realized_kwd = 0.0
         total_profit_kwd = 0.0
         total_loss_kwd = 0.0
+        total_div_alloc_kwd = 0.0
         details: List[dict] = []
+
+        def _alloc_div(sym: str, pf: str, sold_shares: float) -> float:
+            """Pro-rata share of position dividends for this sell."""
+            key = (sym, pf)
+            total_div = dividends_kwd_per_pos.get(key, 0.0)
+            total_bought = shares_bought_per_pos.get(key, 0.0)
+            if total_div == 0.0 or total_bought <= 0.0 or sold_shares <= 0.0:
+                return 0.0
+            ratio = min(sold_shares / total_bought, 1.0)
+            return total_div * ratio
 
         if has_stored:
             sells = df[df["txn_type"] == "Sell"].copy()
@@ -687,21 +741,27 @@ class PortfolioService:
                 profit = float(stored_pnl)
                 ccy = row.get("currency", "KWD")
                 profit_kwd = convert_to_kwd(profit, ccy)
+                sym = str(row["stock_symbol"]).strip()
+                pf = str(row.get("portfolio", "KFH"))
+                div_alloc = _alloc_div(sym, pf, safe_float(row.get("shares"), 0.0))
                 total_realized_kwd += profit_kwd
+                total_div_alloc_kwd += div_alloc
                 if profit_kwd >= 0:
                     total_profit_kwd += profit_kwd
                 else:
                     total_loss_kwd += profit_kwd
                 details.append({
                     "id": int(row["id"]),
-                    "symbol": row["stock_symbol"],
-                    "portfolio": row["portfolio"],
+                    "symbol": sym,
+                    "portfolio": pf,
                     "txn_date": row["txn_date"],
                     "shares": safe_float(row["shares"]),
                     "sell_value": safe_float(row["sell_value"]),
                     "avg_cost_at_txn": safe_float(row.get("avg_cost_at_txn")),
                     "realized_pnl": profit,
                     "realized_pnl_kwd": profit_kwd,
+                    "dividends_allocated_kwd": round(div_alloc, 3),
+                    "net_pnl_kwd": round(profit_kwd + div_alloc, 3),
                     "currency": ccy,
                     "source": "stored",
                 })
@@ -742,6 +802,9 @@ class PortfolioService:
                         position_basis[key]["qty"] -= qty
                         position_basis[key]["total_cost"] -= cost_of_sold
 
+                        div_alloc = _alloc_div(sym, pf, qty)
+                        total_div_alloc_kwd += div_alloc
+
                         details.append({
                             "id": int(row["id"]),
                             "symbol": sym,
@@ -752,6 +815,8 @@ class PortfolioService:
                             "avg_cost_at_txn": avg_cost_ps,
                             "realized_pnl": profit,
                             "realized_pnl_kwd": profit_kwd,
+                            "dividends_allocated_kwd": round(div_alloc, 3),
+                            "net_pnl_kwd": round(profit_kwd + div_alloc, 3),
                             "currency": ccy,
                             "source": "calculated",
                         })
@@ -760,6 +825,7 @@ class PortfolioService:
             "total_realized_kwd": round(total_realized_kwd, 3),
             "total_profit_kwd": round(total_profit_kwd, 3),
             "total_loss_kwd": round(total_loss_kwd, 3),
+            "total_dividends_allocated_kwd": round(total_div_alloc_kwd, 3),
             "details": details,
         }
 
