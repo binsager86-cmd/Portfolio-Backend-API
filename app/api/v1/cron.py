@@ -203,3 +203,31 @@ async def trigger_price_update_and_snapshot(
             "snapshots": all_snapshot_results,
         },
     }
+
+
+@router.post("/notify-portfolio-updates")
+async def trigger_portfolio_alerts(
+    x_cron_key: Optional[str] = Header(None, alias="X-Cron-Key"),
+    key: Optional[str] = Query(None),
+    user_id: int = Query(0, description="User to notify (0 = all users with stocks)"),
+):
+    """
+    Manually dispatch portfolio-update push notifications.
+
+    The same dispatch is invoked automatically after the daily price+snapshot
+    job; this endpoint is for manual testing / re-runs.
+    Honors per-user notification preferences (``dailyPriceUpdates`` and
+    ``portfolioUpdates``).
+    """
+    _verify_cron_key(x_cron_key, key)
+
+    from app.services.portfolio_alerts import notify_portfolio_updates_for_users
+
+    user_ids = _resolve_user_ids(user_id)
+    logger.info("📲 Portfolio alert dispatch triggered for user_ids=%s", user_ids)
+    result = notify_portfolio_updates_for_users(user_ids)
+    return {
+        "status": "ok",
+        "message": f"Dispatched portfolio alerts to {len(user_ids)} user(s); {result.get('total_sent', 0)} push(es) sent",
+        "data": result,
+    }

@@ -60,6 +60,19 @@ def _run_daily_price_then_snapshot(user_id: int | None = None) -> dict:
         all_price_results[uid] = price_result
         all_snapshot_results[uid] = snapshot_result
 
+    # Fire portfolio-update push notifications (best-effort; never blocks
+    # the daily job). Honors per-user notification preferences.
+    try:
+        from app.services.portfolio_alerts import notify_portfolio_updates_for_users
+        alerts_result = notify_portfolio_updates_for_users(user_ids)
+        logger.info(
+            "📲 Portfolio alerts dispatched: %d push(es) sent across %d user(s)",
+            alerts_result.get("total_sent", 0),
+            len(user_ids),
+        )
+    except Exception as exc:
+        logger.warning("Portfolio alert dispatch failed: %s", exc)
+
     # Update the cron API status tracking so /status shows scheduler runs
     try:
         from app.api.v1.cron import _last_run, _last_snapshot_run
