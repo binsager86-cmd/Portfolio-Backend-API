@@ -88,6 +88,97 @@ KUWAIT_STOCKS: List[Dict[str, str]] = [
     {"symbol": "ALEID", "name": "Al Eid Food Company K.S.C. (Public)", "yf_ticker": "ALEID.KW"},
     {"symbol": "ALMANAR", "name": "Al Manar Financing and Leasing Company K.S.C. (Public)", "yf_ticker": "ALMANAR.KW"},
     {"symbol": "INJAZZAT", "name": "Injazzat Real Estate Development Company K.P.S.C.", "yf_ticker": "INJAZZAT.KW"},
+
+    # ── ADDITIONAL BOURSA KUWAIT LISTINGS ──
+    # Source: Boursa Kuwait listed companies (cross-checked via stockanalysis.com /list/kuwait-stock-exchange/).
+    # All use the standard SYMBOL.KW yfinance ticker form (same as the entries above).
+    # Added 2026-04 to bring the catalogue from 65 → 139 (full Premier + Main + Auction market coverage).
+    # Banks
+    {"symbol": "WARBABANK", "name": "Warba Bank K.S.C.P.", "yf_ticker": "WARBABANK.KW"},
+    # Investment / Financial Services
+    {"symbol": "ARZAN", "name": "Arzan Financial Group for Financing and Investment - KPSC", "yf_ticker": "ARZAN.KW"},
+    {"symbol": "NINV", "name": "National Investments Company K.S.C.P.", "yf_ticker": "NINV.KW"},
+    {"symbol": "GIH", "name": "Gulf Investment House - KPSC", "yf_ticker": "GIH.KW"},
+    {"symbol": "KINV", "name": "Kuwait Investment Company K.S.C.P.", "yf_ticker": "KINV.KW"},
+    {"symbol": "ALOLA", "name": "First Investment Company K.S.C.P.", "yf_ticker": "ALOLA.KW"},
+    {"symbol": "OSOUL", "name": "Osoul Investment Company - K.S.C.P", "yf_ticker": "OSOUL.KW"},
+    {"symbol": "ASIYA", "name": "Asiya Capital Investments Company K.S.C.P.", "yf_ticker": "ASIYA.KW"},
+    {"symbol": "BAYANINV", "name": "Bayan Investment Holding Company (K.S.C) Public", "yf_ticker": "BAYANINV.KW"},
+    {"symbol": "WARBACAP", "name": "Warba Capital Holding Company K.S.C.P.", "yf_ticker": "WARBACAP.KW"},
+    {"symbol": "EKTTITAB", "name": "Ekttitab Holding Company K.S.C Public", "yf_ticker": "EKTTITAB.KW"},
+    {"symbol": "FACIL", "name": "Commercial Facilities Company S.A.K.P.", "yf_ticker": "FACIL.KW"},
+    {"symbol": "TAHSSILAT", "name": "Credit Rating and Collection Company K.S.C. (Public)", "yf_ticker": "TAHSSILAT.KW"},
+    # Real Estate
+    {"symbol": "SRE", "name": "Salhia Real Estate Company K.S.C.P.", "yf_ticker": "SRE.KW"},
+    {"symbol": "NRE", "name": "National Real Estate Company - K.P.S.C.", "yf_ticker": "NRE.KW"},
+    {"symbol": "AAYANRE", "name": "A'ayan Real Estate Company K.S.C.P.", "yf_ticker": "AAYANRE.KW"},
+    {"symbol": "AREEC", "name": "Ajial Real Estate Entertainment Company K.S.C.P.", "yf_ticker": "AREEC.KW"},
+    {"symbol": "RASIYAT", "name": "Rasiyat Holding Company K.P.S.C.", "yf_ticker": "RASIYAT.KW"},
+    {"symbol": "THURAYA", "name": "Dar Al-Thuraya Real Estate Company K.S.C.P.", "yf_ticker": "THURAYA.KW"},
+    {"symbol": "KBT", "name": "Kuwait Business Town Real Estate Company - KPSC", "yf_ticker": "KBT.KW"},
+    {"symbol": "ARABREC", "name": "Al-Arabiya Real Estate Company K.S.C.P.", "yf_ticker": "ARABREC.KW"},
+    {"symbol": "ERESCO", "name": "Al-Enma'a Real Estate Company K.S.C.P.", "yf_ticker": "ERESCO.KW"},
+    {"symbol": "MARAKEZ", "name": "Marakez Real Estate Development Company (K.P.S.C)", "yf_ticker": "MARAKEZ.KW"},
+    {"symbol": "MENA", "name": "MENA Real Estate Company - KSCP", "yf_ticker": "MENA.KW"},
+    {"symbol": "EMIRATES", "name": "Kuwait Emirates Holding Company K.S.C.P.", "yf_ticker": "EMIRATES.KW"},
+    {"symbol": "MUBARRAD", "name": "Mubarrad Holding Company K.S.C.P.", "yf_ticker": "MUBARRAD.KW"},
+    {"symbol": "ALAQARIA", "name": "Kuwait Real Estate Holding Company - KPSC", "yf_ticker": "ALAQARIA.KW"},
+    {"symbol": "DALQANRE", "name": "Dalqan Real Estate Company K.S.C. (Public)", "yf_ticker": "DALQANRE.KW"},
+    {"symbol": "FUTUREKID", "name": "Future Kid Entertainment and Real Estate Company K.P.S.C.", "yf_ticker": "FUTUREKID.KW"},
+    {"symbol": "IFAHR", "name": "IFA Hotels and Resorts - KPSC", "yf_ticker": "IFAHR.KW"},
+    {"symbol": "MUNTAZAHAT", "name": "Kuwait Resorts Company K.P.S.C.", "yf_ticker": "MUNTAZAHAT.KW"},
+    {"symbol": "KHOT", "name": "Kuwait Hotels Company K.S.C.P.", "yf_ticker": "KHOT.KW"},
+    # Industrial / Materials
+    {"symbol": "CABLE", "name": "Gulf Cables and Electrical Industries Group Company - KPSC", "yf_ticker": "CABLE.KW"},
+    {"symbol": "PCEM", "name": "Kuwait Portland Cement Co. K.P.S.C.", "yf_ticker": "PCEM.KW"},
+    {"symbol": "KFOUC", "name": "Kuwait Foundry Company K.S.C.P.", "yf_ticker": "KFOUC.KW"},
+    {"symbol": "NICBM", "name": "National Industries Company - KPSC", "yf_ticker": "NICBM.KW"},
+    {"symbol": "SHIP", "name": "Heavy Engineering Industries and Shipbuilding Company K.S.C.P.", "yf_ticker": "SHIP.KW"},
+    {"symbol": "ALKOUT", "name": "Al Kout Industrial Projects Company K.S.C.P.", "yf_ticker": "ALKOUT.KW"},
+    {"symbol": "PAPER", "name": "Shuaiba Industrial Company K.P.S.C.", "yf_ticker": "PAPER.KW"},
+    {"symbol": "MRC", "name": "Metal and Recycling Company K.S.C. (Public)", "yf_ticker": "MRC.KW"},
+    # Energy / Oil & Gas
+    {"symbol": "NAPESCO", "name": "National Petroleum Services Company K.S.C.P.", "yf_ticker": "NAPESCO.KW"},
+    {"symbol": "IPG", "name": "Independent Petroleum Group K.S.C.P.", "yf_ticker": "IPG.KW"},
+    {"symbol": "OULAFUEL", "name": "Oula Fuel Marketing Company - KSCP", "yf_ticker": "OULAFUEL.KW"},
+    {"symbol": "SOOR", "name": "Al Soor Fuel Marketing Company K.S.C.P.", "yf_ticker": "SOOR.KW"},
+    {"symbol": "ALFTAQA", "name": "Action Energy Company K.S.C (Public)", "yf_ticker": "ALFTAQA.KW"},
+    {"symbol": "ENERGYH", "name": "The Energy House Holding Company K.S.C.P.", "yf_ticker": "ENERGYH.KW"},
+    {"symbol": "SENERGY", "name": "Senergy Holding Company K.S.C.P.", "yf_ticker": "SENERGY.KW"},
+    {"symbol": "ABAR", "name": "Burgan Company for Well Drilling, Trading and Maintenance K.S.C. (Public)", "yf_ticker": "ABAR.KW"},
+    {"symbol": "AZNOULA", "name": "Shamal Az-Zour Al-Oula Power and Water Company KSC (Public)", "yf_ticker": "AZNOULA.KW"},
+    # Insurance
+    {"symbol": "AINS", "name": "Al-Ahleia Insurance Company S.A.K.P.", "yf_ticker": "AINS.KW"},
+    {"symbol": "BKIKWT", "name": "Bahrain Kuwait Insurance Company B.S.C.", "yf_ticker": "BKIKWT.KW"},
+    {"symbol": "WINSRE", "name": "Warba Insurance and Reinsurance Company (K.S.C.P.)", "yf_ticker": "WINSRE.KW"},
+    {"symbol": "FTI", "name": "First Takaful Insurance Company - KPSC", "yf_ticker": "FTI.KW"},
+    # Transport / Logistics
+    {"symbol": "JAZEERA", "name": "Jazeera Airways K.S.C.P.", "yf_ticker": "JAZEERA.KW"},
+    {"symbol": "MKHZN", "name": "Agility Public Warehousing Company K.S.C.P.", "yf_ticker": "MKHZN.KW"},
+    {"symbol": "JTC", "name": "JTC Logistics Transportation & Stevedoring Co. K.S.C.P.", "yf_ticker": "JTC.KW"},
+    {"symbol": "CATTL", "name": "Livestock Transport and Trading Company K.P.S.C.", "yf_ticker": "CATTL.KW"},
+    {"symbol": "UPAC", "name": "United Projects Company For Aviation Services K.S.C.P.", "yf_ticker": "UPAC.KW"},
+    # Construction / Contracting
+    {"symbol": "CGC", "name": "Combined Group Contracting Company - K.S.C. (Public)", "yf_ticker": "CGC.KW"},
+    {"symbol": "KCPC", "name": "The Kuwait Company for Process Plant Construction and Contracting K.S.C.P.", "yf_ticker": "KCPC.KW"},
+    {"symbol": "INTEGRATED", "name": "Integrated Holding Company K.S.C.P.", "yf_ticker": "INTEGRATED.KW"},
+    # Technology / Telecom
+    {"symbol": "DIGITUS", "name": "Digitus Group for Digital Infrastructure, Data Centers & Communications. (K.S.C.P)", "yf_ticker": "DIGITUS.KW"},
+    {"symbol": "ATC", "name": "Advanced Technology Company K.S.C.P.", "yf_ticker": "ATC.KW"},
+    # Consumer / Retail / Services
+    {"symbol": "TROLLEY", "name": "Trolley General Trading Company K.S.C.C.", "yf_ticker": "TROLLEY.KW"},
+    {"symbol": "BEYOUT", "name": "Beyout Holding Company K.S.C. (Public)", "yf_ticker": "BEYOUT.KW"},
+    {"symbol": "KCIN", "name": "Kuwait National Cinema Company (K.P.S.C)", "yf_ticker": "KCIN.KW"},
+    {"symbol": "MIDAN", "name": "Al-Maidan Clinic for Oral Health Services Company K.S.C.P.", "yf_ticker": "MIDAN.KW"},
+    {"symbol": "CLEANING", "name": "National Cleaning Company K.P.S.C.", "yf_ticker": "CLEANING.KW"},
+    {"symbol": "GFC", "name": "Gulf Franchising Holding Company - K.S.C. (Public)", "yf_ticker": "GFC.KW"},
+    {"symbol": "PAPCO", "name": "Palms Agro Production Company K.S.C.P", "yf_ticker": "PAPCO.KW"},
+    {"symbol": "NCCI", "name": "National Consumer Holding Company - K.S.C. (Public)", "yf_ticker": "NCCI.KW"},
+    {"symbol": "SPEC", "name": "Specialities Group Holding Company K.P.S.C.", "yf_ticker": "SPEC.KW"},
+    {"symbol": "OSOS", "name": "OSOS Holding Group Company K.P.S.C.", "yf_ticker": "OSOS.KW"},
+    {"symbol": "MADAR", "name": "Al Madar Kuwait Holding Company K.S.C.P.", "yf_ticker": "MADAR.KW"},
+    {"symbol": "VALMORE", "name": "Valmore Holding S.A.E.", "yf_ticker": "VALMORE.KW"},
+    {"symbol": "QIC", "name": "Umm Al Qaiwain General Investments Company P.S.C.", "yf_ticker": "QIC.KW"},
 ]
 
 
