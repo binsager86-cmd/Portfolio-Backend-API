@@ -564,7 +564,7 @@ def _build_extraction_prompt(n_pages: int, existing_codes: Optional[List[Dict[st
     3. Automated Self-Audit — mandatory arithmetic checks
     4. Self-Correction Logic — fix failures or flag UNCALC_ERROR
     """
-    return f"""\
+    prompt = f"""\
 ### ROLE
 Expert Financial Auditor & Data Engineer (Self-Correcting Mode).
 You perform Native Visual Table Mapping — you preserve the visual "DNA"

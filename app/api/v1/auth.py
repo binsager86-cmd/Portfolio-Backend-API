@@ -515,8 +515,6 @@ async def get_api_key(current_user=Depends(get_current_user)):
 
 # ── Password Reset (OTP) ────────────────────────────────────────────
 
-import secrets
-
 def _ensure_password_resets_table():
     """Create password_resets table if it doesn't exist, or recreate if schema is wrong."""
     # If table exists but has wrong schema, drop and recreate

@@ -331,7 +331,6 @@ _TITLE_TYPE_CATEGORY: dict[str, str] = {
     "تأجيل موعد جمعية حملة الوحدات":                     "company_announcement",
     "نتائج اجتماع جمعية حملة الوحدات":                   "company_announcement",
     "انعقاد جمعية حملة الوحدات":                         "company_announcement",
-    "تغيير موعد جمعية حملة الوحدات":                     "company_announcement",
     "تأجيل جمعية حملة الوحدات المؤجلة":                  "company_announcement",
     "تغيير اسم الشركة":                                  "company_announcement",
     "اجتماع الهيئة الادارية":                            "company_announcement",

@@ -553,26 +553,26 @@ async def deposits_import(
                 continue
 
             # Optional fields with sensible defaults
-            def _cell_str(col: str, default: str = "") -> str:
-                val = row.get(col)
+            def _cell_str(row_data: pd.Series, col: str, default: str = "") -> str:
+                val = row_data.get(col)
                 if val is None or (isinstance(val, float) and pd.isna(val)):
                     return default
                 s = str(val).strip()
                 return default if s.lower() in ("nan", "nat") else s
 
-            portfolio = _cell_str("portfolio", "KFH")
+            portfolio = _cell_str(row, "portfolio", "KFH")
             if portfolio not in PORTFOLIO_CCY:
                 portfolio = "KFH"
-            currency = _cell_str("currency", "KWD").upper()
-            source = _cell_str("source", "deposit").lower()
+            currency = _cell_str(row, "currency", "KWD").upper()
+            source = _cell_str(row, "source", "deposit").lower()
             if source not in ("deposit", "withdrawal"):
                 source = "deposit"
-            bank_name = _cell_str("bank_name")
-            description = _cell_str("description")
-            comments = _cell_str("comments")
-            notes = _cell_str("notes")
+            bank_name = _cell_str(row, "bank_name")
+            description = _cell_str(row, "description")
+            comments = _cell_str(row, "comments")
+            notes = _cell_str(row, "notes")
 
-            include_raw = _cell_str("include_in_analysis", "1")
+            include_raw = _cell_str(row, "include_in_analysis", "1")
             include_in_analysis = 0 if include_raw.lower() in ("0", "no", "false", "record") else 1
 
             exec_sql(

@@ -1225,7 +1225,7 @@ _MT_STMT_MAP = {
 _MT_MAX_YEARS = 10
 
 
-def _mt_resolve_slug(symbol: str, client: "httpx.Client") -> Optional[str]:
+def _mt_resolve_slug(symbol: str, client: Any) -> Optional[str]:
     """Get the macrotrends company slug by following the redirect.
 
     macrotrends.net/stocks/charts/AAPL/ → 301 → .../AAPL/apple/
@@ -6626,7 +6626,6 @@ def _fetch_yfinance_risk_data(symbol: str) -> Dict[str, float]:
     DB data in _compute_stock_score — yfinance only provides price +
     price-history-derived metrics.
     """
-    import math
     import signal
     import threading
 
