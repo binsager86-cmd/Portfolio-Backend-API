@@ -37,6 +37,8 @@ def send_push_notifications(
             "title": title,
             "body": body,
             "sound": "default",
+            "channelId": "default",
+            "priority": "high",
         }
         if data:
             msg["data"] = data

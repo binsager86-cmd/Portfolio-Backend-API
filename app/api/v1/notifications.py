@@ -44,6 +44,14 @@ class NotificationPrefs(BaseModel):
     dailyPriceUpdates: Optional[bool] = None
 
 
+def _is_valid_expo_push_token(token: str) -> bool:
+    """Accept current and legacy Expo push token formats."""
+    if not token:
+        return False
+    t = token.strip()
+    return t.startswith("ExponentPushToken[") or t.startswith("ExpoPushToken[")
+
+
 # ── Endpoints ────────────────────────────────────────────────────────
 
 @router.post("/register-token", response_model=RegisterTokenResponse)
@@ -53,11 +61,12 @@ async def register_push_token(
     db: Session = Depends(get_db),
 ):
     """Register an Expo push token for receiving push notifications."""
-    if not body.token or not body.token.startswith("ExponentPushToken["):
+    token = (body.token or "").strip()
+    if not _is_valid_expo_push_token(token):
         raise HTTPException(status_code=400, detail="Invalid Expo push token format")
 
     # Check if token already exists
-    existing = db.query(PushToken).filter(PushToken.token == body.token).first()
+    existing = db.query(PushToken).filter(PushToken.token == token).first()
     if existing:
         # Update user_id and platform if changed
         existing.user_id = current_user.user_id
@@ -69,7 +78,7 @@ async def register_push_token(
     # Create new token record
     push_token = PushToken(
         user_id=current_user.user_id,
-        token=body.token,
+        token=token,
         platform=body.platform,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
