@@ -16,7 +16,8 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, File
+import asyncio
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
@@ -558,6 +559,148 @@ def _run_extraction_job_sync(
                 loop.close()
             except Exception:
                 pass
+
+
+async def _run_extraction_job_async(
+    job_id: int,
+    stock_id: int,
+    user_id: int,
+    pdf_bytes: bytes,
+    filename: str,
+    model: str,
+    force: bool,
+    api_key: str,
+    existing_codes: List[Dict[str, str]],
+) -> None:
+    """
+    [P2-4/B-6] Async extraction coroutine — replaces ``_run_extraction_job_sync``.
+
+    Runs on the FastAPI event loop via ``asyncio.create_task``.  No new event
+    loop or thread-pool is needed; ``extract_financials`` is awaited directly.
+    The heartbeat thread is still used to keep *last_heartbeat_at* fresh
+    because the AI call may take several minutes.
+    """
+    from app.services.extraction_service import extract_financials
+
+    start_ts = time.time()
+    now = int(start_ts)
+    _update_job(job_id, status="running", stage="extracting", started_at=now, last_heartbeat_at=now)
+    _log_job(job_id, stock_id, "started", filename=filename, model=model)
+
+    hb_thread, hb_stop = _start_heartbeat_thread(job_id)
+
+    try:
+        result = await extract_financials(
+            pdf_bytes=pdf_bytes,
+            stock_id=stock_id,
+            api_key=api_key,
+            filename=filename,
+            model_name=model,
+            use_cache=not force,
+            existing_codes=existing_codes if existing_codes else None,
+        )
+
+        extract_ms = int((time.time() - start_ts) * 1000)
+        _log_job(job_id, stock_id, "extraction_complete", filename=filename,
+                 duration_ms=extract_ms, pages=result.pages_processed)
+
+        _update_job(
+            job_id,
+            stage="saving",
+            total_pages=result.pages_processed,
+            pages_processed=result.pages_processed,
+            progress_percent=80,
+            last_heartbeat_at=int(time.time()),
+        )
+
+        stock_row = query_one(
+            "SELECT currency FROM analysis_stocks WHERE id = ?", (stock_id,),
+        )
+        stock_currency = stock_row["currency"] if stock_row else "USD"
+
+        created_statements, total_items = _persist_extraction_result(
+            stock_id=stock_id,
+            result=result,
+            stock_currency=stock_currency,
+            source_file=filename,
+            extracted_by="gemini-ai-pipeline",
+            notes_template=f"AI-extracted (pipeline, retries={result.retry_count})",
+        )
+
+        try:
+            _save_pdf_file(stock_id, user_id, pdf_bytes, filename)
+        except Exception as e:
+            logger.warning("PDF file save failed (non-fatal): %s", e)
+
+        audit_summary = {
+            "checks_total": len(result.audit_checks),
+            "checks_passed": sum(1 for c in result.audit_checks if c.passed),
+            "checks_failed": sum(1 for c in result.audit_checks if not c.passed),
+            "retries_used": result.retry_count,
+            "validation_corrections": result.validation_corrections,
+            "details": [
+                {
+                    "statement_type": c.statement_type,
+                    "period": c.period,
+                    "rule": c.total_label,
+                    "expected": c.computed_sum,
+                    "actual": c.total_value,
+                    "passed": c.passed,
+                    "detail": c.detail,
+                    "discrepancy": c.discrepancy,
+                }
+                for c in result.audit_checks
+            ],
+        }
+
+        total_ms = int((time.time() - start_ts) * 1000)
+        result_payload = {
+            "message": (
+                f"Successfully extracted {len(created_statements)} statements "
+                f"with {total_items} line items."
+            ),
+            "statements": created_statements,
+            "source_file": filename,
+            "pages_processed": result.pages_processed,
+            "model": result.model_used,
+            "confidence": result.confidence,
+            "cached": result.cached,
+            "audit": audit_summary,
+            "duration_ms": total_ms,
+        }
+
+        if not created_statements and getattr(result, "raw_ai_text", ""):
+            result_payload["raw_ai_response_preview"] = result.raw_ai_text[:3000]
+
+        _update_job(
+            job_id,
+            status="done",
+            stage="done",
+            progress_percent=100,
+            pages_processed=result.pages_processed,
+            total_pages=result.pages_processed,
+            result_payload=json.dumps(result_payload, default=str),
+            last_heartbeat_at=int(time.time()),
+            completed_at=int(time.time()),
+        )
+        _log_job(job_id, stock_id, "done", filename=filename,
+                 duration_ms=total_ms, statements=len(created_statements),
+                 items=total_items)
+
+    except Exception as exc:
+        err_ms = int((time.time() - start_ts) * 1000)
+        _log_job(job_id, stock_id, "failed", filename=filename,
+                 duration_ms=err_ms, error=str(exc)[:200])
+        _update_job(
+            job_id,
+            status="failed",
+            error_message=str(exc)[:2000],
+            last_heartbeat_at=int(time.time()),
+            completed_at=int(time.time()),
+        )
+    finally:
+        hb_stop.set()
+        hb_thread.join(timeout=5)
 
 
 # ── Pydantic Schemas ─────────────────────────────────────────────────
@@ -3058,8 +3201,7 @@ def _parse_ai_json(text: str) -> list:
 @router.post("/stocks/{stock_id}/upload-statement")
 async def upload_financial_statement(
     stock_id: int,
-    background_tasks: BackgroundTasks,
-    file: UploadFile = File(...),
+    file: UploadFile = File(...),  # [P2-4/B-6] BackgroundTasks removed — asyncio.create_task used instead
     force: bool = Query(False, description="Skip cache and re-extract from scratch"),
     model: str = Query("gemini-2.5-flash", description="Gemini model to use: gemini-2.5-flash or gemini-2.5-pro"),
     current_user: TokenData = Depends(get_current_user),
@@ -3184,9 +3326,10 @@ async def upload_financial_statement(
         (stock_id, current_user.user_id, now),
     )
 
-    # ── 7. Launch background extraction via BackgroundTasks ──────────
-    background_tasks.add_task(
-        _run_extraction_job_sync,
+    # ── 7. Launch background extraction via asyncio.create_task ──────
+    # [P2-4/B-6] asyncio.create_task runs on the existing event loop and can
+    # call extract_financials (async) directly — no new event loop needed.
+    asyncio.create_task(_run_extraction_job_async(
         job_id=job_id,
         stock_id=stock_id,
         user_id=current_user.user_id,
@@ -3196,7 +3339,7 @@ async def upload_financial_statement(
         force=force,
         api_key=api_key,
         existing_codes=existing_codes,
-    )
+    ))
 
     _log_job(job_id, stock_id, "created", filename=file.filename,
              model=model, pdf_hash=pdf_hash[:12])

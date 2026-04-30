@@ -38,8 +38,8 @@ class Portfolio(Base):
     created_at = Column(Integer, default=lambda: int(time.time()))
 
     user = relationship("User", back_populates="portfolios")
-    external_accounts = relationship("ExternalAccount", back_populates="portfolio", lazy="select")
-    portfolio_transactions = relationship("PortfolioTransaction2", back_populates="portfolio", lazy="select")
+    external_accounts = relationship("ExternalAccount", back_populates="portfolio", lazy="selectin")
+    portfolio_transactions = relationship("PortfolioTransaction2", back_populates="portfolio", lazy="selectin")
 
     def __repr__(self) -> str:
         return f"<Portfolio {self.name}>"

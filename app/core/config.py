@@ -53,9 +53,17 @@ class Settings(BaseSettings):
     PRICE_UPDATE_HOUR: int = 14         # Hour (24h) in Asia/Kuwait to run daily
     PRICE_UPDATE_MINUTE: int = 0
     PRICE_UPDATE_ENABLED: bool = True   # Set False to disable the built-in scheduler
+    PUSH_NOTIFICATIONS_ENABLED: bool = True
+
+    # App version gating
+    MIN_APP_VERSION: str = "1.2.0"      # Oldest version allowed to connect
+    LATEST_APP_VERSION: str = "1.3.1"   # Shown in /system/version-check
 
     # AI / Gemini (optional)
     GEMINI_API_KEY: str = ""            # Google Gemini API key for AI analysis
+
+    # Market data (Whale Tracker)
+    EODHD_API_TOKEN: str = ""           # EODHD token for /api/v1/trade-signals/whale-candles
 
     # SMTP / Email (for password reset OTP)
     SMTP_HOST: str = ""                 # e.g. "smtp.gmail.com"
@@ -115,4 +123,13 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings() -> Settings:
-    return Settings()
+    settings = Settings()
+    # [Phase-1 Security] LEGACY_PLAINTEXT_LOGIN must never be enabled in production.
+    # This plaintext fallback exists only to ease dev-time password migration and
+    # must be removed before any traffic hits real user data.
+    if settings.is_production and settings.LEGACY_PLAINTEXT_LOGIN:
+        raise RuntimeError(
+            "LEGACY_PLAINTEXT_LOGIN=True is forbidden in production. "
+            "Set LEGACY_PLAINTEXT_LOGIN=False in your .env before deploying."
+        )
+    return settings

@@ -4051,3 +4051,89 @@ async def ai_rearrange_statement(
         ),
         "confidence": 0.90 if total == 0 else 0.80,
     }
+
+
+# ════════════════════════════════════════════════════════════════════
+# CROSS-USER PDF DEDUPLICATION (Phase 9)
+# ════════════════════════════════════════════════════════════════════
+
+
+async def get_or_extract_fundamentals(
+    pdf_bytes: bytes,
+    stock_id: int,
+    api_key: str,
+    filename: str = "upload.pdf",
+    model_name: str = "gemini-2.5-flash",
+    existing_codes: Optional[List[Dict[str, str]]] = None,
+) -> ExtractionResult:
+    """
+    Cross-user PDF deduplication wrapper around :func:`extract_financials`.
+
+    Cache hierarchy (fastest → slowest):
+      1. **Redis** — content-hash keyed, 30-day TTL.  Shared across all users.
+         Same PDF uploaded by different users hits this after the first extraction.
+      2. **DB extraction_cache** — per stock_id + pdf_hash (handled inside
+         :func:`extract_financials`).
+      3. **Full AI extraction** — only reached on a true cold miss.
+
+    Args:
+        pdf_bytes:      Raw PDF file bytes.
+        stock_id:       Database stock ID (used for DB cache layer).
+        api_key:        Gemini API key for the extraction call.
+        filename:       Original filename (stored in cache metadata).
+        model_name:     Gemini model to use (default: gemini-2.5-flash).
+        existing_codes: Known period codes to guide AI extraction.
+
+    Returns:
+        :class:`ExtractionResult` — may have ``cached=True`` when served from cache.
+    """
+    from app.core.ai_cache import get_ai_cache, set_ai_cache
+    from app.core.ai_metrics import record_ai_cost
+
+    # Content hash — MD5 is fast and sufficient for dedup (not security-critical)
+    content_hash = hashlib.md5(pdf_bytes).hexdigest()  # nosec B324
+    redis_key = f"pdf:extract:{content_hash}:{stock_id}"
+
+    # ── 1. Redis cross-user cache ─────────────────────────────────────
+    redis_hit = await get_ai_cache(redis_key)
+    if redis_hit:
+        logger.info(
+            "PDF Redis cache HIT (cross-user): hash=%s… stock=%d", content_hash[:12], stock_id
+        )
+        try:
+            result = _dict_to_result(redis_hit)
+            result.cached = True
+            result.pdf_hash = _pdf_hash(pdf_bytes)
+            return result
+        except Exception as exc:
+            logger.warning("Redis PDF cache entry corrupt, falling through: %s", exc)
+
+    # ── 2. DB cache + full extraction (existing pipeline) ─────────────
+    result = await extract_financials(
+        pdf_bytes=pdf_bytes,
+        stock_id=stock_id,
+        api_key=api_key,
+        filename=filename,
+        model_name=model_name,
+        use_cache=True,
+        existing_codes=existing_codes,
+    )
+
+    # ── 3. Populate Redis on a fresh extraction (30-day TTL) ──────────
+    if not result.cached and result.statements:
+        try:
+            await set_ai_cache(redis_key, _result_to_dict(result), ttl=2_592_000)
+            logger.info(
+                "PDF extraction cached in Redis: hash=%s… stock=%d (%d statements)",
+                content_hash[:12], stock_id, len(result.statements),
+            )
+        except Exception as exc:
+            logger.warning("Failed to cache PDF result in Redis: %s", exc)
+
+        # Approximate cost: ~2000 input + ~1500 output tokens per page @ Flash rates
+        approx_cost = result.pages_processed * (
+            2000 * 0.075 / 1_000_000 + 1500 * 0.300 / 1_000_000
+        )
+        record_ai_cost(approx_cost)
+
+    return result

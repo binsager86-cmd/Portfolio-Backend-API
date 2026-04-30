@@ -14,7 +14,9 @@ services:
     runtime: docker                          # uses the Dockerfile
     dockerfilePath: ./Dockerfile
     region: frankfurt                         # fra (EU) — change to oregon for US
-    plan: free                               # free tier; upgrade to starter ($7/mo) to avoid spin-down
+    plan: standard
+    healthCheckPath: /health
+    autoDeploy: true
     buildFilter:
       paths:
         - mobile-migration/backend-api/**
@@ -49,7 +51,13 @@ services:
       # ── AI (optional) ──
       - key: GEMINI_API_KEY
         value: ""                            # set manually in Render dashboard
+      - key: GUNICORN_WORKERS
+        value: "4"
+      - key: MAX_REQUESTS
+        value: "2000"
+      - key: IMAGE_TAG
+        value: ""
     disk:
       name: portfolio-data
       mountPath: /data
-      sizeGB: 1
+      sizeGB: 2

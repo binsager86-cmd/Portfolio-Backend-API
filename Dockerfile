@@ -1,39 +1,33 @@
-# ─────────────────────────────────────────────────────────────────────
-# Portfolio Mobile API — Production Dockerfile
-# ─────────────────────────────────────────────────────────────────────
-# Build:  docker build -t portfolio-api .
-# Run:    docker run -p 8004:8004 --env-file .env portfolio-api
-# ─────────────────────────────────────────────────────────────────────
+# Stage 1: Build Dependencies
+FROM python:3.11-slim AS builder
+WORKDIR /build
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+RUN apt-get update && apt-get install -y --no-install-recommends gcc libpq-dev && rm -rf /var/lib/apt/lists/*
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
-FROM python:3.12-slim AS base
-
-# Prevent Python from writing .pyc / buffering stdout
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
-
+# Stage 2: Production Runtime
+FROM python:3.11-slim
 WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
+    GUNICORN_CMD_ARGS="-c gunicorn_conf.py -k uvicorn.workers.UvicornWorker"
 
-# ── Install OS-level dependencies ────────────────────────────────────
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc libffi-dev curl && \
-    rm -rf /var/lib/apt/lists/*
+# Security: Non-root user
+RUN groupadd -r appgroup && useradd -r -g appgroup -d /app -s /sbin/nologin appuser
 
-# ── Install Python dependencies ──────────────────────────────────────
-COPY requirements.txt pyproject.toml ./
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+# Copy built dependencies
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
-# ── Copy application code ───────────────────────────────────────────
-COPY app/ ./app/
-COPY alembic/ ./alembic/
-COPY alembic.ini ./
+# Copy app code & set permissions
+COPY . .
+RUN chown -R appuser:appgroup /app && chmod -R 555 /app
 
-# ── Health check ─────────────────────────────────────────────────────
+USER appuser
+EXPOSE 8000
+
+# Healthcheck (FastAPI /health endpoint)
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-8004}/health || exit 1
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"
 
-# ── Default port ─────────────────────────────────────────────────────
-EXPOSE 8004
-
-# ── Start server ─────────────────────────────────────────────────────
-CMD ["sh", "-c", "gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8004} --timeout 300 --access-logfile -"]
+CMD ["sh", "-c", "python -m alembic upgrade head && gunicorn app.main:app"]

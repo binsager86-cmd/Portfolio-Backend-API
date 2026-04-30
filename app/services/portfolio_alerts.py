@@ -15,14 +15,62 @@ implemented in this iteration. The pref is still respected by future code.
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timedelta
 from typing import Optional
 
-from sqlalchemy import desc
+from sqlalchemy import case, desc, func, or_
 
 logger = logging.getLogger(__name__)
 
 # Significant portfolio move threshold (absolute percent).
 PORTFOLIO_THRESHOLD_PCT = 2.0
+
+
+def _ensure_portfolio_news_dispatch_table() -> None:
+    """Ensure idempotency table exists for portfolio news push dispatches."""
+    from app.core.database import exec_sql
+
+    exec_sql(
+        """
+        CREATE TABLE IF NOT EXISTS portfolio_news_dispatches (
+            user_id INTEGER NOT NULL,
+            news_id TEXT NOT NULL,
+            dispatched_at TIMESTAMP NOT NULL,
+            PRIMARY KEY (user_id, news_id)
+        )
+        """
+    )
+    exec_sql(
+        """
+        CREATE INDEX IF NOT EXISTS idx_portfolio_news_dispatches_dispatched_at
+        ON portfolio_news_dispatches (dispatched_at)
+        """
+    )
+
+
+def _already_dispatched(user_id: int, news_id: str) -> bool:
+    """Return True when this user/news pair has already been sent."""
+    from app.core.database import query_one
+
+    row = query_one(
+        "SELECT 1 FROM portfolio_news_dispatches WHERE user_id = ? AND news_id = ?",
+        (user_id, news_id),
+    )
+    return row is not None
+
+
+def _mark_dispatched(user_id: int, news_id: str) -> None:
+    """Persist successful user/news dispatch for idempotent retries."""
+    from app.core.database import exec_sql
+
+    exec_sql(
+        """
+        INSERT INTO portfolio_news_dispatches (user_id, news_id, dispatched_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT (user_id, news_id) DO NOTHING
+        """,
+        (user_id, news_id, datetime.utcnow()),
+    )
 
 
 def _format_pct(value: float) -> str:
@@ -188,3 +236,116 @@ def notify_portfolio_updates_for_users(user_ids: list[int]) -> dict:
             logger.warning("portfolio alert dispatch failed for user %s: %s", uid, e)
             results[uid] = {"user_id": uid, "sent": 0, "error": str(e)}
     return {"total_sent": total_sent, "users": results}
+
+
+async def notify_portfolio_news_alerts() -> None:
+    """Dispatch portfolio-news push alerts for users with active holdings."""
+    from app.core.config import get_settings
+    from app.core.database import get_db_session
+    from app.models.news import NewsArticle
+    from app.models.portfolio import PortfolioTransaction
+    from app.models.push_token import PushToken
+    from app.services.push_service import send_push_notification
+
+    settings = get_settings()
+    if not settings.PUSH_NOTIFICATIONS_ENABLED:
+        logger.info("Push notifications disabled in settings")
+        return
+
+    _ensure_portfolio_news_dispatch_table()
+
+    async with get_db_session() as db:
+        users = db.query(PortfolioTransaction.user_id).distinct().all()
+        for (user_id,) in users:
+            holdings = (
+                db.query(
+                    PortfolioTransaction.stock_symbol,
+                    func.sum(
+                        case(
+                            (func.upper(PortfolioTransaction.txn_type) == "SELL", -func.coalesce(PortfolioTransaction.shares, 0.0)),
+                            (func.upper(PortfolioTransaction.txn_type) == "BONUS", func.coalesce(PortfolioTransaction.bonus_shares, 0.0)),
+                            else_=func.coalesce(PortfolioTransaction.shares, 0.0),
+                        )
+                    ).label("total_shares"),
+                )
+                .filter(
+                    PortfolioTransaction.user_id == user_id,
+                    PortfolioTransaction.stock_symbol.isnot(None),
+                    PortfolioTransaction.stock_symbol != "",
+                    or_(
+                        PortfolioTransaction.is_deleted.is_(None),
+                        PortfolioTransaction.is_deleted == 0,
+                    ),
+                )
+                .group_by(PortfolioTransaction.stock_symbol)
+                .having(func.sum(
+                    case(
+                        (func.upper(PortfolioTransaction.txn_type) == "SELL", -func.coalesce(PortfolioTransaction.shares, 0.0)),
+                        (func.upper(PortfolioTransaction.txn_type) == "BONUS", func.coalesce(PortfolioTransaction.bonus_shares, 0.0)),
+                        else_=func.coalesce(PortfolioTransaction.shares, 0.0),
+                    )
+                ) > 0)
+                .all()
+            )
+            symbols = [str(h[0]).upper() for h in holdings if h[0]]
+            if not symbols:
+                continue
+
+            symbol_match_filters = [
+                or_(
+                    func.upper(func.coalesce(NewsArticle.title, "")).contains(symbol),
+                    func.upper(func.coalesce(NewsArticle.summary, "")).contains(symbol),
+                    func.upper(func.coalesce(NewsArticle.related_symbols, "")).contains(symbol),
+                )
+                for symbol in symbols
+            ]
+
+            cutoff = datetime.utcnow() - timedelta(hours=24)
+            latest_news = (
+                db.query(NewsArticle)
+                .filter(NewsArticle.published_at >= cutoff)
+                .filter(or_(*symbol_match_filters))
+                .order_by(NewsArticle.published_at.desc())
+                .first()
+            )
+
+            if not latest_news:
+                continue
+
+            if _already_dispatched(user_id, str(latest_news.news_id)):
+                continue
+
+            tokens = (
+                db.query(PushToken.token)
+                .filter(PushToken.user_id == user_id)
+                .all()
+            )
+            sent_any = False
+            for (token,) in tokens:
+                sent = await send_push_notification(
+                    token=token,
+                    title="Portfolio News Alert",
+                    body=(latest_news.title or "New announcement")[:180],
+                    data={
+                        "type": "portfolio_news",
+                        "news_id": latest_news.id,
+                        "news_external_id": latest_news.news_id,
+                        "category": latest_news.category,
+                        "priority": "high",
+                        "sound": "default",
+                        "android": {
+                            "channel_id": "portfolio-news",
+                        },
+                        "deepLink": f"/(tabs)/news/{latest_news.id}",
+                    },
+                    sound="default",
+                    priority="high",
+                    category="portfolio-news",
+                    android={"channelId": "portfolio-news"},
+                )
+                sent_any = sent_any or sent
+
+            if sent_any:
+                _mark_dispatched(user_id, str(latest_news.news_id))
+
+            logger.info("Dispatched portfolio news alert to user %s", user_id)

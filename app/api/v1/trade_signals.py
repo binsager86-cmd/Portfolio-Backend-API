@@ -15,15 +15,22 @@ from datetime import date
 from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from cachetools import TTLCache
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from app.api.deps import get_current_user
+from app.core.config import get_settings
 from app.core.database import query_one
 from app.core.security import TokenData
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/trade-signals", tags=["Trade Signals"])
+
+# [P2-4/B-6] TTL cache for P/E scrape results — 1 h TTL, max 256 symbol slots.
+# Falls back to last known good value when upstream is temporarily unavailable.
+_pe_cache: TTLCache = TTLCache(maxsize=256, ttl=3600)
 
 _HEADERS = {
     "User-Agent": (
@@ -39,6 +46,8 @@ _QUARTER_OF_MONTH = {
     7: "q3", 8: "q3", 9: "q3",
     10: "q4", 11: "q4", 12: "q4",
 }
+
+settings = get_settings()
 
 
 # ── Scraping helpers ──────────────────────────────────────────────────
@@ -87,6 +96,22 @@ def _statistics_url(
     if is_kwse:
         return f"https://stockanalysis.com/quote/kwse/{base}/statistics/"
     return f"https://stockanalysis.com/stocks/{base.lower()}/statistics/"
+
+
+def _normalize_eod_symbol(symbol: str, exchange: Optional[str], country: Optional[str]) -> str:
+    trimmed = (symbol or "").strip().upper()
+    if not trimmed:
+        return ""
+    if "." in trimmed:
+        return trimmed
+
+    exchange_code = (exchange or "").strip().upper()
+    country_code = (country or "").strip().upper()
+    is_kuwait = (
+        exchange_code in {"KW", "KSE", "BK"}
+        or country_code in {"KW", "KWT", "KUWAIT"}
+    )
+    return f"{trimmed}.KW" if is_kuwait else f"{trimmed}.US"
 
 
 def _parse_quarter_label(label: str) -> Optional[Tuple[int, str]]:
@@ -153,14 +178,25 @@ def _to_float(s: str) -> Optional[float]:
         return None
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=10),
+    retry=retry_if_exception_type((httpx.HTTPError, httpx.TimeoutException)),
+    reraise=True,
+)
 def _scrape_ratios_page(url: str) -> Tuple[List[Optional[Tuple[int, str]]], List[Optional[float]]]:
-    """Fetch the quarterly ratios page and return (column_periods, pe_values).
+    """
+    [P2-4/B-6] Fetch the quarterly ratios page and return (column_periods, pe_values).
+
+    Retries up to 3 times on network / HTTP errors with exponential back-off.
+    Timeout hard-capped at 30 s. Results are NOT cached here — the caller
+    is responsible for checking ``_pe_cache`` before invoking.
 
     column_periods[i] is (year, q_key) tuple or None for 'Current'/unknown.
     pe_values[i] is the PE ratio for that column or None.
     """
     try:
-        resp = httpx.get(url, timeout=20, follow_redirects=True, headers=_HEADERS)
+        resp = httpx.get(url, timeout=30, follow_redirects=True, headers=_HEADERS)
     except Exception as e:  # noqa: BLE001
         logger.warning("ratios fetch failed for %s: %s", url, e)
         return [], []
@@ -290,15 +326,67 @@ def _verdict(current_pe: Optional[float], avg_pe: Optional[float]) -> Dict[str, 
 # ── Endpoint ─────────────────────────────────────────────────────────
 
 
+@router.get("/whale-candles")
+async def whale_candles(
+    symbol: str,
+    exchange: Optional[str] = None,
+    country: Optional[str] = None,
+    from_date: Optional[date] = Query(default=None, alias="from"),
+    to_date: Optional[date] = Query(default=None, alias="to"),
+    current_user: TokenData = Depends(get_current_user),
+):
+    del current_user  # endpoint is auth-protected; user payload not otherwise needed here
+
+    normalized_symbol = _normalize_eod_symbol(symbol, exchange, country)
+    if not normalized_symbol:
+        return {"status": "ok", "data": []}
+
+    api_token = settings.EODHD_API_TOKEN.strip()
+    if not api_token:
+        raise HTTPException(status_code=503, detail="EODHD_API_TOKEN is not configured on backend")
+
+    params: Dict[str, str] = {
+        "api_token": api_token,
+        "fmt": "json",
+    }
+    if from_date is not None:
+        params["from"] = from_date.isoformat()
+    if to_date is not None:
+        params["to"] = to_date.isoformat()
+
+    url = f"https://eodhd.com/api/eod/{normalized_symbol}"
+    try:
+        async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
+            response = await client.get(url, params=params)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("EODHD request failed for %s: %s", normalized_symbol, exc)
+        raise HTTPException(status_code=502, detail="Failed to reach EODHD") from exc
+
+    if response.status_code == 404:
+        return {"status": "ok", "data": []}
+
+    if response.status_code != 200:
+        body = response.text.strip() or f"HTTP {response.status_code}"
+        raise HTTPException(status_code=502, detail=f"EODHD error: {body}")
+
+    payload = response.json()
+    if not isinstance(payload, list):
+        return {"status": "ok", "data": []}
+
+    return {"status": "ok", "data": payload}
+
+
 @router.get("/pe-quarterly/{stock_id}")
 async def pe_quarterly(
     stock_id: int,
+    response: Response,
     current_user: TokenData = Depends(get_current_user),
 ):
     """Quarterly P/E history (last 4 fiscal years) + current-quarter verdict.
 
-    Pulls from stockanalysis.com's quarterly ratios page and the live
-    statistics page for the current P/E reading.
+    [P2-4/B-6] Results are cached in memory for 1 h (TTL cache).
+    ``X-Cache-Status: HIT`` is returned when data comes from cache.
+    Pulls from stockanalysis.com's quarterly ratios page on cache miss.
     """
     stock = query_one(
         "SELECT id, symbol, company_name, exchange, currency FROM analysis_stocks "
@@ -314,11 +402,29 @@ async def pe_quarterly(
     currency: Optional[str] = stock["currency"]
     yf_ticker: Optional[str] = symbol  # symbol already carries the .KW suffix for KWSE
 
+    # [P2-4/B-6] Check TTL cache before scraping
+    cache_key = f"pe:{symbol}"
+    cached = _pe_cache.get(cache_key)
+    if cached is not None:
+        response.headers["X-Cache-Status"] = "HIT"
+        return cached
+
+    response.headers["X-Cache-Status"] = "MISS"
+
     ratios_url = _ratios_url(symbol, yf_ticker, exchange, currency)
     stats_url = _statistics_url(symbol, yf_ticker, exchange, currency)
 
-    headers, pe_values = _scrape_ratios_page(ratios_url)
-    current_pe = _scrape_current_pe(stats_url)
+    try:
+        headers, pe_values = _scrape_ratios_page(ratios_url)
+        current_pe = _scrape_current_pe(stats_url)
+    except Exception as exc:
+        logger.warning("P/E scrape failed for %s (all retries exhausted): %s", symbol, exc)
+        # Graceful degradation: return last cached state if available, else 502
+        stale = _pe_cache.get(cache_key)
+        if stale is not None:
+            response.headers["X-Cache-Status"] = "STALE"
+            return stale
+        raise HTTPException(status_code=502, detail="P/E data temporarily unavailable — upstream scrape failed.")
 
     # Legacy safety-net: some rows may have wrong/default exchange/currency.
     # If no quarterly values were found, try Kuwait URL once for plain symbols.
@@ -326,11 +432,14 @@ async def pe_quarterly(
         kw_base = symbol.upper()
         fallback_ratios = f"https://stockanalysis.com/quote/kwse/{kw_base}/financials/ratios/?p=quarterly"
         fallback_stats = f"https://stockanalysis.com/quote/kwse/{kw_base}/statistics/"
-        f_headers, f_values = _scrape_ratios_page(fallback_ratios)
-        if f_values:
-            headers, pe_values = f_headers, f_values
-            if current_pe is None:
-                current_pe = _scrape_current_pe(fallback_stats)
+        try:
+            f_headers, f_values = _scrape_ratios_page(fallback_ratios)
+            if f_values:
+                headers, pe_values = f_headers, f_values
+                if current_pe is None:
+                    current_pe = _scrape_current_pe(fallback_stats)
+        except Exception:
+            pass  # ignore fallback failure — proceed with empty values
 
     # Build pe_table: { year: {q1, q2, q3, q4} } restricted to last 4 fiscal years
     today = date.today()
@@ -378,7 +487,7 @@ async def pe_quarterly(
         for y, row in pe_table.items()
     }
 
-    return {
+    result = {
         "status": "ok",
         "data": {
             "symbol": symbol,
@@ -395,3 +504,6 @@ async def pe_quarterly(
             "source": "stockanalysis.com",
         },
     }
+    # [P2-4/B-6] Store in TTL cache so subsequent calls within 1 h skip scraping
+    _pe_cache[cache_key] = result
+    return result

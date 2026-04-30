@@ -13,6 +13,7 @@ import logging
 import os
 import sys
 import tempfile
+import threading
 from typing import Optional
 
 from app.core.config import get_settings
@@ -21,6 +22,27 @@ logger = logging.getLogger(__name__)
 
 _scheduler = None
 _lock_fd = None  # file descriptor for cross-worker lock
+
+
+def _queue_portfolio_news_alerts() -> None:
+    """Run async portfolio-news alerts from a sync scheduler context."""
+    import asyncio
+    from app.services.portfolio_alerts import notify_portfolio_news_alerts
+
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(notify_portfolio_news_alerts())
+        return
+    except RuntimeError:
+        pass
+
+    def _runner() -> None:
+        try:
+            asyncio.run(notify_portfolio_news_alerts())
+        except Exception as exc:
+            logger.warning("Portfolio news alert task failed: %s", exc)
+
+    threading.Thread(target=_runner, daemon=True).start()
 
 
 def _run_daily_price_then_snapshot(user_id: int | None = None) -> dict:
@@ -72,6 +94,12 @@ def _run_daily_price_then_snapshot(user_id: int | None = None) -> dict:
         )
     except Exception as exc:
         logger.warning("Portfolio alert dispatch failed: %s", exc)
+
+    try:
+        _queue_portfolio_news_alerts()
+        logger.info("📰 Queued portfolio news alert dispatcher")
+    except Exception as exc:
+        logger.warning("Portfolio news alert queue failed: %s", exc)
 
     # Update the cron API status tracking so /status shows scheduler runs
     try:
@@ -199,6 +227,22 @@ def start_scheduler() -> None:
         )
     else:
         logger.info("⏸  Price scheduler disabled (PRICE_UPDATE_ENABLED=False)")
+
+    # ── Nightly data-retention sweep (03:00 Asia/Kuwait) ────────
+    try:
+        from app.services.compliance_service import enforce_data_retention
+        _scheduler.add_job(
+            enforce_data_retention,
+            trigger=CronTrigger(hour=3, minute=0, timezone="Asia/Kuwait"),
+            id="data_retention_sweep",
+            name="Nightly audit data retention",
+            kwargs={"retention_days": 365},
+            misfire_grace_time=3600,
+            replace_existing=True,
+        )
+        logger.info("🗑️  Nightly data retention scheduled (03:00 Asia/Kuwait, 365-day window)")
+    except Exception as exc:
+        logger.warning("Could not schedule data retention sweep: %s", exc)
 
     _scheduler.start()
     logger.info("🕐 Scheduler started")

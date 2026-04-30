@@ -15,6 +15,61 @@ logger = logging.getLogger(__name__)
 EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
 
 
+async def send_push_notification(
+    token: str,
+    title: str,
+    body: str,
+    data: Optional[dict] = None,
+    sound: str = "default",
+    priority: str = "high",
+    category: Optional[str] = None,
+    android: Optional[dict] = None,
+) -> bool:
+    """Send a single rich push notification via Expo Push API."""
+    if not token:
+        return False
+
+    message: dict = {
+        "to": token,
+        "title": title,
+        "body": body,
+        "sound": sound,
+        "priority": priority,
+    }
+
+    if data:
+        message["data"] = data
+    if category:
+        message["categoryId"] = category
+    if android:
+        # Expo supports channelId at top-level.
+        if isinstance(android, dict) and android.get("channelId"):
+            message["channelId"] = android["channelId"]
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                EXPO_PUSH_URL,
+                json=message,
+                headers={
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                },
+            )
+            resp.raise_for_status()
+            payload = resp.json()
+            tickets = payload.get("data", [])
+            if isinstance(tickets, dict):
+                tickets = [tickets]
+            ok = bool(tickets) and tickets[0].get("status") == "ok"
+            if not ok:
+                logger.warning("Single push ticket not ok: %s", payload)
+            return ok
+    except Exception as exc:
+        logger.warning("Single push notification failed: %s", exc)
+        return False
+
+
 def send_push_notifications(
     tokens: list[str],
     title: str,

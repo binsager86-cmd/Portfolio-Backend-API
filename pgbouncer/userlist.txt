@@ -1,0 +1,2 @@
+"app_user" "md5replace_with_real_md5_hash"
+"pgbouncer_admin" "md5replace_with_real_md5_hash"

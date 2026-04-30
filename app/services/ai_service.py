@@ -5,6 +5,7 @@ Gathers portfolio data and sends structured prompts to Gemini
 for AI-powered investment insights.
 """
 
+import asyncio
 import logging
 from datetime import datetime, timezone
 from typing import Optional
@@ -12,6 +13,16 @@ from typing import Optional
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
+
+AI_GENERATION_TIMEOUT_SECONDS = 25.0
+
+
+async def _run_with_timeout(func, *args, timeout: float = AI_GENERATION_TIMEOUT_SECONDS, **kwargs):
+    """Run a blocking SDK call in a thread with a hard timeout."""
+    return await asyncio.wait_for(
+        asyncio.to_thread(func, *args, **kwargs),
+        timeout=timeout,
+    )
 
 
 def _extract_response_text(resp: object) -> str:
@@ -139,7 +150,8 @@ async def analyze_portfolio(
         from google import genai
 
         client = genai.Client(api_key=api_key)
-        response = client.models.generate_content(
+        response = await _run_with_timeout(
+            client.models.generate_content,
             model="gemini-2.5-flash",
             contents=full_prompt,
         )
@@ -161,7 +173,7 @@ async def analyze_portfolio(
 
             legacy_genai.configure(api_key=api_key)
             model = legacy_genai.GenerativeModel("gemini-2.5-flash")
-            response = model.generate_content(full_prompt)
+            response = await _run_with_timeout(model.generate_content, full_prompt)
             analysis_text = _extract_response_text(response)
             if not analysis_text:
                 raise ValueError("Empty response from Gemini model.")
@@ -177,6 +189,139 @@ async def analyze_portfolio(
             raise ValueError(
                 "AI analysis requires Gemini SDK. Install with: pip install google-genai"
             )
+    except asyncio.TimeoutError:
+        logger.error("Gemini API timeout after %.1fs", AI_GENERATION_TIMEOUT_SECONDS)
+        raise ValueError("AI provider timed out. Please retry in a moment.")
     except Exception as exc:
         logger.error("Gemini API error: %s", exc)
         raise ValueError(f"AI analysis failed: {exc}")
+
+
+# ── Cache-first AI analysis (Phase 9) ────────────────────────────────
+
+
+async def generate_cached_analysis(
+    user_id: int,
+    context: dict,
+    language: str = "en",
+    endpoint: str = "portfolio_analysis",
+) -> dict:
+    """
+    Cache-first portfolio analysis using Redis (DB 1) as a 24-hour result store.
+
+    Flow:
+      1. Compress context → deterministic hash
+      2. Check Redis → return HIT immediately
+      3. On MISS: call Gemini, store result, return with MISS metadata
+
+    Returns a dict with keys:
+      - ``analysis``    — markdown/text from Gemini
+      - ``metadata``    — tokens, latency, model
+      - ``cache_status`` — "HIT" | "MISS" | "ERROR"
+
+    Never raises; errors are returned as cache_status="ERROR".
+    """
+    import time
+
+    from app.core.ai_cache import get_ai_cache, set_ai_cache
+    from app.core.ai_metrics import (
+        record_ai_cache_hit,
+        record_ai_cache_miss,
+        record_ai_latency,
+        record_ai_tokens,
+    )
+    from app.services.context_optimizer import compress_portfolio_context
+
+    ctx_hash, ctx_payload = compress_portfolio_context(context)
+    cache_key = f"ai:{user_id}:{language}:{ctx_hash}"
+
+    # ── 1. Cache hit ──────────────────────────────────────────────────
+    cached = await get_ai_cache(cache_key)
+    if cached:
+        logger.info("AI cache HIT for user %d (key=%s…)", user_id, cache_key[-12:])
+        record_ai_cache_hit(endpoint)
+        cached["cache_status"] = "HIT"
+        return cached
+
+    # ── 2. Cache miss → call Gemini ───────────────────────────────────
+    record_ai_cache_miss(endpoint)
+
+    settings = get_settings()
+    api_key = settings.GEMINI_API_KEY
+    try:
+        from app.core.database import query_one, add_column_if_missing
+        add_column_if_missing("users", "gemini_api_key", "TEXT")
+        row = query_one("SELECT gemini_api_key FROM users WHERE id = ?", (user_id,))
+        if row and row[0]:
+            api_key = row[0]
+    except Exception:
+        pass
+
+    if not api_key:
+        return {
+            "analysis": "AI analysis requires a Gemini API key.",
+            "metadata": {"error": "no_api_key"},
+            "cache_status": "ERROR",
+        }
+
+    language_instruction = "Respond in Arabic." if language == "ar" else "Respond in English."
+    prompt = (
+        f"{language_instruction}\n\n"
+        f"You are an expert investment analyst. Analyze the following compressed portfolio data "
+        f"and provide a concise assessment covering health, diversification, risk, and top recommendations.\n\n"
+        f"Portfolio Data (JSON): {ctx_payload}"
+    )
+
+    start = time.perf_counter()
+    try:
+        from google import genai
+
+        client = genai.Client(api_key=api_key)
+        response = await _run_with_timeout(
+            client.models.generate_content,
+            model="gemini-2.0-flash",
+            contents=prompt,
+        )
+
+        latency = time.perf_counter() - start
+        analysis_text = _extract_response_text(response)
+
+        usage = getattr(response, "usage_metadata", None)
+        tokens_in = getattr(usage, "prompt_token_count", 0) or getattr(usage, "total_prompt_token_count", 0)
+        tokens_out = getattr(usage, "candidates_token_count", 0) or getattr(usage, "total_candidate_token_count", 0)
+
+        result: dict = {
+            "analysis": analysis_text,
+            "metadata": {
+                "tokens_in": tokens_in,
+                "tokens_out": tokens_out,
+                "latency_ms": round(latency * 1000, 1),
+                "model": "gemini-2.0-flash",
+                "language": language,
+            },
+            "cache_status": "MISS",
+        }
+
+        # Record metrics
+        record_ai_latency(latency, endpoint=endpoint, model="gemini-2.0-flash")
+        record_ai_tokens(tokens_in, tokens_out, model="gemini-2.0-flash")
+
+        # Store in Redis (24-hour TTL)
+        await set_ai_cache(cache_key, result, ttl=86400)
+        logger.info(
+            "AI analysis cached for user %d: %d→%d tokens, %.2fs",
+            user_id, tokens_in, tokens_out, latency,
+        )
+        return result
+
+    except Exception as exc:
+        latency = time.perf_counter() - start
+        logger.error("Gemini API failed in generate_cached_analysis: %s", exc)
+        return {
+            "analysis": "⚠️ Analysis temporarily unavailable. Please try again later.",
+            "metadata": {
+                "error": str(exc),
+                "latency_ms": round(latency * 1000, 1),
+            },
+            "cache_status": "ERROR",
+        }

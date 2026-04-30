@@ -9,7 +9,8 @@ This module provides the business-logic layer: authenticate_user().
 import logging
 from typing import Optional
 
-from app.core.database import query_one
+from app.core.database import SessionLocal
+from app.core.repositories.user import UserRepository
 from app.core.security import (             # re-export for backward compat
     verify_password,
     hash_password,
@@ -33,19 +34,27 @@ logger = logging.getLogger(__name__)
 
 def authenticate_user(username: str, password: str) -> Optional[dict]:
     """
-    Verify credentials against the users table.
+    [B-2] Verify credentials against the users table via ORM.
+
     Returns a dict with id, username, name, is_admin on success, else None.
+    Uses UserRepository instead of raw query_one() so auth goes through
+    the SQLAlchemy session (audit trail, connection pool, type safety).
     """
-    row = query_one(
-        "SELECT id, username, password_hash, name, COALESCE(is_admin, 0) FROM users WHERE username = ?",
-        (username,),
-    )
-    if row is None:
-        return None
+    db = SessionLocal()
+    try:
+        repo = UserRepository(db)
+        user = repo.get_by_username(username)
+        if user is None:
+            return None
+        if not verify_password(password, user.password_hash):
+            return None
+        return {
+            "id": user.id,
+            "username": user.username,
+            "name": user.name,
+            "is_admin": bool(user.is_admin),
+        }
+    finally:
+        db.close()
 
-    uid, uname, pw_hash, name, is_admin = row
-    if not verify_password(password, pw_hash):
-        return None
-
-    return {"id": uid, "username": uname, "name": name, "is_admin": bool(is_admin)}
 

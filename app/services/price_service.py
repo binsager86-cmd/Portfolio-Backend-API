@@ -10,11 +10,14 @@ Handles:
   - Tracks update results for caller logging / API response
 """
 
+import asyncio
 import time
 import logging
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from typing import Optional, Dict
 
+from app.core.cache import cache_key, price_cache, get_cached, set_cached
 from app.core.database import get_conn, add_column_if_missing
 
 logger = logging.getLogger(__name__)
@@ -106,6 +109,75 @@ def _normalise_kwd_price(raw: float, currency: str) -> float:
     if currency == "KWD":
         return raw / 1000.0
     return raw
+
+
+def _fetch_price_snapshot_sync(symbol: str, currency: str) -> dict:
+    """Fetch one live quote from Yahoo Finance in a worker thread."""
+    try:
+        import yfinance as yf
+    except ImportError as exc:
+        raise RuntimeError("yfinance is not installed") from exc
+
+    yahoo_sym = _yahoo_symbol(symbol, currency)
+    ticker = yf.Ticker(yahoo_sym)
+    hist = ticker.history(period="5d", interval="1d")
+
+    if hist is not None and getattr(hist.columns, "nlevels", 1) > 1:
+        hist.columns = hist.columns.get_level_values(0)
+
+    if hist is None or hist.empty or "Close" not in hist.columns:
+        raise ValueError("No market data")
+
+    closes = hist["Close"].dropna()
+    if closes.empty:
+        raise ValueError("No market data")
+
+    price = _normalise_kwd_price(float(closes.iloc[-1]), currency)
+    previous_close = None
+    if len(closes) >= 2:
+        previous_close = _normalise_kwd_price(float(closes.iloc[-2]), currency)
+
+    pe_ratio = None
+    try:
+        info = ticker.info
+        pe_val = info.get("trailingPE") or info.get("forwardPE")
+        if pe_val is not None:
+            pe_ratio = round(float(pe_val), 2)
+    except Exception as exc:
+        logger.debug("P/E fetch failed for %s: %s", yahoo_sym, exc)
+
+    return {
+        "symbol": symbol,
+        "yahoo_symbol": yahoo_sym,
+        "price": round(price, 6),
+        "previous_close": round(previous_close, 6) if previous_close is not None else None,
+        "pe_ratio": pe_ratio,
+        "currency": currency,
+        "fetched_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+async def get_price_snapshot(symbol: str, currency: str = "KWD") -> dict:
+    """Return a cached live quote, degrading gracefully on upstream failures."""
+    key = cache_key("price", symbol.strip().upper(), currency.upper())
+    cached = price_cache.get(key)
+    if cached is not None:
+        return cached
+
+    try:
+        result = await asyncio.to_thread(_fetch_price_snapshot_sync, symbol, currency)
+        price_cache[key] = result
+        return result
+    except Exception as exc:
+        fallback = cached if cached is not None else {
+            "symbol": symbol,
+            "price": None,
+            "previous_close": None,
+            "pe_ratio": None,
+            "currency": currency,
+            "error": str(exc),
+        }
+        return fallback
 
 
 # ── Result container ─────────────────────────────────────────────────
@@ -213,37 +285,52 @@ def update_all_prices(
             try:
                 # Prefer stored yf_ticker if available, else derive from symbol+currency
                 yahoo_sym = stored_yf_ticker if stored_yf_ticker else _yahoo_symbol(symbol, currency)
-                ticker = yf.Ticker(yahoo_sym)
 
-                # Use 5d window so weekends / holidays still return data
-                hist = ticker.history(period="5d", interval="1d")
+                # Check price cache before hitting yfinance network
+                cached_data = get_cached(price_cache, yahoo_sym)
+                if cached_data is not None:
+                    price = cached_data["price"]
+                    previous_close = cached_data["previous_close"]
+                    pe_ratio = cached_data["pe_ratio"]
+                else:
+                    ticker = yf.Ticker(yahoo_sym)
 
-                # yfinance ≥ 1.0 may return MultiIndex columns
-                if hist is not None and hist.columns.nlevels > 1:
-                    hist.columns = hist.columns.get_level_values(0)
+                    # Use 5d window so weekends / holidays still return data
+                    hist = ticker.history(period="5d", interval="1d")
 
-                if hist is None or hist.empty or "Close" not in hist.columns:
-                    logger.warning("No data for %s (yahoo: %s)", symbol, yahoo_sym)
-                    result.skipped += 1
-                    result.details.append({"symbol": symbol, "status": "no_data"})
-                    continue
+                    # yfinance ≥ 1.0 may return MultiIndex columns
+                    if hist is not None and hist.columns.nlevels > 1:
+                        hist.columns = hist.columns.get_level_values(0)
 
-                closes = hist["Close"].dropna()
-                raw_price = float(closes.iloc[-1])
-                price = _normalise_kwd_price(raw_price, currency)
-                previous_close = None
-                if len(closes) >= 2:
-                    previous_close = _normalise_kwd_price(float(closes.iloc[-2]), currency)
+                    if hist is None or hist.empty or "Close" not in hist.columns:
+                        logger.warning("No data for %s (yahoo: %s)", symbol, yahoo_sym)
+                        result.skipped += 1
+                        result.details.append({"symbol": symbol, "status": "no_data"})
+                        continue
 
-                # Fetch P/E ratio from ticker info
-                pe_ratio = None
-                try:
-                    info = ticker.info
-                    pe_val = info.get("trailingPE") or info.get("forwardPE")
-                    if pe_val is not None:
-                        pe_ratio = round(float(pe_val), 2)
-                except Exception as pe_exc:
-                    logger.debug("P/E fetch failed for %s: %s", yahoo_sym, pe_exc)
+                    closes = hist["Close"].dropna()
+                    raw_price = float(closes.iloc[-1])
+                    price = _normalise_kwd_price(raw_price, currency)
+                    previous_close = None
+                    if len(closes) >= 2:
+                        previous_close = _normalise_kwd_price(float(closes.iloc[-2]), currency)
+
+                    # Fetch P/E ratio from ticker info
+                    pe_ratio = None
+                    try:
+                        info = ticker.info
+                        pe_val = info.get("trailingPE") or info.get("forwardPE")
+                        if pe_val is not None:
+                            pe_ratio = round(float(pe_val), 2)
+                    except Exception as pe_exc:
+                        logger.debug("P/E fetch failed for %s: %s", yahoo_sym, pe_exc)
+
+                    # Cache result for 5 minutes (TTL set on price_cache instance)
+                    set_cached(price_cache, yahoo_sym, {
+                        "price": price,
+                        "previous_close": previous_close,
+                        "pe_ratio": pe_ratio,
+                    })
 
                 cur.execute(
                     """

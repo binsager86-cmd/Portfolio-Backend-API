@@ -18,15 +18,20 @@ Endpoints:
 """
 
 import json
+import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from email.utils import format_datetime, parsedate_to_datetime
 from hashlib import md5
 from typing import Optional
 
-import httpx
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy.orm import Session
+from kombu.exceptions import OperationalError
+
+from app.core.cache import cache_key, news_cache, get_cached, set_cached
+from app.core.http_client import fetch_with_retry
+import httpx  # kept for httpx.Client used in _bg_fetch_live (sync background thread)
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
@@ -38,6 +43,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/news", tags=["News"])
 
 BOURSA_API = "https://www.boursakuwait.com.kw/data-api/client-services"
+
+# In-memory TTL cache for raw Boursa API responses.
+# Delegates to app.core.cache.news_cache (15-min TTL, max 1000 entries).
+# Key: (rt_code, lang_code)  →  Value: list[dict]
+# Aliased for backward-compat with the X-Cache-Status check in news_feed.
+_boursa_cache = news_cache
+
+# Compatibility state used by legacy in-process helper paths.
+_news_jobs: dict[str, dict] = {}
 
 # Boursa Kuwait data-api request types for news / announcements
 _BOURSA_RT_CODES = [
@@ -683,14 +697,22 @@ def _persist_articles(db: Session, items: list[dict]) -> int:
 
 
 async def _fetch_boursa(params: dict) -> list[dict]:
-    """Fetch data from Boursa Kuwait data-api."""
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.get(BOURSA_API, params=params)
-        resp.raise_for_status()
-        data = resp.json()
-        if isinstance(data, list):
-            return data
-        return []
+    """
+    Fetch data from Boursa Kuwait data-api via the shared retry-backed client.
+
+    Uses fetch_with_retry from app.core.http_client (3 attempts, exponential
+    back-off 1 s → 4 s) and caches results in news_cache (15-min TTL).
+    """
+    ck = (params.get("RT", ""), params.get("L", ""))
+    cached = get_cached(_boursa_cache, ck)
+    if cached is not None:
+        return cached
+
+    resp = await fetch_with_retry(BOURSA_API, params=params)
+    data = resp.json()
+    result = data if isinstance(data, list) else []
+    set_cached(_boursa_cache, ck, result)
+    return result
 
 
 async def _fetch_live_boursa(lang_code: str) -> list[dict]:
@@ -809,6 +831,21 @@ async def news_feed(
       the filters. Honours `If-None-Match` and `If-Modified-Since` and replies
       with `304 Not Modified` when nothing has changed, saving bandwidth.
     """
+    feed_cache_key = cache_key(
+        "news_feed",
+        symbols or "",
+        categories or "",
+        cursor or "",
+        limit,
+        lang or "",
+    )
+
+    cached_payload = get_cached(news_cache, feed_cache_key)
+    if cached_payload is not None:
+        response.headers["Cache-Control"] = "private, max-age=15"
+        response.headers["X-Cache-Status"] = "HIT"
+        return cached_payload
+
     # Trigger background live fetch to keep DB fresh
     # Live data is fetched via /fetch-all or the cron scheduler;
     # the /feed endpoint just serves from DB for speed.
@@ -841,6 +878,9 @@ async def news_feed(
         .first()
     )
     last_modified_dt: Optional[datetime] = latest[0] if latest else None
+    # format_datetime(..., usegmt=True) requires a tz-aware UTC datetime.
+    if last_modified_dt is not None and last_modified_dt.tzinfo is None:
+        last_modified_dt = last_modified_dt.replace(tzinfo=timezone.utc)
     latest_id: Optional[str] = latest[1] if latest else None
     # ETag combines newest id + total + paging coords so any change invalidates.
     etag_seed = f"{latest_id or ''}|{total}|{cursor or ''}|{limit}|{lang or ''}"
@@ -882,13 +922,16 @@ async def news_feed(
     if last_modified_dt:
         response.headers["Last-Modified"] = format_datetime(last_modified_dt, usegmt=True)
     response.headers["Cache-Control"] = "private, max-age=15"
+    response.headers["X-Cache-Status"] = "MISS"
 
-    return {
+    payload = {
         "items": items,
         "nextPageCursor": next_cursor,
         "totalAvailable": total,
         "updatedAt": datetime.utcnow().isoformat(),
     }
+    set_cached(news_cache, feed_cache_key, payload)
+    return payload
 
 
 @router.get("/history")
@@ -1014,122 +1057,126 @@ async def news_sources(
 
 @router.post("/fetch-all")
 async def fetch_all_history(
-    background_tasks: BackgroundTasks,
     lang: str = Query("en", description="Language: 'en' or 'ar'"),
     current_user: TokenData = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
-    Bulk-fetch all available announcements from every Boursa Kuwait
+    [P2-4/B-6] Bulk-fetch all available announcements from every Boursa Kuwait
     data-api source and persist them to the database.
 
-    Runs in the background so production gateways don't time out.
-    Returns immediately with a status message.
+    Queues the job in Celery so ingestion runs off the FastAPI event loop.
+    Returns immediately with a task id and status endpoint.
     """
-    # Quick count before kicking off background task
-    total_before = db.query(NewsArticle).count()
+    from app.tasks.news import fetch_and_ingest_news_task
 
-    background_tasks.add_task(_bg_fetch_all_history)
+    news_cache.clear()
+    try:
+        task = fetch_and_ingest_news_task.delay(lang=lang)
+    except OperationalError as exc:
+        raise HTTPException(status_code=503, detail=f"News queue unavailable: {exc}")
 
     return {
-        "status": "started",
-        "totalStoredBefore": total_before,
-        "message": "Bulk fetch started in background. Check /feed or /history to see new articles as they arrive.",
+        "task_id": task.id,
+        "status": "queued",
+        "check_url": f"/api/v1/news/status/{task.id}",
     }
 
 
-def _bg_fetch_all_history() -> None:
-    """Background worker for bulk-fetching all Boursa announcements.
+@router.get("/status/{job_id}", include_in_schema=True)
+async def fetch_all_status(
+    job_id: str,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Return the current status of a Celery-backed /fetch-all task."""
+    from app.core.celery_app import celery_app
 
-    Uses synchronous httpx.Client (not async) because FastAPI
-    BackgroundTasks run in a thread-pool — calling asyncio.run() can
-    conflict with the main event loop.
+    result = celery_app.AsyncResult(job_id)
+    if result.state == "PENDING":
+        return {"status": "pending", "task_id": job_id}
+    if result.state == "SUCCESS":
+        return {"status": "completed", "task_id": job_id, "result": result.result}
+    if result.state == "FAILURE":
+        return {"status": "failed", "task_id": job_id, "error": str(result.result)}
+    return {"status": result.state, "task_id": job_id, "meta": result.info}
+
+
+async def _async_fetch_all_history(lang: str = "en", job_id: str | None = None) -> None:
     """
-    from app.core.database import SessionLocal
+    [P2-4/B-6] Async bulk-fetch coroutine launched by /fetch-all.
+
+    Uses fetch_with_retry for all outbound calls so transient network failures
+    are retried automatically. Updates _news_jobs[job_id] throughout.
+    """
+    import time as _time
+
+    if job_id and job_id in _news_jobs:
+        _news_jobs[job_id]["status"] = "running"
+        _news_jobs[job_id]["started_at"] = int(_time.time())
 
     total_new = 0
-    total_fetched = 0
+    try:
+        boursa_lang = "A" if lang == "ar" else "E"
 
-    for lang_code in ["E", "A"]:
-        try:
-            # ── Synchronous fetch from all RT codes ──────────────
+        for lang_code in [boursa_lang]:
             seen_ids: set[str] = set()
             merged: list[dict] = []
 
-            with httpx.Client(timeout=120.0) as client:
-                # Full-history endpoint (RT=3516)
+            # Full-history endpoint (RT=3516)
+            try:
+                items = await _fetch_boursa({"RT": _BOURSA_HISTORY_RT, "L": lang_code})
+                for item in items:
+                    nid = str(item.get("NewsId", ""))
+                    if nid and nid not in seen_ids:
+                        seen_ids.add(nid)
+                        merged.append(item)
+                logger.info("Async fetch RT=%s lang=%s: %d items", _BOURSA_HISTORY_RT, lang_code, len(merged))
+            except Exception as exc:
+                logger.warning("Async fetch RT=%s lang=%s failed (all retries): %s", _BOURSA_HISTORY_RT, lang_code, exc)
+
+            # Current-day sources
+            for rt in _BOURSA_RT_CODES:
                 try:
-                    resp = client.get(
-                        BOURSA_API,
-                        params={"RT": _BOURSA_HISTORY_RT, "L": lang_code},
-                    )
-                    resp.raise_for_status()
-                    data = resp.json()
-                    if isinstance(data, list):
-                        for item in data:
-                            nid = str(item.get("NewsId", ""))
-                            if nid and nid not in seen_ids:
-                                seen_ids.add(nid)
-                                merged.append(item)
-                    logger.info(
-                        "BG fetch RT=%s lang=%s: %d items",
-                        _BOURSA_HISTORY_RT, lang_code, len(merged),
-                    )
-                except Exception as e:
-                    logger.warning(
-                        "BG fetch RT=%s lang=%s failed: %s",
-                        _BOURSA_HISTORY_RT, lang_code, e,
-                    )
+                    items = await _fetch_boursa({"RT": rt, "L": lang_code})
+                    for item in items:
+                        nid = str(item.get("NewsId", ""))
+                        if nid and nid not in seen_ids:
+                            seen_ids.add(nid)
+                            merged.append(item)
+                except Exception as exc:
+                    logger.warning("Async fetch RT=%s lang=%s failed: %s", rt, lang_code, exc)
 
-                # Current-day sources (RT=3507/3508)
-                for rt in _BOURSA_RT_CODES:
-                    try:
-                        resp = client.get(
-                            BOURSA_API, params={"RT": rt, "L": lang_code}
-                        )
-                        resp.raise_for_status()
-                        data = resp.json()
-                        if isinstance(data, list):
-                            for item in data:
-                                nid = str(item.get("NewsId", ""))
-                                if nid and nid not in seen_ids:
-                                    seen_ids.add(nid)
-                                    merged.append(item)
-                    except Exception as e:
-                        logger.warning("BG fetch RT=%s failed: %s", rt, e)
+            if not merged:
+                continue
 
-            total_fetched += len(merged)
+            mapped = [_map_item(r, lang_code) for r in merged]
 
-            # ── Persist to DB ────────────────────────────────────
-            if merged:
-                bg_db = SessionLocal()
-                try:
-                    mapped = [_map_item(r, lang_code) for r in merged]
-                    count = _persist_articles(bg_db, mapped)
-                    total_new += count
-                finally:
-                    bg_db.close()
+            from app.core.database import SessionLocal
+            async_db = SessionLocal()
+            try:
+                count = _persist_articles(async_db, mapped)
+                total_new += count
+                if count:
+                    logger.info("Async bulk-fetch persisted %d new articles (lang=%s)", count, lang_code)
+            except Exception as exc:
+                logger.warning("Async bulk-fetch persist failed: %s", exc)
+            finally:
+                async_db.close()
 
-        except Exception as e:
-            logger.warning("Bulk fetch (lang=%s) failed: %s", lang_code, e)
-
-    # Reclassify after all inserts
-    try:
-        bg_db = SessionLocal()
-        try:
-            reclassified = _reclassify_stored_articles(bg_db)
-            total_stored = bg_db.query(NewsArticle).count()
-        finally:
-            bg_db.close()
-    except Exception as e:
-        reclassified = 0
-        total_stored = -1
-        logger.warning("Reclassify failed: %s", e)
-
-    logger.info(
-        "✅  Bulk fetch complete: fetched=%d, new=%d, reclassified=%d, total=%d",
-        total_fetched, total_new, reclassified, total_stored,
-    )
+        logger.info("Async bulk-fetch complete. Total new articles: %d", total_new)
+    except Exception as _job_exc:
+        news_cache.clear()
+        if job_id and job_id in _news_jobs:
+            _news_jobs[job_id]["status"] = f"failed: {_job_exc}"
+            _news_jobs[job_id]["completed_at"] = int(_time.time())
+            _news_jobs[job_id]["total_new"] = total_new
+        logger.error("Async bulk-fetch job %s failed: %s", job_id, _job_exc, exc_info=True)
+    else:
+        news_cache.clear()
+        if job_id and job_id in _news_jobs:
+            _news_jobs[job_id]["status"] = "completed"
+            _news_jobs[job_id]["completed_at"] = int(_time.time())
+            _news_jobs[job_id]["total_new"] = total_new
 
 
 @router.post("/import")

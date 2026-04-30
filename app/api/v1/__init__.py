@@ -25,6 +25,8 @@ from app.api.v1.market import router as market_router
 from app.api.v1.notifications import router as notifications_router
 from app.api.v1.trade_signals import router as trade_signals_router
 from app.api.v1.users import router as users_router
+from app.api.v1.compliance import router as compliance_router
+from app.api.v1.system import router as system_router
 
 v1_router = APIRouter(prefix="/api/v1")
 
@@ -49,3 +51,5 @@ v1_router.include_router(market_router)
 v1_router.include_router(notifications_router)
 v1_router.include_router(trade_signals_router)
 v1_router.include_router(users_router)
+v1_router.include_router(compliance_router)
+v1_router.include_router(system_router)

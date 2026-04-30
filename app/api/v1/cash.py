@@ -13,16 +13,19 @@ from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from starlette.responses import StreamingResponse
 
 from app.api.deps import get_current_user
-from app.core.security import TokenData
+from app.core.database import get_db, query_df, query_val, exec_sql
 from app.core.exceptions import NotFoundError, BadRequestError
-from app.core.database import query_df, query_one, query_val, exec_sql
-from app.services.fx_service import convert_to_kwd, PORTFOLIO_CCY
+from app.core.repositories.cash import CashDepositRepository
+from app.core.security import TokenData
+from app.models.cash import CashDeposit
+from app.schemas.cash import CashDepositCreate, CashDepositUpdate
 from app.services.audit_service import (
     log_event, CASH_CREATE, CASH_UPDATE, CASH_DELETE, CASH_RESTORE,
 )
-from app.schemas.cash import CashDepositCreate, CashDepositUpdate
+from app.services.fx_service import convert_to_kwd, PORTFOLIO_CCY
 from app.services.portfolio_service import PortfolioService
 from app.api.v1.tracker import sync_deposit_to_snapshot
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
@@ -90,16 +93,21 @@ async def list_deposits(
 async def get_deposit(
     deposit_id: int,
     current_user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """Get a single cash deposit by ID."""
-    row = query_one(
-        "SELECT * FROM cash_deposits WHERE id = ? AND user_id = ? AND COALESCE(is_deleted, 0) = 0",
-        (deposit_id, current_user.user_id),
-    )
-    if not row:
+    # [B-2] Use ORM repository instead of raw query_one()
+    repo = CashDepositRepository(db)
+    deposit = repo.get_active(deposit_id, current_user.user_id)
+    if not deposit:
         raise NotFoundError("CashDeposit", deposit_id)
-
-    return {"status": "ok", "data": dict(row)}
+    return {
+        "status": "ok",
+        "data": {
+            c.name: getattr(deposit, c.name)
+            for c in deposit.__table__.columns
+        },
+    }
 
 
 @router.post("/deposits", status_code=201)
@@ -107,6 +115,7 @@ async def create_deposit(
     request: Request,
     body: CashDepositCreate,
     current_user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """Create a new cash deposit/withdrawal."""
     dep = body
@@ -125,24 +134,27 @@ async def create_deposit(
         except Exception:
             fx_rate = None
 
-    exec_sql(
-        """INSERT INTO cash_deposits
-           (user_id, portfolio, deposit_date, amount, currency,
-            bank_name, source, notes, description, comments,
-            include_in_analysis, fx_rate_at_deposit, is_deleted, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)""",
-        (
-            current_user.user_id, dep.portfolio, dep.deposit_date,
-            dep.amount, dep.currency, dep.bank_name,
-            dep.source, dep.notes, dep.description, dep.comments,
-            dep.include_in_analysis, fx_rate, now,
-        ),
+    # [B-2] Use ORM instead of exec_sql + query_val race-condition pattern
+    repo = CashDepositRepository(db)
+    new_deposit = CashDeposit(
+        user_id=current_user.user_id,
+        portfolio=dep.portfolio,
+        deposit_date=dep.deposit_date,
+        amount=dep.amount,
+        currency=dep.currency,
+        bank_name=dep.bank_name,
+        source=dep.source,
+        notes=dep.notes,
+        description=dep.description,
+        comments=dep.comments,
+        include_in_analysis=dep.include_in_analysis,
+        fx_rate_at_deposit=fx_rate,
+        is_deleted=0,
+        created_at=now,
     )
-
-    new_id = query_val(
-        "SELECT id FROM cash_deposits WHERE user_id = ? ORDER BY id DESC LIMIT 1",
-        (current_user.user_id,),
-    )
+    repo.add(new_deposit)
+    db.commit()
+    new_id = new_deposit.id
 
     log_event(
         CASH_CREATE,
@@ -188,31 +200,27 @@ async def update_deposit(
     request: Request,
     body: CashDepositUpdate,
     current_user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """Update a cash deposit."""
-    # Read old amount, portfolio, and source to compute delta for manual-override update
-    old_row = query_one(
-        "SELECT id, amount, portfolio, source FROM cash_deposits WHERE id = ? AND user_id = ? AND COALESCE(is_deleted, 0) = 0",
-        (deposit_id, current_user.user_id),
-    )
-    if not old_row:
+    # [B-2] Use ORM repository instead of raw query_one() + dynamic exec_sql()
+    repo = CashDepositRepository(db)
+    deposit = repo.get_active(deposit_id, current_user.user_id)
+    if not deposit:
         raise NotFoundError("CashDeposit", deposit_id)
 
-    old_amount = float(old_row["amount"] or 0)
-    old_portfolio = old_row["portfolio"]
-    old_source = (old_row.get("source") or "deposit").lower()
+    old_amount = float(deposit.amount or 0)
+    old_portfolio = deposit.portfolio
+    old_source = (deposit.source or "deposit").lower()
 
     updates = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
     if not updates:
         raise BadRequestError("No valid fields to update")
 
-    set_clause = ", ".join(f"{k} = ?" for k in updates)
-    params = list(updates.values()) + [deposit_id, current_user.user_id]
-
-    exec_sql(
-        f"UPDATE cash_deposits SET {set_clause} WHERE id = ? AND user_id = ?",
-        tuple(params),
-    )
+    for field, value in updates.items():
+        if hasattr(deposit, field):
+            setattr(deposit, field, value)
+    db.commit()
 
     new_amount = float(updates.get("amount", old_amount))
     new_portfolio = updates.get("portfolio", old_portfolio)
@@ -246,14 +254,11 @@ async def update_deposit(
     # Return fresh overview totals so frontend can update immediately
     unified = svc.get_total_portfolio_value()
 
-    # Sync deposit to tracker snapshot — re-read the date from DB
+    # Sync deposit to tracker snapshot using ORM-fetched date
     try:
-        dep_row = query_one(
-            "SELECT deposit_date FROM cash_deposits WHERE id = ? AND user_id = ?",
-            (deposit_id, current_user.user_id),
-        )
+        dep_row = repo.get_any(deposit_id, current_user.user_id)
         if dep_row:
-            sync_deposit_to_snapshot(current_user.user_id, dep_row["deposit_date"])
+            sync_deposit_to_snapshot(current_user.user_id, dep_row.deposit_date)
     except Exception as exc:
         logger.warning("snapshot sync after deposit update failed: %s", exc)
 
@@ -273,25 +278,23 @@ async def delete_deposit(
     deposit_id: int,
     request: Request,
     current_user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """Soft-delete a cash deposit."""
-    # Read amount + portfolio before deleting so we can subtract from manual override
-    existing = query_one(
-        "SELECT id, amount, portfolio, source FROM cash_deposits WHERE id = ? AND user_id = ? AND COALESCE(is_deleted, 0) = 0",
-        (deposit_id, current_user.user_id),
-    )
+    # [B-2] Use ORM repository instead of raw query_one() + exec_sql()
+    repo = CashDepositRepository(db)
+    existing = repo.get_active(deposit_id, current_user.user_id)
     if not existing:
         raise NotFoundError("CashDeposit", deposit_id)
 
-    del_amount = float(existing["amount"] or 0)
-    del_portfolio = existing["portfolio"]
-    del_source = (existing.get("source") or "deposit").lower()
+    del_amount = float(existing.amount or 0)
+    del_portfolio = existing.portfolio
+    del_source = (existing.source or "deposit").lower()
 
     now = int(time.time())
-    exec_sql(
-        "UPDATE cash_deposits SET is_deleted = 1, deleted_at = ? WHERE id = ? AND user_id = ?",
-        (now, deposit_id, current_user.user_id),
-    )
+    existing.is_deleted = 1
+    existing.deleted_at = now
+    db.commit()
 
     log_event(
         CASH_DELETE,
@@ -312,14 +315,11 @@ async def delete_deposit(
     # Return fresh overview totals so frontend can update immediately
     unified = svc.get_total_portfolio_value()
 
-    # Sync deposit to tracker snapshot — re-read the date from DB
+    # Sync deposit to tracker snapshot using ORM-fetched date
     try:
-        dep_row = query_one(
-            "SELECT deposit_date FROM cash_deposits WHERE id = ? AND user_id = ?",
-            (deposit_id, current_user.user_id),
-        )
+        dep_row = repo.get_any(deposit_id, current_user.user_id)
         if dep_row:
-            sync_deposit_to_snapshot(current_user.user_id, dep_row["deposit_date"])
+            sync_deposit_to_snapshot(current_user.user_id, dep_row.deposit_date)
     except Exception as exc:
         logger.warning("snapshot sync after deposit delete failed: %s", exc)
 
@@ -339,24 +339,22 @@ async def restore_deposit(
     deposit_id: int,
     request: Request,
     current_user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """Restore a soft-deleted deposit."""
-    # Read amount, portfolio, and source so we can add back to manual override
-    existing = query_one(
-        "SELECT id, amount, portfolio, source FROM cash_deposits WHERE id = ? AND user_id = ? AND is_deleted = 1",
-        (deposit_id, current_user.user_id),
-    )
+    # [B-2] Use ORM repository instead of raw query_one() + exec_sql()
+    repo = CashDepositRepository(db)
+    existing = repo.get_deleted(deposit_id, current_user.user_id)
     if not existing:
         raise NotFoundError("CashDeposit", deposit_id)
 
-    restore_amount = float(existing["amount"] or 0)
-    restore_portfolio = existing["portfolio"]
-    restore_source = (existing.get("source") or "deposit").lower()
+    restore_amount = float(existing.amount or 0)
+    restore_portfolio = existing.portfolio
+    restore_source = (existing.source or "deposit").lower()
 
-    exec_sql(
-        "UPDATE cash_deposits SET is_deleted = 0, deleted_at = NULL WHERE id = ? AND user_id = ?",
-        (deposit_id, current_user.user_id),
-    )
+    existing.is_deleted = 0
+    existing.deleted_at = None
+    db.commit()
 
     log_event(
         CASH_RESTORE,
@@ -377,14 +375,11 @@ async def restore_deposit(
     # Return fresh overview totals so frontend can update immediately
     unified = svc.get_total_portfolio_value()
 
-    # Sync deposit to tracker snapshot — re-read the date from DB
+    # Sync deposit to tracker snapshot using ORM-fetched date
     try:
-        dep_row = query_one(
-            "SELECT deposit_date FROM cash_deposits WHERE id = ? AND user_id = ?",
-            (deposit_id, current_user.user_id),
-        )
+        dep_row = repo.get_any(deposit_id, current_user.user_id)
         if dep_row:
-            sync_deposit_to_snapshot(current_user.user_id, dep_row["deposit_date"])
+            sync_deposit_to_snapshot(current_user.user_id, dep_row.deposit_date)
     except Exception as exc:
         logger.warning("snapshot sync after deposit restore failed: %s", exc)
 

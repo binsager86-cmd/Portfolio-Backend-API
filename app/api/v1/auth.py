@@ -336,33 +336,45 @@ async def google_sign_in(request: Request, body: GoogleSignInRequest):
     We try ID-token verification first; if that fails we try the
     access_token userinfo endpoint as a fallback.
     """
+    import asyncio
     import httpx
 
     google_data = None
     token = body.id_token
 
-    async with httpx.AsyncClient(timeout=10) as client:
-        # ── Attempt 1: verify as id_token ────────────────────────
-        try:
-            resp = await client.get(
-                f"https://oauth2.googleapis.com/tokeninfo?id_token={token}"
-            )
-            if resp.status_code == 200:
-                google_data = resp.json()
-        except httpx.HTTPError:
-            pass  # fall through to access_token attempt
+    # Use explicit connect timeout (3s) so a blocked/unreachable Google endpoint
+    # fails fast instead of hanging until the OS-level TCP timeout fires.
+    _timeout = httpx.Timeout(10.0, connect=3.0)
 
-        # ── Attempt 2: verify as access_token via userinfo ───────
-        if google_data is None or "email" not in google_data:
+    async def _verify_google_token() -> None:
+        nonlocal google_data
+        async with httpx.AsyncClient(timeout=_timeout) as client:
+            # ── Attempt 1: verify as id_token ────────────────────────
             try:
                 resp = await client.get(
-                    "https://www.googleapis.com/oauth2/v3/userinfo",
-                    headers={"Authorization": f"Bearer {token}"},
+                    f"https://oauth2.googleapis.com/tokeninfo?id_token={token}"
                 )
                 if resp.status_code == 200:
                     google_data = resp.json()
-            except httpx.HTTPError:
-                pass
+            except (httpx.HTTPError, httpx.TimeoutException):
+                pass  # fall through to access_token attempt
+
+            # ── Attempt 2: verify as access_token via userinfo ───────
+            if google_data is None or "email" not in google_data:
+                try:
+                    resp = await client.get(
+                        "https://www.googleapis.com/oauth2/v3/userinfo",
+                        headers={"Authorization": f"Bearer {token}"},
+                    )
+                    if resp.status_code == 200:
+                        google_data = resp.json()
+                except (httpx.HTTPError, httpx.TimeoutException):
+                    pass
+
+    try:
+        await asyncio.wait_for(_verify_google_token(), timeout=15.0)
+    except asyncio.TimeoutError:
+        raise UnauthorizedError("Google verification timed out. Please try again.")
 
     if not google_data:
         raise UnauthorizedError("Invalid Google token — could not verify with Google.")

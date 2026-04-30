@@ -13,13 +13,17 @@ Supports two modes:
 Both layers share the same underlying connection.
 """
 
+import json
+import math
 import sqlite3
 from contextlib import contextmanager
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Generator, Optional
 
 import pandas as pd
 from sqlalchemy import create_engine, event, text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import Session, sessionmaker, DeclarativeBase
 
 from app.core.config import get_settings
@@ -27,6 +31,22 @@ from app.core.config import get_settings
 _settings = get_settings()
 _DB_PATH = _settings.database_abs_path
 _USE_PG = _settings.use_postgres
+
+
+def safe_json_dumps(obj: Any) -> str:
+    """Serialize JSON while converting NaN/Inf values to null."""
+    def _sanitize(value: Any) -> Any:
+        if isinstance(value, float):
+            if math.isnan(value) or math.isinf(value):
+                return None
+            return value
+        if isinstance(value, dict):
+            return {k: _sanitize(v) for k, v in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [_sanitize(v) for v in value]
+        return value
+
+    return json.dumps(_sanitize(obj), allow_nan=False, separators=(",", ":"))
 
 
 # ── SQLAlchemy Base ──────────────────────────────────────────────────
@@ -40,18 +60,56 @@ class Base(DeclarativeBase):
 
 _SQLALCHEMY_URL = _settings.sqlalchemy_url
 
+
+def _to_asyncpg_url(url: str) -> str:
+    if url.startswith("postgresql+asyncpg://"):
+        return url
+    if url.startswith("postgresql://"):
+        return "postgresql+asyncpg://" + url[len("postgresql://"):]
+    if url.startswith("postgres://"):
+        return "postgresql+asyncpg://" + url[len("postgres://"):]
+    return url
+
 if _USE_PG:
     engine = create_engine(
         _SQLALCHEMY_URL,
-        pool_size=10,               # Base pool connections
-        max_overflow=20,             # Burst capacity beyond pool_size
+        pool_size=30,                # Base pool connections
+        max_overflow=10,             # Burst capacity beyond pool_size
         pool_pre_ping=True,          # Detect stale connections before use
         pool_recycle=1800,           # Recycle connections every 30 min
-        pool_timeout=30,             # Wait up to 30s for a connection
+        pool_use_lifo=True,
+        pool_timeout=15,
         echo=False,
         connect_args={
-            "options": "-c statement_timeout=30000 -c lock_timeout=10000",
+            "options": "-c statement_timeout=10000 -c lock_timeout=10000 -c idle_in_transaction_session_timeout=30000",
         },
+        json_serializer=safe_json_dumps,
+    )
+
+    # Async SQLAlchemy session for asyncpg + PgBouncer transaction pooling.
+    async_engine = create_async_engine(
+        _to_asyncpg_url(_SQLALCHEMY_URL),
+        echo=False,
+        pool_size=30,
+        max_overflow=10,
+        pool_recycle=1800,
+        pool_pre_ping=True,
+        pool_use_lifo=True,
+        connect_args={
+            # Critical for PgBouncer transaction mode.
+            "statement_cache_size": 0,
+            "command_timeout": 15,
+            "server_settings": {
+                "statement_timeout": "10000",
+                "idle_session_timeout": "30000",
+            },
+        },
+        json_serializer=safe_json_dumps,
+    )
+    AsyncSessionLocal = async_sessionmaker(
+        async_engine,
+        expire_on_commit=False,
+        class_=AsyncSession,
     )
 
     @event.listens_for(engine, "connect")
@@ -67,6 +125,8 @@ else:
         connect_args={"check_same_thread": False},
         echo=False,
     )
+    async_engine = None
+    AsyncSessionLocal = None
 
     @event.listens_for(engine, "connect")
     def _set_sqlite_wal(dbapi_conn, connection_record):
@@ -89,6 +149,16 @@ def get_db() -> Generator[Session, None, None]:
         def list_items(db: Session = Depends(get_db)):
             ...
     """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+@asynccontextmanager
+async def get_db_session() -> Generator[Session, None, None]:
+    """Async context manager wrapper around SessionLocal for async call sites."""
     db = SessionLocal()
     try:
         yield db

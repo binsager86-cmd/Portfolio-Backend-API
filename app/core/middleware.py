@@ -9,6 +9,7 @@ Includes:
 """
 
 import logging
+import hashlib
 import time
 import uuid
 
@@ -145,6 +146,9 @@ _timing_logger = logging.getLogger("app.request")
 # Paths to skip in access logs (noisy health checks, static files)
 _SKIP_LOG_PATHS = frozenset({"/health", "/api/health", "/favicon.ico", "/openapi.json"})
 
+LEGACY_PREFIXES = ("/api/auth/", "/api/portfolio/", "/api/cron/")
+SUNSET_DATE = "2025-12-31T23:59:59Z"
+
 
 class RequestTimingMiddleware(BaseHTTPMiddleware):
     """
@@ -184,5 +188,47 @@ class RequestTimingMiddleware(BaseHTTPMiddleware):
                     "user_agent": (request.headers.get("user-agent") or "")[:120],
                 },
             )
+
+        return response
+
+
+class LegacyDeprecationMiddleware(BaseHTTPMiddleware):
+    """
+    Adds deprecation headers to legacy unversioned API routes.
+
+    Legacy clients continue to work, but every response under the old
+    `/api/{auth,portfolio,cron}` prefixes advertises the `/api/v1/...`
+    successor so callers can migrate gradually.
+    """
+
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        response = await call_next(request)
+        path = request.url.path
+
+        if any(path.startswith(prefix) for prefix in LEGACY_PREFIXES):
+            response.headers["Deprecation"] = "true"
+            response.headers["Sunset"] = SUNSET_DATE
+            successor = path.replace("/api/", "/api/v1/", 1)
+            response.headers["Link"] = f'<{successor}>; rel="successor-version"'
+
+        return response
+
+
+class AssetCacheMiddleware(BaseHTTPMiddleware):
+    """Apply long-lived immutable cache headers for static assets."""
+
+    _STATIC_SUFFIXES = (".js", ".css", ".png", ".webp", ".woff2")
+
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        response = await call_next(request)
+        path = request.url.path
+
+        if path.endswith(self._STATIC_SUFFIXES):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            response.headers["ETag"] = hashlib.md5(path.encode()).hexdigest()[:8]
 
         return response

@@ -6,10 +6,19 @@ Run with:  uvicorn app.main:app --reload --port 8004
 """
 
 import logging
+import os
+import json
 from contextlib import asynccontextmanager
+
+import tracemalloc
 
 import pandas as pd
 pd.set_option("future.no_silent_downcasting", True)
+
+import sentry_sdk
+from prometheus_fastapi_instrumentator import Instrumentator
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,8 +36,11 @@ from app.core.middleware import (
     PrivateNetworkAccessMiddleware,
     CorrelationIDMiddleware,
     RequestTimingMiddleware,
+    LegacyDeprecationMiddleware,
+    AssetCacheMiddleware,
 )
 from app.core.json_response import SafeJSONResponse
+from app.core.feature_flags import get_flags
 
 # Versioned API router (all /api/v1/* routes)
 from app.api.v1 import v1_router
@@ -48,6 +60,16 @@ logger = logging.getLogger(__name__)
 
 settings = get_settings()
 
+# Sentry Init (Production Only)
+if os.getenv("ENVIRONMENT") == "production" and os.getenv("SENTRY_DSN"):
+    sentry_sdk.init(
+        dsn=os.getenv("SENTRY_DSN"),
+        integrations=[FastApiIntegration(), SqlalchemyIntegration()],
+        traces_sample_rate=0.2,
+        environment="production",
+        release=os.getenv("GIT_COMMIT_SHA", "dev"),
+    )
+
 
 # ── Lifespan (startup / shutdown) ────────────────────────────────────
 
@@ -64,9 +86,22 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("✅  Database found: %s", settings.database_abs_path)
 
-        # ── Schema initialization — create ALL tables ────────────
-        from app.core.schema import ensure_all_tables
-        ensure_all_tables()
+        # ── [B-3] Schema managed by Alembic — run pending migrations ─
+        # `alembic upgrade head` is also called in Dockerfile/Procfile before
+        # the server starts.  This in-process call handles development restarts
+        # and any edge case where the pre-start hook was skipped.
+        try:
+            from alembic.config import Config as AlembicConfig
+            from alembic import command as alembic_command
+            import os
+            app_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+            alembic_ini = os.path.join(app_root, "alembic.ini")
+            alembic_cfg = AlembicConfig(alembic_ini)
+            alembic_cfg.set_main_option("script_location", os.path.join(app_root, "alembic"))
+            alembic_command.upgrade(alembic_cfg, "head")
+            logger.info("✅  Alembic: schema is up to date")
+        except Exception as alembic_err:
+            logger.warning("⚠️  Alembic upgrade failed (DB may be pre-stamped): %s", alembic_err)
 
         # ── Additive migration: news_articles.content_hash for dedupe fallback ──
         try:
@@ -131,9 +166,19 @@ async def lifespan(app: FastAPI):
     logger.info("🚀  Backend API starting on http://localhost:8004")
     logger.info("📖  Swagger docs at http://localhost:8004/docs")
 
+    # Dev-only: track memory allocations for profiling
+    if not settings.is_production:
+        tracemalloc.start()
+        logger.info("🔍  tracemalloc enabled (development mode)")
+
     yield  # app is running
 
     # Shutdown
+    try:
+        from app.core.http_client import close_client
+        await close_client()
+    except Exception as exc:
+        logger.debug("HTTP client shutdown skipped: %s", exc)
     stop_scheduler()
     logger.info("👋  Backend API shutting down")
 
@@ -153,6 +198,13 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+@app.on_event("startup")
+async def setup_observability():
+    Instrumentator().instrument(app).expose(app, endpoint="/metrics")
+    # Ensure AI metric descriptors are registered in the default registry
+    import app.core.ai_metrics  # noqa: F401 — side-effect import registers counters
+
 # ── Exception handlers ──────────────────────────────────────────────
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -167,6 +219,8 @@ app.add_middleware(RequestSizeLimitMiddleware)
 # ── Observability Middleware ─────────────────────────────────────────
 app.add_middleware(CorrelationIDMiddleware)
 app.add_middleware(RequestTimingMiddleware)
+app.add_middleware(LegacyDeprecationMiddleware)
+app.add_middleware(AssetCacheMiddleware)
 
 # ── CORS Middleware ──────────────────────────────────────────────────
 # NOTE: allow_origins=["*"] + allow_credentials=True is spec-invalid.
@@ -188,16 +242,27 @@ _dev_origins = [
 # In production, match any *.ondigitalocean.app subdomain + explicit CORS_ORIGINS
 _prod_origin_regex = r"https://.*\.ondigitalocean\.app"
 
+# In development, allow localhost/127.0.0.1 on any port so Expo can
+# run on alternate ports (8083, 8084, etc.) without CORS failures.
+_dev_origin_regex = r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$"
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list if settings.is_production else _dev_origins,
-    allow_origin_regex=_prod_origin_regex if settings.is_production else None,
+    allow_origin_regex=_prod_origin_regex if settings.is_production else _dev_origin_regex,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
     # Chrome Private Network Access: localhost:8081 → 127.0.0.1:8004
     allow_private_network=not settings.is_production,
 )
+
+
+@app.middleware("http")
+async def inject_flags(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Feature-Flags"] = json.dumps(get_flags())
+    return response
 
 
 # ── Routes ───────────────────────────────────────────────────────────

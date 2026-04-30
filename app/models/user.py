@@ -30,7 +30,7 @@ class User(Base):
     # Relationships
     portfolios = relationship("Portfolio", back_populates="user", lazy="selectin")
     stocks = relationship("Stock", back_populates="user", lazy="selectin")
-    transactions = relationship("PortfolioTransaction", back_populates="user", lazy="select")
+    transactions = relationship("PortfolioTransaction", back_populates="user", lazy="selectin")
 
     def __repr__(self) -> str:
         return f"<User id={self.id} username={self.username!r}>"
