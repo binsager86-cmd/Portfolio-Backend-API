@@ -259,5 +259,18 @@ def _parse_ondemand_csv(text: str) -> list[dict]:
             })
         except ValueError:
             continue
+    
+    # Deduplicate by date (ex-dividend dates may appear twice)
+    # Keep the entry with highest volume for each date
     out.sort(key=lambda r: r["date"])
-    return out
+    deduped: dict[str, dict] = {}
+    for row in out:
+        d = row["date"]
+        if d not in deduped:
+            deduped[d] = row
+        else:
+            # Keep the one with higher volume (actual trading data)
+            if row["volume"] > deduped[d]["volume"]:
+                deduped[d] = row
+    
+    return sorted(deduped.values(), key=lambda r: r["date"])
