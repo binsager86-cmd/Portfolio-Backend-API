@@ -17,6 +17,8 @@ services:
     plan: standard
     healthCheckPath: /health
     autoDeploy: true
+    # Run migrations automatically after each deploy
+    postDeployCommand: "alembic upgrade head"
     buildFilter:
       paths:
         - mobile-migration/backend-api/**
