@@ -63,7 +63,9 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""            # Google Gemini API key for AI analysis
 
     # Market data (Whale Tracker)
-    EODHD_API_TOKEN: str = ""           # EODHD token for /api/v1/trade-signals/whale-candles
+    EODHD_API_TOKEN: str = ""           # EODHD token for /api/v1/trade-signals/whale-candles (legacy)
+    TICKERCHART_USERNAME: str = ""     # TickerChart Live account (replaces EODHD)
+    TICKERCHART_PASSWORD: str = ""     # TickerChart Live password (plaintext; sent base64-encoded)
 
     # SMTP / Email (for password reset OTP)
     SMTP_HOST: str = ""                 # e.g. "smtp.gmail.com"

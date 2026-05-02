@@ -197,6 +197,95 @@ async def analyze_portfolio(
         raise ValueError(f"AI analysis failed: {exc}")
 
 
+# ── Whale Radar deep-thinking chat ───────────────────────────────────
+
+WHALE_CHAT_TIMEOUT_SECONDS = 90.0
+
+
+async def whale_chat(user_id: int, prompt: str) -> dict:
+    """
+    Run a deep-thinking Gemini analysis turn for the Whale Radar chat.
+
+    Uses ``gemini-2.5-pro`` with the thinking budget set to dynamic
+    (``-1``) so the model spends as long as it needs reasoning before
+    answering. Falls back to ``gemini-2.5-flash`` (also with thinking)
+    if pro is not available for the API key.
+
+    Returns the same shape as ``analyze_portfolio``.
+    """
+    settings = get_settings()
+
+    api_key = settings.GEMINI_API_KEY
+    try:
+        from app.core.database import query_one, add_column_if_missing
+        add_column_if_missing("users", "gemini_api_key", "TEXT")
+        row = query_one(
+            "SELECT gemini_api_key FROM users WHERE id = ?", (user_id,)
+        )
+        if row and row[0]:
+            api_key = row[0]
+    except Exception:
+        pass
+
+    if not api_key:
+        raise ValueError(
+            "AI chat requires a Gemini API key. "
+            "Add it in Settings or set GEMINI_API_KEY in .env."
+        )
+
+    try:
+        from google import genai
+        from google.genai import types as genai_types
+    except ImportError as exc:
+        raise ValueError(
+            "AI chat requires the google-genai SDK. "
+            "Install with: pip install google-genai"
+        ) from exc
+
+    client = genai.Client(api_key=api_key)
+
+    # Dynamic thinking budget: model decides how much to think.
+    thinking_cfg = genai_types.ThinkingConfig(
+        thinking_budget=-1,
+        include_thoughts=False,
+    )
+    config = genai_types.GenerateContentConfig(
+        thinking_config=thinking_cfg,
+        temperature=0.7,
+        max_output_tokens=4096,
+    )
+
+    last_exc: Exception | None = None
+    for model_id in ("gemini-2.5-pro", "gemini-2.5-flash"):
+        try:
+            response = await _run_with_timeout(
+                client.models.generate_content,
+                model=model_id,
+                contents=prompt,
+                config=config,
+                timeout=WHALE_CHAT_TIMEOUT_SECONDS,
+            )
+            text = _extract_response_text(response)
+            if not text:
+                raise ValueError(f"Empty response from {model_id}.")
+            return {
+                "analysis": text,
+                "model": model_id,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "cached": False,
+            }
+        except asyncio.TimeoutError as exc:
+            last_exc = exc
+            logger.warning("Whale chat timeout on %s after %.1fs", model_id, WHALE_CHAT_TIMEOUT_SECONDS)
+            continue
+        except Exception as exc:
+            last_exc = exc
+            logger.warning("Whale chat error on %s: %s", model_id, exc)
+            continue
+
+    raise ValueError(f"AI chat failed: {last_exc}")
+
+
 # ── Cache-first AI analysis (Phase 9) ────────────────────────────────
 
 

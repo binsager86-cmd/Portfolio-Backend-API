@@ -51,6 +51,11 @@ services:
       # ── AI (optional) ──
       - key: GEMINI_API_KEY
         value: ""                            # set manually in Render dashboard
+      # ── TickerChart Live (Whale Radar OHLCV + indicators) ──
+      - key: TICKERCHART_USERNAME
+        sync: false                          # set manually in Render dashboard
+      - key: TICKERCHART_PASSWORD
+        sync: false                          # set manually in Render dashboard
       - key: GUNICORN_WORKERS
         value: "4"
       - key: MAX_REQUESTS

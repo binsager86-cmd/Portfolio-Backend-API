@@ -82,3 +82,36 @@ async def ai_status(current_user: TokenData = Depends(get_current_user)):
             "model": "gemini-2.5-flash",
         },
     }
+
+
+# ── Whale Radar dedicated chat (deep-thinking) ────────────────────────
+
+
+class WhaleChatRequest(BaseModel):
+    """Single-turn prompt for the Whale Radar AI analyst chat."""
+    prompt: str
+
+
+@router.post("/whale-chat")
+async def whale_chat(
+    body: WhaleChatRequest,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """
+    Dedicated Gemini endpoint for Whale Radar conversations.
+
+    Uses ``gemini-2.5-pro`` with thinking enabled (no budget cap) for
+    in-depth, multi-paragraph reasoning. Falls back to flash if pro
+    is unavailable in the caller's region.
+    """
+    from app.services.ai_service import whale_chat as ai_whale_chat
+
+    try:
+        result = await ai_whale_chat(
+            user_id=current_user.user_id,
+            prompt=body.prompt,
+        )
+    except ValueError as e:
+        raise ServiceUnavailableError(str(e))
+
+    return {"status": "ok", "data": result}

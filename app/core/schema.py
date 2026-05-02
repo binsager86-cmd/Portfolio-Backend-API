@@ -587,6 +587,9 @@ def ensure_all_tables() -> None:
         add_column_if_missing("portfolio_cash", "manual_override", "INTEGER DEFAULT 0")
         add_column_if_missing("portfolio_cash", "last_updated", "INTEGER")
 
+        # -- portfolio_snapshots (legacy DBs may miss this nullable column) --
+        add_column_if_missing("portfolio_snapshots", "portfolio", "TEXT")
+
         logger.info("✅  Additive column migrations applied")
     except Exception as e:
         logger.warning("⚠️  Additive column migrations skipped: %s", e)

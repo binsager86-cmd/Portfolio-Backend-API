@@ -333,47 +333,54 @@ async def whale_candles(
     country: Optional[str] = None,
     from_date: Optional[date] = Query(default=None, alias="from"),
     to_date: Optional[date] = Query(default=None, alias="to"),
+    indicators: bool = Query(default=True, description="Attach TA-Lib technical indicators"),
     current_user: TokenData = Depends(get_current_user),
 ):
+    """OHLCV (and optional technical indicators) for the Whale Radar engine.
+
+    Backed by TickerChart Live (replaces EODHD). Returns rows in the
+    EODHD-compatible shape the mobile WhaleRadar already consumes:
+        [{date, open, high, low, close, volume, ...indicators}, ...]
+
+    Indicators are computed server-side via TA-Lib (the same C library
+    bundled in TickerChart Live's desktop app) so values match the desktop
+    chart bit-for-bit.
+    """
     del current_user  # endpoint is auth-protected; user payload not otherwise needed here
 
-    normalized_symbol = _normalize_eod_symbol(symbol, exchange, country)
-    if not normalized_symbol:
+    from app.services import tickerchart_service as tc
+    from app.services.indicators_service import attach_indicators
+
+    parsed = tc.split_symbol(symbol, exchange, country)
+    if parsed is None:
         return {"status": "ok", "data": []}
+    base, market = parsed
 
-    api_token = settings.EODHD_API_TOKEN.strip()
-    if not api_token:
-        raise HTTPException(status_code=503, detail="EODHD_API_TOKEN is not configured on backend")
+    # When indicators are requested we need extra history for the warmup
+    # period (SMA-200 + MACD slowperiod is the longest at 200 + ~35 bars).
+    # We fetch the broader window, compute, then trim to the requested range.
+    fetch_from = from_date
+    if indicators and from_date is not None:
+        from datetime import timedelta
+        fetch_from = from_date - timedelta(days=365)
 
-    params: Dict[str, str] = {
-        "api_token": api_token,
-        "fmt": "json",
-    }
-    if from_date is not None:
-        params["from"] = from_date.isoformat()
-    if to_date is not None:
-        params["to"] = to_date.isoformat()
-
-    url = f"https://eodhd.com/api/eod/{normalized_symbol}"
     try:
-        async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
-            response = await client.get(url, params=params)
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("EODHD request failed for %s: %s", normalized_symbol, exc)
-        raise HTTPException(status_code=502, detail="Failed to reach EODHD") from exc
+        rows = await tc.fetch_ohlcv(base, market, from_d=fetch_from, to_d=to_date)
+    except RuntimeError as exc:
+        # Misconfigured credentials.
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except httpx.HTTPError as exc:
+        logger.warning("TickerChart request failed for %s.%s: %s", base, market, exc)
+        raise HTTPException(status_code=502, detail="Failed to reach TickerChart") from exc
 
-    if response.status_code == 404:
-        return {"status": "ok", "data": []}
+    if indicators and rows:
+        rows = attach_indicators(rows)
+        # Trim back to requested window (we fetched extra warmup)
+        if from_date is not None:
+            iso = from_date.isoformat()
+            rows = [r for r in rows if r["date"] >= iso]
 
-    if response.status_code != 200:
-        body = response.text.strip() or f"HTTP {response.status_code}"
-        raise HTTPException(status_code=502, detail=f"EODHD error: {body}")
-
-    payload = response.json()
-    if not isinstance(payload, list):
-        return {"status": "ok", "data": []}
-
-    return {"status": "ok", "data": payload}
+    return {"status": "ok", "data": rows}
 
 
 @router.get("/pe-quarterly/{stock_id}")
