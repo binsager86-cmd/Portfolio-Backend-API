@@ -52,6 +52,16 @@ SCORE_TO_WIN_RATE: dict[int, float] = {
 # TP2 win rate is approximately 65 % of TP1 win rate
 TP2_WIN_RATE_FRACTION: float = 0.65
 
+# Regime-based win-rate multipliers applied during probability calibration.
+# Bull regime: full predicted win rate.
+# Neutral/Chop: −10 % (choppy markets reduce signal reliability).
+# Bear regime: −20 % (counter-trend setups are harder to fill and hold).
+REGIME_WIN_RATE_MULTIPLIERS: dict[str, float] = {
+    "Bullish_Expansion":   1.00,
+    "Neutral_Chop":        0.90,
+    "Bearish_Contraction": 0.80,
+}
+
 # Bayesian prior pseudo-observation count
 BAYES_PRIOR_PSEUDO_OBS: int = 50
 

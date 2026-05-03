@@ -8,7 +8,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.services.signal_engine.config.kuwait_constants import ESTIMATED_AUCTION_VOLUME_PCT
+from app.services.signal_engine.config.kuwait_constants import (
+    AUCTION_INTENSITY_HIGH_CONFIDENCE_BOOST,
+    AUCTION_INTENSITY_HIGH_THRESHOLD,
+    AUCTION_INTENSITY_LOW_CONFIDENCE_REDUCTION,
+    AUCTION_INTENSITY_LOW_THRESHOLD,
+    ESTIMATED_AUCTION_VOLUME_PCT,
+)
 
 
 def calculate_auction_intensity(rows: list[dict[str, Any]]) -> float:
@@ -61,10 +67,10 @@ def auction_confidence_adjustment(intensity: float) -> float:
     """Return a multiplicative confidence adjustment factor based on intensity.
 
     Returns:
-        Multiplier in [0.80, 1.15].
+        Multiplier in [1-LOW_REDUCTION, 1+HIGH_BOOST].
     """
-    if intensity < 1.0:
-        return 0.80
-    if intensity > 1.8:
-        return 1.15
-    return 1.00
+    if intensity < AUCTION_INTENSITY_LOW_THRESHOLD:
+        return round(1.0 - AUCTION_INTENSITY_LOW_CONFIDENCE_REDUCTION, 3)
+    if intensity > AUCTION_INTENSITY_HIGH_THRESHOLD:
+        return round(1.0 + AUCTION_INTENSITY_HIGH_CONFIDENCE_BOOST, 3)
+    return 1.0

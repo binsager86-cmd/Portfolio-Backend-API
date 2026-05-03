@@ -16,6 +16,7 @@ from typing import Any
 from app.services.signal_engine.config.risk_config import (
     BAYES_PRIOR_PSEUDO_OBS,
     ISO_MIN_SAMPLES,
+    REGIME_WIN_RATE_MULTIPLIERS,
     SCORE_TO_WIN_RATE,
     TP2_WIN_RATE_FRACTION,
 )
@@ -110,6 +111,10 @@ def calibrate_probabilities(
     else:
         raw_p = _lookup_win_rate(total_score)
         method = "lookup_table"
+
+    # ── Regime adjustment ────────────────────────────────────────────────────
+    regime_mult = REGIME_WIN_RATE_MULTIPLIERS.get(regime, 1.0)
+    raw_p = min(0.95, raw_p * regime_mult)
 
     # ── Stage 2: Bayesian update ──────────────────────────────────────────────
     if recent_performance and int(recent_performance.get("total") or 0) > 0:

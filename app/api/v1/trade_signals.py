@@ -576,6 +576,10 @@ async def kuwait_signal(
     if not rows:
         raise HTTPException(status_code=404, detail=f"No price data returned for {symbol}")
 
+    # Fill short gaps (≤ 3 Kuwait trading sessions) before indicator computation
+    from app.services.signal_engine.data.preprocessing import forward_fill_gaps
+    rows = forward_fill_gaps(rows)
+
     # Attach TA-Lib indicators (same as whale-candles endpoint)
     rows = attach_indicators(rows)
 
