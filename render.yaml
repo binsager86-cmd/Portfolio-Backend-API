@@ -7,7 +7,21 @@
 #   2. Go to https://dashboard.render.com → New → Blueprint
 #   3. Connect your repo and point to mobile-migration/backend-api/
 #   4. Render reads this file and provisions the service automatically
+#
+# Database mode:
+#   - Production: PostgreSQL managed database (see 'databases' section below).
+#     Set DATABASE_URL from the database's internal connection string.
+#   - Fallback: set DATABASE_PATH + keep the disk mount to use SQLite.
 # ──────────────────────────────────────────────────────────────────────
+
+databases:
+  - name: portfolio-db
+    plan: basic                              # upgrade to standard for production load
+    region: frankfurt                        # must match the web service region
+    databaseName: portfolio
+    user: portfolio_user
+    postgresMajorVersion: 16
+
 services:
   - type: web
     name: portfolio-api
@@ -28,8 +42,13 @@ services:
         value: production
       - key: SECRET_KEY
         generateValue: true                  # Render auto-generates a random value
-      - key: DATABASE_PATH
-        value: /data/portfolio.db            # persisted on disk mount
+
+      # ── PostgreSQL — wired from the managed database above ──
+      - key: DATABASE_URL
+        fromDatabase:
+          name: portfolio-db
+          property: connectionString         # full postgresql://user:pass@host/db URL
+
       # ── CORS — replace with your real Vercel URL after deploy ──
       - key: CORS_ORIGINS
         value: https://your-app.vercel.app
@@ -64,7 +83,8 @@ services:
         value: "2000"
       - key: IMAGE_TAG
         value: ""
+    # Persist PDF uploads across deploys (DB is now on Postgres, not disk)
     disk:
-      name: portfolio-data
-      mountPath: /data
+      name: portfolio-uploads
+      mountPath: /app/uploads
       sizeGB: 2

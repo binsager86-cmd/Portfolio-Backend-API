@@ -260,8 +260,17 @@ def _parse_ondemand_csv(text: str) -> list[dict]:
         except ValueError:
             continue
     
-    # Deduplicate by date (ex-dividend dates may appear twice)
-    # Keep the entry with highest volume for each date
+    # Strip phantom rows: ex-dividend entries where any OHLC value is zero.
+    # A valid candle must have ALL of open, high, low, close > 0.
+    # Using OR (any non-zero) was insufficient — a row like open=789,h=0,l=0,c=0
+    # would pass and drag the Y-axis down to zero.
+    def _has_price(r: dict) -> bool:
+        return r["open"] > 0 and r["high"] > 0 and r["low"] > 0 and r["close"] > 0
+
+    out = [r for r in out if _has_price(r)]
+
+    # Deduplicate by date — ex-dividend dates sometimes still appear twice
+    # with real prices. Keep the entry with the highest volume.
     out.sort(key=lambda r: r["date"])
     deduped: dict[str, dict] = {}
     for row in out:
@@ -269,8 +278,7 @@ def _parse_ondemand_csv(text: str) -> list[dict]:
         if d not in deduped:
             deduped[d] = row
         else:
-            # Keep the one with higher volume (actual trading data)
             if row["volume"] > deduped[d]["volume"]:
                 deduped[d] = row
-    
+
     return sorted(deduped.values(), key=lambda r: r["date"])

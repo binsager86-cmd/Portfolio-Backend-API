@@ -514,3 +514,83 @@ async def pe_quarterly(
     # [P2-4/B-6] Store in TTL cache so subsequent calls within 1 h skip scraping
     _pe_cache[cache_key] = result
     return result
+
+
+# ── Kuwait Multi-Factor Signal Engine ────────────────────────────────────────
+
+
+@router.get("/kuwait-signal")
+async def kuwait_signal(
+    symbol: str,
+    exchange: Optional[str] = Query(default="KSE"),
+    country: Optional[str] = Query(default=None),
+    segment: str = Query(default="PREMIER", description="PREMIER | MAIN | AUCTION"),
+    account_equity: float = Query(default=100_000.0, description="Account size in KWD for position sizing"),
+    delay_hours: int = Query(default=0, ge=0, description="Hours since signal was generated (confidence decay)"),
+    wins: Optional[int] = Query(default=None, description="Recent winning trades count (Bayesian calibration)"),
+    total_trades: Optional[int] = Query(default=None, description="Recent total trades count (Bayesian calibration)"),
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Multi-factor technical trade signal for Kuwait Premier Market stocks.
+
+    Fetches 2-year OHLCV history from TickerChart, computes full indicator
+    suite via TA-Lib, then runs the Kuwait Signal Engine:
+
+    • Liquidity filter (ADTV, spread proxy, active-days, wash-trade check)
+    • 3-state HMM regime detection (Bullish / Neutral / Bearish)
+    • Confluence scoring: trend + momentum + volume/flow + S/R + risk-reward
+    • Dynamic regime-based weight adjustments
+    • CVaR-adjusted position sizing (liquidity-aware Kelly fraction)
+    • Probability calibration (isotonic regression + Bayesian updating)
+    • Time-based confidence decay (T+24h → 85 %, T+48h → 65 %, T+72h → 0 %)
+    • Circuit-breaker and Kuwait tick-grid alignment on all price levels
+
+    Returns the canonical signal JSON schema (see Section 6 of spec).
+    """
+    del current_user
+
+    from datetime import timedelta
+
+    from app.services import tickerchart_service as tc
+    from app.services.indicators_service import attach_indicators
+    from app.services.signal_engine.engine.signal_generator import generate_kuwait_signal
+
+    parsed = tc.split_symbol(symbol, exchange, country)
+    if parsed is None:
+        raise HTTPException(status_code=400, detail=f"Cannot resolve symbol '{symbol}' to a TickerChart market")
+    base, market = parsed
+
+    # Fetch 2 years of history to ensure sufficient warmup for HMM training
+    # and long-period indicators (SMA-200 needs 200 bars + signal engine needs 250+)
+    from datetime import date as _date
+    fetch_from = _date.today() - timedelta(days=730)
+
+    try:
+        rows = await tc.fetch_ohlcv(base, market, from_d=fetch_from, to_d=None)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except httpx.HTTPError as exc:
+        logger.warning("TickerChart request failed for %s.%s: %s", base, market, exc)
+        raise HTTPException(status_code=502, detail="Failed to reach TickerChart data provider") from exc
+
+    if not rows:
+        raise HTTPException(status_code=404, detail=f"No price data returned for {symbol}")
+
+    # Attach TA-Lib indicators (same as whale-candles endpoint)
+    rows = attach_indicators(rows)
+
+    # Optional Bayesian calibration context
+    recent_performance: Optional[dict] = None
+    if wins is not None and total_trades is not None and total_trades > 0:
+        recent_performance = {"wins": wins, "total": total_trades}
+
+    signal = generate_kuwait_signal(
+        rows=rows,
+        stock_code=base,
+        segment=segment.upper(),
+        account_equity=account_equity,
+        delay_hours=delay_hours,
+        recent_performance=recent_performance,
+    )
+
+    return {"status": "ok", "data": signal}
