@@ -26,6 +26,7 @@ from app.services.signal_engine.config.model_params import (
     STOP_ATR_MULTIPLIER,
     TP1_RR_MULTIPLIER,
     TP2_RR_MULTIPLIER,
+    TP3_RR_MULTIPLIER,
     VWAP_ANCHOR_LOOKBACK,
 )
 
@@ -252,6 +253,220 @@ def compute_entry_stop_tp(
         "stop_loss": stop_loss,
         "tp1": tp1,
         "tp2": tp2,
+        "risk_per_share": round(actual_risk, 1),
+        "risk_reward_ratio": rr,
+    }
+
+
+# ── Multi-method TP calculator ────────────────────────────────────────────────
+
+def _fib_target(
+    rows: list[dict[str, Any]],
+    direction: str,
+    ratio: float,
+    lookback: int = 60,
+) -> float | None:
+    """Fibonacci extension target from recent swing."""
+    window = rows[-lookback:]
+    highs = [float(r.get("high") or 0.0) for r in window]
+    lows = [float(l.get("low") or 0.0) for l in window]
+    if not highs or not lows:
+        return None
+    swing_high = max(highs)
+    swing_low = min(l for l in lows if l > 0)
+    diff = swing_high - swing_low
+    if diff <= 0:
+        return None
+    if direction == "BUY":
+        return align_to_tick(swing_low + diff * ratio)
+    else:
+        return align_to_tick(swing_high - diff * ratio)
+
+
+def _atr_target(
+    entry_mid: float,
+    atr: float,
+    direction: str,
+    multiplier: float,
+) -> float:
+    if direction == "BUY":
+        return align_to_tick(entry_mid + atr * multiplier)
+    return align_to_tick(entry_mid - atr * multiplier)
+
+
+def _psych_target(
+    entry_mid: float,
+    direction: str,
+    n: int = 1,
+) -> float | None:
+    """Nth round-number level above (BUY) or below (SELL) entry."""
+    if entry_mid <= 0:
+        return None
+    if entry_mid < 20:
+        step = 1.0
+    elif entry_mid < 100:
+        step = 5.0
+    elif entry_mid < 500:
+        step = 10.0
+    elif entry_mid < 1000:
+        step = 25.0
+    else:
+        step = 50.0
+    base = (int(entry_mid / step) + (1 if direction == "BUY" else 0)) * step
+    if direction == "BUY":
+        return align_to_tick(base + (n - 1) * step)
+    else:
+        return align_to_tick(base - n * step)
+
+
+def _52w_extreme(rows: list[dict[str, Any]], direction: str) -> float | None:
+    window = rows[-252:]
+    if direction == "BUY":
+        vals = [float(r.get("high") or 0.0) for r in window]
+        return align_to_tick(max(vals)) if vals else None
+    else:
+        vals = [float(r.get("low") or 0.0) for r in window if (r.get("low") or 0) > 0]
+        return align_to_tick(min(vals)) if vals else None
+
+
+def _median_of_valid(values: list[float | None]) -> float | None:
+    valid = [v for v in values if v is not None and v > 0]
+    if not valid:
+        return None
+    return float(np.median(valid))
+
+
+def _confluence_count(values: list[float | None], median: float, tolerance: float) -> int:
+    valid = [v for v in values if v is not None and v > 0]
+    if median <= 0:
+        return 0
+    return sum(1 for v in valid if abs(v - median) / median <= tolerance)
+
+
+def compute_tp_methods(
+    rows: list[dict[str, Any]],
+    direction: str,
+    entry_mid: float,
+    stop_loss: float,
+    volume_profile: dict[str, Any] | None = None,
+    nearest_sr: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Calculate TP1, TP2, TP3 using multi-method confluence.
+
+    Each TP uses 4-5 independent methods; final value = median of valid methods.
+    Confluence count = number of methods within tolerance of the median.
+
+    Args:
+        rows:           OHLCV rows sorted ascending.
+        direction:      "BUY" or "SELL".
+        entry_mid:      Entry mid-price in fils.
+        stop_loss:      Stop-loss price in fils.
+        volume_profile: Output of calculate_volume_profile() (optional).
+        nearest_sr:     Dict with nearest_resistance / nearest_support keys.
+
+    Returns:
+        {
+            "tp1": float, "tp1_methods": {...}, "tp1_confluence": int,
+            "tp2": float, "tp2_methods": {...}, "tp2_confluence": int,
+            "tp3": float, "tp3_methods": {...}, "tp3_confluence": int,
+            "risk_per_share": float, "risk_reward_ratio": float,
+        }
+    """
+    if not rows or entry_mid <= 0:
+        return {}
+
+    last = rows[-1]
+    atr_raw = last.get("atr_14")
+    atr = float(atr_raw) if atr_raw is not None else entry_mid * 0.015
+    risk = abs(entry_mid - stop_loss) if stop_loss > 0 else atr * STOP_ATR_MULTIPLIER
+    vp = volume_profile or {}
+
+    # ── TP1 (conservative — 4 methods) ───────────────────────────────────────
+    tp1_rr = align_to_tick(entry_mid + risk * TP1_RR_MULTIPLIER) if direction == "BUY" else align_to_tick(entry_mid - risk * TP1_RR_MULTIPLIER)
+    tp1_fib = _fib_target(rows, direction, 1.272)
+    tp1_atr = _atr_target(entry_mid, atr, direction, 1.5)
+    tp1_hvn: float | None = None
+    hvns = [p for p in vp.get("hvn_levels", []) if (p > entry_mid if direction == "BUY" else p < entry_mid)]
+    if hvns:
+        tp1_hvn = align_to_tick(min(hvns) if direction == "BUY" else max(hvns))
+
+    tp1_vals = [tp1_rr, tp1_fib, tp1_atr, tp1_hvn]
+    tp1_median = _median_of_valid(tp1_vals) or tp1_rr
+    tp1_conf = _confluence_count(tp1_vals, tp1_median, 0.02)
+
+    # Cap TP1 below nearest resistance for BUY
+    if direction == "BUY" and nearest_sr:
+        nr = nearest_sr.get("nearest_resistance")
+        if nr and tp1_median >= nr:
+            tp1_median = align_to_tick(nr * 0.99)
+    elif direction == "SELL" and nearest_sr:
+        ns = nearest_sr.get("nearest_support")
+        if ns and tp1_median <= ns:
+            tp1_median = align_to_tick(ns * 1.01)
+
+    # ── TP2 (moderate — 5 methods) ────────────────────────────────────────────
+    tp2_rr = align_to_tick(entry_mid + risk * TP2_RR_MULTIPLIER) if direction == "BUY" else align_to_tick(entry_mid - risk * TP2_RR_MULTIPLIER)
+    tp2_fib = _fib_target(rows, direction, 1.618)
+    tp2_atr = _atr_target(entry_mid, atr, direction, 2.5)
+    tp2_poc: float | None = None
+    poc = vp.get("poc")
+    if poc and (poc > entry_mid if direction == "BUY" else poc < entry_mid):
+        tp2_poc = align_to_tick(poc)
+    tp2_swing = _fib_target(rows, direction, 1.0)  # full swing re-test
+
+    tp2_vals = [tp2_rr, tp2_fib, tp2_atr, tp2_poc, tp2_swing]
+    tp2_median = _median_of_valid(tp2_vals) or tp2_rr
+    tp2_conf = _confluence_count(tp2_vals, tp2_median, 0.03)
+
+    # ── TP3 (aggressive — 5 methods) ─────────────────────────────────────────
+    tp3_rr = align_to_tick(entry_mid + risk * TP3_RR_MULTIPLIER) if direction == "BUY" else align_to_tick(entry_mid - risk * TP3_RR_MULTIPLIER)
+    tp3_fib = _fib_target(rows, direction, 2.618)
+    tp3_atr = _atr_target(entry_mid, atr, direction, 4.0)
+    tp3_psych = _psych_target(entry_mid, direction, n=2)
+    tp3_52w = _52w_extreme(rows, direction)
+
+    tp3_vals = [tp3_rr, tp3_fib, tp3_atr, tp3_psych, tp3_52w]
+    tp3_median = _median_of_valid(tp3_vals) or tp3_rr
+    tp3_conf = _confluence_count(tp3_vals, tp3_median, 0.05)
+
+    # Ensure TP3 > TP2 > TP1 (BUY) or TP3 < TP2 < TP1 (SELL)
+    if direction == "BUY":
+        tp2_median = max(tp2_median, tp1_median * 1.01)
+        tp3_median = max(tp3_median, tp2_median * 1.01)
+    else:
+        tp2_median = min(tp2_median, tp1_median * 0.99)
+        tp3_median = min(tp3_median, tp2_median * 0.99)
+
+    actual_risk = risk
+    rr = round(abs(tp1_median - entry_mid) / actual_risk, 2) if actual_risk > 0 else 0.0
+
+    return {
+        "tp1": round(tp1_median, 1),
+        "tp1_methods": {
+            "rr_1_5x": round(tp1_rr, 1),
+            "fib_127": round(tp1_fib, 1) if tp1_fib else None,
+            "atr_1_5x": round(tp1_atr, 1),
+            "hvn_nearest": round(tp1_hvn, 1) if tp1_hvn else None,
+        },
+        "tp1_confluence": tp1_conf,
+        "tp2": round(tp2_median, 1),
+        "tp2_methods": {
+            "rr_3_0x": round(tp2_rr, 1),
+            "fib_161": round(tp2_fib, 1) if tp2_fib else None,
+            "atr_2_5x": round(tp2_atr, 1),
+            "volume_poc": round(tp2_poc, 1) if tp2_poc else None,
+            "swing_retest": round(tp2_swing, 1) if tp2_swing else None,
+        },
+        "tp2_confluence": tp2_conf,
+        "tp3": round(tp3_median, 1),
+        "tp3_methods": {
+            "rr_4_0x": round(tp3_rr, 1),
+            "fib_261": round(tp3_fib, 1) if tp3_fib else None,
+            "atr_4_0x": round(tp3_atr, 1),
+            "psychological": round(tp3_psych, 1) if tp3_psych else None,
+            "fifty_two_week": round(tp3_52w, 1) if tp3_52w else None,
+        },
+        "tp3_confluence": tp3_conf,
         "risk_per_share": round(actual_risk, 1),
         "risk_reward_ratio": rr,
     }

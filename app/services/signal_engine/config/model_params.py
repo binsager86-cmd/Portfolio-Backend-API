@@ -55,10 +55,12 @@ RESISTANCE_WITHIN_1_5R_BLOCK: bool = True  # hard-block BUY if strong res < 1.5R
 STOP_ATR_MULTIPLIER: float = 1.5    # stop = entry – 1.5 × ATR14
 TP1_RR_MULTIPLIER: float = 1.5     # TP1 reward = risk × 1.5
 TP2_RR_MULTIPLIER: float = 3.0     # TP2 reward = risk × 3.0
+TP3_RR_MULTIPLIER: float = 4.0     # TP3 reward = risk × 4.0  (aggressive target)
 ENTRY_BUFFER_PCT: float = 0.005    # entry zone half-width (± 0.5 % of close)
 
 # ── Signal Confluence Thresholds ─────────────────────────────────────────────
-SIGNAL_MIN_TOTAL_SCORE: int = 75       # total weighted score for BUY
+SIGNAL_STRONG_BUY_SCORE: int = 85      # total weighted score for STRONG_BUY
+SIGNAL_MIN_TOTAL_SCORE: int = 70       # total weighted score for BUY
 SIGNAL_MAX_TOTAL_SELL: int = 25        # total weighted score for SELL
 SIGNAL_MIN_TREND_RAW_PCT: float = 60.0 # trend raw ≥ 60 % of max for BUY
 SIGNAL_MIN_VOLFLOW_RAW_PCT: float = 50.0

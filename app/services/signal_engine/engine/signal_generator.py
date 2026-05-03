@@ -35,6 +35,7 @@ from app.services.signal_engine.config.model_params import (
     SIGNAL_MIN_TOTAL_SCORE,
     SIGNAL_MIN_TREND_RAW_PCT,
     SIGNAL_MIN_VOLFLOW_RAW_PCT,
+    SIGNAL_STRONG_BUY_SCORE,
 )
 from app.services.signal_engine.engine.output_formatter import classify_setup_type, format_signal
 from app.services.signal_engine.engine.probability_calibrator import calibrate_probabilities
@@ -50,7 +51,10 @@ from app.services.signal_engine.models.technical.momentum_score import compute_m
 from app.services.signal_engine.models.technical.support_resistance import (
     compute_entry_stop_tp,
     compute_sr_score,
+    compute_tp_methods,
 )
+from app.services.signal_engine.processors.sr_engine import calculate_full_sr_levels
+from app.services.signal_engine.processors.volume_profile import calculate_volume_profile
 from app.services.signal_engine.models.technical.trend_score import compute_trend_score
 from app.services.signal_engine.models.technical.volume_flow_score import compute_volume_flow_score
 from app.services.signal_engine.processors.auction_proxy import (
@@ -179,7 +183,12 @@ def generate_kuwait_signal(
 
     nearest_support = support_levels[0] if support_levels else None
     nearest_resistance = resistance_levels[0] if resistance_levels else None
-
+    # ── 4b. Volume profile ────────────────────────────────────────────────────
+    try:
+        volume_profile = calculate_volume_profile(rows)
+    except Exception:  # noqa: BLE001
+        logger.exception("Volume profile calculation failed")
+        volume_profile = {}
     # ── 5. Determine signal direction (before RR calculation) ─────────────────
     is_bullish = trend_raw >= 60 and volume_raw >= 50
     is_bearish = trend_raw <= 40 and volume_raw <= 50
@@ -194,6 +203,44 @@ def generate_kuwait_signal(
     # ── 6. Entry / Stop / TP levels ───────────────────────────────────────────
     levels = compute_entry_stop_tp(rows, direction, nearest_resistance, nearest_support)
     rr = levels.get("risk_reward_ratio") or 0.0
+
+    # ── 6b. Rich S/R map + multi-method TP ───────────────────────────────────
+    entry_mid = levels.get("entry_mid") or float(rows[-1].get("close") or 0.0)
+    try:
+        rich_sr = calculate_full_sr_levels(rows, volume_profile, entry_mid)
+    except Exception:  # noqa: BLE001
+        logger.exception("Rich S/R calculation failed")
+        rich_sr = {"resistance": [], "support": [], "nearest_resistance": None, "nearest_support": None}
+
+    try:
+        tp_methods = compute_tp_methods(
+            rows=rows,
+            direction=direction,
+            entry_mid=entry_mid,
+            stop_loss=levels.get("stop_loss") or 0.0,
+            volume_profile=volume_profile,
+            nearest_sr=rich_sr,
+        )
+    except Exception:  # noqa: BLE001
+        logger.exception("compute_tp_methods failed")
+        tp_methods = {}
+
+    # Merge multi-method TPs into levels (tp3 + override tp1/tp2 if available)
+    if tp_methods:
+        levels["tp3"] = tp_methods.get("tp3")
+        # Prefer multi-method TPs over simple RR targets when available
+        if tp_methods.get("tp1"):
+            levels["tp1"] = tp_methods["tp1"]
+        if tp_methods.get("tp2"):
+            levels["tp2"] = tp_methods["tp2"]
+        levels["tp_methods"] = {
+            "tp1": tp_methods.get("tp1_methods"),
+            "tp2": tp_methods.get("tp2_methods"),
+            "tp3": tp_methods.get("tp3_methods"),
+            "tp1_confluence": tp_methods.get("tp1_confluence"),
+            "tp2_confluence": tp_methods.get("tp2_confluence"),
+            "tp3_confluence": tp_methods.get("tp3_confluence"),
+        }
 
     # ── 7. Risk/Reward score (0-100 raw → 0-15 weighted) ─────────────────────
     rr_raw = max(0, min(100, int(((rr - 1.0) / 3.0) * 100)))
@@ -243,7 +290,7 @@ def generate_kuwait_signal(
     )
 
     if direction == "BUY" and buy_gates:
-        final_signal = "BUY"
+        final_signal = "STRONG_BUY" if total_score >= SIGNAL_STRONG_BUY_SCORE else "BUY"
     elif direction == "SELL" and sell_gates:
         final_signal = "SELL"
     else:
@@ -335,7 +382,41 @@ def generate_kuwait_signal(
         },
         "liquidity_passed": liquidity_passed,
         "liquidity_details": liq_details,
+        # Price level arrays for UI price ladder (up to 3 nearest levels each)
+        "support_levels": sr_details.get("support_levels", [])[:3],
+        "resistance_levels": sr_details.get("resistance_levels", [])[:3],
+        "vwap": sr_details.get("anchored_vwap"),
+        # Rich S/R map (for UI S/R Map section)
+        "rich_sr": rich_sr,
+        # Volume profile summary
+        "volume_profile": {
+            "poc": volume_profile.get("poc"),
+            "value_area_high": volume_profile.get("value_area_high"),
+            "value_area_low": volume_profile.get("value_area_low"),
+            "hvn_levels": volume_profile.get("hvn_levels", [])[:5],
+            "lvn_levels": volume_profile.get("lvn_levels", [])[:5],
+        },
     }
+
+    # ── §8 Runtime Monitoring — log required metrics for every signal ─────────
+    from datetime import datetime, timezone  # noqa: PLC0415 (local import to avoid cycle)
+    _friction_pct = round(
+        (2 * 0.0015 + 2 * (0.0010 if segment.upper() == "PREMIER" else 0.0030)) * 100, 3
+    )
+    logger.info(
+        "[SIGNAL] ts=%s  stock=%s  signal=%s  data_as_of=%s  delay_h=%d  "
+        "regime=%s  regime_conf=%.2f  score=%d  p_tp1=%.3f  friction_pct=%.3f%%",
+        datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        stock_code,
+        final_signal,
+        data_as_of,
+        delay_hours,
+        regime,
+        regime_confidence,
+        total_score,
+        prob_result.get("p_tp1_before_sl") or 0.0,
+        _friction_pct,
+    )
 
     return format_signal(
         stock_code=stock_code,

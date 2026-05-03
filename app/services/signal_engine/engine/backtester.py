@@ -28,6 +28,7 @@ import numpy as np
 
 from app.services.signal_engine.config.risk_config import (
     TC_COMMISSION,
+    TC_SLIPPAGE_AUCTION,
     TC_SLIPPAGE_MAIN,
     TC_SLIPPAGE_PREMIER,
 )
@@ -110,7 +111,13 @@ class BacktestReport:
 
 def _total_cost_factor(segment: str) -> float:
     """Return round-trip cost fraction for a given segment."""
-    slippage = TC_SLIPPAGE_PREMIER if segment.upper() == "PREMIER" else TC_SLIPPAGE_MAIN
+    seg = segment.upper()
+    if seg == "PREMIER":
+        slippage = TC_SLIPPAGE_PREMIER
+    elif seg == "AUCTION":
+        slippage = TC_SLIPPAGE_AUCTION
+    else:
+        slippage = TC_SLIPPAGE_MAIN
     return 2 * TC_COMMISSION + 2 * slippage
 
 
@@ -555,6 +562,7 @@ def run_walk_forward_test(
         and report.monte_carlo_p_value < 0.05
         and report.parameter_stability_pct >= 95.0
         and report.cvar_compliance_pct >= 0.95
+        and report.aggregate_avg_r >= 1.2   # ≥+1.2R net of slippage (spec §1)
     )
 
     logger.info(
