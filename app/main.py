@@ -103,6 +103,13 @@ async def lifespan(app: FastAPI):
         except Exception as alembic_err:
             logger.warning("⚠️  Alembic upgrade failed (DB may be pre-stamped): %s", alembic_err)
 
+        # ── Additive migration: portfolios.currency (missing in early prod DBs) ──
+        try:
+            from app.core.database import add_column_if_missing
+            add_column_if_missing("portfolios", "currency", "VARCHAR(10) NOT NULL DEFAULT 'KWD'")
+        except Exception as e:
+            logger.warning("portfolios.currency migration skipped: %s", e)
+
         # ── Additive migration: news_articles.content_hash for dedupe fallback ──
         try:
             from app.core.database import add_column_if_missing, exec_sql
