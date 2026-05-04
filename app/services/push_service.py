@@ -75,6 +75,9 @@ def send_push_notifications(
     title: str,
     body: str,
     data: Optional[dict] = None,
+    channel_id: str = "default",
+    subtitle: Optional[str] = None,
+    badge: Optional[int] = None,
 ) -> dict:
     """
     Send push notifications to a list of Expo push tokens.
@@ -92,9 +95,13 @@ def send_push_notifications(
             "title": title,
             "body": body,
             "sound": "default",
-            "channelId": "default",
+            "channelId": channel_id,
             "priority": "high",
         }
+        if subtitle:
+            msg["subtitle"] = subtitle
+        if badge is not None:
+            msg["badge"] = badge
         if data:
             msg["data"] = data
         messages.append(msg)
@@ -192,9 +199,11 @@ def notify_users_for_article(
         if not token_list:
             return {"sent": 0, "failed": 0, "reason": "no_tokens"}
 
-        symbols_str = ", ".join(symbols_upper)
-        title = f"📰 {symbols_str} — New Announcement"
-        body = article_title[:200] if article_title else "New market announcement"
+        symbols_str = ", ".join(symbols_upper[:3])  # cap at 3 symbols to keep title short
+        if len(symbols_upper) > 3:
+            symbols_str += f" +{len(symbols_upper) - 3}"
+        title = f"📰 {symbols_str}"
+        body = article_title[:180] if article_title else "New market announcement"
         data = {
             "newsId": article_id,
             "type": "news",
@@ -202,7 +211,11 @@ def notify_users_for_article(
             "symbols": symbols_upper,
         }
 
-        return send_push_notifications(token_list, title, body, data)
+        return send_push_notifications(
+            token_list, title, body, data,
+            channel_id="news",
+            subtitle="New Announcement",
+        )
     except Exception as e:
         logger.warning("notify_users_for_article failed: %s", e)
         return {"sent": 0, "failed": 0, "error": str(e)}

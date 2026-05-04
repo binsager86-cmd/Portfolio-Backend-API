@@ -161,22 +161,25 @@ def notify_portfolio_update(user_id: int) -> dict:
         if prefs.get("dailyPriceUpdates", True):
             value_str = f"KD {latest_value:,.3f}"
             if change_pct is not None:
-                title = f"📊 Portfolio: {_format_pct(change_pct)}"
-                body = f"Today's value: {value_str}"
+                direction_emoji = "📈" if change_pct >= 0 else "📉"
+                title = f"{direction_emoji} Daily Portfolio Summary"
+                body = f"{value_str}  •  {_format_pct(change_pct)}"
                 if daily_movement is not None:
                     body += f"  ({_format_kwd(daily_movement)})"
             else:
-                title = "📊 Portfolio updated"
+                title = "📊 Daily Portfolio Summary"
                 body = f"Today's value: {value_str}"
 
             data = {
-                "type": "portfolio_update",
-                "subtype": "daily",
-                "snapshotDate": latest.snapshot_date,
+                "type": "daily_update",
+                "snapshotDate": str(latest.snapshot_date),
                 "value": latest_value,
                 "changePct": change_pct,
             }
-            res = send_push_notifications(tokens, title, body, data)
+            res = send_push_notifications(
+                tokens, title, body, data,
+                channel_id="daily-updates",
+            )
             summary["daily"] = res
             summary["sent"] += int(res.get("sent", 0) or 0)
         else:
@@ -190,20 +193,23 @@ def notify_portfolio_update(user_id: int) -> dict:
         ):
             direction = "up" if change_pct >= 0 else "down"
             emoji = "🚀" if direction == "up" else "⚠️"
-            title = f"{emoji} Portfolio {direction} {_format_pct(change_pct)}"
-            body = f"Today's value: KD {latest_value:,.3f}"
+            title = f"{emoji} Portfolio moved {_format_pct(change_pct)}"
+            body = f"Value: KD {latest_value:,.3f}"
             if daily_movement is not None:
-                body += f"  ({_format_kwd(daily_movement)})"
+                body += f"  ({_format_kwd(daily_movement)} today)"
 
             data = {
                 "type": "portfolio_update",
                 "subtype": "threshold",
-                "snapshotDate": latest.snapshot_date,
+                "snapshotDate": str(latest.snapshot_date),
                 "value": latest_value,
                 "changePct": change_pct,
                 "thresholdPct": PORTFOLIO_THRESHOLD_PCT,
             }
-            res = send_push_notifications(tokens, title, body, data)
+            res = send_push_notifications(
+                tokens, title, body, data,
+                channel_id="portfolio-updates",
+            )
             summary["threshold"] = res
             summary["sent"] += int(res.get("sent", 0) or 0)
         elif change_pct is None:
@@ -322,25 +328,31 @@ async def notify_portfolio_news_alerts() -> None:
             )
             sent_any = False
             for (token,) in tokens:
+                # Build a rich title: "📰 NBK • National Bank of Kuwait"
+                article_title = (latest_news.title or "New announcement")[:180]
+                # Show up to 2 matched symbols in the title
+                matched = [s for s in symbols if s in article_title.upper()][:2]
+                if matched:
+                    notif_title = f"📰 {', '.join(matched)}"
+                    notif_body = article_title
+                else:
+                    notif_title = "📰 Portfolio News"
+                    notif_body = article_title
+
                 sent = await send_push_notification(
                     token=token,
-                    title="Portfolio News Alert",
-                    body=(latest_news.title or "New announcement")[:180],
+                    title=notif_title,
+                    body=notif_body,
                     data={
                         "type": "portfolio_news",
                         "news_id": latest_news.id,
+                        "newsId": latest_news.id,
                         "news_external_id": latest_news.news_id,
                         "category": latest_news.category,
-                        "priority": "high",
-                        "sound": "default",
-                        "android": {
-                            "channel_id": "portfolio-news",
-                        },
                         "deepLink": f"/(tabs)/news/{latest_news.id}",
                     },
                     sound="default",
                     priority="high",
-                    category="portfolio-news",
                     android={"channelId": "portfolio-news"},
                 )
                 sent_any = sent_any or sent
