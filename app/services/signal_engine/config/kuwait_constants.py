@@ -70,6 +70,30 @@ CIRCUIT_BREAKER_UP: float = CIRCUIT_UPPER_PCT          # 0.10
 CIRCUIT_BREAKER_DOWN: float = abs(CIRCUIT_LOWER_PCT)   # 0.05 (positive fraction)
 TRADING_DAYS: frozenset[int] = TRADING_WEEKDAYS        # {0,1,2,3,6}
 
+# ── Hurst Exponent Thresholds ─────────────────────────────────────────────────
+# Premier market has clearer trends (higher liquidity); Main tolerates more noise.
+HURST_THRESHOLD_PREMIER: float = 0.55
+HURST_THRESHOLD_MAIN: float = 0.48
+
+# ── Banking Sector Reference ──────────────────────────────────────────────────
+# Lead-lag filter: when BKB trends strongly, non-banking mid-caps tend to follow.
+BANKING_INDEX_SYMBOL: str = "BKB"
+
+# ── Order Book Integration ────────────────────────────────────────────────────
+# WebSocket base URL for live order book streaming (Boursa Kuwait).
+# Replace with the real endpoint before deploying to production.
+ORDERBOOK_API_BASE: str = "wss://your-api.boursa-kuwait.com/v1"
+
+# Minimum volume (shares) to classify a price level as a "liquidity wall".
+LIQUIDITY_WALL_THRESHOLD_PREMIER: int = 25_000
+LIQUIDITY_WALL_THRESHOLD_MAIN: int = 50_000
+
+# ── Sunday Session Handling ───────────────────────────────────────────────────
+# Kuwait Sunday open is often thinner; widen entry zones for 30 minutes.
+SUNDAY_OPEN_BUFFER_MINUTES: int = 30
+SUNDAY_ENTRY_BUFFER_MULTIPLIER: float = 2.0
+
+# ── Premier Market Universe (top ~30 by liquidity, 2025) ─────────────────────
 PREMIER_STOCKS: list[str] = [
     "NBK", "KFH", "CBK", "BURG", "GBK", "ABK", "AHLI",
     "ZAIN", "OMANTEL", "VIVA",

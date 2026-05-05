@@ -78,3 +78,17 @@ BASE_WEIGHTS: dict[str, float] = {
 # ── Missing Data Handling ─────────────────────────────────────────────────────
 MAX_FORWARD_FILL_DAYS: int = 3      # forward-fill gaps up to 3 days, then NaN
 MIN_BARS_FOR_SIGNAL: int = 60       # need at least 60 valid bars
+
+# ── Hurst Exponent Filter (Trend vs Mean-Reversion) ──────────────────────────
+HURST_LOOKBACK_DAYS: int = 30          # bars used for R/S analysis
+HURST_THRESHOLD_PREMIER: float = 0.55  # Premier market trending threshold
+HURST_THRESHOLD_MAIN: float = 0.48     # Main market trending threshold (more noise)
+HURST_THRESHOLD_DEFAULT: float = 0.52  # Fallback for unknown segments
+
+# ── Order Book Imbalance Thresholds ───────────────────────────────────────────
+OB_IMBALANCE_STRONG: float = 0.30      # |imbalance| > 30% = strong directional bias
+OB_IMBALANCE_MODERATE: float = 0.10    # |imbalance| > 10% = moderate bias
+OB_WALL_MULTIPLIER: float = 3.0        # Liquidity wall = order >= 3x avg level volume
+OB_WALL_STRONG_MULTIPLIER: float = 5.0 # Strong wall = order >= 5x avg level volume
+OB_LOOKBACK_LEVELS: int = 5            # Analyze top 5 price levels for imbalance
+OB_AUCTION_BASELINE_SPREAD: float = 0.005  # 0.5% spread = normal conditions

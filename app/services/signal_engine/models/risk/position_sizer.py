@@ -84,3 +84,66 @@ def calculate_position_size(
         "liquidity_factor": round(liquidity_factor, 3),
         "risk_fraction_used": round(risk_fraction * 100.0, 2),
     }
+
+
+def kuwait_phased_kelly(
+    p_win: float,
+    rr_ratio: float,
+    phase: str,
+    adtv_percentile: float,
+    market_segment: str,
+    portfolio_value_kwd: float,
+) -> dict:
+    """Phased Kelly position sizing with Kuwait liquidity caps.
+
+    Args:
+        p_win:              Calibrated win probability [0, 1].
+        rr_ratio:           Risk/reward ratio (e.g. 2.0 = 2:1).
+        phase:              "Early" (first entry) or "Confirmed" (breakout confirmed).
+        adtv_percentile:    Stock liquidity percentile [0, 100].
+        market_segment:     "Premier" or "Main".
+        portfolio_value_kwd: Total account value in KWD.
+
+    Returns:
+        {
+            "kelly_fraction":    float,  # Raw Kelly f*
+            "adjusted_fraction": float,  # After phase multiplier
+            "final_fraction":    float,  # After liquidity cap
+            "position_size_kwd": float,  # Final position value in KWD
+            "risk_amount_kwd":   float,  # Amount at risk
+            "warnings":          list[str],
+        }
+    """
+    b = rr_ratio
+    # Base Kelly formula: f* = (p*(b+1) - 1) / b
+    kelly_f = max(0.0, (p_win * (b + 1) - 1) / b) if b > 0 else 0.0
+
+    # Phase multiplier: ultra-conservative on first entry, fuller when breakout confirmed
+    phase_mult = 0.10 if phase == "Early" else 0.25
+    adjusted_f = kelly_f * phase_mult
+
+    # Kuwait liquidity cap by market segment
+    max_risk_pct = 0.025 if market_segment.lower() == "premier" else 0.015
+    if adtv_percentile < 30:
+        max_risk_pct *= adtv_percentile / 30.0
+
+    # Apply cap
+    final_f = min(adjusted_f, max_risk_pct)
+
+    risk_amount = portfolio_value_kwd * final_f
+
+    warnings: list[str] = []
+    if adjusted_f > max_risk_pct:
+        warnings.append(f"liquidity_cap_applied: {max_risk_pct * 100:.1f}% max risk")
+    if phase == "Early" and final_f > 0.005:
+        warnings.append("early_phase: consider manual confirmation")
+
+    return {
+        "kelly_fraction": round(kelly_f, 4),
+        "adjusted_fraction": round(adjusted_f, 4),
+        "final_fraction": round(final_f, 4),
+        "position_size_kwd": round(portfolio_value_kwd * final_f, 2),
+        "risk_amount_kwd": round(risk_amount, 2),
+        "warnings": warnings,
+    }
+

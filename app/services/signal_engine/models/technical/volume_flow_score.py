@@ -110,18 +110,59 @@ def _auction_score(intensity: float) -> tuple[int, str]:
     return 5, f"low_institutional_auction_{intensity:.2f}"
 
 
+def _orderbook_adjustment(ob_data: dict[str, Any] | None) -> tuple[int, str]:
+    """Order book imbalance adjustment (±10 pts, +5 liquidity wall bonus).
+
+    Args:
+        ob_data: Dict with keys ``imbalance_ratio`` ∈ [-1,+1] and optional
+                 ``liquidity_wall`` sub-dict.  Pass None when OB is unavailable.
+
+    Returns:
+        (adjustment, description) — adjustment capped at [-10, +15].
+    """
+    if not ob_data:
+        return 0, "orderbook_unavailable"
+
+    ratio = float(ob_data.get("imbalance_ratio") or 0.0)
+    wall = ob_data.get("liquidity_wall")
+
+    if ratio > 0.3:
+        adj, desc = +10, f"strong_bid_pressure_ob_{ratio:.2f}"
+    elif ratio < -0.3:
+        adj, desc = -10, f"strong_ask_pressure_ob_{ratio:.2f}"
+    else:
+        adj, desc = 0, f"balanced_ob_{ratio:.2f}"
+
+    # Liquidity wall adds +5 (confirms direction; total capped at +15)
+    if wall:
+        adj = min(+15, adj + 5)
+        desc += f"+wall_{wall.get('side', '')}@{wall.get('price', '')}"
+
+    return adj, desc
+
+
 def compute_volume_flow_score(
     rows: list[dict[str, Any]],
     auction_intensity: float,
+    orderbook_imbalance: dict[str, Any] | None = None,
 ) -> tuple[int, dict[str, Any]]:
     """Compute the raw volume/flow score and component breakdown.
 
     Args:
         rows: OHLCV + indicator rows sorted ascending by date.
-        auction_intensity: Pre-computed auction intensity from auction_proxy.
+        auction_intensity: Pre-computed auction intensity from auction_proxy or real OB.
+        orderbook_imbalance: Optional dict with ``imbalance_ratio`` and ``liquidity_wall``
+                             from order book analysis.  Pass None when OB is unavailable.
 
     Returns:
         Tuple of (raw_score: int [0, 100], details: dict).
+
+    Scoring (max 100):
+        OBV slope  : 35 pts
+        CMF(20)    : 25 pts
+        A/D Line   : 20 pts
+        Auction    : 30 pts
+        OB adjust  : ±10 pts (+5 wall bonus, total ±15)
     """
     if not rows:
         return 50, {"error": "no_rows"}
@@ -132,8 +173,9 @@ def compute_volume_flow_score(
     cmf_pts, cmf_desc = _cmf_score(last)
     ad_pts, ad_desc = _ad_line_score(rows)
     auc_pts, auc_desc = _auction_score(auction_intensity)
+    ob_adj, ob_desc = _orderbook_adjustment(orderbook_imbalance)
 
-    raw = min(100, obv_pts + cmf_pts + ad_pts + auc_pts)
+    raw = min(100, max(0, obv_pts + cmf_pts + ad_pts + auc_pts + ob_adj))
 
     details = {
         "obv_pts": obv_pts,
@@ -144,7 +186,10 @@ def compute_volume_flow_score(
         "ad_desc": ad_desc,
         "auction_pts": auc_pts,
         "auction_desc": auc_desc,
+        "orderbook_adjustment": ob_adj,
+        "orderbook_desc": ob_desc,
         "auction_intensity": auction_intensity,
+        "orderbook_imbalance": orderbook_imbalance,
         "raw_score": raw,
     }
     return raw, details

@@ -282,3 +282,200 @@ def _parse_ondemand_csv(text: str) -> list[dict]:
                 deduped[d] = row
 
     return sorted(deduped.values(), key=lambda r: r["date"])
+
+
+# ── Order Book / Market Depth ────────────────────────────────────────
+async def fetch_order_book(
+    base_symbol: str,
+    market_abb: str,
+    depth: int = 20,
+) -> dict:
+    """Fetch real-time order book (market depth) snapshot.
+    
+    Returns format matching TickerChart Market Depth view:
+    {
+        "symbol": "IFAHR",
+        "market": "KSE",
+        "timestamp": "2026-05-04T21:35:00Z",
+        "bids": [
+            {"price": 890.0, "volume": 5000},
+            {"price": 886.0, "volume": 5000},
+            ...
+        ],
+        "asks": [
+            {"price": 908.0, "volume": 3500},
+            {"price": 909.0, "volume": 849},
+            ...
+        ],
+        "total_bid_volume": 29010,
+        "total_ask_volume": 182254
+    }
+    """
+    host = _MARKET_HOST.get(market_abb)
+    if host is None:
+        raise ValueError(f"Unsupported market: {market_abb}")
+
+    # Try multiple possible endpoints for market depth
+    endpoints = [
+        "/tcdata/marketdepth.php",
+        "/tcdata/orderbook.php",
+        "/tcdata/level2.php",
+        "/m/v2/marketdepth",
+    ]
+    
+    user_name = (get_settings().TICKERCHART_USERNAME or "").strip()
+    token = await _get_token()
+    
+    for path in endpoints:
+        try:
+            qs_pairs = [
+                ("user_name", user_name),
+                ("symbol", f"{base_symbol}.{market_abb}"),
+                ("depth", str(depth)),
+                ("language", "ENGLISH"),
+            ] + _common_params()
+            final_qs, _ = _sign(path, qs_pairs)
+            url = f"https://{host}{path}?{final_qs}"
+            
+            async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+                resp = await client.get(
+                    url,
+                    headers={
+                        "User-Agent": _USER_AGENT,
+                        "Authorization": f"TcToken{token}",
+                    },
+                )
+                
+                if resp.status_code == 200:
+                    # Found working endpoint
+                    data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else None
+                    if data:
+                        # Parse TickerChart format to our standard format
+                        return _parse_order_book_response(data, base_symbol, market_abb)
+                    
+                    # If CSV/text format, parse it
+                    text = resp.text
+                    if text and "BID" in text.upper() or "ASK" in text.upper():
+                        return _parse_order_book_csv(text, base_symbol, market_abb)
+                        
+        except Exception as e:
+            logger.debug(f"Endpoint {path} failed: {e}")
+            continue
+    
+    # If all endpoints fail, raise error
+    raise RuntimeError(
+        f"No working order book endpoint found for {base_symbol}.{market_abb}. "
+        "Market depth may not be available for this symbol or market."
+    )
+
+
+def _parse_order_book_response(data: dict, symbol: str, market: str) -> dict:
+    """Parse JSON response from TickerChart market depth API."""
+    from datetime import datetime
+    
+    # Try multiple possible JSON structures
+    bids_raw = data.get("bids", data.get("bid", data.get("buy", [])))
+    asks_raw = data.get("asks", data.get("ask", data.get("sell", [])))
+    
+    bids = []
+    asks = []
+    
+    # Parse bids (descending by price)
+    for item in bids_raw:
+        if isinstance(item, dict):
+            price = float(item.get("price", item.get("p", 0)))
+            volume = float(item.get("volume", item.get("v", item.get("qty", 0))))
+        elif isinstance(item, (list, tuple)) and len(item) >= 2:
+            price = float(item[0])
+            volume = float(item[1])
+        else:
+            continue
+        
+        if price > 0 and volume > 0:
+            bids.append({"price": price, "volume": volume})
+    
+    # Parse asks (ascending by price)
+    for item in asks_raw:
+        if isinstance(item, dict):
+            price = float(item.get("price", item.get("p", 0)))
+            volume = float(item.get("volume", item.get("v", item.get("qty", 0))))
+        elif isinstance(item, (list, tuple)) and len(item) >= 2:
+            price = float(item[0])
+            volume = float(item[1])
+        else:
+            continue
+        
+        if price > 0 and volume > 0:
+            asks.append({"price": price, "volume": volume})
+    
+    # Sort bids descending (highest price first)
+    bids.sort(key=lambda x: x["price"], reverse=True)
+    # Sort asks ascending (lowest price first)
+    asks.sort(key=lambda x: x["price"])
+    
+    total_bid = sum(b["volume"] for b in bids)
+    total_ask = sum(a["volume"] for a in asks)
+    
+    return {
+        "symbol": symbol,
+        "market": market,
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "bids": bids,
+        "asks": asks,
+        "total_bid_volume": total_bid,
+        "total_ask_volume": total_ask,
+    }
+
+
+def _parse_order_book_csv(text: str, symbol: str, market: str) -> dict:
+    """Parse CSV/text format order book response."""
+    from datetime import datetime
+    
+    bids = []
+    asks = []
+    current_section = None
+    
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        
+        upper = line.upper()
+        if "BID" in upper:
+            current_section = "bid"
+            continue
+        elif "ASK" in upper or "OFFER" in upper:
+            current_section = "ask"
+            continue
+        
+        # Parse price,volume lines
+        parts = line.split(",")
+        if len(parts) >= 2:
+            try:
+                price = float(parts[0].strip())
+                volume = float(parts[1].strip())
+                
+                if price > 0 and volume > 0:
+                    if current_section == "bid":
+                        bids.append({"price": price, "volume": volume})
+                    elif current_section == "ask":
+                        asks.append({"price": price, "volume": volume})
+            except ValueError:
+                continue
+    
+    # Sort bids descending, asks ascending
+    bids.sort(key=lambda x: x["price"], reverse=True)
+    asks.sort(key=lambda x: x["price"])
+    
+    total_bid = sum(b["volume"] for b in bids)
+    total_ask = sum(a["volume"] for a in asks)
+    
+    return {
+        "symbol": symbol,
+        "market": market,
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "bids": bids,
+        "asks": asks,
+        "total_bid_volume": total_bid,
+        "total_ask_volume": total_ask,
+    }
