@@ -372,7 +372,7 @@ async def google_sign_in(request: Request, body: GoogleSignInRequest):
                     pass
 
     try:
-        await asyncio.wait_for(_verify_google_token(), timeout=15.0)
+        await asyncio.wait_for(_verify_google_token(), timeout=25.0)
     except asyncio.TimeoutError:
         raise UnauthorizedError("Google verification timed out. Please try again.")
 
