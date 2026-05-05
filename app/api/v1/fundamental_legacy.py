@@ -6295,6 +6295,66 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
     # Also try to compute Discount to Intrinsic Value from latest valuation
     _enrich_intrinsic_discount(stock_id, latest)
 
+    # ── Fallback: compute ROIC, Debt-to-Equity, Interest Coverage from
+    #    financial_line_items if they are missing from stock_metrics.
+    #    Uses the same extended aliases as enrichMetricsWithFallbacks() on the
+    #    mobile client so the Score tab and Metrics tab always agree.
+    def _li(*codes: str) -> Optional[float]:
+        """Return the latest amount for any of the given line_item_codes."""
+        placeholders = ",".join("?" * len(codes))
+        row = query_one(
+            f"""SELECT li.amount FROM financial_line_items li
+                JOIN financial_statements fs ON li.statement_id = fs.id
+                WHERE fs.stock_id = ? AND UPPER(li.line_item_code) IN ({placeholders})
+                ORDER BY fs.period_end_date DESC LIMIT 1""",
+            (stock_id, *[c.upper() for c in codes]),
+        )
+        if row:
+            return row[0] if isinstance(row, (tuple, list)) else row.get("amount")
+        return None
+
+    # Alias bridge: frontend stores "Debt/Equity Ratio", backend scores "Debt-to-Equity"
+    if "Debt-to-Equity" not in latest and "Debt/Equity Ratio" in latest:
+        latest["Debt-to-Equity"] = latest["Debt/Equity Ratio"]
+
+    if "Debt-to-Equity" not in latest:
+        _st_debt = _li("SHORT_TERM_DEBT", "SHORT_TERM_BORROWINGS",
+                       "CURRENT_PORTION_OF_LONG_TERM_DEBT", "NOTES_PAYABLE")
+        _lt_debt = _li("LONG_TERM_DEBT", "LONG_TERM_BORROWINGS", "BONDS_PAYABLE")
+        _equity  = _li("TOTAL_EQUITY", "SHAREHOLDERS_EQUITY",
+                       "TOTAL_SHAREHOLDERS_EQUITY", "STOCKHOLDERS_EQUITY")
+        _td = (_st_debt or 0) + (_lt_debt or 0)
+        if (_st_debt is not None or _lt_debt is not None) and _equity and _equity != 0:
+            latest["Debt-to-Equity"] = round(_td / _equity, 4)
+
+    if "Interest Coverage" not in latest:
+        _ebit   = _li("OPERATING_INCOME", "OPERATING_PROFIT", "EBIT", "INCOME_FROM_OPERATIONS")
+        _intexp = _li("INTEREST_EXPENSE", "FINANCE_COSTS", "FINANCE_EXPENSE",
+                      "INTEREST_AND_FINANCE_COSTS")
+        if _ebit is not None and _intexp and _intexp != 0:
+            latest["Interest Coverage"] = round(_ebit / abs(_intexp), 4)
+
+    if "ROIC" not in latest:
+        _op_inc = _li("OPERATING_INCOME", "OPERATING_PROFIT", "EBIT", "INCOME_FROM_OPERATIONS")
+        _st_d   = _li("SHORT_TERM_DEBT", "SHORT_TERM_BORROWINGS",
+                      "CURRENT_PORTION_OF_LONG_TERM_DEBT", "NOTES_PAYABLE")
+        _lt_d   = _li("LONG_TERM_DEBT", "LONG_TERM_BORROWINGS", "BONDS_PAYABLE")
+        _eq     = _li("TOTAL_EQUITY", "SHAREHOLDERS_EQUITY",
+                      "TOTAL_SHAREHOLDERS_EQUITY", "STOCKHOLDERS_EQUITY")
+        _cash   = _li("CASH_AND_EQUIVALENTS", "CASH_AND_CASH_EQUIVALENTS", "CASH")
+        _st_inv = _li("SHORT_TERM_INVESTMENTS", "MARKETABLE_SECURITIES")
+        _tx     = _li("EFFECTIVE_TAX_RATE")
+        if _tx is None:
+            _inc_tax = _li("INCOME_TAX_EXPENSE", "PROVISION_FOR_INCOME_TAXES", "TAX_EXPENSE")
+            _pretax  = _li("PRETAX_INCOME", "INCOME_BEFORE_TAX", "PROFIT_BEFORE_TAX")
+            if _inc_tax is not None and _pretax and _pretax != 0:
+                _tx = _inc_tax / _pretax
+        _safe_tx  = min(max(_tx or 0, 0), 1)
+        _td_r     = (_st_d or 0) + (_lt_d or 0)
+        _inv_cap  = (_eq or 0) + _td_r - (_cash or 0) - (_st_inv or 0)
+        if _op_inc is not None and _eq is not None and _inv_cap > 0:
+            latest["ROIC"] = round(_op_inc * (1 - _safe_tx) / _inv_cap, 6)
+
     fund, fund_breakdown = _score_fundamentals_detailed(latest)
     val, val_breakdown = _score_valuation_detailed(latest)
     growth, growth_breakdown = _score_growth_detailed(latest)
