@@ -86,6 +86,18 @@ class TestADTV:
         _, details = is_tradable(rows)
         assert details["pass_adtv"] is False
 
+    def test_zero_value_fallback_uses_volume_times_close(self):
+        """When value=0 but volume × close / 1000 exceeds ADTV threshold, should pass."""
+        # volume=2000, close=300 fils → 2000 × 300 / 1000 = 600 KWD per day
+        # 600 × 20 days would avg 600 KWD — still well below 100K threshold
+        # We need a large volume × close to exceed threshold
+        # volume=1_000_000 shares, close=200 fils → 1M × 200 / 1000 = 200K KWD
+        rows = _make_rows(n=30, value=0.0, volume=1_000_000, close=200.0)
+        _, details = is_tradable(rows)
+        assert details["adtv_fallback_used"] is True
+        assert details["pass_adtv"] is True
+        assert details["adtv_20d_kd"] == pytest.approx(200_000.0, rel=0.01)
+
 
 # ── Spread proxy threshold ─────────────────────────────────────────────────────
 
@@ -113,6 +125,14 @@ class TestSpreadProxy:
         passed, _ = is_tradable(rows)
         # pass/fail doesn't matter — just no crash
         assert isinstance(passed, bool)
+
+    def test_corrupt_spread_capped_at_10_pct(self):
+        """Absurd H/L values (e.g. data corruption) must be capped at 10% spread_proxy_pct."""
+        # high=5000, low=0, close=100 → raw (h-l)/c = 50.0 = 5000% — must be capped
+        rows = _make_rows(n=30, high=5000.0, low=0.0, close=100.0, value=200_000.0)
+        _, details = is_tradable(rows)
+        assert details["spread_proxy_pct"] == pytest.approx(10.0)
+        assert details["pass_spread"] is False  # 10% >> 1.5% threshold
 
 
 # ── Active trading days ────────────────────────────────────────────────────────

@@ -80,3 +80,40 @@ def forward_fill_gaps(
         filled.append(curr)
 
     return filled
+
+
+def detect_corporate_action_gap(
+    rows: list[dict[str, Any]],
+    gap_threshold: float = 0.12,
+) -> bool:
+    """Return True if the most recent bar shows a suspicious overnight price gap.
+
+    An overnight gap exceeding ``gap_threshold`` (default 12 %) is likely caused
+    by an unadjusted corporate action (ex-dividend, bonus issue, stock split)
+    rather than genuine intraday price movement.  Kuwait circuit breakers cap
+    single-session moves at +10 % / −5 %, so a ≥ 12 % open-vs-prior-close gap
+    cannot be explained by normal price action.
+
+    Forward-filled synthetic bars (``_forward_filled = True``) are skipped
+    because they carry the previous close as their open — no real gap exists.
+
+    Args:
+        rows:          OHLCV rows sorted ascending by date, ≥ 2 elements.
+        gap_threshold: Fractional gap magnitude that triggers the flag (0.12 = 12 %).
+
+    Returns:
+        True when the current bar's open differs from the prior bar's close by
+        more than ``gap_threshold``; False otherwise.
+    """
+    if len(rows) < 2:
+        return False
+    last = rows[-1]
+    # Ignore synthetic forward-fill bars — they replicate the prior close as open
+    if last.get("_forward_filled"):
+        return False
+    prev_close = float(rows[-2].get("close") or 0.0)
+    curr_open  = float(last.get("open") or 0.0)
+    if prev_close <= 0 or curr_open <= 0:
+        return False
+    gap = abs(curr_open - prev_close) / prev_close
+    return gap > gap_threshold

@@ -11,7 +11,11 @@ from __future__ import annotations
 
 import pytest
 
-from app.services.signal_engine.models.technical.trend_score import compute_trend_score
+from app.services.signal_engine.models.technical.trend_score import (
+    _bars_since_ema20_50_cross,
+    _kaufman_er,
+    compute_trend_score,
+)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -62,10 +66,12 @@ class TestReturnType:
 class TestEMAAlignment:
     def test_full_bullish_alignment_gives_high_score(self):
         # close > ema20 > ema50 > sma200
+        # Note: age_mult (0.65 floor for old trends) reduces the raw 94 → ~56.
+        # Score >= 50 confirms bullish > neutral (≈40) > bearish (≈7).
         rows = _rows(n=80, close_start=500)
         rows[-1].update({"close": 510, "ema_20": 505, "ema_50": 490, "sma_200": 470})
         score, _ = compute_trend_score(rows)
-        assert score >= 60
+        assert score >= 50
 
     def test_full_bearish_alignment_gives_low_score(self):
         # close < ema20 < ema50 < sma200
@@ -129,3 +135,111 @@ class TestSwingStructure:
         score, details = compute_trend_score([])
         assert isinstance(score, int)
         assert 0 <= score <= 100
+
+
+# ── Kaufman ER ────────────────────────────────────────────────────────────────
+
+class TestKaufmanER:
+    def test_perfectly_trending_returns_one(self):
+        # All bars move the same direction → ER = 1.0
+        rows = [{"close": float(i)} for i in range(1, 16)]
+        assert _kaufman_er(rows) == pytest.approx(1.0)
+
+    def test_flat_returns_zero(self):
+        # All closes identical → noise = 0 denominator → returns 0.5 (neutral)
+        rows = [{"close": 100.0}] * 15
+        er = _kaufman_er(rows)
+        assert er == pytest.approx(0.5)
+
+    def test_insufficient_data_returns_neutral(self):
+        rows = [{"close": float(i)} for i in range(5)]
+        assert _kaufman_er(rows, period=14) == pytest.approx(0.5)
+
+    def test_noisy_series_below_clean(self):
+        # Zig-zag (high noise, low net direction) vs straight trend
+        zigzag = [{"close": 100.0 + (5.0 if i % 2 == 0 else -4.5)} for i in range(15)]
+        straight = [{"close": 100.0 + i * 0.5} for i in range(15)]
+        assert _kaufman_er(zigzag) < _kaufman_er(straight)
+
+
+# ── Trend age ────────────────────────────────────────────────────────────────
+
+class TestTrendAge:
+    def _cross_rows(self, bars_before_cross: int = 5) -> list[dict]:
+        """Build rows where EMA20 crosses above EMA50 at position -bars_before_cross."""
+        rows: list[dict] = []
+        total = 40
+        cross_at = total - bars_before_cross   # index where cross happens
+        for i in range(total):
+            if i < cross_at:
+                # Bearish: ema20 < ema50
+                rows.append({"close": 100.0, "ema_20": 95.0, "ema_50": 100.0,
+                              "sma_200": 105.0, "adx_14": 28.0,
+                              "high": 102.0, "low": 98.0, "atr_14": 4.0})
+            else:
+                # Bullish: ema20 > ema50
+                rows.append({"close": 110.0, "ema_20": 108.0, "ema_50": 100.0,
+                              "sma_200": 95.0, "adx_14": 28.0,
+                              "high": 112.0, "low": 108.0, "atr_14": 4.0})
+        return rows
+
+    def test_fresh_cross_detected_as_zero_bars(self):
+        rows = self._cross_rows(bars_before_cross=1)
+        assert _bars_since_ema20_50_cross(rows) == 0
+
+    def test_old_cross_returns_correct_age(self):
+        rows = self._cross_rows(bars_before_cross=10)
+        assert _bars_since_ema20_50_cross(rows) == 9
+
+    def test_no_bullish_cross_returns_n(self):
+        # Bearish throughout
+        rows = [{"close": 100.0, "ema_20": 95.0, "ema_50": 100.0} for _ in range(20)]
+        assert _bars_since_ema20_50_cross(rows) == len(rows)
+
+    def test_fresh_cross_scores_higher_than_old(self):
+        fresh = self._cross_rows(bars_before_cross=1)
+        old   = self._cross_rows(bars_before_cross=30)
+        score_fresh, _ = compute_trend_score(fresh)
+        score_old,   _ = compute_trend_score(old)
+        assert score_fresh > score_old
+
+    def test_modifier_keys_in_details(self):
+        rows = self._cross_rows(bars_before_cross=5)
+        _, d = compute_trend_score(rows)
+        for key in ("er_value", "er_mult", "age_mult", "bars_since_ema_cross",
+                    "stretch_mult", "sector_mult", "combined_mult", "base_raw"):
+            assert key in d, f"Missing key: {key}"
+
+
+# ── EMA stretch guard ────────────────────────────────────────────────────────
+
+class TestStretchGuard:
+    def _row_with_stretch(self, stretch_atr: float) -> dict:
+        atr = 10.0
+        ema20 = 500.0
+        close = ema20 + stretch_atr * atr  # price above ema20
+        return {"close": close, "ema_20": ema20, "ema_50": ema20 * 0.96,
+                "sma_200": ema20 * 0.92, "adx_14": 28.0,
+                "high": close + 5, "low": close - 5, "atr_14": atr}
+
+    def test_within_bounds_no_penalty(self):
+        rows = _rows(n=40) + [self._row_with_stretch(1.0)]
+        _, d = compute_trend_score(rows)
+        assert d["stretch_mult"] == 1.0
+
+    def test_moderate_extension_penalty(self):
+        rows = _rows(n=40) + [self._row_with_stretch(2.0)]
+        _, d = compute_trend_score(rows)
+        assert d["stretch_mult"] == 0.75
+
+    def test_severe_extension_penalty(self):
+        rows = _rows(n=40) + [self._row_with_stretch(2.5)]
+        _, d = compute_trend_score(rows)
+        assert d["stretch_mult"] == 0.45
+
+    def test_stretch_reduces_final_score(self):
+        rows_tight = _rows(n=40) + [self._row_with_stretch(0.5)]
+        rows_stretched = _rows(n=40) + [self._row_with_stretch(2.5)]
+        score_tight, _ = compute_trend_score(rows_tight)
+        score_stretched, _ = compute_trend_score(rows_stretched)
+        assert score_tight > score_stretched

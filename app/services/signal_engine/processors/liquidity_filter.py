@@ -34,6 +34,7 @@ def is_tradable(rows: list[dict[str, Any]]) -> tuple[bool, dict[str, Any]]:
     """
     details: dict[str, Any] = {
         "adtv_20d_kd":          None,
+        "adtv_fallback_used":   False,
         "spread_proxy_pct":     None,
         "active_days_30d_pct":  None,
         "volume_concentration": None,
@@ -50,24 +51,41 @@ def is_tradable(rows: list[dict[str, Any]]) -> tuple[bool, dict[str, Any]]:
     recent_30 = rows[-30:] if len(rows) >= 30 else rows
 
     # ── 1. ADTV: 20-day median of traded_value_kd ─────────────────────────────
-    values_kd = [float(r.get("value") or 0.0) for r in recent_20]
+    # Primary source: r["value"] (pre-computed traded value in KWD).
+    # Fallback: volume (shares) × close (fils) ÷ 1000 → KWD when value is zero
+    # or missing (e.g. data pipeline gaps, delayed delivery).
+    _adtv_fallback_used = False
+    values_kd = []
+    for r in recent_20:
+        v = float(r.get("value") or 0.0)
+        if v <= 0:
+            _close = float(r.get("close") or 0.0)
+            _vol   = float(r.get("volume") or 0.0)
+            v = _vol * _close / 1000.0   # fils × shares → KWD
+            if v > 0:
+                _adtv_fallback_used = True
+        values_kd.append(v)
+    values_kd_nonzero = [v for v in values_kd if v > 0]  # exclude true zeros
     try:
-        adtv = statistics.median(values_kd)
+        adtv = statistics.median(values_kd_nonzero) if values_kd_nonzero else 0.0
     except statistics.StatisticsError:
         adtv = 0.0
     details["adtv_20d_kd"] = round(adtv, 2)
+    details["adtv_fallback_used"] = _adtv_fallback_used
     details["pass_adtv"] = adtv >= PREMIER_ADTV_MIN_KD
 
     # ── 2. Spread proxy: median (high-low)/close over 20 days ─────────────────
+    # Capped at 10% to guard against corrupt H/L data causing absurd display values.
+    _SPREAD_CAP: float = 0.10
     spreads = []
     for r in recent_20:
         h = float(r.get("high") or 0.0)
         l_val = float(r.get("low") or 0.0)
         c = float(r.get("close") or 0.0)
-        if c > 0:
-            spreads.append((h - l_val) / c)
+        if c > 0 and h >= l_val:
+            spreads.append(min((h - l_val) / c, _SPREAD_CAP))
     spread_proxy = statistics.median(spreads) if spreads else 1.0
-    details["spread_proxy_pct"] = round(spread_proxy * 100, 3)
+    details["spread_proxy_pct"] = round(spread_proxy * 100, 3)   # stored as percent (e.g. 1.5 = 1.5%)
     details["pass_spread"] = spread_proxy <= PREMIER_SPREAD_PROXY_MAX
 
     # ── 3. Active days: non-zero volume days in last 30 sessions ──────────────

@@ -63,7 +63,7 @@ class TestRSI:
     def test_bull_zone_rsi_gives_max_rsi_pts(self):
         rows = _rows(rsi=58.0)   # 50-65 is optimal
         _, d = compute_momentum_score(rows)
-        assert d["rsi_pts"] == 35
+        assert d["rsi_pts"] == 25
 
     def test_overbought_rsi_penalised(self):
         rows = _rows(rsi=75.0)
@@ -81,7 +81,7 @@ class TestRSI:
         rows = _rows()
         rows[-1]["rsi_14"] = None
         _, d = compute_momentum_score(rows)
-        assert d["rsi_pts"] == 17
+        assert d["rsi_pts"] == 12
 
 
 # ── MACD ─────────────────────────────────────────────────────────────────────
@@ -90,18 +90,18 @@ class TestMACD:
     def test_bullish_accelerating_macd_gives_max(self):
         rows = _rows(macd=2.0, macd_sig=1.5, macd_hist=0.5)
         _, d = compute_momentum_score(rows)
-        assert d["macd_pts"] == 30
+        assert d["macd_pts"] == 40
 
     def test_bearish_macd_gives_low_pts(self):
         rows = _rows(macd=-1.0, macd_sig=0.5, macd_hist=-0.5)
         _, d = compute_momentum_score(rows)
-        assert d["macd_pts"] == 4
+        assert d["macd_pts"] == 5
 
     def test_missing_macd_returns_neutral_pts(self):
         rows = _rows()
         rows[-1]["macd"] = None
         _, d = compute_momentum_score(rows)
-        assert d["macd_pts"] == 13
+        assert d["macd_pts"] == 17
 
 
 # ── ROC ───────────────────────────────────────────────────────────────────────
@@ -111,7 +111,7 @@ class TestROC:
         closes = [400.0 + i * 4.0 for i in range(30)]  # >5% gain over 10 bars
         rows = [_row(close=c) for c in closes]
         _, d = compute_momentum_score(rows)
-        assert d["roc_pts"] == 20
+        assert d["roc_pts"] == 25
 
     def test_negative_roc_gives_zero(self):
         closes = [500.0 - i * 5.0 for i in range(30)]  # steep decline
@@ -126,7 +126,7 @@ class TestStochastic:
     def test_k_above_d_in_bull_zone_gives_max(self):
         rows = _rows(stoch_k=55.0, stoch_d=45.0)  # K > D, K in 40-70
         _, d = compute_momentum_score(rows)
-        assert d["stoch_pts"] == 15
+        assert d["stoch_pts"] == 10
 
     def test_k_below_d_bearish_gives_zero(self):
         rows = _rows(stoch_k=35.0, stoch_d=50.0)  # K < D, K < 40
@@ -136,22 +136,28 @@ class TestStochastic:
     def test_overbought_stoch_gives_reduced_pts(self):
         rows = _rows(stoch_k=85.0, stoch_d=70.0)  # K > D but overbought
         _, d = compute_momentum_score(rows)
-        assert d["stoch_pts"] == 5
+        assert d["stoch_pts"] == 3
 
     def test_missing_stoch_returns_neutral(self):
         rows = _rows()
         rows[-1]["stoch_k"] = None
         _, d = compute_momentum_score(rows)
-        assert d["stoch_pts"] == 7
+        assert d["stoch_pts"] == 5
 
 
 # ── Score ceiling ─────────────────────────────────────────────────────────────
 
 class TestScoreCeiling:
     def test_perfect_conditions_capped_at_100(self):
-        # step=4 → ROC(10) = (close[-1] - close[-11])/close[-11] ≈ 8% > 5% → 20 pts
+        # RSI=25 + MACD=40 + ROC=25 + Stoch=10 = 100
         closes = [400.0 + i * 4.0 for i in range(30)]
         rows = [_row(close=c, rsi=58.0, macd=3.0, macd_sig=1.0, macd_hist=2.0,
                      stoch_k=55.0, stoch_d=45.0) for c in closes]
         score, _ = compute_momentum_score(rows)
         assert score == 100
+
+    def test_details_has_component_keys(self):
+        _, d = compute_momentum_score(_rows())
+        for key in ("rsi_pts", "macd_pts", "roc_pts", "stoch_pts", "raw_score"):
+            assert key in d, f"missing key: {key}"
+

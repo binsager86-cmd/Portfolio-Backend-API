@@ -222,7 +222,9 @@ app.add_exception_handler(Exception, unhandled_exception_handler)
 # ── Security Middleware ──────────────────────────────────────────────
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestSizeLimitMiddleware)
-
+# ── Compression Middleware ────────────────────────────────────────────
+from fastapi.middleware.gzip import GZipMiddleware
+app.add_middleware(GZipMiddleware, minimum_size=512)
 # ── Observability Middleware ─────────────────────────────────────────
 app.add_middleware(CorrelationIDMiddleware)
 app.add_middleware(RequestTimingMiddleware)

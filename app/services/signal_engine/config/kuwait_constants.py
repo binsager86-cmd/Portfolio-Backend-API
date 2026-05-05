@@ -104,3 +104,48 @@ PREMIER_STOCKS: list[str] = [
     "HUMANSOFT", "BAYAN", "IFA",
     "ALAFCO", "KSCC", "NREC", "IHC",
 ]
+
+# ── Kuwait Sector Taxonomy (Portfolio Correlation Guard) ─────────────────────
+# Maps stock codes to broad sector buckets used to warn against over-concentration.
+# "other" is the fallback for unlisted symbols.
+KUWAIT_SECTOR_MAP: dict[str, str] = {
+    # Banking
+    "NBK": "banking",   "KFH": "banking",   "CBK": "banking",
+    "BURG": "banking",  "ABK": "banking",   "AHLI": "banking",
+    "GBK": "banking",   "KCBK": "banking",  "WARBA": "banking",
+    "AUB": "banking",   "BKME": "banking",  "COAST": "banking",
+    # Telecom
+    "ZAIN": "telecom",  "VIVA": "telecom",  "OMANTEL": "telecom",
+    # Investment & Financial Services
+    "KIPCO": "investment", "BAYAN": "investment", "MARKAZ": "investment",
+    "KAMCO": "investment", "ALIMTIAZ": "investment", "GCC": "investment",
+    "IFA": "investment", "GULF": "investment",
+    # Real Estate
+    "MABANEE": "real_estate", "NRE": "real_estate", "NREC": "real_estate",
+    "AQARAT": "real_estate",
+    # Industrial & Petrochemical
+    "IHC": "industrial", "KPI": "industrial", "GCC": "industrial",
+    # Logistics & Transportation
+    "AGILITY": "logistics",
+    # Technology & Education
+    "HUMANSOFT": "technology",
+    # Aviation & Leasing
+    "ALAFCO": "aviation",
+    # Other Premier stocks
+    "AUM": "other", "KSCC": "other", "NMDC": "other",
+}
+
+# Maximum recommended sector exposure as % of portfolio (for correlation guard).
+SECTOR_CAP_PCT: dict[str, float] = {
+    "banking":     30.0,
+    "telecom":     25.0,
+    "investment":  20.0,
+    "real_estate": 20.0,
+    "industrial":  15.0,
+    "logistics":   15.0,
+    "technology":  15.0,
+    "aviation":    10.0,
+    "energy":      15.0,
+    "insurance":   10.0,
+    "other":       20.0,
+}

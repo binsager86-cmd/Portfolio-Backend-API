@@ -226,7 +226,11 @@ async def generate_kuwait_signal(
 
     # ── Guard: minimum data ───────────────────────────────────────────────────
     if len(rows) < MIN_BARS_FOR_SIGNAL:
-        return _neutral_signal(stock_code, segment, data_as_of, reason_code="insufficient_data")
+        return _neutral_signal(
+            stock_code, segment, data_as_of,
+            reason_code="insufficient_data",
+            four_scores=_make_blocked_four_scores(rows),
+        )
 
     # ── 1. Liquidity filter ───────────────────────────────────────────────────
     liquidity_passed, liq_details = is_tradable(rows)
@@ -241,11 +245,15 @@ async def generate_kuwait_signal(
             k.replace("pass_", "") for k, v in liq_details.items()
             if k.startswith("pass_") and not v
         ]
+        _liq_spread = float(liq_details.get("spread_proxy_pct") or 0.0)
         return _neutral_signal(
             stock_code, segment, data_as_of,
             reason_code="liquidity_failed",
             failed_gates=_failed_gates,
             block_details={k: v for k, v in liq_details.items() if not k.startswith("pass_")},
+            four_scores=_make_blocked_four_scores(rows, adtv_kwd=adtv_kd, spread_pct=_liq_spread),
+            liquidity_passed=liquidity_passed,
+            liquidity_details=liq_details,
         )
 
     # ── 2. Circuit-breaker proximity (computed early so all early-return paths can use it)
@@ -284,7 +292,10 @@ async def generate_kuwait_signal(
             f"market shows mean-reverting behavior, skipping signal"
         )
         return _neutral_signal(stock_code, segment, data_as_of, reason_code="hurst_filter_fail",
-                               circuit_proximity=_circuit_proximity_early)
+                               circuit_proximity=_circuit_proximity_early,
+                               four_scores=_make_blocked_four_scores(rows, adtv_kwd=adtv_kd, spread_pct=float(liq_details.get("spread_proxy_pct", 0.0))),
+                               liquidity_passed=liquidity_passed,
+                               liquidity_details=liq_details)
     
     if hurst_result["action"] == "skip_or_downgrade":
         alerts.append(
@@ -454,7 +465,8 @@ async def generate_kuwait_signal(
         "support_resistance": round(sr_raw * _pre_weights["support_resistance"]),
         "risk_reward":        round(rr_raw * _pre_weights["risk_reward"]),
     }
-    _pre_total_raw = sum(_pre_sub_weighted.values())
+    _pre_four_factor_sum = sum(v for k, v in _pre_sub_weighted.items() if k != "risk_reward")
+    _pre_total_raw = int(_pre_four_factor_sum / 0.85)
     # Apply circuit penalty so total_score matches what a real signal would show
     _pre_total = int(_pre_total_raw * _circuit_result_early["penalty_multiplier"])
 
@@ -579,7 +591,11 @@ async def generate_kuwait_signal(
         "support_resistance": round(sr_raw * w_sr),
         "risk_reward":        round(rr_raw * w_rr),
     }
-    total_score = sum(sub_weighted.values())
+    
+    # We sum all keys EXCEPT risk_reward for the Combined Score
+    _four_factor_sum = sum(v for k, v in sub_weighted.items() if k != "risk_reward")
+    # Because we excluded 15% weight, re-normalize the remaining 85% to be out of 100
+    total_score = int((_four_factor_sum / 0.85))
     
     # Apply Hurst confidence penalty to total score
     total_score = int(total_score * hurst_confidence_penalty)
@@ -601,6 +617,8 @@ async def generate_kuwait_signal(
             reason_code=f"hurst_chop_blocked: {hurst_result['description']}",
             circuit_proximity=_circuit_proximity_early,
             four_scores=four_scores,
+            liquidity_passed=liquidity_passed,
+            liquidity_details=liq_details,
         )
 
     # ── 10. Final signal determination ───────────────────────────────────────
@@ -856,6 +874,45 @@ _NEUTRAL_CIRCUIT_PROXIMITY: dict[str, Any] = {
 }
 
 
+_BLOCKED_CIRCUIT_RESULT: dict[str, Any] = {
+    "nearest_circuit_pct": 5.0,
+    "is_near_upper_circuit": False,
+    "is_near_lower_circuit": False,
+    "penalty_multiplier": 1.0,
+    "severity": "none",
+    "direction": None,
+    "is_near_limit": False,
+    "distance_to_upper_pct": None,
+    "distance_to_lower_pct": None,
+}
+
+
+def _make_blocked_four_scores(
+    rows: list[dict[str, Any]],
+    adtv_kwd: float = 0.0,
+    spread_pct: float = 0.0,
+) -> dict[str, Any]:
+    """Return a four_scores dict with all-zero technical inputs.
+
+    Used by early-return paths (liquidity failure, insufficient data, corporate
+    action) where technical scores are not yet computed.  The Risk score will
+    reflect real liquidity/spread data when available.
+    """
+    # compute_all_four_scores needs to be imported or already in scope
+    return compute_all_four_scores(
+        rows=rows,
+        trend_raw=0,
+        momentum_raw=0,
+        volume_raw=0,
+        sr_details={},
+        auction_intensity=1.0,
+        rr_ratio=0.0,
+        adtv_kwd=adtv_kwd,
+        spread_pct=spread_pct,
+        circuit_result=_BLOCKED_CIRCUIT_RESULT,
+    )
+
+
 def _neutral_signal(
     stock_code: str,
     segment: str,
@@ -870,6 +927,8 @@ def _neutral_signal(
     total_score_for_neutral: int = 0,
     total_score_raw_for_neutral: int | None = None,
     four_scores: dict[str, Any] | None = None,
+    liquidity_passed: bool = False,
+    liquidity_details: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return a minimal NEUTRAL signal with structured block reason."""
     _cp = circuit_proximity or _NEUTRAL_CIRCUIT_PROXIMITY
@@ -896,7 +955,7 @@ def _neutral_signal(
             "regime": "Neutral_Chop",
             "regime_confidence": None, "auction_intensity": None,
             "sub_scores": sub_scores or {}, "raw_sub_scores": raw_sub_scores or {},
-            "liquidity_passed": False, "liquidity_details": {},
+            "liquidity_passed": liquidity_passed, "liquidity_details": liquidity_details or {},
             # Pass through the actual circuit_proximity so tests can access it
             "circuit_proximity": _cp,
             "four_scores": four_scores,

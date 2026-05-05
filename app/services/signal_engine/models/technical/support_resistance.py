@@ -43,14 +43,20 @@ def _find_swing_pivots(
     Returns:
         (swing_highs, swing_lows) as lists of price values.
     """
+    from numpy.lib.stride_tricks import sliding_window_view
+
     n = len(highs)
-    sh: list[float] = []
-    sl: list[float] = []
-    for i in range(lookback, n - lookback):
-        if highs[i] == max(highs[i - lookback: i + lookback + 1]):
-            sh.append(highs[i])
-        if lows[i] == min(lows[i - lookback: i + lookback + 1]):
-            sl.append(lows[i])
+    if n < 2 * lookback + 1:
+        return [], []
+    highs_arr = np.array(highs, dtype=float)
+    lows_arr  = np.array(lows,  dtype=float)
+    w = 2 * lookback + 1
+    windows_h = sliding_window_view(highs_arr, w)
+    windows_l = sliding_window_view(lows_arr,  w)
+    center_h = highs_arr[lookback: n - lookback]
+    center_l = lows_arr[lookback:  n - lookback]
+    sh = center_h[center_h == windows_h.max(axis=1)].tolist()
+    sl = center_l[center_l == windows_l.min(axis=1)].tolist()
     return sh, sl
 
 
@@ -108,6 +114,30 @@ def _anchored_vwap(rows: list[dict[str, Any]], anchor_lookback: int) -> float | 
     cum_pv = sum(t * v for t, v in zip(typical, vols))
     cum_v = sum(vols)
     return cum_pv / cum_v if cum_v > 0 else None
+
+
+# ── Session Volume Skew Proxy ────────────────────────────────────────────────
+
+def _compute_session_volume_skew(rows: list[dict[str, Any]], lookback: int = 20) -> float:
+    """Proxy for intraday volume front-loading using a rolling daily window.
+
+    In the absence of tick-level time data, compares volume in the first half of
+    the lookback window against total window volume.  A ratio > 0.70 suggests
+    most buying occurred early while price extended later — a late-session
+    exhaustion pattern commonly seen on the Kuwait 9:30–12:30 AST session.
+
+    Returns:
+        Float in [0.0, 1.0].  0.0 when data is insufficient.
+    """
+    window = rows[-lookback:] if len(rows) >= lookback else rows
+    if len(window) < 4:
+        return 0.0
+    vols = [float(r.get("volume") or 0.0) for r in window]
+    total = sum(vols)
+    if total == 0:
+        return 0.0
+    half = len(vols) // 2
+    return sum(vols[:half]) / total
 
 
 # ── Main S/R Scorer ──────────────────────────────────────────────────────────
@@ -188,6 +218,29 @@ def compute_sr_score(
     details["volume_profile_pts"] = vp_pts
 
     raw = min(100, support_pts + resistance_pts + vp_pts)
+
+    # ── Multiplicative guards (optional contextual penalties) ─────────────────
+    # 1. Psychological Level Proximity Guard
+    #    Kuwait round numbers in fils: 500 (0.500 KWD), 750, 1000, 1250, 1500.
+    #    Entering within 1.5 % of a round number raises reversal risk — penalise
+    #    the S/R quality score by 15 % since the level itself provides less edge.
+    _psych_fils = [500.0, 750.0, 1000.0, 1250.0, 1500.0]
+    nearest_psych = min(_psych_fils, key=lambda p: abs(p - close))
+    psych_guard = close > 0 and abs(nearest_psych - close) / close < 0.015
+    if psych_guard:
+        raw = int(raw * 0.85)
+
+    # 2. Session-Hour Volume Clustering Guard
+    #    Proxy: first-half of 20-bar rolling window > 70 % of total volume →
+    #    late-session price extension without volume support (exhaustion).
+    session_vol_skew = _compute_session_volume_skew(rows)
+    vol_skew_guard = session_vol_skew > 0.70
+    if vol_skew_guard:
+        raw = int(raw * 0.90)
+
+    raw = max(0, min(100, raw))
+    details["psych_level_guard"] = psych_guard
+    details["session_vol_skew"] = round(session_vol_skew, 3)
     details["raw_score"] = raw
 
     return raw, details, support_levels, resistance_levels

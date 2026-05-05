@@ -5,7 +5,7 @@ defined in the project spec (Section 6).
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 
@@ -21,6 +21,7 @@ _BLOCK_REASON_DESCRIPTIONS: dict[str, str] = {
     "circuit_breaker": "Price is near a Kuwait exchange circuit-breaker limit",
     "low_confluence": "Insufficient technical confluence across scoring dimensions",
     "no_signal": "No signal criteria met",
+    "corporate_action_suspected": "Overnight price gap exceeds circuit-breaker limit — possible ex-dividend or stock split",
 }
 
 
@@ -69,6 +70,15 @@ def format_signal(
     Returns the full JSON-ready signal matching the spec schema exactly.
     """
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    # ── Signal TTL: expires 72 hours after the data_as_of date ─────────────
+    try:
+        _data_date = datetime.fromisoformat(str(data_as_of)).replace(tzinfo=timezone.utc)
+        signal_expires_at: str | None = (_data_date + timedelta(hours=72)).isoformat()
+        is_expired: bool = datetime.now(timezone.utc) > _data_date + timedelta(hours=72)
+    except (ValueError, TypeError):
+        signal_expires_at = None
+        is_expired = False
 
     # Determine tick-alignment note
     entry_mid = levels.get("entry_mid") or 0.0
@@ -153,6 +163,8 @@ def format_signal(
         "risk_metrics": {
             "risk_per_share_fils": levels.get("risk_per_share"),
             "risk_reward_ratio": levels.get("risk_reward_ratio"),
+            "effective_rr": levels.get("effective_rr"),
+            "spread_pct_assumed": levels.get("spread_pct_assumed"),
             "position_size_percent": risk_metrics.get("equity_pct"),
             "cvar_95_fils": risk_metrics.get("cvar_fils"),
             "liquidity_adjustment_factor": risk_metrics.get("liquidity_factor"),
@@ -174,6 +186,7 @@ def format_signal(
             "banking_lead_lag": confluence.get("banking_lead_lag"),
             "sub_scores": confluence.get("sub_scores"),
             "raw_sub_scores": confluence.get("raw_sub_scores"),
+            "indicator_breakdown": confluence.get("indicator_breakdown"),
             "liquidity_passed": confluence.get("liquidity_passed"),
             "liquidity_details": confluence.get("liquidity_details"),
             "support_levels": confluence.get("support_levels", []),
@@ -185,11 +198,14 @@ def format_signal(
             "circuit_breaker": confluence.get("circuit_breaker"),
             "total_score_raw": confluence.get("total_score_raw"),
             "four_scores": confluence.get("four_scores"),
+            "sector_metadata": confluence.get("sector_metadata"),
         },
         "alerts": alerts,
         "metadata": {
             "model_version": _MODEL_VERSION,
             "data_as_of": data_as_of,
+            "signal_expires_at": signal_expires_at,
+            "is_expired": is_expired,
             "walk_forward_window": walk_forward_window,
             "statistical_confidence": probabilities.get("p_tp1_before_sl"),
         },

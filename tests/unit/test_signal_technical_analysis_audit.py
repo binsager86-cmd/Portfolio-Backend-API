@@ -344,91 +344,78 @@ class TestMomentumScorer:
 
     # ── RSI ────────────────────────────────────────────────────────────────────
 
-    def test_rsi_bull_zone_50_65_gives_35pts(self):
+    def test_rsi_bull_zone_50_65_gives_25pts(self):
         _, d = compute_momentum_score(self._rows(rsi_14=58.0))
-        assert d["rsi_pts"] == 35
+        assert d["rsi_pts"] == 25
 
-    def test_rsi_overbought_threshold_is_65_not_70(self):
-        """RSI_OVERBOUGHT == RSI_BULL_MOMENTUM_HIGH == 65.0.
-
-        The 28-pt tier (RSI_BULL_MOMENTUM_HIGH < v < RSI_OVERBOUGHT) covers an
-        empty range [65 < v < 65], so it is unreachable by design — any RSI ≥ 65
-        is treated as overbought (9 pts).
-        """
-        from app.services.signal_engine.config.model_params import (
-            RSI_BULL_MOMENTUM_HIGH, RSI_OVERBOUGHT,
-        )
-        assert RSI_BULL_MOMENTUM_HIGH == RSI_OVERBOUGHT, (
-            "RSI_BULL_MOMENTUM_HIGH and RSI_OVERBOUGHT are the same threshold; "
-            "the 28-pt tier is unreachable."
-        )
-        # RSI = 67 (> 65) → overbought tier → 9 pts
+    def test_rsi_extended_65_70_gives_20pts(self):
+        """RSI 65–70 = strong-but-extended tier (Option A: 20 pts)."""
         _, d = compute_momentum_score(self._rows(rsi_14=67.0))
-        assert d["rsi_pts"] == 9
+        assert d["rsi_pts"] == 20
 
-    def test_rsi_overbought_ge70_gives_9pts(self):
+    def test_rsi_overbought_ge70_gives_6pts(self):
         _, d = compute_momentum_score(self._rows(rsi_14=75.0))
-        assert d["rsi_pts"] == 9
+        assert d["rsi_pts"] == 6
 
-    def test_rsi_recovering_40_50_gives_19pts(self):
+    def test_rsi_recovering_40_50_gives_13pts(self):
         _, d = compute_momentum_score(self._rows(rsi_14=45.0))
-        assert d["rsi_pts"] == 19
+        assert d["rsi_pts"] == 13
 
-    def test_rsi_weak_35_40_gives_10pts(self):
+    def test_rsi_weak_35_40_gives_7pts(self):
         _, d = compute_momentum_score(self._rows(rsi_14=37.0))
-        assert d["rsi_pts"] == 10
+        assert d["rsi_pts"] == 7
 
-    def test_rsi_deeply_oversold_lt35_gives_4pts(self):
+    def test_rsi_deeply_oversold_lt35_gives_3pts(self):
         _, d = compute_momentum_score(self._rows(rsi_14=20.0))
-        assert d["rsi_pts"] == 4
+        assert d["rsi_pts"] == 3
 
-    def test_rsi_missing_gives_17pts(self):
+    def test_rsi_missing_gives_12pts(self):
         rows = self._rows()
         rows[-1]["rsi_14"] = None
         _, d = compute_momentum_score(rows)
-        assert d["rsi_pts"] == 17
+        assert d["rsi_pts"] == 12
 
     # ── MACD ───────────────────────────────────────────────────────────────────
 
-    def test_macd_bullish_accelerating_gives_30pts(self):
+    def test_macd_bullish_accelerating_gives_40pts(self):
         # m > s AND h > 0
         _, d = compute_momentum_score(self._rows(macd=2.0, macd_signal=1.5, macd_hist=0.5))
-        assert d["macd_pts"] == 30
+        assert d["macd_pts"] == 40
 
-    def test_macd_above_signal_decelerating_gives_19pts(self):
+    def test_macd_above_signal_decelerating_gives_25pts(self):
         # m > s AND h <= 0
         _, d = compute_momentum_score(self._rows(macd=2.0, macd_signal=1.5, macd_hist=-0.1))
-        assert d["macd_pts"] == 19
+        assert d["macd_pts"] == 25
 
-    def test_macd_crossover_imminent_gives_15pts(self):
+    def test_macd_crossover_imminent_gives_20pts(self):
         # m < s AND h > 0 (histogram turning up)
         _, d = compute_momentum_score(self._rows(macd=1.0, macd_signal=1.5, macd_hist=0.3))
-        assert d["macd_pts"] == 15
+        assert d["macd_pts"] == 20
 
-    def test_macd_bearish_gives_4pts(self):
+    def test_macd_bearish_gives_5pts(self):
         # m < s AND h < 0
         _, d = compute_momentum_score(self._rows(macd=-1.0, macd_signal=0.5, macd_hist=-0.5))
-        assert d["macd_pts"] == 4
+        assert d["macd_pts"] == 5
 
-    def test_macd_missing_gives_13pts(self):
+    def test_macd_missing_gives_17pts(self):
         rows = self._rows()
         rows[-1]["macd"] = None
         _, d = compute_momentum_score(rows)
-        assert d["macd_pts"] == 13
+        assert d["macd_pts"] == 17
 
     # ── ROC (10-bar) ───────────────────────────────────────────────────────────
 
-    def test_roc_strong_positive_gt5pct_gives_20pts(self):
+    def test_roc_strong_positive_gt5pct_gives_25pts(self):
         closes = [400.0 + i * 4.5 for i in range(30)]  # ~45/400 = 11.25% over 10 bars
         rows = [_base_row(close=c) for c in closes]
         _, d = compute_momentum_score(rows)
-        assert d["roc_pts"] == 20
+        assert d["roc_pts"] == 25
 
-    def test_roc_moderate_positive_2_5pct_gives_16pts(self):
+    def test_roc_moderate_positive_2_5pct_gives_20pts(self):
         closes = [400.0 + i * 0.9 for i in range(30)]  # 9/400 = 2.25% over 10 bars
         rows = [_base_row(close=c) for c in closes]
         _, d = compute_momentum_score(rows)
-        assert d["roc_pts"] == 16
+        assert d["roc_pts"] == 20
 
     def test_roc_strong_negative_gives_0pts(self):
         closes = [500.0 - i * 5.0 for i in range(30)]
@@ -438,35 +425,35 @@ class TestMomentumScorer:
 
     # ── Stochastic ─────────────────────────────────────────────────────────────
 
-    def test_stoch_k_above_d_in_40_70_gives_15pts(self):
+    def test_stoch_k_above_d_in_40_70_gives_10pts(self):
         _, d = compute_momentum_score(self._rows(stoch_k=55.0, stoch_d=48.0))
-        assert d["stoch_pts"] == 15
-
-    def test_stoch_k_above_d_recovering_below_40_gives_12pts(self):
-        _, d = compute_momentum_score(self._rows(stoch_k=30.0, stoch_d=22.0))
-        assert d["stoch_pts"] == 12
-
-    def test_stoch_k_above_d_extended_70_80_gives_10pts(self):
-        _, d = compute_momentum_score(self._rows(stoch_k=75.0, stoch_d=68.0))
         assert d["stoch_pts"] == 10
 
-    def test_stoch_k_above_d_overbought_ge80_gives_5pts(self):
-        _, d = compute_momentum_score(self._rows(stoch_k=85.0, stoch_d=78.0))
-        assert d["stoch_pts"] == 5
+    def test_stoch_k_above_d_recovering_below_40_gives_8pts(self):
+        _, d = compute_momentum_score(self._rows(stoch_k=30.0, stoch_d=22.0))
+        assert d["stoch_pts"] == 8
 
-    def test_stoch_bearish_k_below_d_elevated_gives_3pts(self):
-        _, d = compute_momentum_score(self._rows(stoch_k=70.0, stoch_d=75.0))
+    def test_stoch_k_above_d_extended_70_80_gives_6pts(self):
+        _, d = compute_momentum_score(self._rows(stoch_k=75.0, stoch_d=68.0))
+        assert d["stoch_pts"] == 6
+
+    def test_stoch_k_above_d_overbought_ge80_gives_3pts(self):
+        _, d = compute_momentum_score(self._rows(stoch_k=85.0, stoch_d=78.0))
         assert d["stoch_pts"] == 3
+
+    def test_stoch_bearish_k_below_d_elevated_gives_2pts(self):
+        _, d = compute_momentum_score(self._rows(stoch_k=70.0, stoch_d=75.0))
+        assert d["stoch_pts"] == 2
 
     def test_stoch_bearish_k_below_d_low_gives_0pts(self):
         _, d = compute_momentum_score(self._rows(stoch_k=30.0, stoch_d=40.0))
         assert d["stoch_pts"] == 0
 
-    def test_stoch_missing_gives_7pts(self):
+    def test_stoch_missing_gives_5pts(self):
         rows = self._rows()
         rows[-1]["stoch_k"] = None
         _, d = compute_momentum_score(rows)
-        assert d["stoch_pts"] == 7
+        assert d["stoch_pts"] == 5
 
     def test_momentum_score_always_in_range(self):
         for rsi in [20, 40, 58, 67, 80]:
@@ -479,75 +466,75 @@ class TestMomentumScorer:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class TestVolumeFlowScorer:
-    """Boundary values for OBV slope, CMF, A/D slope, auction intensity."""
+    """Boundary values for OBV slope, CMF, RVOL, auction intensity."""
 
-    def _rising_obv(self, n: int = 12) -> list[dict]:
-        return [_base_row(obv=500_000.0 * (i + 1), ad=2_000_000.0 * (i + 1)) for i in range(n)]
+    def _rising_obv(self, n: int = 25) -> list[dict]:
+        return [_base_row(obv=500_000.0 * (i + 1)) for i in range(n)]
 
-    def _flat_obv(self, n: int = 12) -> list[dict]:
-        return [_base_row(obv=5_000_000.0, ad=10_000_000.0) for _ in range(n)]
+    def _flat_obv(self, n: int = 25) -> list[dict]:
+        return [_base_row(obv=5_000_000.0) for _ in range(n)]
 
-    def _falling_obv(self, n: int = 12) -> list[dict]:
-        return [_base_row(obv=12_000_000.0 - 500_000.0 * i, ad=24_000_000.0 - 1_000_000.0 * i)
+    def _falling_obv(self, n: int = 25) -> list[dict]:
+        return [_base_row(obv=12_000_000.0 - 500_000.0 * i)
                 for i in range(n)]
 
     # ── OBV ────────────────────────────────────────────────────────────────────
 
-    def test_strongly_rising_obv_gives_35pts(self):
+    def test_strongly_rising_obv_gives_25pts(self):
         _, d = compute_volume_flow_score(self._rising_obv(), auction_intensity=1.0)
-        assert d["obv_pts"] == 35
+        assert d["obv_pts"] == 25
 
-    def test_flat_obv_gives_15pts(self):
+    def test_flat_obv_gives_12pts(self):
         _, d = compute_volume_flow_score(self._flat_obv(), auction_intensity=1.0)
-        assert d["obv_pts"] == 15
+        assert d["obv_pts"] == 12
 
     def test_strongly_falling_obv_gives_0pts(self):
         _, d = compute_volume_flow_score(self._falling_obv(), auction_intensity=1.0)
         assert d["obv_pts"] == 0
 
-    def test_missing_obv_gives_15pts(self):
+    def test_missing_obv_gives_12pts(self):
         rows = self._rising_obv()
         for r in rows:
             r["obv"] = None
         _, d = compute_volume_flow_score(rows, auction_intensity=1.0)
-        assert d["obv_pts"] == 15
+        assert d["obv_pts"] == 12
 
     # ── CMF ────────────────────────────────────────────────────────────────────
 
-    def test_cmf_strong_accumulation_gt020_gives_25pts(self):
+    def test_cmf_strong_accumulation_gt020_gives_35pts(self):
         rows = self._flat_obv()
         for r in rows:
             r["cmf_20"] = 0.25
         _, d = compute_volume_flow_score(rows, auction_intensity=1.0)
-        assert d["cmf_pts"] == 25
+        assert d["cmf_pts"] == 35
 
-    def test_cmf_accumulation_010_020_gives_20pts(self):
+    def test_cmf_accumulation_010_020_gives_28pts(self):
         rows = self._flat_obv()
         for r in rows:
             r["cmf_20"] = 0.15
         _, d = compute_volume_flow_score(rows, auction_intensity=1.0)
-        assert d["cmf_pts"] == 20
+        assert d["cmf_pts"] == 28
 
-    def test_cmf_mild_accumulation_003_010_gives_14pts(self):
+    def test_cmf_mild_accumulation_003_010_gives_20pts(self):
         rows = self._flat_obv()
         for r in rows:
             r["cmf_20"] = 0.06
         _, d = compute_volume_flow_score(rows, auction_intensity=1.0)
-        assert d["cmf_pts"] == 14
+        assert d["cmf_pts"] == 20
 
-    def test_cmf_neutral_gives_10pts(self):
+    def test_cmf_neutral_gives_14pts(self):
         rows = self._flat_obv()
         for r in rows:
             r["cmf_20"] = 0.0
         _, d = compute_volume_flow_score(rows, auction_intensity=1.0)
-        assert d["cmf_pts"] == 10
+        assert d["cmf_pts"] == 14
 
-    def test_cmf_distribution_010_020_gives_2pts(self):
+    def test_cmf_distribution_010_020_gives_3pts(self):
         rows = self._flat_obv()
         for r in rows:
             r["cmf_20"] = -0.15
         _, d = compute_volume_flow_score(rows, auction_intensity=1.0)
-        assert d["cmf_pts"] == 2
+        assert d["cmf_pts"] == 3
 
     def test_cmf_strong_distribution_lte_neg020_gives_0pts(self):
         rows = self._flat_obv()
@@ -556,29 +543,45 @@ class TestVolumeFlowScorer:
         _, d = compute_volume_flow_score(rows, auction_intensity=1.0)
         assert d["cmf_pts"] == 0
 
-    # ── A/D Line ───────────────────────────────────────────────────────────────
+    # ── RVOL ───────────────────────────────────────────────────────────────────
 
-    def test_strongly_rising_ad_gives_20pts(self):
-        _, d = compute_volume_flow_score(self._rising_obv(), auction_intensity=1.0)
-        assert d["ad_pts"] == 20
+    def test_rvol_breakout_ge2x_gives_25pts(self):
+        """Current volume 2.4x median → 25 pts."""
+        base_vol = 1_000_000.0
+        rows = [_base_row(obv=5_000_000.0) for _ in range(24)]
+        for r in rows:
+            r["volume"] = base_vol
+        last = _base_row(obv=5_000_000.0)
+        last["volume"] = base_vol * 2.4
+        rows.append(last)
+        _, d = compute_volume_flow_score(rows, auction_intensity=1.0)
+        assert d["rvol_pts"] == 25
 
-    def test_strongly_falling_ad_gives_0pts(self):
-        _, d = compute_volume_flow_score(self._falling_obv(), auction_intensity=1.0)
-        assert d["ad_pts"] == 0
+    def test_rvol_thin_lt05x_gives_0pts(self):
+        """Current volume 0.4x median → 0 pts."""
+        base_vol = 1_000_000.0
+        rows = [_base_row(obv=5_000_000.0) for _ in range(24)]
+        for r in rows:
+            r["volume"] = base_vol
+        last = _base_row(obv=5_000_000.0)
+        last["volume"] = base_vol * 0.4
+        rows.append(last)
+        _, d = compute_volume_flow_score(rows, auction_intensity=1.0)
+        assert d["rvol_pts"] == 0
 
     # ── Auction intensity ──────────────────────────────────────────────────────
 
-    def test_high_auction_intensity_ge18_gives_30pts(self):
+    def test_high_auction_intensity_ge18_gives_15pts(self):
         _, d = compute_volume_flow_score(self._flat_obv(), auction_intensity=2.0)
-        assert d["auction_pts"] == 30
+        assert d["auction_pts"] == 15
 
-    def test_normal_auction_intensity_1_18_gives_20pts(self):
+    def test_normal_auction_intensity_1_18_gives_10pts(self):
         _, d = compute_volume_flow_score(self._flat_obv(), auction_intensity=1.0)
-        assert d["auction_pts"] == 20
+        assert d["auction_pts"] == 10
 
-    def test_low_auction_intensity_lt1_gives_5pts(self):
+    def test_low_auction_intensity_lt1_gives_3pts(self):
         _, d = compute_volume_flow_score(self._flat_obv(), auction_intensity=0.5)
-        assert d["auction_pts"] == 5
+        assert d["auction_pts"] == 3
 
     def test_volume_score_always_in_range(self):
         for intensity in [0.3, 1.0, 2.5]:
@@ -1265,12 +1268,10 @@ class TestEndToEndScoring:
         """sub_weighted values must sum to total_score (before circuit-breaker)."""
         signal = self._run(generate_kuwait_signal(self._make_strong_bull_rows(), stock_code="TEST"))
         conf = signal["confluence_details"]
-        sub_sum = sum(conf["sub_scores"].values())
-        total = conf["total_score"]
-        # Allow ≤ 5 pts difference to account for circuit-breaker penalty if triggered
-        assert abs(sub_sum - total) <= 5, (
-            f"sub_scores sum ({sub_sum}) does not match total_score ({total}). "
-            "If gap > 5, circuit-breaker penalty may have fired."
+        sub_sum = sum(v for k, v in conf["sub_scores"].items() if k != "risk_reward")
+        total = conf["total_score_raw"]
+        assert abs((sub_sum / 0.85) - total) <= 5, (
+            f"sub_scores sum ({sub_sum}) un-normalized does not match total_score_raw ({total})."
         )
 
     # ── Bullish scenario ───────────────────────────────────────────────────────
@@ -1288,7 +1289,7 @@ class TestEndToEndScoring:
     def test_bullish_rows_produce_high_total_score(self):
         signal = self._run(generate_kuwait_signal(self._make_strong_bull_rows(), stock_code="TEST"))
         total = signal["confluence_details"]["total_score"]
-        assert total >= 55, f"Expected high total_score with bullish inputs, got {total}"
+        assert total >= 50, f"Expected high total_score with bullish inputs, got {total}"
 
     def test_bullish_signal_is_buy_or_neutral(self):
         """Signal is BUY/STRONG_BUY if all gates pass; NEUTRAL if RR gate fails."""

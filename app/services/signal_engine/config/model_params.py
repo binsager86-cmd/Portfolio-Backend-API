@@ -37,6 +37,21 @@ ADX_TRENDING_MIN: float = 20.0
 ADX_STRONG_MIN: float = 25.0
 ADX_VERY_STRONG_MIN: float = 30.0
 
+# ── Kaufman Efficiency Ratio (Noise Filter) ───────────────────────────────────
+ER_PERIOD: int = 14             # bars used for ER calculation
+ER_HIGH: float = 0.60           # clean directional trend → +15% bonus
+ER_MID: float = 0.45            # moderate directionality → +5% bonus
+ER_LOW: float = 0.30            # noisy / random-walk → −20% penalty
+
+# ── Trend Maturity (EMA20/50 Crossover Age) ──────────────────────────────────
+TREND_AGE_PEAK_MULT: float = 1.25   # multiplier for a just-fired crossover (age=0)
+TREND_AGE_FLOOR_MULT: float = 0.65  # floor applied to all mature / bearish trends
+TREND_AGE_SCALE: float = 40.0       # bars over which the boost decays to the floor
+
+# ── EMA Stretch / Mean-Reversion Guard ───────────────────────────────────────
+STRETCH_SEVERE_ATR: float = 2.2     # |close − EMA20| > 2.2×ATR → strong penalty
+STRETCH_MODERATE_ATR: float = 1.8   # |close − EMA20| > 1.8×ATR → moderate penalty
+
 # ── RSI Thresholds ────────────────────────────────────────────────────────────
 RSI_OVERSOLD: float = 35.0
 RSI_OVERBOUGHT: float = 65.0

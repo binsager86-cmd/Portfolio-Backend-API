@@ -116,7 +116,7 @@ def compute_timing_score(
     return raw, tier, desc
 
 
-# ── 3. RISK SCORE (Downside Protection & Gate) ───────────────────────────────
+# ── 3. RISK SCORE (INFORMATIONAL ONLY — NO BLOCKING) ─────────────────────────
 # Weights: RR 40% | Volatility 25% | Liquidity 20% | Circuit 15%
 
 def compute_risk_score(
@@ -125,27 +125,26 @@ def compute_risk_score(
     adtv_kwd: float,
     spread_pct: float,
     circuit_distance_pct: float,
-) -> tuple[int, str, str, bool, str]:
-    """Downside protection: RR (40%) + Volatility (25%) + Liquidity (20%) + Circuit (15%).
+) -> tuple[int, str, str]:
+    """Downside risk profile: RR (40%) + Volatility (25%) + Liquidity (20%) + Circuit (15%).
 
-    Args:
-        rr_ratio:             Risk-reward ratio (e.g. 2.5).
-        atr_pct:              ATR(14) as a percentage of close (e.g. 1.8 for 1.8%).
-        adtv_kwd:             Average daily traded value in KWD.
-        spread_pct:           Bid-ask spread proxy as % (e.g. 1.2).
-        circuit_distance_pct: Distance to nearest circuit limit in % of price.
+    INFORMATIONAL ONLY — no blocking.
+    Risk levels: "Low Risk" (≥70) | "Moderate Risk" (40–69) | "High Risk" (<40)
 
     Returns:
-        (score 0-100, tier, description, is_blocked, block_reason)
+        (score 0-100, risk_level, description)
     """
     # RR (non-linear)
-    rr_pts = (
-        0   if rr_ratio < 1.5 else
-        30  if rr_ratio < 2.0 else
-        60  if rr_ratio < 2.5 else
-        80  if rr_ratio < 3.0 else
-        100
-    )
+    if rr_ratio <= 0.0:
+        rr_pts = 50  # Neutral/No Setup defaults to moderate instead of harshly penalizing
+    else:
+        rr_pts = (
+            0   if rr_ratio < 1.0 else
+            40  if rr_ratio < 1.5 else
+            60  if rr_ratio < 2.0 else
+            80  if rr_ratio < 2.5 else
+            100
+        )
 
     # Volatility (lower ATR% = better)
     vol_pts = (
@@ -183,48 +182,41 @@ def compute_risk_score(
         (circuit_pts * 0.15)
     )
     raw = max(0, min(100, raw))
-    tier, desc = _classify_tier(raw)
 
-    is_blocked = tier in ("Sell", "Strong Sell")
-    block_reason = "risk_gate_triggered" if is_blocked else ""
+    if raw >= 70:
+        risk_level = "Low Risk"
+        desc = "favorable_risk_profile"
+    elif raw >= 40:
+        risk_level = "Moderate Risk"
+        desc = "moderate_risk_caution_advised"
+    else:
+        risk_level = "High Risk"
+        desc = "high_risk_proceed_with_caution"
 
-    return raw, tier, desc, is_blocked, block_reason
+    return raw, risk_level, desc
 
 
-# ── 4. OVERALL SCORE (Composite Decision) ────────────────────────────────────
+# ── 4. OVERALL SCORE (NO GATING — RISK-ADJUSTED COMPOSITE) ───────────────────
 
 def compute_overall_score(
     potential_raw: int,
     timing_raw: int,
     risk_raw: int,
-    risk_tier: str,
 ) -> tuple[int, str, str, float]:
-    """Risk-gated composite: Potential (50%) + Timing (50%) × risk multiplier.
+    """Risk-weighted composite: Potential (50%) + Timing (50%) × risk multiplier.
+
+    NO BLOCKING — risk reduces the score but never forces it to zero.
 
     Returns:
         (score 0-100, tier, description, risk_multiplier)
     """
-    # Hard gate
-    if risk_tier in ("Sell", "Strong Sell"):
-        return 0, "Strong Sell", "blocked_by_risk_gate", 0.0
-
     base_confluence = (potential_raw * 0.50) + (timing_raw * 0.50)
 
-    # Risk multiplier — any risk_raw < 40 maps to Sell/Strong Sell and is
-    # already caught by the hard gate above, so mult=0.0 is a safety net only.
-    if risk_raw >= 85:
-        mult = 1.00
-    elif risk_raw >= 70:
-        mult = 0.90
-    elif risk_raw >= 60:
-        mult = 0.75
-    elif risk_raw >= 40:
-        mult = 0.50
-    else:  # pragma: no cover  — hard gate above blocks risk_raw < 40
-        mult = 0.0
+    # We no longer apply a risk multiplier to the overall score.
+    # It remains purely an average of Potential and Timing.
+    mult = 1.0
 
-    raw = int(base_confluence * mult)
-    raw = max(0, min(100, raw))
+    raw = max(0, min(100, int(base_confluence)))
     tier, desc = _classify_tier(raw)
     return raw, tier, desc, mult
 
@@ -237,41 +229,37 @@ _TIER_RANK: dict[str, int] = {
 
 
 def compute_position_action(
-    potential_tier: str,
-    timing_tier: str,
-    risk_tier: str,
     overall_tier: str,
+    risk_level: str,
 ) -> dict[str, Any]:
-    """Map the four tiers to a position action and max position size."""
-    if risk_tier == "Strong Sell":
-        return {"action": "BLOCK_DANGEROUS", "label": "BLOCK — Dangerous", "max_position_pct": 0.0}
+    """Map overall tier + risk level to a suggested position size.
 
-    if risk_tier == "Sell":
-        return {"action": "BLOCK_DO_NOT_TRADE", "label": "BLOCK — Do not trade", "max_position_pct": 0.0}
+    NO BLOCKING — always returns a non-negative size.
+    """
+    # Base size from risk level
+    if risk_level == "High Risk":
+        max_pct = 0.5
+        label_suffix = "High Risk"
+    elif risk_level == "Moderate Risk":
+        max_pct = 1.0
+        label_suffix = "Moderate Risk"
+    else:  # Low Risk
+        max_pct = 1.5
+        label_suffix = "Low Risk"
 
-    if all(t == "Strong Buy" for t in (potential_tier, timing_tier, risk_tier, overall_tier)):
-        return {"action": "MAXIMUM_SIZE", "label": "Maximum size (2.5%)", "max_position_pct": 2.5}
+    # Override for very weak overall score
+    if overall_tier in ("Strong Sell", "Sell"):
+        return {"action": "NO_TRADE", "label": "No trade recommended", "max_position_pct": 0.0}
 
-    if all(t == "Buy" for t in (potential_tier, timing_tier, risk_tier, overall_tier)):
-        return {"action": "STANDARD_SIZE", "label": "Standard size (1.5%)", "max_position_pct": 1.5}
-
-    if (potential_tier == "Buy" and timing_tier == "Hold"
-            and risk_tier == "Buy" and overall_tier == "Hold"):
-        return {"action": "REDUCE_SIZE", "label": "Reduce size (0.75%)", "max_position_pct": 0.75}
-
-    if (potential_tier == "Hold" and timing_tier == "Buy"
-            and risk_tier == "Buy" and overall_tier == "Hold"):
-        return {"action": "WAIT_PULLBACK", "label": "Wait for pullback", "max_position_pct": 0.0}
-
-    if (potential_tier == "Buy" and timing_tier == "Buy"
-            and risk_tier == "Hold" and overall_tier == "Hold"):
-        return {"action": "WAIT_BETTER_RR", "label": "Wait for better RR", "max_position_pct": 0.0}
+    if overall_tier == "Strong Buy" and risk_level == "Low Risk":
+        return {"action": "MAXIMUM_SIZE", "label": "Maximum size (2.5%) — Low Risk", "max_position_pct": 2.5}
 
     overall_rank = _TIER_RANK.get(overall_tier, 0)
-    if overall_rank >= 4:
-        return {"action": "STANDARD_SIZE", "label": "Standard size (1.5%)", "max_position_pct": 1.5}
-    if overall_rank == 3:
-        return {"action": "REDUCE_SIZE", "label": "Reduce size (0.5%)", "max_position_pct": 0.5}
+    if overall_rank >= 4:  # Buy or Strong Buy
+        return {"action": "STANDARD_SIZE", "label": f"Standard size ({max_pct}%) — {label_suffix}", "max_position_pct": max_pct}
+    if overall_rank == 3:  # Hold
+        reduced = round(max_pct * 0.5, 1)
+        return {"action": "REDUCE_SIZE", "label": f"Reduce size ({reduced}%) — {label_suffix}", "max_position_pct": reduced}
 
     return {"action": "NO_TRADE", "label": "No trade — no edge", "max_position_pct": 0.0}
 
@@ -332,13 +320,13 @@ def compute_all_four_scores(
     tim_score, tim_tier, tim_desc = compute_timing_score(
         sr_details, auction_intensity, close, atr_14, atr_60
     )
-    risk_score, risk_tier, risk_desc, risk_blocked, risk_reason = compute_risk_score(
+    risk_score, risk_level, risk_desc = compute_risk_score(
         rr_ratio, atr_pct, adtv_kwd, spread_pct, circuit_dist
     )
     ov_score, ov_tier, ov_desc, risk_mult = compute_overall_score(
-        pot_score, tim_score, risk_score, risk_tier
+        pot_score, tim_score, risk_score
     )
-    action = compute_position_action(pot_tier, tim_tier, risk_tier, ov_tier)
+    action = compute_position_action(ov_tier, risk_level)
 
     return {
         "potential": {
@@ -353,10 +341,8 @@ def compute_all_four_scores(
         },
         "risk": {
             "score": risk_score,
-            "tier": risk_tier,
+            "risk_level": risk_level,
             "description": risk_desc,
-            "is_blocked": risk_blocked,
-            "block_reason": risk_reason,
         },
         "overall": {
             "score": ov_score,
