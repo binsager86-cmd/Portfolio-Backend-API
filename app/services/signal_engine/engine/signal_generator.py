@@ -239,19 +239,131 @@ async def generate_kuwait_signal(
 
     alerts: list[str] = []
 
-    # ── Hard gate: fail early if liquidity check fails (before technical scoring)
+    # ── Hard gate: liquidity failure always returns NEUTRAL/NO_TRADE.
+    # We still compute raw diagnostics so UI can explain *why* the stock was blocked.
     if not liquidity_passed:
         _failed_gates = [
             k.replace("pass_", "") for k, v in liq_details.items()
             if k.startswith("pass_") and not v
         ]
         _liq_spread = float(liq_details.get("spread_proxy_pct") or 0.0)
+
+        _blocked_circuit = _graduated_circuit_penalty(rows)
+        _blocked_circuit_proximity: dict[str, Any] = {
+            "is_near_limit": _blocked_circuit["is_near_limit"],
+            "direction": _blocked_circuit["direction"],
+            "distance_to_upper_pct": _blocked_circuit["distance_to_upper_pct"],
+            "distance_to_lower_pct": _blocked_circuit["distance_to_lower_pct"],
+        }
+
+        _blocked_sub_raw: dict[str, int] = {}
+        _blocked_sub_weighted: dict[str, int] = {}
+        _blocked_total_raw = 0
+        _blocked_total = 0
+        _blocked_technical_debug: dict[str, Any] | None = None
+        _blocked_indicator_breakdown: dict[str, Any] | None = None
+        _blocked_four_scores = _make_blocked_four_scores(
+            rows,
+            adtv_kwd=adtv_kd,
+            spread_pct=_liq_spread,
+        )
+
+        try:
+            _auction_intensity = calculate_auction_intensity(rows)
+
+            _trend_raw, _trend_details = compute_trend_score(rows)
+            _momentum_raw, _momentum_details = compute_momentum_score(rows)
+            _volume_raw, _volume_details = compute_volume_flow_score(rows, _auction_intensity)
+            _sr_raw, _sr_details, _support_levels, _resistance_levels = compute_sr_score(rows)
+
+            _nearest_support = _support_levels[0] if _support_levels else None
+            _nearest_resistance = _resistance_levels[0] if _resistance_levels else None
+
+            _is_bullish = _trend_raw >= 60 and _volume_raw >= 50
+            _is_bearish = _trend_raw <= 40 and _volume_raw <= 50
+            if _is_bullish:
+                _direction = "BUY"
+            elif _is_bearish:
+                _direction = "SELL"
+            else:
+                _direction = "NEUTRAL"
+
+            _levels = compute_entry_stop_tp(
+                rows,
+                _direction,
+                _nearest_resistance,
+                _nearest_support,
+            )
+            _rr = _levels.get("risk_reward_ratio") or 0.0
+            _rr_raw = max(0, min(100, int(((_rr - 1.0) / 3.0) * 100)))
+
+            _blocked_weights = _apply_regime_weights(dict(BASE_WEIGHTS), "Neutral_Chop", liq_pct)
+            _blocked_sub_raw = {
+                "trend": _trend_raw,
+                "momentum": _momentum_raw,
+                "volume_flow": _volume_raw,
+                "support_resistance": _sr_raw,
+                "risk_reward": _rr_raw,
+            }
+            _blocked_sub_weighted = {
+                "trend": round(_trend_raw * _blocked_weights["trend"]),
+                "momentum": round(_momentum_raw * _blocked_weights["momentum"]),
+                "volume_flow": round(_volume_raw * _blocked_weights["volume_flow"]),
+                "support_resistance": round(_sr_raw * _blocked_weights["support_resistance"]),
+                "risk_reward": round(_rr_raw * _blocked_weights["risk_reward"]),
+            }
+
+            _blocked_four_factor_sum = sum(
+                v for k, v in _blocked_sub_weighted.items() if k != "risk_reward"
+            )
+            _blocked_total_raw = int(_blocked_four_factor_sum / 0.85)
+            _blocked_total = int(_blocked_total_raw * _blocked_circuit["penalty_multiplier"])
+
+            _blocked_four_scores = compute_all_four_scores(
+                rows=rows,
+                trend_raw=_trend_raw,
+                momentum_raw=_momentum_raw,
+                volume_raw=_volume_raw,
+                sr_details=_sr_details,
+                auction_intensity=_auction_intensity,
+                rr_ratio=_rr,
+                adtv_kwd=adtv_kd,
+                spread_pct=_liq_spread,
+                circuit_result=_blocked_circuit,
+            )
+
+            _blocked_technical_debug = {
+                "trend_raw": _trend_raw,
+                "momentum_raw": _momentum_raw,
+                "volume_raw": _volume_raw,
+                "sr_raw": _sr_raw,
+                "rr_raw": _rr_raw,
+            }
+            _blocked_indicator_breakdown = _build_indicator_breakdown(
+                _trend_details,
+                _momentum_details,
+                _volume_details,
+                _sr_details,
+            )
+        except Exception:
+            logger.exception(
+                "Failed to compute liquidity-blocked diagnostics for %s",
+                stock_code,
+            )
+
         return _neutral_signal(
             stock_code, segment, data_as_of,
             reason_code="liquidity_failed",
             failed_gates=_failed_gates,
             block_details={k: v for k, v in liq_details.items() if not k.startswith("pass_")},
-            four_scores=_make_blocked_four_scores(rows, adtv_kwd=adtv_kd, spread_pct=_liq_spread),
+            technical_scores_debug=_blocked_technical_debug,
+            circuit_proximity=_blocked_circuit_proximity,
+            sub_scores=_blocked_sub_weighted,
+            raw_sub_scores=_blocked_sub_raw,
+            total_score_for_neutral=_blocked_total,
+            total_score_raw_for_neutral=_blocked_total_raw,
+            four_scores=_blocked_four_scores,
+            indicator_breakdown=_blocked_indicator_breakdown,
             liquidity_passed=liquidity_passed,
             liquidity_details=liq_details,
         )
@@ -456,6 +568,12 @@ async def generate_kuwait_signal(
         "volume_flow": volume_raw, "support_resistance": sr_raw,
         "risk_reward": rr_raw,
     }
+    _pre_indicator_breakdown = _build_indicator_breakdown(
+        trend_details,
+        momentum_details,
+        volume_details,
+        sr_details,
+    )
     _pre_sub_weighted = {
         "trend":              round(trend_raw * _pre_weights["trend"]),
         "momentum":           round(momentum_raw * _pre_weights["momentum"]),
@@ -506,6 +624,7 @@ async def generate_kuwait_signal(
             total_score_for_neutral=_pre_total,
             total_score_raw_for_neutral=_pre_total_raw,
             four_scores=four_scores,
+            indicator_breakdown=_pre_indicator_breakdown,
             liquidity_passed=liquidity_passed,
             liquidity_details=liq_details,
             hurst_filter={
@@ -542,6 +661,7 @@ async def generate_kuwait_signal(
             total_score_for_neutral=_pre_total,
             total_score_raw_for_neutral=_pre_total_raw,
             four_scores=four_scores,
+            indicator_breakdown=_pre_indicator_breakdown,
         )
 
     # ── Hard gate: major resistance within 1.5R blocks BUY ───────────────────
@@ -565,6 +685,7 @@ async def generate_kuwait_signal(
             total_score_for_neutral=_pre_total,
             total_score_raw_for_neutral=_pre_total_raw,
             four_scores=four_scores,
+            indicator_breakdown=_pre_indicator_breakdown,
         )
 
     # ── 8. Apply regime + liquidity weight adjustments ────────────────────────
@@ -647,6 +768,7 @@ async def generate_kuwait_signal(
             reason_code=f"hurst_chop_blocked: {hurst_result['description']}",
             circuit_proximity=_circuit_proximity_early,
             four_scores=four_scores,
+            indicator_breakdown=_pre_indicator_breakdown,
             liquidity_passed=liquidity_passed,
             liquidity_details=liq_details,
         )
@@ -826,6 +948,12 @@ async def generate_kuwait_signal(
             "support_resistance": sr_raw,
             "risk_reward": rr_raw,
         },
+        "indicator_breakdown": _build_indicator_breakdown(
+            trend_details,
+            momentum_details,
+            volume_details,
+            sr_details,
+        ),
         "liquidity_passed": liquidity_passed,
         "liquidity_details": liq_details,
         # Price level arrays for UI price ladder (up to 3 nearest levels each)
@@ -924,9 +1052,10 @@ def _make_blocked_four_scores(
 ) -> dict[str, Any]:
     """Return a four_scores dict with all-zero technical inputs.
 
-    Used by early-return paths (liquidity failure, insufficient data, corporate
-    action) where technical scores are not yet computed.  The Risk score will
-    reflect real liquidity/spread data when available.
+    Used by early-return paths where technical scores are unavailable
+    (insufficient data, corporate action) and as a fallback when blocked-path
+    diagnostic scoring fails. The Risk score reflects real liquidity/spread
+    data when available.
     """
     # compute_all_four_scores needs to be imported or already in scope
     return compute_all_four_scores(
@@ -943,6 +1072,78 @@ def _make_blocked_four_scores(
     )
 
 
+def _build_indicator_breakdown(
+    trend_details: dict[str, Any] | None,
+    momentum_details: dict[str, Any] | None,
+    volume_details: dict[str, Any] | None,
+    sr_details: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Normalize technical scorer details to the frontend indicator_breakdown shape."""
+    trend_block = None
+    if trend_details:
+        trend_block = {
+            "ema_pts": int(trend_details.get("ema_pts", trend_details.get("ema_alignment_pts", 0)) or 0),
+            "ema_desc": trend_details.get("ema_desc", trend_details.get("ema_alignment_desc", "unavailable")),
+            "adx_pts": int(trend_details.get("adx_pts", 0) or 0),
+            "adx_desc": trend_details.get("adx_desc", "unavailable"),
+            "swing_pts": int(trend_details.get("swing_pts", trend_details.get("swing_structure_pts", 0)) or 0),
+            "swing_desc": trend_details.get("swing_desc", trend_details.get("swing_structure_desc", "unavailable")),
+            "raw_score": int(trend_details.get("raw_score", 0) or 0),
+        }
+
+    momentum_block = None
+    if momentum_details:
+        momentum_block = {
+            "rsi_pts": int(momentum_details.get("rsi_pts", 0) or 0),
+            "rsi_desc": momentum_details.get("rsi_desc", "unavailable"),
+            "macd_pts": int(momentum_details.get("macd_pts", 0) or 0),
+            "macd_desc": momentum_details.get("macd_desc", "unavailable"),
+            "roc_pts": int(momentum_details.get("roc_pts", 0) or 0),
+            "roc_desc": momentum_details.get("roc_desc", "unavailable"),
+            "stoch_pts": int(momentum_details.get("stoch_pts", 0) or 0),
+            "stoch_desc": momentum_details.get("stoch_desc", "unavailable"),
+            "raw_score": int(momentum_details.get("raw_score", 0) or 0),
+        }
+
+    volume_block = None
+    if volume_details:
+        volume_block = {
+            "cmf_pts": int(volume_details.get("cmf_pts", 0) or 0),
+            "cmf_desc": volume_details.get("cmf_desc", "unavailable"),
+            "obv_pts": int(volume_details.get("obv_pts", 0) or 0),
+            "obv_desc": volume_details.get("obv_desc", "unavailable"),
+            "rvol_pts": int(volume_details.get("rvol_pts", 0) or 0),
+            "rvol_desc": volume_details.get("rvol_desc", "unavailable"),
+            "auction_pts": int(volume_details.get("auction_pts", 0) or 0),
+            "auction_desc": volume_details.get("auction_desc", "unavailable"),
+            "auction_intensity": float(volume_details.get("auction_intensity", 1.0) or 1.0),
+            "raw_score": int(volume_details.get("raw_score", 0) or 0),
+        }
+
+    sr_block = None
+    if sr_details:
+        sr_block = {
+            "support_proximity_pts": sr_details.get("support_proximity_pts"),
+            "resistance_clearance_pts": sr_details.get("resistance_clearance_pts"),
+            "volume_profile_pts": sr_details.get("volume_profile_pts"),
+            "nearest_support": sr_details.get("nearest_support"),
+            "nearest_resistance": sr_details.get("nearest_resistance"),
+            "volume_poc": sr_details.get("volume_poc"),
+            "anchored_vwap": sr_details.get("anchored_vwap"),
+            "raw_score": int(sr_details.get("raw_score", 0) or 0),
+        }
+
+    if not any([trend_block, momentum_block, volume_block, sr_block]):
+        return None
+
+    return {
+        "trend": trend_block,
+        "momentum": momentum_block,
+        "volume": volume_block,
+        "sr": sr_block,
+    }
+
+
 def _neutral_signal(
     stock_code: str,
     segment: str,
@@ -957,6 +1158,7 @@ def _neutral_signal(
     total_score_for_neutral: int = 0,
     total_score_raw_for_neutral: int | None = None,
     four_scores: dict[str, Any] | None = None,
+    indicator_breakdown: dict[str, Any] | None = None,
     liquidity_passed: bool = False,
     liquidity_details: dict[str, Any] | None = None,
     hurst_filter: dict[str, Any] | None = None,
@@ -987,6 +1189,7 @@ def _neutral_signal(
             "regime_confidence": None, "auction_intensity": None,
             "hurst_filter": hurst_filter,
             "sub_scores": sub_scores or {}, "raw_sub_scores": raw_sub_scores or {},
+            "indicator_breakdown": indicator_breakdown,
             "liquidity_passed": liquidity_passed, "liquidity_details": liquidity_details or {},
             # Pass through the actual circuit_proximity so tests can access it
             "circuit_proximity": _cp,

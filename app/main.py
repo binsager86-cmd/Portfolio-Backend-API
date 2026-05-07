@@ -103,6 +103,18 @@ async def lifespan(app: FastAPI):
         except Exception as alembic_err:
             logger.warning("⚠️  Alembic upgrade failed (DB may be pre-stamped): %s", alembic_err)
 
+        # ── Ensure core tables exist for legacy/stamped databases ──
+        # Some local DBs can be stamped to head without all table DDL actually
+        # present (for example after manual DB swaps). This idempotent schema
+        # initializer backfills missing tables like user_settings so runtime
+        # endpoints do not fail with OperationalError.
+        try:
+            from app.core.schema import ensure_all_tables
+            ensure_all_tables()
+            logger.info("✅  Core schema ensured (idempotent)")
+        except Exception as schema_err:
+            logger.warning("⚠️  Core schema ensure failed: %s", schema_err)
+
         # ── Additive migration: portfolios.currency (missing in early prod DBs) ──
         try:
             from app.core.database import add_column_if_missing
