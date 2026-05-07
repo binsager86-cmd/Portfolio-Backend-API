@@ -282,21 +282,19 @@ async def generate_kuwait_signal(
         market_segment=segment,
         lookback_days=30,
     )
-    
+
     hurst_confidence_penalty = hurst_result["confidence_penalty"]  # 0.70-1.0
-    
+
+    hurst_hard_block = False
+
     if hurst_result["action"] == "skip_signal":
         alerts.append(
             f"HURST FILTER FAIL: {hurst_result['description']} — "
             f"H={hurst_result['h_value']:.3f}±{hurst_result['h_std_error']:.3f}, "
             f"market shows mean-reverting behavior, skipping signal"
         )
-        return _neutral_signal(stock_code, segment, data_as_of, reason_code="hurst_filter_fail",
-                               circuit_proximity=_circuit_proximity_early,
-                               four_scores=_make_blocked_four_scores(rows, adtv_kwd=adtv_kd, spread_pct=float(liq_details.get("spread_proxy_pct", 0.0))),
-                               liquidity_passed=liquidity_passed,
-                               liquidity_details=liq_details)
-    
+        hurst_hard_block = True
+
     if hurst_result["action"] == "skip_or_downgrade":
         alerts.append(
             f"HURST BORDERLINE: H={hurst_result['h_value']:.3f}±{hurst_result['h_std_error']:.3f}, "
@@ -487,6 +485,38 @@ async def generate_kuwait_signal(
         spread_pct=_spread_pct,
         circuit_result=_circuit_result_early,
     )
+
+    # ── Hard gate: strong mean-reversion blocks signal, but preserve computed scores ──────
+    if hurst_hard_block:
+        return _neutral_signal(
+            stock_code,
+            segment,
+            data_as_of,
+            reason_code="hurst_filter_fail",
+            failed_gates=["hurst_filter"],
+            block_details={
+                "h_value": hurst_result["h_value"],
+                "h_std_error": hurst_result["h_std_error"],
+                "threshold_used": hurst_result["threshold_used"],
+                "description": hurst_result["description"],
+            },
+            circuit_proximity=_circuit_proximity_early,
+            sub_scores=_pre_sub_weighted,
+            raw_sub_scores=_pre_sub_raw,
+            total_score_for_neutral=_pre_total,
+            total_score_raw_for_neutral=_pre_total_raw,
+            four_scores=four_scores,
+            liquidity_passed=liquidity_passed,
+            liquidity_details=liq_details,
+            hurst_filter={
+                "h_value": hurst_result["h_value"],
+                "h_std_error": hurst_result["h_std_error"],
+                "threshold": hurst_result["threshold_used"],
+                "confidence_penalty": hurst_result["confidence_penalty"],
+                "action": hurst_result["action"],
+                "description": hurst_result["description"],
+            },
+        )
 
     # ── Hard gate: BUY signals require minimum RR ratio ───────────────────────
     if direction == "BUY" and rr < SIGNAL_MIN_RR:
@@ -929,6 +959,7 @@ def _neutral_signal(
     four_scores: dict[str, Any] | None = None,
     liquidity_passed: bool = False,
     liquidity_details: dict[str, Any] | None = None,
+    hurst_filter: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return a minimal NEUTRAL signal with structured block reason."""
     _cp = circuit_proximity or _NEUTRAL_CIRCUIT_PROXIMITY
@@ -954,6 +985,7 @@ def _neutral_signal(
             "total_score_raw": _total_raw,
             "regime": "Neutral_Chop",
             "regime_confidence": None, "auction_intensity": None,
+            "hurst_filter": hurst_filter,
             "sub_scores": sub_scores or {}, "raw_sub_scores": raw_sub_scores or {},
             "liquidity_passed": liquidity_passed, "liquidity_details": liquidity_details or {},
             # Pass through the actual circuit_proximity so tests can access it
