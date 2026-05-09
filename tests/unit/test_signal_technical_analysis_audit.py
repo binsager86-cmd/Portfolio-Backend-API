@@ -8,7 +8,7 @@ Sections
 --------
 A  Trend scorer — EMA alignment, ADX, swing structure
 B  Momentum scorer — RSI, MACD, ROC, Stochastic
-C  Volume-flow scorer — OBV, CMF, A/D Line, auction intensity
+C  Volume-flow scorer — OBV, CMF, RVOL, auction intensity, order-book adjustment
 D  Support/Resistance scorer — proximity, clearance, volume POC
 E  RR score formula (rr_raw calculation)
 F  Direction determination logic
@@ -20,6 +20,8 @@ K  Signal gate thresholds (BUY=70, STRONG_BUY=85, SELL=25)
 L  Resistance-within-1.5R hard block
 M  Circuit-breaker ×0.70 penalty
 N  End-to-end scoring with crafted rows
+O  Four-score architecture — Potential/Timing/Risk/Overall + position action
+P  Signal payload mapping — indicator_breakdown + blocked four_scores
 """
 from __future__ import annotations
 
@@ -44,7 +46,17 @@ from app.services.signal_engine.config.kuwait_constants import (
 )
 from app.services.signal_engine.engine.signal_generator import (
     _apply_regime_weights,
+    _build_indicator_breakdown,
+    _make_blocked_four_scores,
     generate_kuwait_signal,
+)
+from app.services.signal_engine.models.technical.four_score_engine import (
+    compute_all_four_scores,
+    compute_overall_score,
+    compute_position_action,
+    compute_potential_score,
+    compute_risk_score,
+    compute_timing_score,
 )
 from app.services.signal_engine.models.technical.momentum_score import compute_momentum_score
 from app.services.signal_engine.models.technical.support_resistance import (
@@ -1334,3 +1346,258 @@ class TestEndToEndScoring:
         assert bull_score > bear_score, (
             f"Bull score ({bull_score}) should be greater than bear score ({bear_score})"
         )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# O. FOUR-SCORE ARCHITECTURE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestFourScoreArchitecture:
+    """Audit Potential/Timing/Risk/Overall score logic and action matrix."""
+
+    def test_potential_score_weighting_is_exact(self):
+        score, tier, _ = compute_potential_score(trend_raw=80, momentum_raw=60, volume_raw=70)
+        assert score == 71  # int(80*0.40 + 60*0.25 + 70*0.35)
+        assert tier == "Buy"
+
+    def test_timing_score_full_alignment_is_100(self):
+        sr_details = {
+            "support_proximity_pts": 40,
+            "resistance_clearance_pts": 35,
+            "volume_poc": 500.0,
+        }
+        score, tier, _ = compute_timing_score(
+            sr_details=sr_details,
+            auction_intensity=2.5,
+            close=500.0,
+            atr_14=8.0,
+            atr_60=8.0,
+        )
+        assert score == 100
+        assert tier == "Strong Buy"
+
+    def test_timing_score_weak_inputs_is_strong_sell(self):
+        sr_details = {
+            "support_proximity_pts": 0,
+            "resistance_clearance_pts": 0,
+            "volume_poc": None,
+        }
+        score, tier, _ = compute_timing_score(
+            sr_details=sr_details,
+            auction_intensity=0.5,
+            close=500.0,
+            atr_14=8.0,
+        )
+        assert score == 4
+        assert tier == "Strong Sell"
+
+    def test_risk_score_rr_zero_defaults_to_moderate_not_zero(self):
+        score, level, _ = compute_risk_score(
+            rr_ratio=0.0,
+            atr_pct=2.5,
+            adtv_kwd=250_000.0,
+            spread_pct=0.8,
+            circuit_distance_pct=3.0,
+        )
+        assert score == 70
+        assert level == "Low Risk"
+
+    def test_risk_score_harsh_conditions_flag_high_risk(self):
+        score, level, _ = compute_risk_score(
+            rr_ratio=0.8,
+            atr_pct=6.0,
+            adtv_kwd=80_000.0,
+            spread_pct=2.0,
+            circuit_distance_pct=0.4,
+        )
+        assert score == 13
+        assert level == "High Risk"
+
+    def test_overall_score_blocked_when_risk_tier_is_sell(self):
+        base, adjusted, tier, desc, mult = compute_overall_score(
+            potential_raw=88,
+            timing_raw=84,
+            risk_raw=20,
+            risk_tier="Sell",
+        )
+        assert base == 86
+        assert adjusted == 0
+        assert tier == "Strong Sell"
+        assert desc == "blocked_by_risk_gate"
+        assert mult == 0.0
+
+    def test_overall_score_uses_risk_multiplier_ladder(self):
+        base, adjusted, tier, _, mult = compute_overall_score(
+            potential_raw=80,
+            timing_raw=80,
+            risk_raw=70,
+            risk_tier="Buy",
+        )
+        assert base == 80
+        assert adjusted == 72
+        assert tier == "Buy"
+        assert mult == 0.9
+
+    def test_position_action_strong_buy_low_risk_is_maximum_size(self):
+        action = compute_position_action(overall_tier="Strong Buy", risk_level="Low Risk")
+        assert action["action"] == "MAXIMUM_SIZE"
+        assert action["max_position_pct"] == 2.5
+
+    def test_position_action_sell_tier_is_no_trade(self):
+        action = compute_position_action(overall_tier="Sell", risk_level="Moderate Risk")
+        assert action["action"] == "NO_TRADE"
+        assert action["max_position_pct"] == 0.0
+
+    def test_compute_all_four_scores_returns_full_structure(self):
+        rows = _rising_rows(n=80, close_start=460.0, step=0.4, value=250_000.0)
+        sr_details = {
+            "support_proximity_pts": 32,
+            "resistance_clearance_pts": 22,
+            "volume_poc": rows[-1]["close"],
+        }
+        four_scores = compute_all_four_scores(
+            rows=rows,
+            trend_raw=72,
+            momentum_raw=66,
+            volume_raw=61,
+            sr_details=sr_details,
+            auction_intensity=1.6,
+            rr_ratio=2.2,
+            adtv_kwd=250_000.0,
+            spread_pct=0.8,
+            circuit_result={"nearest_circuit_pct": 5.0},
+        )
+
+        expected_keys = {"potential", "timing", "risk", "overall", "position_action"}
+        assert set(four_scores.keys()) == expected_keys
+        assert 0 <= four_scores["overall"]["score"] <= 100
+        assert four_scores["overall"]["adjustment_factor"] == four_scores["overall"]["risk_multiplier"]
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# P. SIGNAL PAYLOAD MAPPING
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestSignalPayloadMapping:
+    """Audit payload transparency fields consumed by frontend indicator cards."""
+
+    @staticmethod
+    def _run(coro):
+        import asyncio
+        return asyncio.run(coro)
+
+    def _make_rows(self, n: int = 80) -> list[dict]:
+        rows = []
+        for i in range(n):
+            c = 500.0 + i * 0.2
+            rows.append(_base_row(
+                close=c,
+                high=c + 2.0,
+                low=c - 2.0,
+                volume=5_000_000.0,
+                value=250_000.0,
+                atr=8.0,
+                obv=500_000.0 * (i + 1),
+                ema_20=c * 0.982,
+                ema_50=c * 0.960,
+                sma_200=c * 0.920,
+                adx_14=30.0,
+                rsi_14=58.0,
+                macd=2.0,
+                macd_signal=1.5,
+                macd_hist=0.5,
+                stoch_k=55.0,
+                stoch_d=48.0,
+                cmf_20=0.18,
+                date=f"2026-02-{(i % 28) + 1:02d}",
+            ))
+        return rows
+
+    def test_indicator_breakdown_preserves_dual_trend_scores(self):
+        trend_details = {
+            "base_raw": 67,
+            "final_adjusted": 44,
+            "adjustment_factor": 0.66,
+            "multipliers": {
+                "efficiency_ratio": 1.15,
+                "trend_age": 0.95,
+                "ema_stretch": 0.75,
+                "sector_lead_lag": 1.0,
+            },
+            "ema_pts": 40,
+            "ema_desc": "full_bullish_alignment",
+            "adx_pts": 24,
+            "adx_desc": "strong_trend_adx_28.0",
+            "swing_pts": 20,
+            "swing_desc": "partial_bullish_structure",
+            "raw_score": 44,
+        }
+        breakdown = _build_indicator_breakdown(
+            trend_details=trend_details,
+            momentum_details=None,
+            volume_details=None,
+            sr_details=None,
+        )
+        assert breakdown is not None
+        trend = breakdown["trend"]
+        assert trend["base_raw"] == 67
+        assert trend["final_adjusted"] == 44
+        assert trend["adjustment_factor"] == 0.66
+        assert trend["multipliers"]["ema_stretch"] == 0.75
+
+    def test_indicator_breakdown_fallback_maps_legacy_keys(self):
+        trend_details = {
+            "raw_score": 55,
+            "er_mult": 1.05,
+            "age_mult": 0.90,
+            "stretch_mult": 0.75,
+            "sector_mult": 1.00,
+            "ema_alignment_pts": 28,
+            "ema_alignment_desc": "short_term_bullish_no_200",
+            "adx_pts": 24,
+            "swing_structure_pts": 20,
+        }
+        breakdown = _build_indicator_breakdown(
+            trend_details=trend_details,
+            momentum_details=None,
+            volume_details=None,
+            sr_details=None,
+        )
+        assert breakdown is not None
+        trend = breakdown["trend"]
+        assert trend["base_raw"] == 55
+        assert trend["final_adjusted"] == 55
+        assert trend["multipliers"]["efficiency_ratio"] == 1.05
+        assert trend["multipliers"]["trend_age"] == 0.9
+        assert trend["multipliers"]["ema_stretch"] == 0.75
+        assert trend["multipliers"]["sector_lead_lag"] == 1.0
+
+    def test_indicator_breakdown_none_when_all_inputs_missing(self):
+        breakdown = _build_indicator_breakdown(None, None, None, None)
+        assert breakdown is None
+
+    def test_blocked_four_scores_return_no_trade_profile(self):
+        rows = _rising_rows(n=20, close_start=480.0, step=0.2)
+        blocked = _make_blocked_four_scores(rows, adtv_kwd=80_000.0, spread_pct=2.0)
+        assert blocked["potential"]["score"] == 0
+        assert blocked["overall"]["score"] <= 5
+        assert blocked["position_action"]["action"] == "NO_TRADE"
+
+    def test_end_to_end_signal_contains_four_scores_and_indicator_breakdown(self):
+        signal = self._run(generate_kuwait_signal(self._make_rows(), stock_code="TEST"))
+        confluence = signal["confluence_details"]
+        assert isinstance(confluence.get("four_scores"), dict)
+        indicator_breakdown = confluence.get("indicator_breakdown")
+        assert isinstance(indicator_breakdown, dict)
+        trend_block = indicator_breakdown.get("trend")
+        assert isinstance(trend_block, dict)
+        for key in ("base_raw", "final_adjusted", "adjustment_factor", "multipliers"):
+            assert key in trend_block, f"Missing trend indicator key: {key}"
+
+    def test_insufficient_data_neutral_still_contains_blocked_four_scores(self):
+        signal = self._run(generate_kuwait_signal(self._make_rows(n=10), stock_code="TEST"))
+        assert signal["signal"] == "NEUTRAL"
+        assert signal["reason"] == "insufficient_data"
+        four_scores = signal["confluence_details"].get("four_scores")
+        assert isinstance(four_scores, dict)
+        assert "overall" in four_scores

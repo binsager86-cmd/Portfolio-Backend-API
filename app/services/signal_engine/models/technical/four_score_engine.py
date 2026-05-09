@@ -196,29 +196,42 @@ def compute_risk_score(
     return raw, risk_level, desc
 
 
-# ── 4. OVERALL SCORE (NO GATING — RISK-ADJUSTED COMPOSITE) ───────────────────
+# ── 4. OVERALL SCORE (DUAL-SCORE: base confluence + risk-adjusted) ───────────
 
 def compute_overall_score(
     potential_raw: int,
     timing_raw: int,
     risk_raw: int,
-) -> tuple[int, str, str, float]:
-    """Risk-weighted composite: Potential (50%) + Timing (50%) × risk multiplier.
-
-    NO BLOCKING — risk reduces the score but never forces it to zero.
+    risk_tier: str,
+) -> tuple[int, int, str, str, float]:
+    """Return dual-score overall result.
 
     Returns:
-        (score 0-100, tier, description, risk_multiplier)
+        (base_score, adjusted_score, tier, description, risk_multiplier)
     """
-    base_confluence = (potential_raw * 0.50) + (timing_raw * 0.50)
+    base_score = int((potential_raw * 0.50) + (timing_raw * 0.50))
+    base_score = max(0, min(100, base_score))
 
-    # We no longer apply a risk multiplier to the overall score.
-    # It remains purely an average of Potential and Timing.
-    mult = 1.0
+    # Hard block for very weak risk tiers.
+    if risk_tier in ("Sell", "Strong Sell"):
+        return base_score, 0, "Strong Sell", "blocked_by_risk_gate", 0.0
 
-    raw = max(0, min(100, int(base_confluence)))
-    tier, desc = _classify_tier(raw)
-    return raw, tier, desc, mult
+    # Risk multiplier ladder.
+    if risk_raw >= 85:
+        mult = 1.00
+    elif risk_raw >= 70:
+        mult = 0.90
+    elif risk_raw >= 60:
+        mult = 0.75
+    elif risk_raw >= 40:
+        mult = 0.50
+    else:
+        mult = 0.0
+
+    adjusted_score = int(base_score * mult)
+    adjusted_score = max(0, min(100, adjusted_score))
+    tier, desc = _classify_tier(adjusted_score)
+    return base_score, adjusted_score, tier, desc, mult
 
 
 # ── DECISION MATRIX → position action ────────────────────────────────────────
@@ -323,8 +336,9 @@ def compute_all_four_scores(
     risk_score, risk_level, risk_desc = compute_risk_score(
         rr_ratio, atr_pct, adtv_kwd, spread_pct, circuit_dist
     )
-    ov_score, ov_tier, ov_desc, risk_mult = compute_overall_score(
-        pot_score, tim_score, risk_score
+    risk_tier, _risk_tier_desc = _classify_tier(risk_score)
+    ov_base, ov_score, ov_tier, ov_desc, risk_mult = compute_overall_score(
+        pot_score, tim_score, risk_score, risk_tier
     )
     action = compute_position_action(ov_tier, risk_level)
 
@@ -345,7 +359,9 @@ def compute_all_four_scores(
             "description": risk_desc,
         },
         "overall": {
+            "base_score": ov_base,
             "score": ov_score,
+            "adjustment_factor": risk_mult,
             "tier": ov_tier,
             "description": ov_desc,
             "risk_multiplier": risk_mult,

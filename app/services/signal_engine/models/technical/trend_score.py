@@ -192,24 +192,16 @@ def compute_trend_score(
     stock_sector: str = "",
     banking_trend_raw: float = 0.0,
 ) -> tuple[int, dict[str, Any]]:
-    """Compute the raw trend score with multiplicative context modifiers.
-
-    Args:
-        rows: OHLCV + indicator rows sorted ascending by date.
-        stock_sector: Sector string (e.g. ``"Banking"``).  Passed by
-            ``signal_generator`` after the banking-data fetch so the
-            sector lead-lag modifier can be applied in one call.
-        banking_trend_raw: Raw banking-index trend score [0–100].  A value
-            of 0.0 (default) disables the sector modifier (neutral × 1.0).
+    """Return dual-score trend result: pure base score + context-adjusted score.
 
     Returns:
-        Tuple of (final_score: int [0, 100], details: dict).
+        (final_adjusted_score, details)
 
-    Modifier pipeline (applied after base score):
-        1. Kaufman ER      — penalises choppy / noisy price action.
-        2. Trend age       — boosts fresh EMA20/50 crossovers, penalises aged trends.
-        3. EMA stretch     — penalises over-extension from EMA20 (mean-reversion risk).
-        4. Sector lead-lag — discounts non-banking stocks when banking is weak (optional).
+    The details dict preserves legacy keys while adding explicit transparency:
+      - ``base_raw``: pure technical structure score (no context multipliers)
+      - ``final_adjusted``: score after context multipliers
+      - ``adjustment_factor``: combined multiplier applied to base score
+      - ``multipliers``: named multiplier breakdown
     """
     if not rows:
         return 50, {"error": "no_rows"}
@@ -222,7 +214,8 @@ def compute_trend_score(
     swing_pts, swing_desc = _swing_structure_score(rows)
     base_raw = min(100, ema_pts + adx_pts + swing_pts)
 
-    # ── Modifier 1: Kaufman Efficiency Ratio ──────────────────────────────────
+    # ── Context multipliers ───────────────────────────────────────────────────
+    # Modifier 1: Kaufman Efficiency Ratio
     er = _kaufman_er(rows)
     if er > ER_HIGH:
         er_mult = 1.15
@@ -237,14 +230,14 @@ def compute_trend_score(
         er_mult = 1.00
         er_label = "neutral"
 
-    # ── Modifier 2: Trend age / maturity ─────────────────────────────────────
+    # Modifier 2: Trend age / maturity
     bars_since_cross = _bars_since_ema20_50_cross(rows)
     age_mult = max(
         TREND_AGE_FLOOR_MULT,
         TREND_AGE_PEAK_MULT - (bars_since_cross / TREND_AGE_SCALE),
     )
 
-    # ── Modifier 3: EMA stretch (mean-reversion guard) ────────────────────────
+    # Modifier 3: EMA stretch (mean-reversion guard)
     close = float(last.get("close") or 0.0)
     ema20_val = last.get("ema_20")
     atr14_val = last.get("atr_14")
@@ -264,9 +257,7 @@ def compute_trend_score(
         stretch_mult = 1.00
         stretch_label = "atr_unavailable"
 
-    # ── Modifier 4: Kuwait sector lead-lag (optional) ─────────────────────────
-    # Applied when banking context is provided by signal_generator (step 8a).
-    # Non-banking stocks are discounted when banking-sector trend is weak.
+    # Modifier 4: sector lead-lag (optional)
     sector_is_banking = str(stock_sector).lower() == "banking"
     if banking_trend_raw > 0 and not sector_is_banking and banking_trend_raw < 60:
         sector_mult = 0.85
@@ -275,20 +266,31 @@ def compute_trend_score(
         sector_mult = 1.00
         sector_label = "not_applied"
 
-    # ── Final score ───────────────────────────────────────────────────────────
     combined_mult = er_mult * age_mult * stretch_mult * sector_mult
     final_score = int(min(100, max(0, base_raw * combined_mult)))
 
     details: dict[str, Any] = {
-        # Base sub-components (unchanged — audit trail)
+        # Dual-score transparency
+        "base_raw":            base_raw,
+        "final_adjusted":      final_score,
+        "adjustment_factor":   round(combined_mult, 2),
+        "multipliers": {
+            "efficiency_ratio": round(er_mult, 2),
+            "trend_age": round(age_mult, 2),
+            "ema_stretch": round(stretch_mult, 2),
+            "sector_lead_lag": round(sector_mult, 2),
+        },
+        # Legacy and audit fields
         "ema_alignment_pts":   ema_pts,
         "ema_alignment_desc":  ema_desc,
+        "ema_pts":             ema_pts,
+        "ema_desc":            ema_desc,
         "adx_pts":             adx_pts,
         "adx_desc":            adx_desc,
         "swing_structure_pts": swing_pts,
         "swing_structure_desc": swing_desc,
-        "base_raw":            base_raw,
-        # Multipliers (full audit trail)
+        "swing_pts":           swing_pts,
+        "swing_desc":          swing_desc,
         "er_value":            round(er, 4),
         "er_mult":             er_mult,
         "er_label":            er_label,
@@ -300,6 +302,7 @@ def compute_trend_score(
         "sector_mult":         sector_mult,
         "sector_label":        sector_label,
         "combined_mult":       round(combined_mult, 4),
+        "final_score":         final_score,
         "raw_score":           final_score,
     }
     return final_score, details

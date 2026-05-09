@@ -24,6 +24,9 @@ _BACKGROUND_TASKS: set[asyncio.Task] = set()
 DEFAULT_MAX_CONCURRENCY = 4
 MAX_CONCURRENCY = 8
 DEFAULT_SEGMENT = "PREMIER"
+STALE_RUN_TIMEOUT_SECONDS = 60 * 60
+STALL_NO_PROGRESS_SECONDS = 10 * 60
+PER_SYMBOL_TIMEOUT_SECONDS = 45
 
 
 def _ensure_schema() -> None:
@@ -107,6 +110,77 @@ def _to_int(value: Any) -> Optional[int]:
         return None
 
 
+def _close_stale_running_runs() -> None:
+    """Auto-close stale/stalled jobs so new scans are not blocked forever."""
+    now = int(time.time())
+    stale_rows = query_all(
+        "SELECT id, started_at, processed_symbols, success_count, failed_count "
+        "FROM technical_analysis_runs "
+        "WHERE status = 'running'"
+    )
+    for row in stale_rows:
+        started_at = _to_int(row.get("started_at"))
+        if started_at is None:
+            continue
+        age_seconds = now - started_at
+
+        run_id = _to_int(row.get("id"))
+        if run_id is None:
+            continue
+
+        score_stats = query_one(
+            "SELECT "
+            "COUNT(*) AS processed, "
+            "SUM(CASE WHEN error IS NULL OR error = '' THEN 1 ELSE 0 END) AS success, "
+            "MAX(created_at) AS last_write "
+            "FROM technical_analysis_scores "
+            "WHERE run_id = ?",
+            (run_id,),
+        ) or {}
+
+        processed = _to_int(score_stats.get("processed"))
+        success = _to_int(score_stats.get("success"))
+        if processed is None:
+            processed = _to_int(row.get("processed_symbols")) or 0
+        if success is None:
+            success = _to_int(row.get("success_count")) or 0
+        failed = max(0, processed - success)
+
+        last_write_ts = _to_int(score_stats.get("last_write"))
+        no_progress_seconds = age_seconds if last_write_ts is None else max(0, now - last_write_ts)
+
+        timed_out = age_seconds > STALE_RUN_TIMEOUT_SECONDS
+        stalled = no_progress_seconds > STALL_NO_PROGRESS_SECONDS
+        if not (timed_out or stalled):
+            continue
+
+        if timed_out:
+            reason = f"Auto-closed stale run after timeout ({STALE_RUN_TIMEOUT_SECONDS // 60}m)"
+            logger.warning(
+                "Technical batch: auto-closing timed-out run %s after %ss (processed=%s)",
+                run_id,
+                age_seconds,
+                processed,
+            )
+        else:
+            reason = f"Auto-closed stalled run after no progress ({STALL_NO_PROGRESS_SECONDS // 60}m)"
+            logger.warning(
+                "Technical batch: auto-closing stalled run %s after %ss without progress (processed=%s)",
+                run_id,
+                no_progress_seconds,
+                processed,
+            )
+
+        _finish_run(
+            run_id,
+            status="failed",
+            processed_symbols=processed,
+            success_count=success,
+            failed_count=failed,
+            message=reason,
+        )
+
+
 def _load_universe(limit: Optional[int] = None) -> list[dict[str, str]]:
     """Return a unique, sorted Kuwait stock universe."""
     seen: set[str] = set()
@@ -167,6 +241,7 @@ def _serialize_score_row(row: Any) -> dict[str, Any]:
 
 def get_active_run() -> Optional[dict[str, Any]]:
     _ensure_schema()
+    _close_stale_running_runs()
     row = query_one(
         "SELECT * FROM technical_analysis_runs "
         "WHERE status = 'running' "
@@ -180,6 +255,7 @@ def get_active_run() -> Optional[dict[str, Any]]:
 
 def get_latest_run(limit: int = 300) -> dict[str, Any]:
     _ensure_schema()
+    _close_stale_running_runs()
     safe_limit = max(1, min(1000, int(limit or 300)))
 
     run_row = query_one(
@@ -195,7 +271,7 @@ def get_latest_run(limit: int = 300) -> dict[str, Any]:
         "risk_adjusted_score, error "
         "FROM technical_analysis_scores "
         "WHERE run_id = ? "
-        "ORDER BY CASE WHEN overall_score IS NULL THEN 1 ELSE 0 END, overall_score DESC, symbol ASC "
+        "ORDER BY CASE WHEN raw_technical_score IS NULL THEN 1 ELSE 0 END, raw_technical_score DESC, symbol ASC "
         "LIMIT ?",
         (run["id"], safe_limit),
     )
@@ -205,6 +281,7 @@ def get_latest_run(limit: int = 300) -> dict[str, Any]:
 
 def get_run_by_id(run_id: int, limit: int = 300) -> dict[str, Any]:
     _ensure_schema()
+    _close_stale_running_runs()
     safe_limit = max(1, min(1000, int(limit or 300)))
 
     run_row = query_one("SELECT * FROM technical_analysis_runs WHERE id = ?", (run_id,))
@@ -218,7 +295,7 @@ def get_run_by_id(run_id: int, limit: int = 300) -> dict[str, Any]:
         "risk_adjusted_score, error "
         "FROM technical_analysis_scores "
         "WHERE run_id = ? "
-        "ORDER BY CASE WHEN overall_score IS NULL THEN 1 ELSE 0 END, overall_score DESC, symbol ASC "
+        "ORDER BY CASE WHEN raw_technical_score IS NULL THEN 1 ELSE 0 END, raw_technical_score DESC, symbol ASC "
         "LIMIT ?",
         (run_id, safe_limit),
     )
@@ -319,6 +396,33 @@ def _insert_score(run_id: int, score: dict[str, Any]) -> None:
     )
 
 
+def _failed_symbol_row(
+    *,
+    symbol: str,
+    company_name: str,
+    segment: str,
+    error: str,
+    signal: str | None = None,
+    reason: str | None = None,
+) -> dict[str, Any]:
+    """Build a table-ready failed row so every symbol is accounted for."""
+    return {
+        "symbol": symbol,
+        "company_name": company_name,
+        "segment": segment.upper(),
+        "signal": signal,
+        "reason": reason,
+        "trend_score": None,
+        "momentum_score": None,
+        "buying_pressure_score": None,
+        "key_price_level_score": None,
+        "overall_score": None,
+        "raw_technical_score": None,
+        "risk_adjusted_score": None,
+        "error": (error or "unknown_error")[:300],
+    }
+
+
 async def _score_one_symbol(
     symbol: str,
     company_name: str,
@@ -361,15 +465,45 @@ async def _score_one_symbol(
         sr_raw = _to_int(((component_scores.get("support_resistance") or {}).get("raw")))
 
         confluence = signal.get("confluence_details") or {}
+        score_breakdown = signal.get("score_breakdown") or {}
         four_scores = confluence.get("four_scores") or {}
-        overall_from_four = _to_int((((four_scores.get("overall") or {}).get("score"))))
+        overall_four = four_scores.get("overall") or {}
 
-        raw_technical_score = _to_int(signal.get("raw_technical_score"))
-        risk_adjusted_score = _to_int(signal.get("risk_adjusted_score"))
+        # Daily batch UI dual-overall semantics:
+        # - raw_technical_score  -> combined score WITHOUT directional trend adjustment
+        # - risk_adjusted_score  -> combined score WITH directional trend adjustment
+        combined_no_adjustment = _to_int(signal.get("combined_score_unadjusted_directional"))
+        combined_with_adjustment = _to_int(signal.get("combined_score_adjusted_directional"))
 
-        overall_score = overall_from_four
-        if overall_score is None:
-            overall_score = risk_adjusted_score if risk_adjusted_score is not None else raw_technical_score
+        # Backfill from score_breakdown for mixed/older payload variants.
+        if combined_no_adjustment is None:
+            combined_no_adjustment = _to_int(score_breakdown.get("combined_unadjusted_directional"))
+        if combined_with_adjustment is None:
+            combined_with_adjustment = _to_int(score_breakdown.get("combined_adjusted_directional"))
+
+        # In current engine raw_technical_score matches combined adjusted directional.
+        if combined_with_adjustment is None:
+            combined_with_adjustment = _to_int(signal.get("raw_technical_score"))
+
+        # Legacy fallback path for older runs that only had four-score overall values.
+        if combined_no_adjustment is None:
+            combined_no_adjustment = _to_int(overall_four.get("base_score"))
+        if combined_with_adjustment is None:
+            combined_with_adjustment = _to_int(overall_four.get("score"))
+
+        # Final fallback from older confluence totals.
+        if combined_no_adjustment is None:
+            combined_no_adjustment = _to_int(confluence.get("total_score_raw"))
+        if combined_with_adjustment is None:
+            combined_with_adjustment = _to_int(confluence.get("total_score"))
+
+        # Safety: keep both columns populated whenever one side exists.
+        if combined_no_adjustment is None:
+            combined_no_adjustment = combined_with_adjustment
+        if combined_with_adjustment is None:
+            combined_with_adjustment = combined_no_adjustment
+
+        overall_score = combined_with_adjustment
 
         return {
             "symbol": symbol,
@@ -382,27 +516,28 @@ async def _score_one_symbol(
             "buying_pressure_score": volume_raw,
             "key_price_level_score": sr_raw,
             "overall_score": overall_score,
-            "raw_technical_score": raw_technical_score,
-            "risk_adjusted_score": risk_adjusted_score,
+            "raw_technical_score": combined_no_adjustment,
+            "risk_adjusted_score": combined_with_adjustment,
             "error": None,
         }
     except Exception as exc:  # noqa: BLE001
-        logger.warning("Technical batch: %s failed: %s", symbol, exc)
-        return {
-            "symbol": symbol,
-            "company_name": company_name,
-            "segment": segment.upper(),
-            "signal": None,
-            "reason": None,
-            "trend_score": None,
-            "momentum_score": None,
-            "buying_pressure_score": None,
-            "key_price_level_score": None,
-            "overall_score": None,
-            "raw_technical_score": None,
-            "risk_adjusted_score": None,
-            "error": str(exc)[:300],
-        }
+        err_code = str(exc)[:300]
+        logger.warning("Technical batch: %s failed: %s", symbol, err_code)
+        if err_code in {"no_price_data", "symbol_resolution_failed"}:
+            return _failed_symbol_row(
+                symbol=symbol,
+                company_name=company_name,
+                segment=segment,
+                error=err_code,
+                signal="NO_DATA",
+                reason=err_code,
+            )
+        return _failed_symbol_row(
+            symbol=symbol,
+            company_name=company_name,
+            segment=segment,
+            error=err_code,
+        )
 
 
 async def _execute_run(
@@ -414,15 +549,45 @@ async def _execute_run(
     account_equity: float,
 ) -> dict[str, Any]:
     sem = asyncio.Semaphore(max(1, min(MAX_CONCURRENCY, max_concurrency)))
+    accounted_symbols: set[str] = set()
+    loop_exception: Exception | None = None
 
     async def _worker(entry: dict[str, str]) -> dict[str, Any]:
         async with sem:
-            return await _score_one_symbol(
-                symbol=entry["symbol"],
-                company_name=entry["name"],
-                segment=segment,
-                account_equity=account_equity,
-            )
+            symbol = entry["symbol"]
+            company_name = entry["name"]
+            try:
+                return await asyncio.wait_for(
+                    _score_one_symbol(
+                        symbol=symbol,
+                        company_name=company_name,
+                        segment=segment,
+                        account_equity=account_equity,
+                    ),
+                    timeout=PER_SYMBOL_TIMEOUT_SECONDS,
+                )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "Technical batch: %s timed out after %ss",
+                    symbol,
+                    PER_SYMBOL_TIMEOUT_SECONDS,
+                )
+                return _failed_symbol_row(
+                    symbol=symbol,
+                    company_name=company_name,
+                    segment=segment,
+                    error="symbol_timeout",
+                    signal="NO_DATA",
+                    reason="symbol_timeout",
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.exception("Technical batch worker crashed for %s", symbol)
+                return _failed_symbol_row(
+                    symbol=symbol,
+                    company_name=company_name,
+                    segment=segment,
+                    error=f"worker_exception:{exc}",
+                )
 
     tasks = [asyncio.create_task(_worker(entry)) for entry in universe]
 
@@ -431,27 +596,98 @@ async def _execute_run(
     success = 0
     failed = 0
 
-    for task in asyncio.as_completed(tasks):
-        result = await task
-        _insert_score(run_id, result)
+    try:
+        for task in asyncio.as_completed(tasks):
+            result = await task
+            symbol = str(result.get("symbol") or "")
 
-        processed += 1
-        if result.get("error"):
-            failed += 1
-        else:
-            success += 1
+            try:
+                _insert_score(run_id, result)
+            except Exception as insert_exc:  # noqa: BLE001
+                logger.exception(
+                    "Technical batch run %s: failed inserting row for %s",
+                    run_id,
+                    symbol or "<unknown>",
+                )
+                if loop_exception is None:
+                    loop_exception = insert_exc
+                continue
 
-        if processed == 1 or processed % 10 == 0 or processed == total:
-            _update_run_progress(
-                run_id,
-                processed_symbols=processed,
-                success_count=success,
-                failed_count=failed,
-                message=f"Processed {processed}/{total}",
+            if symbol:
+                accounted_symbols.add(symbol)
+
+            processed += 1
+            if result.get("error"):
+                failed += 1
+            else:
+                success += 1
+
+            if processed == 1 or processed % 10 == 0 or processed == total:
+                _update_run_progress(
+                    run_id,
+                    processed_symbols=processed,
+                    success_count=success,
+                    failed_count=failed,
+                    message=f"Processed {processed}/{total}",
+                )
+    except Exception as exc:  # noqa: BLE001
+        loop_exception = exc
+        logger.exception("Technical batch run %s interrupted during processing", run_id)
+    finally:
+        # Ensure all tasks are finalized and no task remains running in the loop.
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+    # Reconcile missing symbols so the run accounts for the full universe.
+    if len(accounted_symbols) < total:
+        reason = "batch_interrupted" if loop_exception else "symbol_not_accounted"
+        missing_entries = [
+            entry for entry in universe if entry["symbol"] not in accounted_symbols
+        ]
+        for entry in missing_entries:
+            fallback = _failed_symbol_row(
+                symbol=entry["symbol"],
+                company_name=entry["name"],
+                segment=segment,
+                error=reason,
+                signal="NO_DATA",
+                reason=reason,
             )
+            try:
+                _insert_score(run_id, fallback)
+                accounted_symbols.add(entry["symbol"])
+            except Exception as insert_exc:  # noqa: BLE001
+                logger.exception(
+                    "Technical batch run %s: failed inserting reconciliation row for %s",
+                    run_id,
+                    entry["symbol"],
+                )
+                if loop_exception is None:
+                    loop_exception = insert_exc
 
-    status = "completed" if success > 0 else "failed"
-    finish_message = f"Completed: {success} success, {failed} failed"
+    # Recompute counts from persisted rows to keep run metadata consistent.
+    stats = query_one(
+        "SELECT "
+        "COUNT(*) AS processed, "
+        "SUM(CASE WHEN error IS NULL OR error = '' THEN 1 ELSE 0 END) AS success "
+        "FROM technical_analysis_scores "
+        "WHERE run_id = ?",
+        (run_id,),
+    ) or {}
+
+    processed = _to_int(stats.get("processed")) or 0
+    success = _to_int(stats.get("success")) or 0
+    failed = max(0, processed - success)
+
+    if processed < total:
+        status = "failed"
+        finish_message = f"Incomplete: accounted {processed}/{total}, success {success}, failed {failed}"
+    elif loop_exception is not None:
+        status = "failed"
+        finish_message = f"Completed with interruption: {success} success, {failed} failed"
+    else:
+        status = "completed" if success > 0 else "failed"
+        finish_message = f"Completed: {success} success, {failed} failed"
+
     _finish_run(
         run_id,
         status=status,

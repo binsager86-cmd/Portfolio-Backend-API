@@ -735,6 +735,11 @@ async def generate_kuwait_signal(
     w_sr = weights["support_resistance"]
     w_rr = weights["risk_reward"]
 
+    try:
+        trend_base_raw = int(float(trend_details.get("base_raw", trend_raw)))
+    except (TypeError, ValueError):
+        trend_base_raw = int(trend_raw)
+
     sub_weighted = {
         "trend":              round(trend_raw * w_trend),
         "momentum":           round(momentum_raw * w_mom),
@@ -750,6 +755,18 @@ async def generate_kuwait_signal(
     
     # Apply Hurst confidence penalty to total score
     total_score = int(total_score * hurst_confidence_penalty)
+
+    # Companion combined score without directional trend adjustment.
+    _four_factor_sum_unadjusted = (
+        round(trend_base_raw * w_trend)
+        + round(momentum_raw * w_mom)
+        + round(volume_raw * w_vol)
+        + round(sr_raw * w_sr)
+    )
+    total_score_without_trend_directional_adjustment = int((_four_factor_sum_unadjusted / 0.85))
+    total_score_without_trend_directional_adjustment = int(
+        total_score_without_trend_directional_adjustment * hurst_confidence_penalty
+    )
 
     # ── 9b. Hurst + Neutral_Chop combined gate ────────────────────────────────
     # Even when Hurst says "skip_or_downgrade" (borderline), block low-conviction
@@ -830,6 +847,8 @@ async def generate_kuwait_signal(
         "cvar_penalty_pct": 0.0,  # CVaR reduces position size, not the score
         "age_decay_applied": False,  # updated after decay step below
         "final_risk_adjusted": risk_adjusted_score,
+        "combined_adjusted_directional": raw_technical_score,
+        "combined_unadjusted_directional": total_score_without_trend_directional_adjustment,
     }
 
     # ── 12. CVaR and position sizing ─────────────────────────────────────────
@@ -1020,6 +1039,8 @@ async def generate_kuwait_signal(
         position_sizing=phased_kelly_result,
         raw_technical_score=raw_technical_score,
         risk_adjusted_score=risk_adjusted_score,
+        combined_score_adjusted_directional=raw_technical_score,
+        combined_score_unadjusted_directional=total_score_without_trend_directional_adjustment,
         score_breakdown=_score_breakdown,
     )
 
@@ -1081,7 +1102,19 @@ def _build_indicator_breakdown(
     """Normalize technical scorer details to the frontend indicator_breakdown shape."""
     trend_block = None
     if trend_details:
+        multipliers = trend_details.get("multipliers")
+        if not isinstance(multipliers, dict):
+            multipliers = {
+                "efficiency_ratio": float(trend_details.get("er_mult", 1.0) or 1.0),
+                "trend_age": float(trend_details.get("age_mult", 1.0) or 1.0),
+                "ema_stretch": float(trend_details.get("stretch_mult", 1.0) or 1.0),
+                "sector_lead_lag": float(trend_details.get("sector_mult", 1.0) or 1.0),
+            }
         trend_block = {
+            "base_raw": int(trend_details.get("base_raw", trend_details.get("raw_score", 0)) or 0),
+            "final_adjusted": int(trend_details.get("final_adjusted", trend_details.get("raw_score", 0)) or 0),
+            "adjustment_factor": float(trend_details.get("adjustment_factor", trend_details.get("combined_mult", 1.0)) or 1.0),
+            "multipliers": multipliers,
             "ema_pts": int(trend_details.get("ema_pts", trend_details.get("ema_alignment_pts", 0)) or 0),
             "ema_desc": trend_details.get("ema_desc", trend_details.get("ema_alignment_desc", "unavailable")),
             "adx_pts": int(trend_details.get("adx_pts", 0) or 0),

@@ -58,6 +58,8 @@ def format_signal(
     # ── Score transparency ────────────────────────────────────────────────────
     raw_technical_score: int | None = None,
     risk_adjusted_score: int | None = None,
+    combined_score_adjusted_directional: int | None = None,
+    combined_score_unadjusted_directional: int | None = None,
     score_breakdown: dict[str, Any] | None = None,
     # ── Block-reason fields (for NEUTRAL signals) ─────────────────────────────
     block_reason: str | None = None,
@@ -134,6 +136,8 @@ def format_signal(
         # ── Score transparency (new) ─────────────────────────────────────────
         "raw_technical_score": raw_technical_score,
         "risk_adjusted_score": risk_adjusted_score,
+        "combined_score_adjusted_directional": combined_score_adjusted_directional,
+        "combined_score_unadjusted_directional": combined_score_unadjusted_directional,
         "score_breakdown": score_breakdown,
         "component_scores": _build_component_scores(confluence),
 
