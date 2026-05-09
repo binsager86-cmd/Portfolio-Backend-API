@@ -12,6 +12,7 @@ Verified properties:
 """
 from __future__ import annotations
 
+import asyncio
 import math
 import random
 import pytest
@@ -28,6 +29,10 @@ from app.services.signal_engine.config.kuwait_constants import (
 
 
 # ── Synthetic OHLCV dataset builder ───────────────────────────────────────────
+
+def _run(coro):
+    """Run async signal generator in sync pytest tests."""
+    return asyncio.run(coro)
 
 def _make_ohlcv(
     n: int = 300,
@@ -108,8 +113,15 @@ class TestNBKSignalFlow:
     @pytest.fixture(scope="class")
     def signal(self):
         rows = _make_ohlcv(n=300, start_price=720.0, trend=0.0005, adtv_kd=400_000.0, seed=1)
-        return generate_kuwait_signal(rows, stock_code="NBK", segment="PREMIER",
-                                      account_equity=100_000.0, delay_hours=0)
+        return _run(
+            generate_kuwait_signal(
+                rows,
+                stock_code="NBK",
+                segment="PREMIER",
+                account_equity=100_000.0,
+                delay_hours=0,
+            )
+        )
 
     def test_canonical_schema_keys_present(self, signal):
         required = ["timestamp", "stock_code", "segment", "signal", "setup_type",
@@ -157,8 +169,15 @@ class TestZAINSignalFlow:
     @pytest.fixture(scope="class")
     def signal(self):
         rows = _make_ohlcv(n=300, start_price=560.0, trend=0.0, sigma=0.012, adtv_kd=200_000.0, seed=7)
-        return generate_kuwait_signal(rows, stock_code="ZAIN", segment="PREMIER",
-                                      account_equity=50_000.0, delay_hours=0)
+        return _run(
+            generate_kuwait_signal(
+                rows,
+                stock_code="ZAIN",
+                segment="PREMIER",
+                account_equity=50_000.0,
+                delay_hours=0,
+            )
+        )
 
     def test_schema_valid(self, signal):
         assert "confluence_details" in signal
@@ -188,8 +207,15 @@ class TestMABANEESignalFlow:
     def signal(self):
         # MABANEE is higher-priced: test the 1.0-fil tick grid
         rows = _make_ohlcv(n=300, start_price=1100.0, trend=0.0003, adtv_kd=150_000.0, seed=13)
-        return generate_kuwait_signal(rows, stock_code="MABANEE", segment="PREMIER",
-                                      account_equity=75_000.0, delay_hours=0)
+        return _run(
+            generate_kuwait_signal(
+                rows,
+                stock_code="MABANEE",
+                segment="PREMIER",
+                account_equity=75_000.0,
+                delay_hours=0,
+            )
+        )
 
     def test_large_tick_grid_applied(self, signal):
         """Prices above 100.9 fils must use 1.0-fil tick grid."""
@@ -227,7 +253,7 @@ class TestCircuitBreakerRejection:
         rows[-1]["close"] = round(upper, 1)
         rows[-1]["high"] = round(upper * 1.001, 1)
         rows[-1]["low"] = round(upper * 0.998, 1)
-        sig = generate_kuwait_signal(rows, "CBK", "PREMIER", 100_000.0, delay_hours=0)
+        sig = _run(generate_kuwait_signal(rows, "CBK", "PREMIER", 100_000.0, delay_hours=0))
         # Near circuit: BUY entries should not target above the circuit limit
         if sig["signal"] == "BUY":
             tp2 = sig["execution"].get("tp2_fils")
@@ -242,7 +268,7 @@ class TestCircuitBreakerRejection:
         rows[-1]["close"] = round(lower, 1)
         rows[-1]["high"] = round(lower * 1.002, 1)
         rows[-1]["low"] = round(lower * 0.999, 1)
-        sig = generate_kuwait_signal(rows, "BURG", "PREMIER", 100_000.0, delay_hours=0)
+        sig = _run(generate_kuwait_signal(rows, "BURG", "PREMIER", 100_000.0, delay_hours=0))
         # Near lower circuit: SELL SL shouldn't be placed below circuit floor
         if sig["signal"] == "SELL":
             sl = sig["execution"].get("stop_loss_fils")
@@ -257,13 +283,13 @@ class TestLiquidityGate:
     def test_illiquid_stock_returns_neutral(self):
         """Stock with ADTV below threshold should always return NEUTRAL."""
         rows = _make_ohlcv(n=300, adtv_kd=10_000.0, seed=55)  # far below 100k KD min
-        sig = generate_kuwait_signal(rows, "ILLIQUID", "PREMIER", 100_000.0, delay_hours=0)
+        sig = _run(generate_kuwait_signal(rows, "ILLIQUID", "PREMIER", 100_000.0, delay_hours=0))
         assert sig["signal"] == "NEUTRAL"
 
     def test_liquid_stock_can_generate_directional_signal(self):
         """Strong trend + liquid stock should NOT always be NEUTRAL."""
         rows = _make_ohlcv(n=300, trend=0.001, sigma=0.008, adtv_kd=500_000.0, seed=21)
-        sig = generate_kuwait_signal(rows, "NBK", "PREMIER", 100_000.0, delay_hours=0)
+        sig = _run(generate_kuwait_signal(rows, "NBK", "PREMIER", 100_000.0, delay_hours=0))
         # We cannot guarantee a BUY (depends on data), but should not raise
         assert sig["signal"] in {"BUY", "SELL", "NEUTRAL"}
 
@@ -273,8 +299,8 @@ class TestLiquidityGate:
 class TestDelayDecay:
     def test_48h_delay_lowers_confidence(self):
         rows = _make_ohlcv(n=300, trend=0.001, adtv_kd=300_000.0, seed=33)
-        sig_0h = generate_kuwait_signal(rows, "NBK", "PREMIER", 100_000.0, delay_hours=0)
-        sig_48h = generate_kuwait_signal(rows, "NBK", "PREMIER", 100_000.0, delay_hours=48)
+        sig_0h = _run(generate_kuwait_signal(rows, "NBK", "PREMIER", 100_000.0, delay_hours=0))
+        sig_48h = _run(generate_kuwait_signal(rows, "NBK", "PREMIER", 100_000.0, delay_hours=48))
         p0 = sig_0h.get("probabilities", {}).get("p_tp1_before_sl") or 0.0
         p48 = sig_48h.get("probabilities", {}).get("p_tp1_before_sl") or 0.0
         assert p48 <= p0 + 0.01  # 48h delay never increases probability

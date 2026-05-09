@@ -79,12 +79,24 @@ def _ensure_dir(base_dir: Path) -> None:
     base_dir.mkdir(parents=True, exist_ok=True)
 
 
+def _resolve_base_dir(
+    base_dir: Path | str | None = None,
+    store_dir: Path | str | None = None,
+) -> Path:
+    """Resolve storage directory from either ``base_dir`` or legacy ``store_dir``."""
+    selected = base_dir if base_dir is not None else store_dir
+    if selected is None:
+        return _DEFAULT_BASE_DIR
+    return Path(selected)
+
+
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def save_rows(
     stock_code: str,
     rows: list[dict[str, Any]],
-    base_dir: Path | None = None,
+    base_dir: Path | str | None = None,
+    store_dir: Path | str | None = None,
 ) -> bool:
     """Persist OHLCV+indicator rows for a stock to Parquet.
 
@@ -104,7 +116,7 @@ def save_rows(
     if not rows:
         return True
 
-    base = base_dir or _DEFAULT_BASE_DIR
+    base = _resolve_base_dir(base_dir=base_dir, store_dir=store_dir)
     _ensure_dir(base)
     path = _stock_path(stock_code, base)
 
@@ -140,7 +152,10 @@ def load_rows(
     stock_code: str,
     from_date: str | None = None,
     to_date: str | None = None,
-    base_dir: Path | None = None,
+    base_dir: Path | str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    store_dir: Path | str | None = None,
 ) -> list[dict[str, Any]]:
     """Load stored OHLCV+indicator rows for a stock.
 
@@ -149,6 +164,9 @@ def load_rows(
         from_date:  Optional start date filter (YYYY-MM-DD, inclusive).
         to_date:    Optional end date filter (YYYY-MM-DD, inclusive).
         base_dir:   Override storage directory.
+        start_date: Alias of from_date.
+        end_date:   Alias of to_date.
+        store_dir:  Legacy alias of base_dir.
 
     Returns:
         List of row dicts sorted ascending by date.  Empty list if not found.
@@ -156,7 +174,7 @@ def load_rows(
     if not _PARQUET_AVAILABLE:
         return []
 
-    base = base_dir or _DEFAULT_BASE_DIR
+    base = _resolve_base_dir(base_dir=base_dir, store_dir=store_dir)
     path = _stock_path(stock_code, base)
 
     if not path.exists():
@@ -167,10 +185,13 @@ def load_rows(
         df = table.to_pandas()
         df["date"] = df["date"].astype(str)
 
-        if from_date:
-            df = df[df["date"] >= from_date]
-        if to_date:
-            df = df[df["date"] <= to_date]
+        start = from_date or start_date
+        end = to_date or end_date
+
+        if start:
+            df = df[df["date"] >= start]
+        if end:
+            df = df[df["date"] <= end]
 
         df = df.sort_values("date").reset_index(drop=True)
         # Replace NaN with None for downstream compatibility
@@ -180,12 +201,16 @@ def load_rows(
         return []
 
 
-def delete_stock(stock_code: str, base_dir: Path | None = None) -> bool:
+def delete_stock(
+    stock_code: str,
+    base_dir: Path | str | None = None,
+    store_dir: Path | str | None = None,
+) -> bool:
     """Delete the stored parquet file for a stock.
 
     Returns True if deleted, False if file did not exist or deletion failed.
     """
-    base = base_dir or _DEFAULT_BASE_DIR
+    base = _resolve_base_dir(base_dir=base_dir, store_dir=store_dir)
     path = _stock_path(stock_code, base)
     if not path.exists():
         return False
@@ -197,9 +222,12 @@ def delete_stock(stock_code: str, base_dir: Path | None = None) -> bool:
         return False
 
 
-def list_stored_stocks(base_dir: Path | None = None) -> list[str]:
+def list_stored_stocks(
+    base_dir: Path | str | None = None,
+    store_dir: Path | str | None = None,
+) -> list[str]:
     """Return list of stock codes that have stored parquet files."""
-    base = base_dir or _DEFAULT_BASE_DIR
+    base = _resolve_base_dir(base_dir=base_dir, store_dir=store_dir)
     if not base.exists():
         return []
     return sorted(p.stem for p in base.glob("*.parquet"))
@@ -207,13 +235,15 @@ def list_stored_stocks(base_dir: Path | None = None) -> list[str]:
 
 def get_date_range(
     stock_code: str,
-    base_dir: Path | None = None,
+    base_dir: Path | str | None = None,
+    store_dir: Path | str | None = None,
 ) -> tuple[str | None, str | None]:
     """Return (first_date, last_date) of stored data for a stock.
 
     Returns (None, None) if no data exists.
     """
-    rows = load_rows(stock_code, base_dir=base_dir)
+    base = _resolve_base_dir(base_dir=base_dir, store_dir=store_dir)
+    rows = load_rows(stock_code, base_dir=base)
     if not rows:
         return None, None
     dates = [str(r.get("date", "")) for r in rows if r.get("date")]

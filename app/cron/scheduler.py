@@ -125,6 +125,30 @@ def _run_daily_price_then_snapshot(user_id: int | None = None) -> dict:
     return {"price": all_price_results, "snapshot": all_snapshot_results}
 
 
+def _run_daily_technical_batch() -> dict:
+    """Daily job: run technical scoring across the Kuwait stock universe."""
+    settings = get_settings()
+    from app.services.technical_batch_service import run_batch_sync
+
+    logger.info(
+        "📊 Scheduler: starting daily technical batch (%02d:%02d Asia/Kuwait)",
+        settings.TECHNICAL_BATCH_HOUR,
+        settings.TECHNICAL_BATCH_MINUTE,
+    )
+
+    try:
+        result = run_batch_sync(
+            triggered_by="scheduler",
+            segment=settings.TECHNICAL_BATCH_SEGMENT,
+            max_concurrency=settings.TECHNICAL_BATCH_MAX_CONCURRENCY,
+        )
+        logger.info("📊 Scheduler: technical batch finished: %s", result.get("message"))
+        return result
+    except Exception as exc:
+        logger.warning("📊 Scheduler: technical batch failed: %s", exc)
+        return {"status": "error", "message": str(exc)}
+
+
 def _acquire_scheduler_lock() -> bool:
     """
     Try to acquire an exclusive file lock so only ONE gunicorn worker
@@ -243,6 +267,30 @@ def start_scheduler() -> None:
         logger.info("🗑️  Nightly data retention scheduled (03:00 Asia/Kuwait, 365-day window)")
     except Exception as exc:
         logger.warning("Could not schedule data retention sweep: %s", exc)
+
+    # ── Daily technical universe scoring ───────────────────────────
+    if settings.TECHNICAL_BATCH_ENABLED:
+        technical_trigger = CronTrigger(
+            hour=settings.TECHNICAL_BATCH_HOUR,
+            minute=settings.TECHNICAL_BATCH_MINUTE,
+            timezone="Asia/Kuwait",
+        )
+        _scheduler.add_job(
+            _run_daily_technical_batch,
+            trigger=technical_trigger,
+            id="daily_technical_batch",
+            name="Daily technical universe batch scoring",
+            replace_existing=True,
+            coalesce=True,
+            max_instances=1,
+        )
+        logger.info(
+            "📊 Daily technical batch scheduled — daily at %02d:%02d Asia/Kuwait",
+            settings.TECHNICAL_BATCH_HOUR,
+            settings.TECHNICAL_BATCH_MINUTE,
+        )
+    else:
+        logger.info("⏸  Technical batch scheduler disabled (TECHNICAL_BATCH_ENABLED=False)")
 
     _scheduler.start()
     logger.info("🕐 Scheduler started")

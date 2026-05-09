@@ -53,6 +53,11 @@ class Settings(BaseSettings):
     PRICE_UPDATE_HOUR: int = 14         # Hour (24h) in Asia/Kuwait to run daily
     PRICE_UPDATE_MINUTE: int = 0
     PRICE_UPDATE_ENABLED: bool = True   # Set False to disable the built-in scheduler
+    TECHNICAL_BATCH_ENABLED: bool = True
+    TECHNICAL_BATCH_HOUR: int = 14      # Daily technical universe scoring (Asia/Kuwait)
+    TECHNICAL_BATCH_MINUTE: int = 5
+    TECHNICAL_BATCH_MAX_CONCURRENCY: int = 4
+    TECHNICAL_BATCH_SEGMENT: str = "PREMIER"
     PUSH_NOTIFICATIONS_ENABLED: bool = True
 
     # App version gating

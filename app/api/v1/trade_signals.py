@@ -598,3 +598,62 @@ async def kuwait_signal(
     )
 
     return {"status": "ok", "data": signal}
+
+
+@router.get("/technical-batch/latest")
+async def technical_batch_latest(
+    limit: int = Query(default=300, ge=1, le=1000),
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Return the latest stored technical universe batch run + score rows."""
+    del current_user
+    from app.services.technical_batch_service import get_latest_run
+
+    return {"status": "ok", "data": get_latest_run(limit=limit)}
+
+
+@router.get("/technical-batch/{run_id}")
+async def technical_batch_by_id(
+    run_id: int,
+    limit: int = Query(default=300, ge=1, le=1000),
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Return a specific technical universe batch run + score rows."""
+    del current_user
+    from app.services.technical_batch_service import get_run_by_id
+
+    data = get_run_by_id(run_id, limit=limit)
+    if not data.get("run"):
+        raise HTTPException(status_code=404, detail=f"Technical batch run {run_id} not found")
+    return {"status": "ok", "data": data}
+
+
+@router.post("/technical-batch/run")
+async def technical_batch_run(
+    background: bool = Query(default=True, description="Run in background and return immediately"),
+    segment: str = Query(default="PREMIER", description="Segment label used by signal model"),
+    max_concurrency: int = Query(default=4, ge=1, le=8),
+    limit: Optional[int] = Query(default=None, ge=1, le=500),
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Trigger technical universe scoring for all configured Kuwait symbols."""
+    from app.services.technical_batch_service import kickoff_batch_background, run_batch_once
+
+    if background:
+        payload = kickoff_batch_background(
+            triggered_by="manual",
+            requested_by_user_id=current_user.user_id,
+            segment=segment,
+            max_concurrency=max_concurrency,
+            limit=limit,
+        )
+        return {"status": "ok", "data": payload}
+
+    payload = await run_batch_once(
+        triggered_by="manual",
+        requested_by_user_id=current_user.user_id,
+        segment=segment,
+        max_concurrency=max_concurrency,
+        limit=limit,
+    )
+    return {"status": "ok", "data": payload}
