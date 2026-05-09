@@ -28,6 +28,14 @@ STALE_RUN_TIMEOUT_SECONDS = 60 * 60
 STALL_NO_PROGRESS_SECONDS = 10 * 60
 PER_SYMBOL_TIMEOUT_SECONDS = 45
 
+_ACTION_PRIORITY: dict[str, int] = {
+    "EXECUTE": 0,
+    "HOLD": 1,
+    "WATCH": 2,
+    "AVOID": 3,
+    "FLAG": 4,
+}
+
 
 def _ensure_schema() -> None:
     """Create batch run/result tables if missing."""
@@ -108,6 +116,40 @@ def _to_int(value: Any) -> Optional[int]:
         return int(float(str(value)))
     except (TypeError, ValueError):
         return None
+
+
+def _resolve_combined_scores_from_signal(signal: dict[str, Any]) -> tuple[int | None, int | None]:
+    """Resolve (adjusted, unadjusted) combined scores from signal-engine output.
+
+    Priority follows the canonical signal contract first, then backward-compatible
+    fallbacks for older payloads.
+    """
+    score_breakdown = signal.get("score_breakdown") or {}
+    confluence = signal.get("confluence_details") or {}
+    four_scores = confluence.get("four_scores") or {}
+    overall_four = four_scores.get("overall") or {}
+
+    adjusted = _to_int(signal.get("combined_score_adjusted_directional"))
+    if adjusted is None:
+        adjusted = _to_int(score_breakdown.get("combined_adjusted_directional"))
+    if adjusted is None:
+        adjusted = _to_int(signal.get("raw_technical_score"))
+    if adjusted is None:
+        adjusted = _to_int(confluence.get("total_score_raw"))
+    if adjusted is None:
+        adjusted = _to_int(confluence.get("total_score"))
+    if adjusted is None:
+        adjusted = _to_int(overall_four.get("score"))
+
+    unadjusted = _to_int(signal.get("combined_score_unadjusted_directional"))
+    if unadjusted is None:
+        unadjusted = _to_int(score_breakdown.get("combined_unadjusted_directional"))
+    if unadjusted is None:
+        unadjusted = _to_int(overall_four.get("base_score"))
+    if unadjusted is None:
+        unadjusted = adjusted
+
+    return adjusted, unadjusted
 
 
 def _close_stale_running_runs() -> None:
@@ -221,21 +263,127 @@ def _serialize_run(row: Any) -> dict[str, Any]:
     }
 
 
+def _resolve_row_combined_scores_for_action(row: Any) -> tuple[int | None, int | None]:
+    """Resolve (base, adjusted) combined scores from a persisted score row."""
+    base = _to_int(row.get("raw_technical_score"))
+    adjusted = _to_int(row.get("risk_adjusted_score"))
+    overall = _to_int(row.get("overall_score"))
+
+    if adjusted is None:
+        adjusted = overall if overall is not None else base
+    if base is None:
+        base = overall if overall is not None else adjusted
+
+    return base, adjusted
+
+
+def _classify_action_recommendation(
+    *,
+    trend_directional: int | None,
+    combined_base: int | None,
+    combined_adjusted: int | None,
+    error: Any,
+) -> tuple[str | None, int | None, str | None, int | None]:
+    """Return (action, gap, note, priority) for technical-batch ranking."""
+    if error:
+        return None, None, None, None
+
+    if combined_base is None or combined_adjusted is None:
+        return None, None, None, None
+
+    trend = _to_int(trend_directional) or 0
+    gap = int(combined_base - combined_adjusted)
+
+    action: str
+    note: str
+
+    # Highest-priority sanity check for anomalous negative-gap weak-trend rows.
+    if gap < 0 and trend < 30:
+        action = "FLAG"
+        note = f"Negative gap {gap:+d} with trend {trend} < 30; review factor logic."
+        return action, gap, note, _ACTION_PRIORITY[action]
+
+    # Negative-gap gate: execute only when both trend and adjusted strength are high.
+    if gap < 0:
+        if combined_adjusted < 55:
+            action = "AVOID"
+            note = f"Negative gap {gap:+d} but adjusted {combined_adjusted} < 55."
+            return action, gap, note, _ACTION_PRIORITY[action]
+        if trend >= 50 and combined_adjusted >= 65:
+            action = "EXECUTE"
+            note = (
+                f"Negative gap {gap:+d} with trend {trend} and adjusted {combined_adjusted};"
+                " qualified execute."
+            )
+            return action, gap, note, _ACTION_PRIORITY[action]
+        action = "HOLD"
+        note = (
+            f"Negative gap {gap:+d} without trend>=50 and adjusted>=65; "
+            "downgraded to hold."
+        )
+        return action, gap, note, _ACTION_PRIORITY[action]
+
+    if 0 <= gap <= 5 and combined_adjusted >= 68:
+        action = "EXECUTE"
+        note = f"Gap {gap:+d} with adjusted {combined_adjusted} in execute band."
+        return action, gap, note, _ACTION_PRIORITY[action]
+
+    if (6 <= gap <= 10) or (0 <= gap <= 5 and 60 <= combined_adjusted <= 67):
+        action = "HOLD"
+        note = f"Gap {gap:+d} with adjusted {combined_adjusted} in hold band."
+        return action, gap, note, _ACTION_PRIORITY[action]
+
+    if 11 <= gap <= 15:
+        action = "WATCH"
+        note = f"Gap {gap:+d} in watch band."
+        return action, gap, note, _ACTION_PRIORITY[action]
+
+    if gap >= 16 or (combined_adjusted < 55 and gap >= 0):
+        action = "AVOID"
+        note = f"Gap {gap:+d} with adjusted {combined_adjusted} in avoid band."
+        return action, gap, note, _ACTION_PRIORITY[action]
+
+    action = "AVOID"
+    note = f"Gap {gap:+d} with adjusted {combined_adjusted} outside action bands."
+    return action, gap, note, _ACTION_PRIORITY[action]
+
+
 def _serialize_score_row(row: Any) -> dict[str, Any]:
+    trend_directional = _to_int(row.get("trend_score")) or 0
+    speed_momentum = _to_int(row.get("momentum_score")) or 0
+    buying_pressure = _to_int(row.get("buying_pressure_score")) or 0
+    key_price_level = _to_int(row.get("key_price_level_score")) or 0
+    overall_score = _to_int(row.get("overall_score"))
+    raw_technical_score = _to_int(row.get("raw_technical_score"))
+    risk_adjusted_score = _to_int(row.get("risk_adjusted_score"))
+    error = row.get("error")
+
+    combined_base, combined_adjusted = _resolve_row_combined_scores_for_action(row)
+    action_recommendation, score_gap, action_note, action_priority = _classify_action_recommendation(
+        trend_directional=trend_directional,
+        combined_base=combined_base,
+        combined_adjusted=combined_adjusted,
+        error=error,
+    )
+
     return {
         "symbol": str(row["symbol"]),
         "company_name": row.get("company_name"),
         "segment": row.get("segment"),
         "signal": row.get("signal"),
         "reason": row.get("reason"),
-        "trend_directional": _to_int(row.get("trend_score")) or 0,
-        "speed_momentum": _to_int(row.get("momentum_score")) or 0,
-        "buying_pressure": _to_int(row.get("buying_pressure_score")) or 0,
-        "key_price_level": _to_int(row.get("key_price_level_score")) or 0,
-        "overall_score": _to_int(row.get("overall_score")) or 0,
-        "raw_technical_score": _to_int(row.get("raw_technical_score")),
-        "risk_adjusted_score": _to_int(row.get("risk_adjusted_score")),
-        "error": row.get("error"),
+        "trend_directional": trend_directional,
+        "speed_momentum": speed_momentum,
+        "buying_pressure": buying_pressure,
+        "key_price_level": key_price_level,
+        "overall_score": overall_score,
+        "raw_technical_score": raw_technical_score,
+        "risk_adjusted_score": risk_adjusted_score,
+        "score_gap": score_gap,
+        "action_recommendation": action_recommendation,
+        "action_note": action_note,
+        "action_priority": action_priority,
+        "error": error,
     }
 
 
@@ -464,44 +612,10 @@ async def _score_one_symbol(
         volume_raw = _to_int(((component_scores.get("volume_flow") or {}).get("raw")))
         sr_raw = _to_int(((component_scores.get("support_resistance") or {}).get("raw")))
 
-        confluence = signal.get("confluence_details") or {}
-        score_breakdown = signal.get("score_breakdown") or {}
-        four_scores = confluence.get("four_scores") or {}
-        overall_four = four_scores.get("overall") or {}
-
-        # Daily batch UI dual-overall semantics:
-        # - raw_technical_score  -> combined score WITHOUT directional trend adjustment
-        # - risk_adjusted_score  -> combined score WITH directional trend adjustment
-        combined_no_adjustment = _to_int(signal.get("combined_score_unadjusted_directional"))
-        combined_with_adjustment = _to_int(signal.get("combined_score_adjusted_directional"))
-
-        # Backfill from score_breakdown for mixed/older payload variants.
-        if combined_no_adjustment is None:
-            combined_no_adjustment = _to_int(score_breakdown.get("combined_unadjusted_directional"))
-        if combined_with_adjustment is None:
-            combined_with_adjustment = _to_int(score_breakdown.get("combined_adjusted_directional"))
-
-        # In current engine raw_technical_score matches combined adjusted directional.
-        if combined_with_adjustment is None:
-            combined_with_adjustment = _to_int(signal.get("raw_technical_score"))
-
-        # Legacy fallback path for older runs that only had four-score overall values.
-        if combined_no_adjustment is None:
-            combined_no_adjustment = _to_int(overall_four.get("base_score"))
-        if combined_with_adjustment is None:
-            combined_with_adjustment = _to_int(overall_four.get("score"))
-
-        # Final fallback from older confluence totals.
-        if combined_no_adjustment is None:
-            combined_no_adjustment = _to_int(confluence.get("total_score_raw"))
-        if combined_with_adjustment is None:
-            combined_with_adjustment = _to_int(confluence.get("total_score"))
-
-        # Safety: keep both columns populated whenever one side exists.
-        if combined_no_adjustment is None:
-            combined_no_adjustment = combined_with_adjustment
-        if combined_with_adjustment is None:
-            combined_with_adjustment = combined_no_adjustment
+        # Daily batch dual-overall semantics:
+        # - raw_technical_score  -> combined score WITHOUT directional adjustment
+        # - risk_adjusted_score  -> combined score WITH directional adjustment
+        combined_with_adjustment, combined_no_adjustment = _resolve_combined_scores_from_signal(signal)
 
         overall_score = combined_with_adjustment
 
