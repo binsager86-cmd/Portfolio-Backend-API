@@ -45,7 +45,7 @@ def _build_component_scores(confluence: dict[str, Any]) -> dict[str, Any] | None
 def format_signal(
     stock_code: str,
     segment: str,
-    signal_direction: str,           # "BUY" | "SELL" | "NEUTRAL"
+    signal_direction: str,           # "BUY" | "STRONG_BUY" | "SELL" | "NEUTRAL" | "WATCH" | "HOLD"
     setup_type: str,
     levels: dict[str, Any],          # from compute_entry_stop_tp
     risk_metrics: dict[str, Any],    # position_sizer + cvar output
@@ -66,6 +66,7 @@ def format_signal(
     failed_gates: list[str] | None = None,
     block_details: dict[str, Any] | None = None,
     technical_scores_debug: dict[str, Any] | None = None,
+    entry_trigger: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Assemble the canonical signal output dict.
 
@@ -149,6 +150,19 @@ def format_signal(
         "failed_gates": failed_gates or [],
         "details": block_details or {},
         "technical_scores_debug": technical_scores_debug,
+        "entry_trigger": entry_trigger or {
+            "action": "HOLD",
+            "trigger": "none",
+            "pullback": {"triggered": False, "reason": "not_evaluated", "strength": 0},
+            "breakout": {"triggered": False, "reason": "not_evaluated", "strength": 0},
+            "accumulation": {"state": "absent", "obv_slope_pct": None, "cmf": None},
+            "triggered": False,
+            "trigger_type": None,
+            "trigger_strength": 0,
+            "accumulation_state": "absent",
+            "recommended_state": "HOLD",
+            "details": {"skipped": "not_evaluated"},
+        },
 
         "hurst": hurst_top,
         "orderbook_imbalance": ob_top,

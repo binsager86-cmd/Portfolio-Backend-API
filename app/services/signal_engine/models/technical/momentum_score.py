@@ -28,16 +28,16 @@ from app.services.signal_engine.config.model_params import ROC_PERIOD
 
 
 def _rsi_score(last: dict[str, Any]) -> tuple[int, str]:
-    """Max 25 pts (Option A: RSI=25%). Overbought threshold raised to 70."""
+    """Max 25 pts (Option A: RSI=25%). Overbought threshold raised to 75."""
     rsi = last.get("rsi_14")
     if rsi is None:
         return 12, "rsi_missing"
     v = float(rsi)
     if 50.0 <= v <= 65.0:
         return 25, f"healthy_bull_momentum_rsi_{v:.1f}"
-    if 65.0 < v < 70.0:
+    if 65.0 < v < 75.0:
         return 20, f"strong_but_extended_rsi_{v:.1f}"
-    if v >= 70.0:
+    if v >= 75.0:
         return 6, f"overbought_rsi_{v:.1f}"
     if 40.0 <= v < 50.0:
         return 13, f"recovering_rsi_{v:.1f}"
@@ -47,7 +47,7 @@ def _rsi_score(last: dict[str, Any]) -> tuple[int, str]:
 
 
 def _macd_score(last: dict[str, Any]) -> tuple[int, str]:
-    """Max 40 pts (Option A: MACD=40%). Captures trend persistence / block accumulation."""
+    """Max 40 pts (Option A: MACD=40%) with zero-line-aware state scoring."""
     macd = last.get("macd")
     signal = last.get("macd_signal")
     hist = last.get("macd_hist")
@@ -58,12 +58,16 @@ def _macd_score(last: dict[str, Any]) -> tuple[int, str]:
     m, s = float(macd), float(signal)
     h = float(hist) if hist is not None else m - s
 
-    if m > s and h > 0:
+    if m > s and h > 0 and m >= 0:
         return 40, "macd_bullish_accelerating"
-    if m > s and h <= 0:
-        return 25, "macd_above_signal_decelerating"
+    if m > s and h > 0 and m < 0:
+        return 30, "macd_bullish_accelerating_below_zero"
+    if m > s and h <= 0 and m >= 0:
+        return 27, "macd_above_signal_decelerating"
+    if m > s and h <= 0 and m < 0:
+        return 19, "macd_above_signal_decelerating_below_zero"
     if m < s and h > 0:
-        return 20, "macd_crossover_imminent"
+        return 16, "macd_crossover_imminent"
     return 5, "macd_bearish"
 
 
@@ -110,9 +114,13 @@ def _stoch_score(last: dict[str, Any]) -> tuple[int, str]:
             return 6, f"stoch_extended_not_overbought_k{k:.0f}"
         return 3, f"stoch_overbought_k{k:.0f}"
     else:
+        if 30.0 <= k <= 60.0:
+            return 4, f"stoch_bearish_midrange_k{k:.0f}"
         if k > 60.0:
             return 2, f"stoch_bearish_elevated_k{k:.0f}"
-        return 0, f"stoch_bearish_k{k:.0f}"
+        if 20.0 <= k < 30.0:
+            return 6, f"stoch_bearish_oversold_k{k:.0f}"
+        return 8, f"stoch_bearish_deep_oversold_k{k:.0f}"
 
 
 def compute_momentum_score(rows: list[dict[str, Any]]) -> tuple[int, dict[str, Any]]:

@@ -128,10 +128,10 @@ class TestStochastic:
         _, d = compute_momentum_score(rows)
         assert d["stoch_pts"] == 10
 
-    def test_k_below_d_bearish_gives_zero(self):
+    def test_k_below_d_bearish_midrange_gives_four(self):
         rows = _rows(stoch_k=35.0, stoch_d=50.0)  # K < D, K < 40
         _, d = compute_momentum_score(rows)
-        assert d["stoch_pts"] == 0
+        assert d["stoch_pts"] == 4
 
     def test_overbought_stoch_gives_reduced_pts(self):
         rows = _rows(stoch_k=85.0, stoch_d=70.0)  # K > D but overbought

@@ -395,15 +395,15 @@ class TestMomentumScorer:
         _, d = compute_momentum_score(self._rows(macd=2.0, macd_signal=1.5, macd_hist=0.5))
         assert d["macd_pts"] == 40
 
-    def test_macd_above_signal_decelerating_gives_25pts(self):
+    def test_macd_above_signal_decelerating_gives_27pts(self):
         # m > s AND h <= 0
         _, d = compute_momentum_score(self._rows(macd=2.0, macd_signal=1.5, macd_hist=-0.1))
-        assert d["macd_pts"] == 25
+        assert d["macd_pts"] == 27
 
-    def test_macd_crossover_imminent_gives_20pts(self):
+    def test_macd_crossover_imminent_gives_16pts(self):
         # m < s AND h > 0 (histogram turning up)
         _, d = compute_momentum_score(self._rows(macd=1.0, macd_signal=1.5, macd_hist=0.3))
-        assert d["macd_pts"] == 20
+        assert d["macd_pts"] == 16
 
     def test_macd_bearish_gives_5pts(self):
         # m < s AND h < 0
@@ -458,9 +458,9 @@ class TestMomentumScorer:
         _, d = compute_momentum_score(self._rows(stoch_k=70.0, stoch_d=75.0))
         assert d["stoch_pts"] == 2
 
-    def test_stoch_bearish_k_below_d_low_gives_0pts(self):
+    def test_stoch_bearish_k_below_d_midrange_gives_4pts(self):
         _, d = compute_momentum_score(self._rows(stoch_k=30.0, stoch_d=40.0))
-        assert d["stoch_pts"] == 0
+        assert d["stoch_pts"] == 4
 
     def test_stoch_missing_gives_5pts(self):
         rows = self._rows()

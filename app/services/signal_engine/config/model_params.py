@@ -54,7 +54,7 @@ STRETCH_MODERATE_ATR: float = 1.8   # |close − EMA20| > 1.8×ATR → moderate 
 
 # ── RSI Thresholds ────────────────────────────────────────────────────────────
 RSI_OVERSOLD: float = 35.0
-RSI_OVERBOUGHT: float = 65.0
+RSI_OVERBOUGHT: float = 75.0
 RSI_BULL_MOMENTUM_LOW: float = 50.0
 RSI_BULL_MOMENTUM_HIGH: float = 65.0
 
@@ -68,9 +68,9 @@ RESISTANCE_WITHIN_1_5R_BLOCK: bool = True  # hard-block BUY if strong res < 1.5R
 
 # ── Stop & Target Multipliers (ATR-based) ────────────────────────────────────
 STOP_ATR_MULTIPLIER: float = 1.5    # stop = entry – 1.5 × ATR14
-TP1_RR_MULTIPLIER: float = 1.5     # TP1 reward = risk × 1.5
+TP1_RR_MULTIPLIER: float = 2.0     # TP1 reward = risk × 2.0
 TP2_RR_MULTIPLIER: float = 3.0     # TP2 reward = risk × 3.0
-TP3_RR_MULTIPLIER: float = 4.0     # TP3 reward = risk × 4.0  (aggressive target)
+TP3_RR_MULTIPLIER: float = 4.5     # TP3 reward = risk × 4.5  (aggressive target)
 ENTRY_BUFFER_PCT: float = 0.005    # entry zone half-width (± 0.5 % of close)
 
 # ── Signal Confluence Thresholds ─────────────────────────────────────────────
@@ -89,6 +89,19 @@ BASE_WEIGHTS: dict[str, float] = {
     "support_resistance": 0.15,
     "risk_reward":        0.15,
 }
+
+# ── Entry Trigger Thresholds ──────────────────────────────────────────────────
+PULLBACK_EMA_PROXIMITY_PCT: float = 0.01   # price within ±1 % of EMA-20
+PULLBACK_LOOKBACK_BARS: int = 5            # bars to check EMA slope/touch
+PULLBACK_STOCH_MAX: float = 50.0           # stoch %K must be below this
+
+BREAKOUT_RANGE_BARS: int = 8               # consolidation window
+BREAKOUT_RANGE_ATR_MULT_MAX: float = 1.8   # range ≤ 1.8 × ATR = tight
+BREAKOUT_VOLUME_MULT_MIN: float = 1.5      # volume ≥ 1.5 × 20-bar avg
+BREAKOUT_VOLUME_AVG_BARS: int = 20         # lookback for avg volume
+
+ACCUMULATION_OBV_MIN_SLOPE_PCT: float = 0.3  # OBV slope ≥ 0.3 % per bar
+ACCUMULATION_CMF_MIN: float = 0.05            # CMF ≥ 0.05
 
 # ── Missing Data Handling ─────────────────────────────────────────────────────
 MAX_FORWARD_FILL_DAYS: int = 3      # forward-fill gaps up to 3 days, then NaN

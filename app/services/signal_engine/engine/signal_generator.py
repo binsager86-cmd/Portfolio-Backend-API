@@ -48,6 +48,7 @@ from app.services.signal_engine.models.regime.transition_monitor import (
 from app.services.signal_engine.models.risk.confluence_decay import adjust_confidence_for_delay
 from app.services.signal_engine.models.risk.cvar_calculator import calculate_cvar
 from app.services.signal_engine.models.risk.position_sizer import calculate_position_size, kuwait_phased_kelly
+from app.services.signal_engine.models.technical.entry_trigger import evaluate_entry_trigger
 from app.services.signal_engine.models.technical.momentum_score import compute_momentum_score
 from app.services.signal_engine.models.technical.support_resistance import (
     compute_entry_stop_tp,
@@ -859,6 +860,16 @@ async def generate_kuwait_signal(
     else:
         final_signal = "NEUTRAL"
 
+    entry_trigger: dict[str, Any] | None = None
+    if final_signal in ("BUY", "STRONG_BUY"):
+        score_tier = "Strong Buy" if final_signal == "STRONG_BUY" else "Buy"
+        entry_trigger = evaluate_entry_trigger(rows, score_tier)
+        trigger_action = str(entry_trigger.get("action") or "").upper()
+        if trigger_action == "WATCH":
+            final_signal = "WATCH"
+        elif trigger_action == "HOLD":
+            final_signal = "HOLD"
+
     # ── 11. Graduated circuit-breaker penalty ────────────────────────────────
     # Reuse the already-computed early result (same rows, no need to recompute)
     _circuit_result = _circuit_result_early
@@ -1088,6 +1099,7 @@ async def generate_kuwait_signal(
         combined_score_adjusted_directional=raw_technical_score,
         combined_score_unadjusted_directional=total_score_without_trend_directional_adjustment,
         score_breakdown=_score_breakdown,
+        entry_trigger=entry_trigger,
     )
 
 
