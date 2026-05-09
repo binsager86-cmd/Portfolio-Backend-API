@@ -47,6 +47,7 @@ from app.services.signal_engine.config.kuwait_constants import (
 from app.services.signal_engine.engine.signal_generator import (
     _apply_regime_weights,
     _build_indicator_breakdown,
+    _liquidity_percentile,
     _make_blocked_four_scores,
     generate_kuwait_signal,
 )
@@ -1601,3 +1602,64 @@ class TestSignalPayloadMapping:
         four_scores = signal["confluence_details"].get("four_scores")
         assert isinstance(four_scores, dict)
         assert "overall" in four_scores
+
+    def test_liquidity_failed_neutral_exposes_combined_directional_scores(self):
+        rows = []
+        for i in range(80):
+            c = 500.0 + i * 0.2
+            rows.append(_base_row(
+                close=c,
+                high=c + 2.0,
+                low=c - 2.0,
+                volume=50_000.0,
+                value=20_000.0,
+                atr=8.0,
+                obv=20_000.0 * (i + 1),
+                ema_20=c * 0.982,
+                ema_50=c * 0.960,
+                sma_200=c * 0.920,
+                adx_14=30.0,
+                rsi_14=58.0,
+                macd=2.0,
+                macd_signal=1.5,
+                macd_hist=0.5,
+                stoch_k=55.0,
+                stoch_d=48.0,
+                cmf_20=0.18,
+                date=f"2026-03-{(i % 28) + 1:02d}",
+            ))
+
+        signal = self._run(generate_kuwait_signal(rows, stock_code="TEST"))
+        assert signal["signal"] == "NEUTRAL"
+        assert signal["reason"] == "liquidity_failed"
+
+        confluence = signal["confluence_details"]
+        raw_sub = confluence.get("raw_sub_scores") or {}
+        indicator_breakdown = confluence.get("indicator_breakdown") or {}
+        trend_block = indicator_breakdown.get("trend") or {}
+        liquidity_details = confluence.get("liquidity_details") or {}
+
+        trend_base_raw = int(trend_block.get("base_raw", raw_sub.get("trend", 0)) or 0)
+        liq_pct = _liquidity_percentile(float(liquidity_details.get("adtv_20d_kd") or 0.0))
+        weights = _apply_regime_weights(dict(BASE_WEIGHTS), "Neutral_Chop", liq_pct)
+
+        expected_adjusted = int(
+            (
+                round(int(raw_sub.get("trend", 0)) * weights["trend"])
+                + round(int(raw_sub.get("momentum", 0)) * weights["momentum"])
+                + round(int(raw_sub.get("volume_flow", 0)) * weights["volume_flow"])
+                + round(int(raw_sub.get("support_resistance", 0)) * weights["support_resistance"])
+            ) / 0.85
+        )
+        expected_unadjusted = int(
+            (
+                round(trend_base_raw * weights["trend"])
+                + round(int(raw_sub.get("momentum", 0)) * weights["momentum"])
+                + round(int(raw_sub.get("volume_flow", 0)) * weights["volume_flow"])
+                + round(int(raw_sub.get("support_resistance", 0)) * weights["support_resistance"])
+            ) / 0.85
+        )
+
+        assert signal["combined_score_adjusted_directional"] == expected_adjusted
+        assert signal["combined_score_unadjusted_directional"] == expected_unadjusted
+        assert signal["raw_technical_score"] == expected_adjusted

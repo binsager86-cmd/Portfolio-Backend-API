@@ -260,6 +260,7 @@ async def generate_kuwait_signal(
         _blocked_sub_weighted: dict[str, int] = {}
         _blocked_total_raw = 0
         _blocked_total = 0
+        _blocked_total_unadjusted = 0
         _blocked_technical_debug: dict[str, Any] | None = None
         _blocked_indicator_breakdown: dict[str, Any] | None = None
         _blocked_four_scores = _make_blocked_four_scores(
@@ -297,6 +298,11 @@ async def generate_kuwait_signal(
             _rr = _levels.get("risk_reward_ratio") or 0.0
             _rr_raw = max(0, min(100, int(((_rr - 1.0) / 3.0) * 100)))
 
+            try:
+                _blocked_trend_base_raw = int(float(_trend_details.get("base_raw", _trend_raw)))
+            except (TypeError, ValueError):
+                _blocked_trend_base_raw = int(_trend_raw)
+
             _blocked_weights = _apply_regime_weights(dict(BASE_WEIGHTS), "Neutral_Chop", liq_pct)
             _blocked_sub_raw = {
                 "trend": _trend_raw,
@@ -317,6 +323,15 @@ async def generate_kuwait_signal(
                 v for k, v in _blocked_sub_weighted.items() if k != "risk_reward"
             )
             _blocked_total_raw = int(_blocked_four_factor_sum / 0.85)
+
+            _blocked_four_factor_sum_unadjusted = (
+                round(_blocked_trend_base_raw * _blocked_weights["trend"])
+                + round(_momentum_raw * _blocked_weights["momentum"])
+                + round(_volume_raw * _blocked_weights["volume_flow"])
+                + round(_sr_raw * _blocked_weights["support_resistance"])
+            )
+            _blocked_total_unadjusted = int(_blocked_four_factor_sum_unadjusted / 0.85)
+
             _blocked_total = int(_blocked_total_raw * _blocked_circuit["penalty_multiplier"])
 
             _blocked_four_scores = compute_all_four_scores(
@@ -362,6 +377,8 @@ async def generate_kuwait_signal(
             raw_sub_scores=_blocked_sub_raw,
             total_score_for_neutral=_blocked_total,
             total_score_raw_for_neutral=_blocked_total_raw,
+            combined_score_adjusted_directional_for_neutral=_blocked_total_raw,
+            combined_score_unadjusted_directional_for_neutral=_blocked_total_unadjusted,
             four_scores=_blocked_four_scores,
             indicator_breakdown=_blocked_indicator_breakdown,
             liquidity_passed=liquidity_passed,
@@ -583,6 +600,17 @@ async def generate_kuwait_signal(
     }
     _pre_four_factor_sum = sum(v for k, v in _pre_sub_weighted.items() if k != "risk_reward")
     _pre_total_raw = int(_pre_four_factor_sum / 0.85)
+    try:
+        _pre_trend_base_raw = int(float(trend_details.get("base_raw", trend_raw)))
+    except (TypeError, ValueError):
+        _pre_trend_base_raw = int(trend_raw)
+    _pre_four_factor_sum_unadjusted = (
+        round(_pre_trend_base_raw * _pre_weights["trend"])
+        + round(momentum_raw * _pre_weights["momentum"])
+        + round(volume_raw * _pre_weights["volume_flow"])
+        + round(sr_raw * _pre_weights["support_resistance"])
+    )
+    _pre_total_unadjusted = int(_pre_four_factor_sum_unadjusted / 0.85)
     # Apply circuit penalty so total_score matches what a real signal would show
     _pre_total = int(_pre_total_raw * _circuit_result_early["penalty_multiplier"])
 
@@ -623,6 +651,8 @@ async def generate_kuwait_signal(
             raw_sub_scores=_pre_sub_raw,
             total_score_for_neutral=_pre_total,
             total_score_raw_for_neutral=_pre_total_raw,
+            combined_score_adjusted_directional_for_neutral=_pre_total_raw,
+            combined_score_unadjusted_directional_for_neutral=_pre_total_unadjusted,
             four_scores=four_scores,
             indicator_breakdown=_pre_indicator_breakdown,
             liquidity_passed=liquidity_passed,
@@ -660,6 +690,8 @@ async def generate_kuwait_signal(
             raw_sub_scores=_pre_sub_raw,
             total_score_for_neutral=_pre_total,
             total_score_raw_for_neutral=_pre_total_raw,
+            combined_score_adjusted_directional_for_neutral=_pre_total_raw,
+            combined_score_unadjusted_directional_for_neutral=_pre_total_unadjusted,
             four_scores=four_scores,
             indicator_breakdown=_pre_indicator_breakdown,
         )
@@ -684,6 +716,8 @@ async def generate_kuwait_signal(
             raw_sub_scores=_pre_sub_raw,
             total_score_for_neutral=_pre_total,
             total_score_raw_for_neutral=_pre_total_raw,
+            combined_score_adjusted_directional_for_neutral=_pre_total_raw,
+            combined_score_unadjusted_directional_for_neutral=_pre_total_unadjusted,
             four_scores=four_scores,
             indicator_breakdown=_pre_indicator_breakdown,
         )
@@ -784,6 +818,18 @@ async def generate_kuwait_signal(
             stock_code, segment, data_as_of,
             reason_code=f"hurst_chop_blocked: {hurst_result['description']}",
             circuit_proximity=_circuit_proximity_early,
+            sub_scores=sub_weighted,
+            raw_sub_scores={
+                "trend": trend_raw,
+                "momentum": momentum_raw,
+                "volume_flow": volume_raw,
+                "support_resistance": sr_raw,
+                "risk_reward": rr_raw,
+            },
+            total_score_for_neutral=total_score,
+            total_score_raw_for_neutral=total_score,
+            combined_score_adjusted_directional_for_neutral=total_score,
+            combined_score_unadjusted_directional_for_neutral=total_score_without_trend_directional_adjustment,
             four_scores=four_scores,
             indicator_breakdown=_pre_indicator_breakdown,
             liquidity_passed=liquidity_passed,
@@ -1190,6 +1236,8 @@ def _neutral_signal(
     raw_sub_scores: dict[str, Any] | None = None,
     total_score_for_neutral: int = 0,
     total_score_raw_for_neutral: int | None = None,
+    combined_score_adjusted_directional_for_neutral: int | None = None,
+    combined_score_unadjusted_directional_for_neutral: int | None = None,
     four_scores: dict[str, Any] | None = None,
     indicator_breakdown: dict[str, Any] | None = None,
     liquidity_passed: bool = False,
@@ -1199,6 +1247,34 @@ def _neutral_signal(
     """Return a minimal NEUTRAL signal with structured block reason."""
     _cp = circuit_proximity or _NEUTRAL_CIRCUIT_PROXIMITY
     _total_raw = total_score_raw_for_neutral if total_score_raw_for_neutral is not None else total_score_for_neutral
+
+    def _safe_int(value: Any) -> int | None:
+        try:
+            if value is None:
+                return None
+            return int(float(value))
+        except (TypeError, ValueError):
+            return None
+
+    _overall = (four_scores or {}).get("overall") if isinstance(four_scores, dict) else {}
+    _combined_adjusted = _safe_int(combined_score_adjusted_directional_for_neutral)
+    _combined_unadjusted = _safe_int(combined_score_unadjusted_directional_for_neutral)
+
+    if _combined_adjusted is None:
+        _combined_adjusted = _safe_int(_total_raw)
+    if _combined_unadjusted is None:
+        _combined_unadjusted = _safe_int(_total_raw)
+
+    if _combined_unadjusted is None:
+        _combined_unadjusted = _safe_int((_overall or {}).get("base_score"))
+    if _combined_adjusted is None:
+        _combined_adjusted = _safe_int((_overall or {}).get("score"))
+
+    if _combined_unadjusted is None:
+        _combined_unadjusted = _safe_int(total_score_for_neutral)
+    if _combined_adjusted is None:
+        _combined_adjusted = _safe_int(total_score_for_neutral)
+
     return format_signal(
         stock_code=stock_code,
         segment=segment,
@@ -1230,6 +1306,10 @@ def _neutral_signal(
         },
         alerts=[f"No signal: {reason_code}"],
         data_as_of=data_as_of,
+        raw_technical_score=_safe_int(_total_raw),
+        risk_adjusted_score=_safe_int(total_score_for_neutral),
+        combined_score_adjusted_directional=_combined_adjusted,
+        combined_score_unadjusted_directional=_combined_unadjusted,
         block_reason=reason_code,
         failed_gates=failed_gates or [],
         block_details=block_details or {},
