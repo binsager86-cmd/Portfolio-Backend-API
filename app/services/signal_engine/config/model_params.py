@@ -95,6 +95,21 @@ BREAKOUT_VOLUME_AVG_BARS: int = 20         # lookback for avg volume
 ACCUMULATION_OBV_MIN_SLOPE_PCT: float = 0.3  # OBV slope ≥ 0.3 % per bar
 ACCUMULATION_CMF_MIN: float = 0.05            # CMF ≥ 0.05
 
+# ── Kaufman Efficiency Ratio (ER) ────────────────────────────────────────────
+ER_PERIOD: int = 10                 # bars used for efficiency-ratio calculation
+ER_HIGH: float = 0.70               # ER above this → clean directional trend
+ER_MID: float = 0.45                # ER above this (but ≤ ER_HIGH) → moderate trend
+ER_LOW: float = 0.25                # ER below this → noisy / random-walk
+
+# ── Trend Age / Maturity Multiplier ──────────────────────────────────────────
+TREND_AGE_PEAK_MULT: float = 1.20  # multiplier applied to a fresh crossover
+TREND_AGE_FLOOR_MULT: float = 0.70 # minimum multiplier for a very aged trend
+TREND_AGE_SCALE: float = 50.0      # bars over which the multiplier decays to floor
+
+# ── EMA Stretch Guard (mean-reversion penalty) ────────────────────────────────
+STRETCH_MODERATE_ATR: float = 2.0  # price > 2× ATR from EMA20 → moderate penalty
+STRETCH_SEVERE_ATR: float = 3.5    # price > 3.5× ATR from EMA20 → severe penalty
+
 # ── Missing Data Handling ─────────────────────────────────────────────────────
 MAX_FORWARD_FILL_DAYS: int = 3      # forward-fill gaps up to 3 days, then NaN
 MIN_BARS_FOR_SIGNAL: int = 60       # need at least 60 valid bars
