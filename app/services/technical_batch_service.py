@@ -606,11 +606,11 @@ async def _score_one_symbol(
             delay_hours=0,
         )
 
-        component_scores = signal.get("component_scores") or {}
-        trend_raw = _to_int(((component_scores.get("trend") or {}).get("raw")))
-        momentum_raw = _to_int(((component_scores.get("momentum") or {}).get("raw")))
-        volume_raw = _to_int(((component_scores.get("volume_flow") or {}).get("raw")))
-        sr_raw = _to_int(((component_scores.get("support_resistance") or {}).get("raw")))
+        raw_sub_scores = (signal.get("confluence_details") or {}).get("raw_sub_scores") or {}
+        trend_raw = _to_int(raw_sub_scores.get("trend"))
+        momentum_raw = _to_int(raw_sub_scores.get("momentum"))
+        volume_raw = _to_int(raw_sub_scores.get("volume_flow"))
+        sr_raw = _to_int(raw_sub_scores.get("support_resistance"))
 
         # Daily batch dual-overall semantics:
         # - raw_technical_score  -> combined score WITHOUT directional adjustment
