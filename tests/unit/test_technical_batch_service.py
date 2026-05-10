@@ -29,11 +29,13 @@ def test_score_one_symbol_uses_sync_signal_generator(monkeypatch):
         return {
             "signal": "BUY",
             "reason": "ok",
-            "component_scores": {
-                "trend": {"raw": 72},
-                "momentum": {"raw": 64},
-                "volume_flow": {"raw": 59},
-                "support_resistance": {"raw": 61},
+            "confluence_details": {
+                "raw_sub_scores": {
+                    "trend": 72,
+                    "momentum": 64,
+                    "volume_flow": 59,
+                    "support_resistance": 61,
+                },
             },
             "combined_score_adjusted_directional": 67,
             "combined_score_unadjusted_directional": 70,
