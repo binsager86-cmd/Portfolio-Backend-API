@@ -598,7 +598,7 @@ async def _score_one_symbol(
         rows = forward_fill_gaps(rows)
         rows = attach_indicators(rows)
 
-        signal = await generate_kuwait_signal(
+        signal = generate_kuwait_signal(
             rows=rows,
             stock_code=base,
             segment=segment.upper(),
