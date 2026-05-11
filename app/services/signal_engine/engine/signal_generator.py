@@ -181,6 +181,9 @@ def generate_kuwait_signal(
 
     # ── 4. Technical scoring ──────────────────────────────────────────────────
     trend_raw, trend_details = compute_trend_score(rows)
+    # Base trend score before directional context multipliers (ER, age, stretch, sector).
+    # Used to produce the unadjusted combined score so the frontend can show both.
+    trend_base_raw = trend_details.get("base_raw", trend_raw)
     momentum_raw, momentum_details = compute_momentum_score(rows)
     volume_raw, volume_details = compute_volume_flow_score(rows, auction_intensity)
     sr_raw, sr_details, support_levels, resistance_levels = compute_sr_score(rows)
@@ -281,6 +284,18 @@ def generate_kuwait_signal(
     }
     total_score = sum(sub_weighted.values())
 
+    # Unadjusted combined score: same weights but uses the pure base trend score
+    # (before directional context multipliers such as ER, trend-age, EMA-stretch).
+    # Computed explicitly from all sub-scores so it stays correct if total_score changes.
+    sub_weighted_unadjusted = {
+        "trend":              round(trend_base_raw * w_trend),
+        "momentum":           round(momentum_raw * w_mom),
+        "volume_flow":        round(volume_raw * w_vol),
+        "support_resistance": round(sr_raw * w_sr),
+        "risk_reward":        round(rr_raw * w_rr),
+    }
+    total_score_unadjusted = sum(sub_weighted_unadjusted.values())
+
     # ── 10. Circuit-breaker score haircut (BEFORE classification) ────────────
     # Applied here so the displayed score equals the score the gate evaluates.
     if len(rows) >= 2:
@@ -294,6 +309,7 @@ def generate_kuwait_signal(
             near_lower = (close_now - lower) / close_now <= CIRCUIT_BUFFER_PCT
             if near_upper or near_lower:
                 total_score = int(total_score * 0.70)
+                total_score_unadjusted = int(total_score_unadjusted * 0.70)
 
     # ── 11. CVaR ──────────────────────────────────────────────────────────────
     cvar_result = calculate_cvar(rows, adtv_kd=adtv_kd)
@@ -447,7 +463,7 @@ def generate_kuwait_signal(
         _friction_pct,
     )
 
-    return format_signal(
+    signal_out = format_signal(
         stock_code=stock_code,
         segment=segment,
         signal_direction=final_signal,
@@ -460,6 +476,17 @@ def generate_kuwait_signal(
         data_as_of=data_as_of,
         entry_trigger=entry_trigger,
     )
+    # Attach dual combined scores so the daily batch can persist them separately:
+    #   combined_score_adjusted_directional   — total_score using trend WITH directional multipliers
+    #   combined_score_unadjusted_directional — total_score using base trend WITHOUT multipliers
+    signal_out["combined_score_adjusted_directional"] = total_score
+    signal_out["combined_score_unadjusted_directional"] = total_score_unadjusted
+    # Per-stock trend directional haircut: the combined multiplier applied to the base trend
+    # score (e.g. 0.87 means the trend score was reduced to 87% of its raw structural value).
+    # Component multipliers are exposed separately for transparency.
+    signal_out["trend_directional_factor"] = trend_details.get("adjustment_factor")
+    signal_out["trend_directional_multipliers"] = trend_details.get("multipliers")
+    return signal_out
 
 
 def _neutral_signal(

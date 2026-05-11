@@ -105,6 +105,92 @@ def test_serialize_score_row_keeps_overall_null() -> None:
     assert serialized["risk_adjusted_score"] == 74
 
 
+def test_serialize_score_row_exposes_trend_directional_factor() -> None:
+    """trend_directional_factor is returned as a float when present."""
+    row = {
+        "symbol": "NBK",
+        "company_name": "National Bank of Kuwait",
+        "segment": "PREMIER",
+        "signal": "BUY",
+        "reason": None,
+        "trend_score": 65,
+        "momentum_score": 60,
+        "buying_pressure_score": 55,
+        "key_price_level_score": 50,
+        "overall_score": None,
+        "raw_technical_score": 70,
+        "risk_adjusted_score": 61,
+        "trend_directional_factor": 0.87,
+        "trend_directional_multipliers": None,
+        "error": None,
+    }
+
+    serialized = _serialize_score_row(row)
+
+    assert serialized["trend_directional_factor"] == 0.87
+    assert serialized["trend_directional_multipliers"] is None
+
+
+def test_serialize_score_row_decodes_trend_multipliers_json() -> None:
+    """trend_directional_multipliers stored as a JSON string is decoded to a dict."""
+    import json
+
+    mults = {
+        "efficiency_ratio": 1.05,
+        "trend_age": 0.95,
+        "ema_stretch": 0.75,
+        "sector_lead_lag": 1.0,
+    }
+    row = {
+        "symbol": "ZAIN",
+        "company_name": "Zain",
+        "segment": "PREMIER",
+        "signal": "NEUTRAL",
+        "reason": None,
+        "trend_score": 55,
+        "momentum_score": 50,
+        "buying_pressure_score": 50,
+        "key_price_level_score": 50,
+        "overall_score": None,
+        "raw_technical_score": 60,
+        "risk_adjusted_score": 56,
+        "trend_directional_factor": 0.75,
+        "trend_directional_multipliers": json.dumps(mults),
+        "error": None,
+    }
+
+    serialized = _serialize_score_row(row)
+
+    assert serialized["trend_directional_factor"] == 0.75
+    assert isinstance(serialized["trend_directional_multipliers"], dict)
+    assert serialized["trend_directional_multipliers"]["ema_stretch"] == 0.75
+
+
+def test_serialize_score_row_missing_directional_factor_is_none() -> None:
+    """Rows from before the migration (no directional factor) serialize cleanly."""
+    row = {
+        "symbol": "GFH",
+        "company_name": "GFH Financial Group",
+        "segment": "PREMIER",
+        "signal": "NEUTRAL",
+        "reason": None,
+        "trend_score": 50,
+        "momentum_score": 50,
+        "buying_pressure_score": 50,
+        "key_price_level_score": 50,
+        "overall_score": None,
+        "raw_technical_score": 58,
+        "risk_adjusted_score": 58,
+        "error": None,
+        # trend_directional_factor / trend_directional_multipliers absent
+    }
+
+    serialized = _serialize_score_row(row)
+
+    assert serialized["trend_directional_factor"] is None
+    assert serialized["trend_directional_multipliers"] is None
+
+
 def _base_row_for_action_tests() -> dict:
     return {
         "symbol": "NBK",

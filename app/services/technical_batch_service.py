@@ -7,6 +7,7 @@ and serves latest-run snapshots for fast UI rendering.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
 from datetime import date, timedelta
@@ -82,6 +83,8 @@ def _ensure_schema() -> None:
             overall_score INTEGER,
             raw_technical_score INTEGER,
             risk_adjusted_score INTEGER,
+            trend_directional_factor REAL,
+            trend_directional_multipliers TEXT,
             error TEXT,
             created_at BIGINT NOT NULL,
             UNIQUE(run_id, symbol)
@@ -101,6 +104,20 @@ def _ensure_schema() -> None:
     exec_sql(
         "CREATE INDEX IF NOT EXISTS ix_ta_scores_symbol ON technical_analysis_scores(symbol)"
     )
+
+    # Add per-stock directional factor columns to existing tables (idempotent migration).
+    # Catch only the "column already exists" error emitted by both SQLite
+    # ("duplicate column name") and PostgreSQL ("already exists"); re-raise anything else.
+    for col_ddl in (
+        "ALTER TABLE technical_analysis_scores ADD COLUMN trend_directional_factor REAL",
+        "ALTER TABLE technical_analysis_scores ADD COLUMN trend_directional_multipliers TEXT",
+    ):
+        try:
+            exec_sql(col_ddl)
+        except Exception as exc:  # noqa: BLE001
+            msg = str(exc).lower()
+            if "duplicate column" not in msg and "already exists" not in msg:
+                raise
 
     _SCHEMA_INIT = True
 
@@ -358,6 +375,29 @@ def _serialize_score_row(row: Any) -> dict[str, Any]:
     risk_adjusted_score = _to_int(row.get("risk_adjusted_score"))
     error = row.get("error")
 
+    # Per-stock trend directional factor stored as a float; decode multipliers from JSON.
+    trend_directional_factor = row.get("trend_directional_factor")
+    if trend_directional_factor is not None:
+        try:
+            trend_directional_factor = float(trend_directional_factor)
+        except (TypeError, ValueError):
+            logger.warning(
+                "Could not convert trend_directional_factor=%r for symbol=%s",
+                trend_directional_factor,
+                row.get("symbol"),
+            )
+            trend_directional_factor = None
+    raw_mults = row.get("trend_directional_multipliers")
+    if isinstance(raw_mults, str):
+        try:
+            raw_mults = json.loads(raw_mults)
+        except (TypeError, ValueError):
+            logger.warning(
+                "Could not decode trend_directional_multipliers JSON for symbol=%s",
+                row.get("symbol"),
+            )
+            raw_mults = None
+
     combined_base, combined_adjusted = _resolve_row_combined_scores_for_action(row)
     action_recommendation, score_gap, action_note, action_priority = _classify_action_recommendation(
         trend_directional=trend_directional,
@@ -379,6 +419,8 @@ def _serialize_score_row(row: Any) -> dict[str, Any]:
         "overall_score": overall_score,
         "raw_technical_score": raw_technical_score,
         "risk_adjusted_score": risk_adjusted_score,
+        "trend_directional_factor": trend_directional_factor,
+        "trend_directional_multipliers": raw_mults,
         "score_gap": score_gap,
         "action_recommendation": action_recommendation,
         "action_note": action_note,
@@ -518,12 +560,15 @@ def _finish_run(
 
 
 def _insert_score(run_id: int, score: dict[str, Any]) -> None:
+    raw_mults = score.get("trend_directional_multipliers")
+    mults_json = json.dumps(raw_mults) if raw_mults is not None else None
     exec_sql(
         "INSERT INTO technical_analysis_scores "
         "(run_id, symbol, company_name, segment, signal, reason, trend_score, momentum_score, "
         "buying_pressure_score, key_price_level_score, overall_score, raw_technical_score, "
-        "risk_adjusted_score, error, created_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "risk_adjusted_score, trend_directional_factor, trend_directional_multipliers, "
+        "error, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             run_id,
             score["symbol"],
@@ -538,6 +583,8 @@ def _insert_score(run_id: int, score: dict[str, Any]) -> None:
             score.get("overall_score"),
             score.get("raw_technical_score"),
             score.get("risk_adjusted_score"),
+            score.get("trend_directional_factor"),
+            mults_json,
             score.get("error"),
             int(time.time()),
         ),
@@ -567,6 +614,8 @@ def _failed_symbol_row(
         "overall_score": None,
         "raw_technical_score": None,
         "risk_adjusted_score": None,
+        "trend_directional_factor": None,
+        "trend_directional_multipliers": None,
         "error": (error or "unknown_error")[:300],
     }
 
@@ -632,6 +681,8 @@ async def _score_one_symbol(
             "overall_score": overall_score,
             "raw_technical_score": combined_no_adjustment,
             "risk_adjusted_score": combined_with_adjustment,
+            "trend_directional_factor": signal.get("trend_directional_factor"),
+            "trend_directional_multipliers": signal.get("trend_directional_multipliers"),
             "error": None,
         }
     except Exception as exc:  # noqa: BLE001
