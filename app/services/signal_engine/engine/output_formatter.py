@@ -71,6 +71,7 @@ def format_signal(
         },
         "confluence_details": {
             "total_score": confluence.get("total_score"),
+            "total_score_raw": confluence.get("total_score_raw"),
             "regime": confluence.get("regime"),
             "regime_confidence": confluence.get("regime_confidence"),
             "auction_intensity": confluence.get("auction_intensity"),
@@ -78,6 +79,9 @@ def format_signal(
             "raw_sub_scores": confluence.get("raw_sub_scores"),
             "liquidity_passed": confluence.get("liquidity_passed"),
             "liquidity_details": confluence.get("liquidity_details"),
+            "circuit_proximity": confluence.get("circuit_proximity"),
+            "indicator_breakdown": confluence.get("indicator_breakdown"),
+            "four_scores": confluence.get("four_scores"),
             "support_levels": confluence.get("support_levels", []),
             "resistance_levels": confluence.get("resistance_levels", []),
             "vwap": confluence.get("vwap"),

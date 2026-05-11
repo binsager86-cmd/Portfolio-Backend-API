@@ -51,6 +51,7 @@ from app.services.signal_engine.models.risk.confluence_decay import adjust_confi
 from app.services.signal_engine.models.risk.cvar_calculator import calculate_cvar
 from app.services.signal_engine.models.risk.position_sizer import calculate_position_size
 from app.services.signal_engine.models.technical.entry_trigger import evaluate_entry_trigger
+from app.services.signal_engine.models.technical.four_score_engine import compute_all_four_scores
 from app.services.signal_engine.models.technical.momentum_score import compute_momentum_score
 from app.services.signal_engine.models.technical.support_resistance import (
     compute_entry_stop_tp,
@@ -129,7 +130,72 @@ def _liquidity_percentile(adtv_kd: float | None) -> float:
     return 15.0
 
 
-def generate_kuwait_signal(
+def _build_indicator_breakdown(
+    trend_details: dict[str, Any] | None,
+    momentum_details: dict[str, Any] | None,
+    volume_details: dict[str, Any] | None,
+    sr_details: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Build transparent per-indicator details used by UI cards."""
+    if not any([trend_details, momentum_details, volume_details, sr_details]):
+        return None
+
+    trend_details = trend_details or {}
+    trend_block = {
+        "base_raw": trend_details.get("base_raw", trend_details.get("raw_score", trend_details.get("final_score"))),
+        "final_adjusted": trend_details.get("final_adjusted", trend_details.get("raw_score")),
+        "adjustment_factor": trend_details.get("adjustment_factor", trend_details.get("combined_mult", 1.0)),
+        "multipliers": trend_details.get("multipliers", {
+            "efficiency_ratio": trend_details.get("er_mult", 1.0),
+            "trend_age": trend_details.get("age_mult", 1.0),
+            "ema_stretch": trend_details.get("stretch_mult", 1.0),
+            "sector_lead_lag": trend_details.get("sector_mult", 1.0),
+        }),
+        "ema_pts": trend_details.get("ema_pts", trend_details.get("ema_alignment_pts")),
+        "ema_desc": trend_details.get("ema_desc", trend_details.get("ema_alignment_desc")),
+        "adx_pts": trend_details.get("adx_pts"),
+        "adx_desc": trend_details.get("adx_desc"),
+        "swing_pts": trend_details.get("swing_pts", trend_details.get("swing_structure_pts")),
+        "swing_desc": trend_details.get("swing_desc", trend_details.get("swing_structure_desc")),
+    }
+
+    return {
+        "trend": trend_block,
+        "momentum": momentum_details or {},
+        "volume_flow": volume_details or {},
+        "support_resistance": sr_details or {},
+    }
+
+
+def _make_blocked_four_scores(
+    rows: list[dict[str, Any]],
+    adtv_kwd: float,
+    spread_pct: float,
+) -> dict[str, Any]:
+    """Return a deterministic blocked profile when signal is not tradable."""
+    return {
+        "potential": {"score": 0, "tier": "Strong Sell", "description": "blocked"},
+        "timing": {"score": 0, "tier": "Strong Sell", "description": "blocked"},
+        "risk": {
+            "score": max(0, int(100 - min(100, spread_pct * 20))),
+            "level": "High Risk",
+            "tier": "Sell",
+            "description": "blocked_by_liquidity_or_data",
+            "adtv_kwd": adtv_kwd,
+        },
+        "overall": {
+            "base_score": 0,
+            "score": 0,
+            "tier": "Strong Sell",
+            "description": "blocked_by_risk_gate",
+            "risk_multiplier": 0.0,
+            "adjustment_factor": 0.0,
+        },
+        "position_action": {"action": "NO_TRADE", "max_position_pct": 0.0},
+    }
+
+
+async def generate_kuwait_signal(
     rows: list[dict[str, Any]],
     stock_code: str,
     segment: str = "PREMIER",
@@ -157,7 +223,7 @@ def generate_kuwait_signal(
 
     # ── Guard: minimum data ───────────────────────────────────────────────────
     if len(rows) < MIN_BARS_FOR_SIGNAL:
-        return _neutral_signal(stock_code, segment, data_as_of, "insufficient_data")
+        return _neutral_signal(stock_code, segment, data_as_of, "insufficient_data", rows=rows)
 
     # ── 1. Liquidity filter ───────────────────────────────────────────────────
     liquidity_passed, liq_details = is_tradable(rows)
@@ -283,6 +349,12 @@ def generate_kuwait_signal(
         "risk_reward":        round(rr_raw * w_rr),
     }
     total_score = sum(sub_weighted.values())
+    indicator_breakdown = _build_indicator_breakdown(
+        trend_details=trend_details,
+        momentum_details=momentum_details,
+        volume_details=volume_details,
+        sr_details=sr_details,
+    )
 
     # Unadjusted combined score: same weights but uses the pure base trend score
     # (before directional context multipliers such as ER, trend-age, EMA-stretch).
@@ -298,18 +370,59 @@ def generate_kuwait_signal(
 
     # ── 10. Circuit-breaker score haircut (BEFORE classification) ────────────
     # Applied here so the displayed score equals the score the gate evaluates.
+    close_now = float(rows[-1].get("close") or 0.0)
+    circuit_proximity = {
+        "is_near_limit": False,
+        "direction": "none",
+        "distance_to_upper_pct": None,
+        "distance_to_lower_pct": None,
+    }
     if len(rows) >= 2:
         prev_close = float(rows[-2].get("close") or 0.0)
         alerts.extend(_circuit_breaker_alerts(rows, prev_close))
-        close_now = float(rows[-1].get("close") or 0.0)
         if close_now > 0 and prev_close > 0:
             upper = prev_close * (1.0 + CIRCUIT_UPPER_PCT)
             lower = prev_close * (1.0 + CIRCUIT_LOWER_PCT)
-            near_upper = (upper - close_now) / close_now <= CIRCUIT_BUFFER_PCT
-            near_lower = (close_now - lower) / close_now <= CIRCUIT_BUFFER_PCT
+            gap_upper = (upper - close_now) / close_now
+            gap_lower = (close_now - lower) / close_now
+            near_upper = gap_upper <= CIRCUIT_BUFFER_PCT
+            near_lower = gap_lower <= CIRCUIT_BUFFER_PCT
             if near_upper or near_lower:
                 total_score = int(total_score * 0.70)
                 total_score_unadjusted = int(total_score_unadjusted * 0.70)
+            direction = "both" if near_upper and near_lower else "upper" if near_upper else "lower" if near_lower else "none"
+            circuit_proximity = {
+                "is_near_limit": bool(near_upper or near_lower),
+                "direction": direction,
+                "distance_to_upper_pct": round(max(gap_upper, 0.0) * 100.0, 3),
+                "distance_to_lower_pct": round(max(gap_lower, 0.0) * 100.0, 3),
+            }
+            if near_upper and levels.get("tp1"):
+                levels["tp1"] = min(float(levels["tp1"]), round(upper * 0.997, 1))
+
+    last = rows[-1]
+    high_now = float(last.get("high") or 0.0)
+    low_now = float(last.get("low") or 0.0)
+    spread_pct = ((high_now - low_now) / close_now * 100.0) if close_now > 0 else 0.0
+    upper_pct = circuit_proximity.get("distance_to_upper_pct")
+    lower_pct = circuit_proximity.get("distance_to_lower_pct")
+    nearest = min(v for v in [upper_pct, lower_pct] if isinstance(v, (int, float))) if (
+        isinstance(upper_pct, (int, float)) or isinstance(lower_pct, (int, float))
+    ) else 99.0
+    circuit_result = {"nearest_circuit_pct": round(float(nearest), 3)}
+
+    four_scores = compute_all_four_scores(
+        rows=rows,
+        trend_raw=trend_raw,
+        momentum_raw=momentum_raw,
+        volume_raw=volume_raw,
+        sr_details=sr_details,
+        auction_intensity=auction_intensity,
+        rr_ratio=float(rr),
+        adtv_kwd=float(adtv_kd),
+        spread_pct=float(spread_pct),
+        circuit_result=circuit_result,
+    )
 
     # ── 11. CVaR ──────────────────────────────────────────────────────────────
     cvar_result = calculate_cvar(rows, adtv_kd=adtv_kd)
@@ -390,6 +503,9 @@ def generate_kuwait_signal(
 
     if resistance_within_1_5r and direction == "BUY":
         alerts.append("Major resistance detected within 1.5R — BUY signal blocked")
+    neutral_reason = "gates_not_met"
+    if not liquidity_passed:
+        neutral_reason = "liquidity_failed"
 
     # ── 16b. Entry trigger evaluation ─────────────────────────────────────
     if final_signal in ("BUY", "STRONG_BUY"):
@@ -414,6 +530,14 @@ def generate_kuwait_signal(
     risk_merged = {**position_result, **cvar_result}
     confluence = {
         "total_score": total_score,
+        "total_score_raw": int(
+            (
+                int(sub_weighted.get("trend", 0))
+                + int(sub_weighted.get("momentum", 0))
+                + int(sub_weighted.get("volume_flow", 0))
+                + int(sub_weighted.get("support_resistance", 0))
+            ) / 0.85
+        ),
         "regime": regime,
         "regime_confidence": regime_confidence,
         "auction_intensity": auction_intensity,
@@ -427,6 +551,9 @@ def generate_kuwait_signal(
         },
         "liquidity_passed": liquidity_passed,
         "liquidity_details": liq_details,
+        "circuit_proximity": circuit_proximity,
+        "indicator_breakdown": indicator_breakdown or {},
+        "four_scores": four_scores,
         # Price level arrays for UI price ladder (up to 3 nearest levels each)
         "support_levels": sr_details.get("support_levels", [])[:3],
         "resistance_levels": sr_details.get("resistance_levels", [])[:3],
@@ -481,11 +608,36 @@ def generate_kuwait_signal(
     #   combined_score_unadjusted_directional — total_score using base trend WITHOUT multipliers
     signal_out["combined_score_adjusted_directional"] = total_score
     signal_out["combined_score_unadjusted_directional"] = total_score_unadjusted
+    signal_out["raw_technical_score"] = total_score
     # Per-stock trend directional haircut: the combined multiplier applied to the base trend
     # score (e.g. 0.87 means the trend score was reduced to 87% of its raw structural value).
     # Component multipliers are exposed separately for transparency.
     signal_out["trend_directional_factor"] = trend_details.get("adjustment_factor")
     signal_out["trend_directional_multipliers"] = trend_details.get("multipliers")
+    if signal_out.get("signal") == "NEUTRAL":
+        if not liquidity_passed:
+            neutral_weights = _apply_regime_weights(dict(BASE_WEIGHTS), "Neutral_Chop", liq_pct)
+            adjusted_liq = int(
+                (
+                    round(int(trend_raw) * neutral_weights["trend"])
+                    + round(int(momentum_raw) * neutral_weights["momentum"])
+                    + round(int(volume_raw) * neutral_weights["volume_flow"])
+                    + round(int(sr_raw) * neutral_weights["support_resistance"])
+                ) / 0.85
+            )
+            unadjusted_liq = int(
+                (
+                    round(int(trend_base_raw) * neutral_weights["trend"])
+                    + round(int(momentum_raw) * neutral_weights["momentum"])
+                    + round(int(volume_raw) * neutral_weights["volume_flow"])
+                    + round(int(sr_raw) * neutral_weights["support_resistance"])
+                ) / 0.85
+            )
+            signal_out["combined_score_adjusted_directional"] = adjusted_liq
+            signal_out["combined_score_unadjusted_directional"] = unadjusted_liq
+            signal_out["raw_technical_score"] = adjusted_liq
+            confluence["four_scores"] = _make_blocked_four_scores(rows, adtv_kd, spread_pct)
+        signal_out["reason"] = neutral_reason
     return signal_out
 
 
@@ -494,9 +646,16 @@ def _neutral_signal(
     segment: str,
     data_as_of: str,
     reason: str,
+    rows: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Return a minimal NEUTRAL signal with the given reason in alerts."""
-    return format_signal(
+    rows = rows or []
+    close = float(rows[-1].get("close") or 0.0) if rows else 0.0
+    high = float(rows[-1].get("high") or close) if rows else 0.0
+    low = float(rows[-1].get("low") or close) if rows else 0.0
+    spread_pct = ((high - low) / close * 100.0) if close > 0 else 0.0
+    blocked_four = _make_blocked_four_scores(rows, 0.0, spread_pct)
+    signal = format_signal(
         stock_code=stock_code,
         segment=segment,
         signal_direction="NEUTRAL",
@@ -517,6 +676,14 @@ def _neutral_signal(
             "regime_confidence": None, "auction_intensity": None,
             "sub_scores": {}, "raw_sub_scores": {},
             "liquidity_passed": False, "liquidity_details": {},
+            "circuit_proximity": {
+                "is_near_limit": False,
+                "direction": "none",
+                "distance_to_upper_pct": None,
+                "distance_to_lower_pct": None,
+            },
+            "indicator_breakdown": {},
+            "four_scores": blocked_four,
         },
         alerts=[f"No signal: {reason}"],
         data_as_of=data_as_of,
@@ -525,3 +692,8 @@ def _neutral_signal(
                        "breakout": {"triggered": False, "reason": reason},
                        "accumulation": {"state": "absent", "obv_slope_pct": None, "cmf": None}},
     )
+    signal["reason"] = reason
+    signal["raw_technical_score"] = 0
+    signal["combined_score_adjusted_directional"] = 0
+    signal["combined_score_unadjusted_directional"] = 0
+    return signal

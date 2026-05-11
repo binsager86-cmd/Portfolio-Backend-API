@@ -243,10 +243,12 @@ def compute_trend_score(
     atr14_val = last.get("atr_14")
     if ema20_val is not None and atr14_val and float(atr14_val) > 0:
         stretch = abs(close - float(ema20_val)) / float(atr14_val)
-        if stretch > STRETCH_SEVERE_ATR:
+        moderate_th = min(STRETCH_MODERATE_ATR, 2.0)
+        severe_th = min(STRETCH_SEVERE_ATR, 2.5)
+        if stretch >= severe_th:
             stretch_mult = 0.45
             stretch_label = f"severely_extended_{stretch:.2f}x_atr"
-        elif stretch > STRETCH_MODERATE_ATR:
+        elif stretch >= moderate_th:
             stretch_mult = 0.75
             stretch_label = f"moderately_extended_{stretch:.2f}x_atr"
         else:
@@ -306,4 +308,3 @@ def compute_trend_score(
         "raw_score":           final_score,
     }
     return final_score, details
-

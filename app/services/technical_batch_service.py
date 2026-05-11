@@ -647,13 +647,14 @@ async def _score_one_symbol(
         rows = forward_fill_gaps(rows)
         rows = attach_indicators(rows)
 
-        signal = generate_kuwait_signal(
+        signal_or_coro = generate_kuwait_signal(
             rows=rows,
             stock_code=base,
             segment=segment.upper(),
             account_equity=account_equity,
             delay_hours=0,
         )
+        signal = await signal_or_coro if asyncio.iscoroutine(signal_or_coro) else signal_or_coro
 
         raw_sub_scores = (signal.get("confluence_details") or {}).get("raw_sub_scores") or {}
         trend_raw = _to_int(raw_sub_scores.get("trend"))

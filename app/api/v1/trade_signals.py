@@ -9,6 +9,7 @@ the live current P/E reading.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from datetime import date
@@ -588,7 +589,7 @@ async def kuwait_signal(
     if wins is not None and total_trades is not None and total_trades > 0:
         recent_performance = {"wins": wins, "total": total_trades}
 
-    signal = generate_kuwait_signal(
+    signal_or_coro = generate_kuwait_signal(
         rows=rows,
         stock_code=base,
         segment=segment.upper(),
@@ -596,6 +597,7 @@ async def kuwait_signal(
         delay_hours=delay_hours,
         recent_performance=recent_performance,
     )
+    signal = await signal_or_coro if asyncio.iscoroutine(signal_or_coro) else signal_or_coro
 
     return {"status": "ok", "data": signal}
 

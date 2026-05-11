@@ -18,6 +18,7 @@ All metrics are computed only from OUT-OF-SAMPLE test periods.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import math
 import random
@@ -485,13 +486,13 @@ def run_walk_forward_test(
                 continue
 
             try:
-                sig = generate_kuwait_signal(
+                sig = asyncio.run(generate_kuwait_signal(
                     rows=train_rows,
                     stock_code=code,
                     segment=segment,
                     account_equity=account_equity,
                     delay_hours=0,
-                )
+                ))
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Signal generation failed for %s (window %d): %s", code, win_idx + 1, exc)
                 continue
