@@ -481,6 +481,11 @@ def generate_kuwait_signal(
     #   combined_score_unadjusted_directional — total_score using base trend WITHOUT multipliers
     signal_out["combined_score_adjusted_directional"] = total_score
     signal_out["combined_score_unadjusted_directional"] = total_score_unadjusted
+    # Per-stock trend directional haircut: the combined multiplier applied to the base trend
+    # score (e.g. 0.87 means the trend score was reduced to 87% of its raw structural value).
+    # Component multipliers are exposed separately for transparency.
+    signal_out["trend_directional_factor"] = trend_details.get("adjustment_factor")
+    signal_out["trend_directional_multipliers"] = trend_details.get("multipliers")
     return signal_out
 
 
