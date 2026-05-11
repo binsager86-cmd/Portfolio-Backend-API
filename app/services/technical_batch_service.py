@@ -7,7 +7,6 @@ and serves latest-run snapshots for fast UI rendering.
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import json
 import logging
 import time
@@ -107,12 +106,18 @@ def _ensure_schema() -> None:
     )
 
     # Add per-stock directional factor columns to existing tables (idempotent migration).
+    # Catch only the "column already exists" error emitted by both SQLite
+    # ("duplicate column name") and PostgreSQL ("already exists"); re-raise anything else.
     for col_ddl in (
         "ALTER TABLE technical_analysis_scores ADD COLUMN trend_directional_factor REAL",
         "ALTER TABLE technical_analysis_scores ADD COLUMN trend_directional_multipliers TEXT",
     ):
-        with contextlib.suppress(Exception):
+        try:
             exec_sql(col_ddl)
+        except Exception as exc:  # noqa: BLE001
+            msg = str(exc).lower()
+            if "duplicate column" not in msg and "already exists" not in msg:
+                raise
 
     _SCHEMA_INIT = True
 
@@ -376,12 +381,21 @@ def _serialize_score_row(row: Any) -> dict[str, Any]:
         try:
             trend_directional_factor = float(trend_directional_factor)
         except (TypeError, ValueError):
+            logger.warning(
+                "Could not convert trend_directional_factor=%r for symbol=%s",
+                trend_directional_factor,
+                row.get("symbol"),
+            )
             trend_directional_factor = None
     raw_mults = row.get("trend_directional_multipliers")
     if isinstance(raw_mults, str):
         try:
             raw_mults = json.loads(raw_mults)
         except (TypeError, ValueError):
+            logger.warning(
+                "Could not decode trend_directional_multipliers JSON for symbol=%s",
+                row.get("symbol"),
+            )
             raw_mults = None
 
     combined_base, combined_adjusted = _resolve_row_combined_scores_for_action(row)
