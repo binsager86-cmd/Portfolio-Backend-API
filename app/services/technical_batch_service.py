@@ -613,11 +613,11 @@ async def _score_one_symbol(
         sr_raw = _to_int(raw_sub_scores.get("support_resistance"))
 
         # Daily batch dual-overall semantics:
-        # - raw_technical_score  -> combined score WITHOUT directional adjustment
-        # - risk_adjusted_score  -> combined score WITH directional adjustment
+        # - overall_score/raw_technical_score -> combined score WITHOUT directional adjustment
+        # - risk_adjusted_score               -> combined score WITH directional adjustment
         combined_with_adjustment, combined_no_adjustment = _resolve_combined_scores_from_signal(signal)
 
-        overall_score = combined_with_adjustment
+        overall_score = combined_no_adjustment
 
         return {
             "symbol": symbol,
