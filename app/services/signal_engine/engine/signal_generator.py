@@ -183,7 +183,7 @@ def generate_kuwait_signal(
     trend_raw, trend_details = compute_trend_score(rows)
     # Base trend score before directional context multipliers (ER, age, stretch, sector).
     # Used to produce the unadjusted combined score so the frontend can show both.
-    trend_base_raw: int = trend_details.get("base_raw", trend_raw)
+    trend_base_raw = trend_details.get("base_raw", trend_raw)
     momentum_raw, momentum_details = compute_momentum_score(rows)
     volume_raw, volume_details = compute_volume_flow_score(rows, auction_intensity)
     sr_raw, sr_details, support_levels, resistance_levels = compute_sr_score(rows)
@@ -286,12 +286,15 @@ def generate_kuwait_signal(
 
     # Unadjusted combined score: same weights but uses the pure base trend score
     # (before directional context multipliers such as ER, trend-age, EMA-stretch).
-    # This lets the daily batch store both values so the UI can display them separately.
-    total_score_unadjusted = (
-        total_score
-        - round(trend_raw * w_trend)
-        + round(trend_base_raw * w_trend)
-    )
+    # Computed explicitly from all sub-scores so it stays correct if total_score changes.
+    sub_weighted_unadjusted = {
+        "trend":              round(trend_base_raw * w_trend),
+        "momentum":           round(momentum_raw * w_mom),
+        "volume_flow":        round(volume_raw * w_vol),
+        "support_resistance": round(sr_raw * w_sr),
+        "risk_reward":        round(rr_raw * w_rr),
+    }
+    total_score_unadjusted = sum(sub_weighted_unadjusted.values())
 
     # ── 10. Circuit-breaker score haircut (BEFORE classification) ────────────
     # Applied here so the displayed score equals the score the gate evaluates.
