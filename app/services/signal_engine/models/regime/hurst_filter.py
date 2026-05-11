@@ -11,11 +11,13 @@ from app.services.signal_engine.config.kuwait_constants import (
     HURST_THRESHOLD_PREMIER,
 )
 
+MIN_HURST_WINDOW_SIZE = 20
+
 
 def _rescaled_range_analysis(prices: np.ndarray) -> tuple[float, float]:
     """Estimate Hurst exponent from persistence/noise heuristics."""
     arr = np.asarray(prices, dtype=float)
-    if arr.size < 20:
+    if arr.size < MIN_HURST_WINDOW_SIZE:
         return 0.5, 0.15
 
     if float(np.nanstd(arr)) < 1e-6 or (
@@ -50,7 +52,7 @@ def compute_hurst_filter(
     seg = str(market_segment or "PREMIER").upper()
     threshold = HURST_THRESHOLD_MAIN if seg == "MAIN" else HURST_THRESHOLD_PREMIER
 
-    if len(rows) < max(20, lookback_days):
+    if len(rows) < max(MIN_HURST_WINDOW_SIZE, lookback_days):
         return {
             "is_trending": False,
             "h_value": 0.5,
@@ -62,7 +64,7 @@ def compute_hurst_filter(
         }
 
     closes = np.array([float(r.get("close") or 0.0) for r in rows[-lookback_days:]], dtype=float)
-    if closes.size < 20 or float(np.nanstd(closes)) < 1e-9:
+    if closes.size < MIN_HURST_WINDOW_SIZE or float(np.nanstd(closes)) < 1e-9:
         return {
             "is_trending": False,
             "h_value": 0.7,

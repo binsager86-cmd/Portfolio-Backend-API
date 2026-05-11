@@ -18,18 +18,17 @@ Usage:
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 from typing import Any
 
 from app.services.signal_engine.config.kuwait_constants import (
     CIRCUIT_BUFFER_PCT,
     CIRCUIT_LOWER_PCT,
     CIRCUIT_UPPER_PCT,
-    PREMIER_ADTV_MIN_KD,
 )
 from app.services.signal_engine.config.model_params import (
     BASE_WEIGHTS,
     MIN_BARS_FOR_SIGNAL,
-    REGIME_BULL,
     SIGNAL_MAX_TOTAL_SELL,
     SIGNAL_MIN_P_TP1_BUY,
     SIGNAL_MIN_P_TP1_SELL,
@@ -58,8 +57,6 @@ from app.services.signal_engine.models.technical.support_resistance import (
     compute_sr_score,
     compute_tp_methods,
 )
-from app.services.signal_engine.processors.sr_engine import calculate_full_sr_levels
-from app.services.signal_engine.processors.volume_profile import calculate_volume_profile
 from app.services.signal_engine.models.technical.trend_score import compute_trend_score
 from app.services.signal_engine.models.technical.volume_flow_score import compute_volume_flow_score
 from app.services.signal_engine.processors.auction_proxy import (
@@ -67,8 +64,11 @@ from app.services.signal_engine.processors.auction_proxy import (
     calculate_auction_intensity,
 )
 from app.services.signal_engine.processors.liquidity_filter import is_tradable
+from app.services.signal_engine.processors.sr_engine import calculate_full_sr_levels
+from app.services.signal_engine.processors.volume_profile import calculate_volume_profile
 
 logger = logging.getLogger(__name__)
+SCORE_NORMALIZATION_FACTOR = 0.85
 
 
 def _apply_regime_weights(
@@ -406,9 +406,8 @@ async def generate_kuwait_signal(
     spread_pct = ((high_now - low_now) / close_now * 100.0) if close_now > 0 else 0.0
     upper_pct = circuit_proximity.get("distance_to_upper_pct")
     lower_pct = circuit_proximity.get("distance_to_lower_pct")
-    nearest = min(v for v in [upper_pct, lower_pct] if isinstance(v, (int, float))) if (
-        isinstance(upper_pct, (int, float)) or isinstance(lower_pct, (int, float))
-    ) else 99.0
+    valid_pcts = [v for v in [upper_pct, lower_pct] if isinstance(v, (int, float))]
+    nearest = min(valid_pcts) if valid_pcts else 99.0
     circuit_result = {"nearest_circuit_pct": round(float(nearest), 3)}
 
     four_scores = compute_all_four_scores(
@@ -536,7 +535,7 @@ async def generate_kuwait_signal(
                 + int(sub_weighted.get("momentum", 0))
                 + int(sub_weighted.get("volume_flow", 0))
                 + int(sub_weighted.get("support_resistance", 0))
-            ) / 0.85
+            ) / SCORE_NORMALIZATION_FACTOR
         ),
         "regime": regime,
         "regime_confidence": regime_confidence,
@@ -571,14 +570,13 @@ async def generate_kuwait_signal(
     }
 
     # ── §8 Runtime Monitoring — log required metrics for every signal ─────────
-    from datetime import datetime, timezone  # noqa: PLC0415 (local import to avoid cycle)
     _friction_pct = round(
         (2 * 0.0015 + 2 * (0.0010 if segment.upper() == "PREMIER" else 0.0030)) * 100, 3
     )
     logger.info(
         "[SIGNAL] ts=%s  stock=%s  signal=%s  data_as_of=%s  delay_h=%d  "
         "regime=%s  regime_conf=%.2f  score=%d  p_tp1=%.3f  friction_pct=%.3f%%",
-        datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         stock_code,
         final_signal,
         data_as_of,
@@ -623,7 +621,7 @@ async def generate_kuwait_signal(
                     + round(int(momentum_raw) * neutral_weights["momentum"])
                     + round(int(volume_raw) * neutral_weights["volume_flow"])
                     + round(int(sr_raw) * neutral_weights["support_resistance"])
-                ) / 0.85
+                ) / SCORE_NORMALIZATION_FACTOR
             )
             unadjusted_liq = int(
                 (
@@ -631,7 +629,7 @@ async def generate_kuwait_signal(
                     + round(int(momentum_raw) * neutral_weights["momentum"])
                     + round(int(volume_raw) * neutral_weights["volume_flow"])
                     + round(int(sr_raw) * neutral_weights["support_resistance"])
-                ) / 0.85
+                ) / SCORE_NORMALIZATION_FACTOR
             )
             signal_out["combined_score_adjusted_directional"] = adjusted_liq
             signal_out["combined_score_unadjusted_directional"] = unadjusted_liq

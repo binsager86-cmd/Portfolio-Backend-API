@@ -164,8 +164,8 @@ def compute_all_four_scores(
     risk_score, risk_level, risk_desc = compute_risk_score(
         rr_ratio=rr_ratio,
         atr_pct=atr_pct,
-        adtv_kwd=float(adtv_kwd or 0.0),
-        spread_pct=float(spread_pct or 0.0),
+        adtv_kwd=adtv_kwd,
+        spread_pct=spread_pct,
         circuit_distance_pct=float((circuit_result or {}).get("nearest_circuit_pct") or 99.0),
     )
     risk_tier = "Buy" if risk_level == "Low Risk" else "Hold" if risk_level == "Moderate Risk" else "Sell"

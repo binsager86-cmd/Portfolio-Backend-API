@@ -1,7 +1,10 @@
 """Order-book imbalance proxy utilities."""
 from __future__ import annotations
 
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 class OrderBookImbalance:
@@ -18,7 +21,8 @@ class OrderBookImbalance:
             return None
         try:
             return await self.api_client.get_order_book(symbol=self.symbol, depth=20)
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Order book fetch failed for %s: %s", self.symbol, exc)
             return None
 
     def compute_imbalance_ratio(self, snapshot: dict[str, Any] | None) -> dict[str, Any]:
@@ -109,5 +113,5 @@ class OrderBookImbalance:
             "bid_pressure": 0.5,
             "ask_pressure": 0.5,
             "liquidity_wall": None,
-            "description": reason if reason else "balanced_book",
+            "description": reason,
         }

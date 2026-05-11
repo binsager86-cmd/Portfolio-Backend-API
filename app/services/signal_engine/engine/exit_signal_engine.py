@@ -56,7 +56,7 @@ def _compute_momentum_exhaustion(
             reasons.append("price mildly stretched above EMA20")
 
     if rsi >= 80 and adx >= 30:
-        score = min(score, 45 if score < 50 else score)
+        score = min(score, 45)
 
     return min(100, score), reasons
 
