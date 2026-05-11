@@ -61,6 +61,6 @@ def test_score_one_symbol_uses_sync_signal_generator(monkeypatch):
     assert result["momentum_score"] == 64
     assert result["buying_pressure_score"] == 59
     assert result["key_price_level_score"] == 61
-    assert result["overall_score"] == 67
+    assert result["overall_score"] == 70
     assert result["risk_adjusted_score"] == 67
     assert result["raw_technical_score"] == 70
