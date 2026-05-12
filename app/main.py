@@ -198,6 +198,23 @@ async def lifespan(app: FastAPI):
         await close_client()
     except Exception as exc:
         logger.debug("HTTP client shutdown skipped: %s", exc)
+
+    # Cancel any in-flight background technical-batch tasks so they can mark
+    # their runs as "failed" before the process exits.  Without this, a
+    # graceful restart leaves runs stuck in "running" status, which causes the
+    # technical-analysis page to spin indefinitely on the next server start.
+    try:
+        from app.services.technical_batch_service import _BACKGROUND_TASKS
+        pending = list(_BACKGROUND_TASKS)
+        if pending:
+            logger.info("Cancelling %d in-flight technical batch task(s) for clean shutdown", len(pending))
+            for task in pending:
+                task.cancel()
+            import asyncio as _asyncio
+            await _asyncio.gather(*pending, return_exceptions=True)
+    except Exception as exc:
+        logger.debug("Background task cleanup skipped: %s", exc)
+
     stop_scheduler()
     logger.info("👋  Backend API shutting down")
 

@@ -458,7 +458,7 @@ def get_latest_run(limit: int = 300) -> dict[str, Any]:
     score_rows = query_all(
         "SELECT symbol, company_name, segment, signal, reason, trend_score, momentum_score, "
         "buying_pressure_score, key_price_level_score, overall_score, raw_technical_score, "
-        "risk_adjusted_score, error "
+        "risk_adjusted_score, trend_directional_factor, trend_directional_multipliers, error "
         "FROM technical_analysis_scores "
         "WHERE run_id = ? "
         "ORDER BY CASE WHEN raw_technical_score IS NULL THEN 1 ELSE 0 END, raw_technical_score DESC, symbol ASC "
@@ -482,7 +482,7 @@ def get_run_by_id(run_id: int, limit: int = 300) -> dict[str, Any]:
     score_rows = query_all(
         "SELECT symbol, company_name, segment, signal, reason, trend_score, momentum_score, "
         "buying_pressure_score, key_price_level_score, overall_score, raw_technical_score, "
-        "risk_adjusted_score, error "
+        "risk_adjusted_score, trend_directional_factor, trend_directional_multipliers, error "
         "FROM technical_analysis_scores "
         "WHERE run_id = ? "
         "ORDER BY CASE WHEN raw_technical_score IS NULL THEN 1 ELSE 0 END, raw_technical_score DESC, symbol ASC "
@@ -975,6 +975,26 @@ def kickoff_batch_background(
                 max_concurrency=max_concurrency,
                 account_equity=account_equity,
             )
+        except asyncio.CancelledError:
+            # Server is shutting down gracefully; mark the run as failed so the
+            # page does not stay stuck in the "running" loading state on the
+            # next server start.
+            logger.warning(
+                "Background technical batch run %s cancelled (server shutdown)",
+                run_id,
+            )
+            try:
+                _finish_run(
+                    run_id,
+                    status="failed",
+                    processed_symbols=0,
+                    success_count=0,
+                    failed_count=len(universe),
+                    message="Run cancelled (server shutdown or task cancellation)",
+                )
+            except Exception:  # noqa: BLE001
+                logger.exception("Failed to mark cancelled run %s as failed", run_id)
+            raise  # re-raise so asyncio can propagate the cancellation
         except Exception as exc:  # noqa: BLE001
             logger.exception("Background technical batch run %s failed", run_id)
             _finish_run(
