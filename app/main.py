@@ -145,20 +145,16 @@ async def lifespan(app: FastAPI):
         # ── Backfill yf_ticker for existing stocks ───────────────
         try:
             from app.core.database import exec_sql, query_df
-            from app.data.stock_lists import KUWAIT_STOCKS, US_STOCKS
-            ticker_map = {}
-            for s in KUWAIT_STOCKS:
-                ticker_map[s["symbol"].upper()] = s["yf_ticker"]
-            for s in US_STOCKS:
-                ticker_map[s["symbol"].upper()] = s["yf_ticker"]
+            from app.data.stock_lists import resolve_yf_ticker_from_lists
             missing = query_df(
-                "SELECT id, symbol FROM stocks WHERE yf_ticker IS NULL OR yf_ticker = ''"
+                "SELECT id, symbol, currency FROM stocks WHERE yf_ticker IS NULL OR yf_ticker = ''"
             )
             if missing is not None and not missing.empty:
                 updated = 0
                 for _, row in missing.iterrows():
                     sym = str(row["symbol"]).strip().upper()
-                    yf = ticker_map.get(sym)
+                    ccy = str(row.get("currency") or "").strip().upper()
+                    yf = resolve_yf_ticker_from_lists(sym, ccy)
                     if yf:
                         exec_sql("UPDATE stocks SET yf_ticker = ? WHERE id = ?", (yf, row["id"]))
                         updated += 1
