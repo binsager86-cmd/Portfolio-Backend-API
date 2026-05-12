@@ -4,7 +4,7 @@ Only includes stocks verified to work on yfinance.
 Symbol must match the yfinance base ticker (before .KW suffix).
 """
 
-from typing import List, Dict, Optional
+from typing import Dict, List
 
 
 KUWAIT_STOCKS: List[Dict[str, str]] = [
@@ -305,7 +305,7 @@ US_STOCKS: List[Dict[str, str]] = [
 ]
 
 
-def resolve_yf_ticker_from_lists(symbol: str, currency: str) -> Optional[str]:
+def resolve_yf_ticker_from_lists(symbol: str, currency: str) -> str | None:
     """Resolve symbol to yfinance ticker using market-aware fallback priority."""
     sym_upper = symbol.strip().upper()
     ccy_upper = currency.strip().upper()
