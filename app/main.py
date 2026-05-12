@@ -153,7 +153,7 @@ async def lifespan(app: FastAPI):
                 updated = 0
                 for _, row in missing.iterrows():
                     sym = str(row["symbol"]).strip().upper()
-                    ccy = str(row.get("currency") or "").strip().upper()
+                    ccy = str(row.get("currency") or "KWD").strip().upper()
                     yf = resolve_yf_ticker_from_lists(sym, ccy)
                     if yf:
                         exec_sql("UPDATE stocks SET yf_ticker = ? WHERE id = ?", (yf, row["id"]))
