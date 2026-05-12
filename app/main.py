@@ -162,6 +162,38 @@ async def lifespan(app: FastAPI):
                     logger.info("Backfilled yf_ticker for %d existing stocks", updated)
         except Exception as e:
             logger.warning("yf_ticker backfill skipped: %s", e)
+
+        # ── Correct mismatched yf_ticker for known stocks ────────
+        # Symbols that exist in both the Kuwait and US reference lists (e.g. KRE)
+        # may have been stored with the wrong market ticker. Re-resolve and fix.
+        try:
+            from app.core.database import exec_sql, query_df
+            from app.data.stock_lists import resolve_yf_ticker_from_lists
+            all_stocks = query_df(
+                "SELECT id, symbol, currency, yf_ticker FROM stocks"
+                " WHERE yf_ticker IS NOT NULL AND yf_ticker != ''"
+            )
+            if all_stocks is not None and not all_stocks.empty:
+                corrected = 0
+                for _, row in all_stocks.iterrows():
+                    sym = str(row["symbol"]).strip().upper()
+                    ccy = str(row.get("currency") or "KWD").strip().upper()
+                    stored = str(row["yf_ticker"]).strip()
+                    resolved = resolve_yf_ticker_from_lists(sym, ccy)
+                    if resolved and resolved != stored:
+                        exec_sql(
+                            "UPDATE stocks SET yf_ticker = ? WHERE id = ?",
+                            (resolved, row["id"]),
+                        )
+                        corrected += 1
+                        logger.info(
+                            "Corrected yf_ticker for %s (%s): %s → %s",
+                            sym, ccy, stored, resolved,
+                        )
+                if corrected:
+                    logger.info("Corrected yf_ticker for %d stock(s)", corrected)
+        except Exception as e:
+            logger.warning("yf_ticker correction skipped: %s", e)
     start_scheduler()
 
     # ── Production security audit ────────────────────────────────────
