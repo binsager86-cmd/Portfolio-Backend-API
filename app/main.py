@@ -8,6 +8,7 @@ Run with:  uvicorn app.main:app --reload --port 8004
 import logging
 import os
 import json
+import asyncio
 from contextlib import asynccontextmanager
 
 import tracemalloc
@@ -210,8 +211,7 @@ async def lifespan(app: FastAPI):
             logger.info("Cancelling %d in-flight technical batch task(s) for clean shutdown", len(pending))
             for task in pending:
                 task.cancel()
-            import asyncio as _asyncio
-            await _asyncio.gather(*pending, return_exceptions=True)
+            await asyncio.gather(*pending, return_exceptions=True)
     except Exception as exc:
         logger.debug("Background task cleanup skipped: %s", exc)
 

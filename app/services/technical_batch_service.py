@@ -989,7 +989,7 @@ def kickoff_batch_background(
                     status="failed",
                     processed_symbols=0,
                     success_count=0,
-                    failed_count=len(universe),
+                    failed_count=0,
                     message="Run cancelled (server shutdown or task cancellation)",
                 )
             except Exception:  # noqa: BLE001
