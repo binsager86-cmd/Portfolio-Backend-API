@@ -4,7 +4,7 @@ Only includes stocks verified to work on yfinance.
 Symbol must match the yfinance base ticker (before .KW suffix).
 """
 
-from typing import List, Dict
+from typing import Dict, List
 
 
 KUWAIT_STOCKS: List[Dict[str, str]] = [
@@ -303,3 +303,24 @@ US_STOCKS: List[Dict[str, str]] = [
     {"symbol": "REGN", "name": "Regeneron Pharmaceuticals Inc.", "yf_ticker": "REGN"},
     {"symbol": "VRTX", "name": "Vertex Pharmaceuticals Inc.", "yf_ticker": "VRTX"},
 ]
+
+
+def resolve_yf_ticker_from_lists(symbol: str, currency: str) -> str | None:
+    """Resolve symbol to yfinance ticker using market-aware fallback priority."""
+    sym_upper = symbol.strip().upper()
+    ccy_upper = currency.strip().upper()
+    if not sym_upper:
+        return None
+
+    kw_map = {entry["symbol"].upper(): entry["yf_ticker"] for entry in KUWAIT_STOCKS}
+    us_map = {entry["symbol"].upper(): entry["yf_ticker"] for entry in US_STOCKS}
+
+    if ccy_upper == "KWD" and sym_upper in kw_map:
+        return kw_map[sym_upper]
+    if ccy_upper == "USD" and sym_upper in us_map:
+        return us_map[sym_upper]
+    if sym_upper in kw_map:
+        return kw_map[sym_upper]
+    if sym_upper in us_map:
+        return us_map[sym_upper]
+    return None
