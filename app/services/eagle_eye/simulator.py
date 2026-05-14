@@ -156,6 +156,27 @@ def _get_ohlcv_near(ticker: str, target_date: str) -> Optional[dict]:
     return None
 
 
+def _compute_atr(ticker: str, date_str: str, periods: int = 14) -> Optional[float]:
+    """Compute Average True Range over the last `periods` bars ending on date_str."""
+    rows = _query_all(
+        """SELECT high, low, close FROM ee_ohlcv_cache
+           WHERE ticker = ? AND bar_date <= ?
+           ORDER BY bar_date DESC LIMIT ?""",
+        (ticker.upper(), date_str, periods + 1),
+    )
+    if not rows or len(rows) < 2:
+        return None
+    bars = list(reversed(rows))  # oldest first
+    trs: list[float] = []
+    for i in range(1, len(bars)):
+        h = float(bars[i].get("high") or 0)
+        lo = float(bars[i].get("low") or 0)
+        prev_c = float(bars[i - 1].get("close") or 0)
+        tr = max(h - lo, abs(h - prev_c), abs(lo - prev_c))
+        trs.append(tr)
+    return sum(trs) / len(trs) if trs else None
+
+
 def _get_sector(ticker: str) -> str:
     row = _query_one(
         "SELECT sector FROM ee_ratings_cache WHERE ticker = ?",
@@ -267,9 +288,10 @@ class SimulatorEngine:
 
             exit_triggered = False
 
-            # 1. Stop loss
-            if stop > 0 and l <= stop:
-                self._close_position(pos, portfolio, min(c, stop), "STOP_HIT", date_str, days_held)
+            # 1. Stop loss — triggered only when close price is at/below stop
+            #    (avoids false stops from intraday noise that recovers by close)
+            if stop > 0 and c <= stop:
+                self._close_position(pos, portfolio, c, "STOP_HIT", date_str, days_held)
                 closed.append({"ticker": pos["ticker"], "reason": "STOP_HIT"})
                 exit_triggered = True
 
@@ -319,13 +341,24 @@ class SimulatorEngine:
 
         for rating in todays_ratings:
             portfolio = _get_portfolio(strategy.portfolio_id) or portfolio
-            decision = self._evaluate_entry(strategy, rating, portfolio)
+            decision = self._evaluate_entry(strategy, rating, portfolio, date_str)
             if not decision.should_enter:
                 self._log_considered(strategy.portfolio_id, date_str, rating, decision.skip_reason)
                 continue
 
+            # Use actual market price from OHLCV cache (not stale rating target)
+            ticker = (rating.get("ticker") or "").upper()
+            ohlcv = _get_ohlcv_near(ticker, date_str)
+            if ohlcv is None:
+                self._log_considered(strategy.portfolio_id, date_str, rating, "NO_PRICE_DATA")
+                continue
+            actual_price = float(ohlcv.get("close") or 0)
+            if actual_price <= 0:
+                self._log_considered(strategy.portfolio_id, date_str, rating, "NO_PRICE_DATA")
+                continue
+
             portfolio_value = float(portfolio.get("total_value_kwd") or 10000)
-            position_size_kwd = self._compute_position_size(rating, portfolio_value)
+            position_size_kwd = self._compute_position_size(rating, portfolio_value, actual_price, date_str)
             if position_size_kwd < MIN_TRADE_SIZE_KWD:
                 self._log_considered(strategy.portfolio_id, date_str, rating, "POSITION_TOO_SMALL")
                 continue
@@ -337,15 +370,15 @@ class SimulatorEngine:
                 self._log_considered(strategy.portfolio_id, date_str, rating, "INSUFFICIENT_CASH")
                 continue
 
-            self._open_position(strategy, rating, portfolio, position_size_kwd, date_str)
-            opened.append({"ticker": rating.get("ticker"), "size_kwd": position_size_kwd})
+            self._open_position(strategy, rating, portfolio, position_size_kwd, date_str, actual_price)
+            opened.append({"ticker": ticker, "size_kwd": position_size_kwd})
 
         return opened
 
     # ── Evaluation ───────────────────────────────────────────────────────
 
     def _evaluate_entry(
-        self, strategy: StrategyConfig, rating: dict, portfolio: dict
+        self, strategy: StrategyConfig, rating: dict, portfolio: dict, date_str: str = ""
     ) -> EntryDecision:
         confidence = float(rating.get("confidence") or 0)
         stage = rating.get("stage") or ""
@@ -358,6 +391,8 @@ class SimulatorEngine:
             return _skip("STAGE_NOT_ALLOWED")
         if self._already_holding(strategy.portfolio_id, ticker):
             return _skip("ALREADY_HOLDING")
+        if self._recently_stopped_out(strategy.portfolio_id, ticker, date_str):
+            return _skip("RECENTLY_STOPPED_OUT")
 
         cash = float(portfolio.get("cash_balance_kwd") or 0)
         if cash < MIN_TRADE_SIZE_KWD:
@@ -375,13 +410,36 @@ class SimulatorEngine:
 
     # ── Position sizing ──────────────────────────────────────────────────
 
-    def _compute_position_size(self, rating: dict, portfolio_value: float) -> float:
+    def _compute_position_size(
+        self, rating: dict, portfolio_value: float, actual_price: float = 0, date_str: str = ""
+    ) -> float:
         from app.services.eagle_eye.rating_engine import compute_position_size
 
-        entry = float(rating.get("entry_primary") or rating.get("last_price") or 0)
-        stop = float(rating.get("stop_loss") or 0)
+        entry = actual_price if actual_price > 0 else float(rating.get("entry_primary") or rating.get("last_price") or 0)
+        entry_primary = float(rating.get("entry_primary") or 0)
+        stop_from_rating = float(rating.get("stop_loss") or 0)
         confidence = float(rating.get("confidence") or 60)
-        tp1 = float(rating.get("tp1") or 0) or None
+        tp1_from_rating = float(rating.get("tp1") or 0)
+
+        # Prefer ATR-based stop (2.5× ATR) — absorbs Kuwait market intraday noise
+        ticker = (rating.get("ticker") or "").upper()
+        atr = _compute_atr(ticker, date_str) if (ticker and date_str and entry > 0) else None
+        if atr and atr > 0:
+            stop = entry - (2.5 * atr)
+            if stop <= 0:
+                stop = entry * 0.90  # fallback: 10% max stop
+        elif entry_primary > 0 and stop_from_rating > 0:
+            stop_pct = (entry_primary - stop_from_rating) / entry_primary
+            stop = entry * (1 - stop_pct)
+        else:
+            stop = entry * 0.93  # 7% default stop
+
+        # Rescale TP1 to actual entry price
+        if entry_primary > 0 and tp1_from_rating > 0:
+            tp1_pct = (tp1_from_rating - entry_primary) / entry_primary
+            tp1: Optional[float] = entry * (1 + tp1_pct)
+        else:
+            tp1 = None
 
         if entry <= 0 or stop <= 0 or stop >= entry:
             # Fallback: 5% of portfolio
@@ -408,10 +466,38 @@ class SimulatorEngine:
         portfolio: dict,
         size_kwd: float,
         date_str: str,
+        actual_price: float = 0,
     ) -> None:
-        entry_price = float(rating.get("entry_primary") or rating.get("last_price") or 0)
+        entry_primary = float(rating.get("entry_primary") or rating.get("last_price") or 0)
+        stop_from_rating = float(rating.get("stop_loss") or 0)
+        tp1_from_rating = float(rating.get("tp1") or 0)
+        tp2_from_rating = float(rating.get("tp2") or 0)
+        tp3_from_rating = float(rating.get("tp3") or 0)
+
+        # Use actual market price; fall back to rating's entry_primary
+        entry_price = actual_price if actual_price > 0 else entry_primary
         if entry_price <= 0:
             return
+
+        # Rescale stop and TPs proportionally to the actual entry price
+        def _rescale_level(level_from_rating: float, is_stop: bool) -> float:
+            if entry_primary <= 0 or level_from_rating <= 0:
+                return entry_price * (0.93 if is_stop else 0)
+            pct = (level_from_rating - entry_primary) / entry_primary
+            return entry_price * (1 + pct)
+
+        # ATR-based stop (2.5× ATR) — wider than rating %, absorbs noise
+        ticker_for_atr = (rating.get("ticker") or "").upper()
+        atr = _compute_atr(ticker_for_atr, date_str) if (ticker_for_atr and date_str) else None
+        if atr and atr > 0:
+            planned_stop = entry_price - (2.5 * atr)
+            if planned_stop <= 0:
+                planned_stop = entry_price * 0.90
+        else:
+            planned_stop = _rescale_level(stop_from_rating, is_stop=True)
+        planned_tp1 = _rescale_level(tp1_from_rating, is_stop=False) if tp1_from_rating > 0 else 0
+        planned_tp2 = _rescale_level(tp2_from_rating, is_stop=False) if tp2_from_rating > 0 else 0
+        planned_tp3 = _rescale_level(tp3_from_rating, is_stop=False) if tp3_from_rating > 0 else 0
 
         shares = round(size_kwd / entry_price, 4)
         portfolio_value = float(portfolio.get("total_value_kwd") or 10000)
@@ -471,10 +557,10 @@ class SimulatorEngine:
                 json.dumps(signals),
                 round(accumulation_score, 4),
                 json.dumps(indicators),
-                float(rating.get("stop_loss") or 0),
-                float(rating.get("tp1") or 0),
-                float(rating.get("tp2") or 0),
-                float(rating.get("tp3") or 0),
+                round(planned_stop, 6),
+                round(planned_tp1, 6),
+                round(planned_tp2, 6),
+                round(planned_tp3, 6),
                 _now_ts(),
                 _now_ts(),
             ),
@@ -689,6 +775,22 @@ class SimulatorEngine:
         count = _query_val(
             "SELECT COUNT(*) FROM simulator_positions WHERE portfolio_id = ? AND ticker = ? AND status = 'OPEN'",
             (portfolio_id, ticker.upper()),
+        )
+        return bool(count and int(count) > 0)
+
+    def _recently_stopped_out(self, portfolio_id: int, ticker: str, date_str: str, lookback_days: int = 15) -> bool:
+        """Return True if this ticker had a STOP_HIT exit within the last ~3 weeks."""
+        try:
+            d = date.fromisoformat(date_str) if date_str else date.today()
+        except Exception:
+            d = date.today()
+        # Convert trading days to calendar days (roughly 7/5)
+        cutoff = (d - timedelta(days=int(lookback_days * 7 / 5))).isoformat()
+        count = _query_val(
+            """SELECT COUNT(*) FROM simulator_positions
+               WHERE portfolio_id = ? AND ticker = ? AND status = 'CLOSED'
+                 AND exit_reason = 'STOP_HIT' AND exit_date >= ?""",
+            (portfolio_id, ticker.upper(), cutoff),
         )
         return bool(count and int(count) > 0)
 

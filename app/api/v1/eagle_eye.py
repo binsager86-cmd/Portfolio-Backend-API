@@ -628,6 +628,13 @@ def _sim_portfolio_summary(portfolio: dict) -> dict:
     total = float(portfolio.get("total_value_kwd") or starting)
     cumulative_return_pct = ((total - starting) / starting * 100) if starting > 0 else 0
 
+    # live_since: date when portfolio was last reset (updated_at from DB)
+    raw_live_since = portfolio.get("updated_at") or portfolio.get("created_at")
+    if raw_live_since:
+        live_since = str(raw_live_since).split(" ")[0].split("T")[0]
+    else:
+        live_since = None
+
     return {
         "id": pid,
         "strategy_name": portfolio.get("strategy_name"),
@@ -645,6 +652,7 @@ def _sim_portfolio_summary(portfolio: dict) -> dict:
         "profit_factor": round(profit_factor, 2),
         "max_drawdown_pct": round(max_drawdown, 2),
         "equity_curve": equity_curve,
+        "live_since": live_since,
     }
 
 

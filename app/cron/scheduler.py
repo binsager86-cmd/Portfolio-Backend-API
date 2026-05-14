@@ -357,9 +357,34 @@ def start_scheduler() -> None:
             max_instances=1,
         )
 
+        # ── Simulator daily run (Sun–Thu 14:20 — after rating recompute) ──
+        def _run_eagle_eye_simulator() -> None:
+            """Paper trading simulator: exits → entries → snapshot for all 3 strategies."""
+            try:
+                from app.services.eagle_eye.simulator import get_engine
+                result = get_engine().run_daily()
+                logger.info("📈 Simulator daily run complete: %s", result)
+            except Exception as _exc:
+                logger.warning("📈 Simulator daily run failed: %s", _exc)
+
+        _scheduler.add_job(
+            _run_eagle_eye_simulator,
+            trigger=CronTrigger(
+                day_of_week="sun,mon,tue,wed,thu",
+                hour=14,
+                minute=20,
+                timezone="Asia/Kuwait",
+            ),
+            id="eagle_eye_simulator_daily",
+            name="Eagle Eye paper trading simulator",
+            replace_existing=True,
+            coalesce=True,
+            max_instances=1,
+        )
+
         logger.info(
             "Eagle Eye jobs scheduled "
-            "(Sun–Thu 13:15 intraday; Sun–Thu 14:05 nightly; DNA rebuild Sun 14:30 Asia/Kuwait)"
+            "(Sun–Thu 13:15 intraday; Sun–Thu 14:05 nightly; DNA rebuild Sun 14:30; Simulator 14:20 Asia/Kuwait)"
         )
     except Exception as exc:
         logger.warning("Could not schedule Eagle Eye jobs: %s", exc)
