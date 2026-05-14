@@ -891,9 +891,13 @@ class SimulatorEngine:
                exit_date TEXT, exit_price REAL, exit_reason TEXT,
                pnl_kwd REAL, pnl_pct REAL, days_held INTEGER,
                max_unrealized_gain_pct REAL, max_unrealized_loss_pct REAL,
+               entry_relative_volume NUMERIC(8,2),
                created_at TEXT, updated_at TEXT
             )""",
         )
+        # Additive migration for tables created before entry_relative_volume was added
+        from app.core.database import add_column_if_missing as _acim
+        _acim("simulator_positions", "entry_relative_volume", "NUMERIC(8,2)")
         _exec(
             """CREATE TABLE IF NOT EXISTS simulator_daily_snapshots (
                id INTEGER PRIMARY KEY AUTOINCREMENT,
