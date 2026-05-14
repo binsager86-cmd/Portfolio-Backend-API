@@ -113,6 +113,14 @@ async def lifespan(app: FastAPI):
         except Exception as ee_err:
             logger.warning("⚠️  Eagle Eye schema init failed: %s", ee_err)
 
+        # ── Simulator tables (idempotent — must exist before first request) ──
+        try:
+            from app.services.eagle_eye.simulator import ensure_simulator_tables as _sim_init
+            _sim_init()
+            logger.info("✅  Simulator schema ensured (idempotent)")
+        except Exception as sim_err:
+            logger.warning("⚠️  Simulator schema init failed: %s", sim_err)
+
         # ── Eagle Eye cache warmup: if ratings cache is cold (<50 rows),
         # trigger a full background recompute so the scanner shows all
         # ~141 Kuwait stocks instead of only the on-demand-fetched ones.

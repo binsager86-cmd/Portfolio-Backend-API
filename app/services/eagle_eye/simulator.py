@@ -91,6 +91,11 @@ def _exec(sql: str, params: tuple = ()) -> None:
     exec_sql(sql, params)
 
 
+def ensure_simulator_tables() -> None:
+    """Idempotent DDL — creates all simulator tables. Called at app startup."""
+    SimulatorEngine()._ensure_simulator_tables()
+
+
 def _query_one(sql: str, params: tuple = ()) -> Optional[Any]:
     from app.core.database import query_one
     return query_one(sql, params)
