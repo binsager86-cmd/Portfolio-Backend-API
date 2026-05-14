@@ -13,6 +13,7 @@ Endpoints:
 """
 from __future__ import annotations
 
+import json
 import logging
 import uuid
 from datetime import date, datetime, timedelta
@@ -430,9 +431,9 @@ async def get_stock_dna(
         profiles.append(ThresholdProfileResponse(
             threshold_pct=tp.get("threshold_pct", 0),
             success_rate=tp.get("success_rate", 0),
-            sample_count=tp.get("sample_count", 0),
+            sample_count=tp.get("occurrences", tp.get("sample_count", 0)),
             median_bars_to_hit=tp.get("median_bars_to_hit"),
-            avg_win_pct=tp.get("avg_win_pct"),
+            avg_win_pct=tp.get("avg_gain_pct", tp.get("avg_win_pct")),
             avg_loss_pct=tp.get("avg_loss_pct"),
         ))
 
@@ -565,6 +566,464 @@ async def refresh_stocks(
         )
     except Exception as exc:
         logger.warning("Could not start Eagle Eye background recompute: %s", exc)
+
+
+# ===========================================================================
+# SIMULATOR ENDPOINTS
+# ===========================================================================
+
+def _sim_portfolio_summary(portfolio: dict) -> dict:
+    """Compute aggregate metrics for one simulator portfolio."""
+    from app.core.database import query_all, query_val
+
+    pid = portfolio["id"]
+
+    closed_rows = query_all(
+        """SELECT pnl_pct, pnl_kwd, exit_reason, entry_stage, entry_confidence
+           FROM simulator_positions
+           WHERE portfolio_id = ? AND status IN ('CLOSED', 'OVERRIDDEN')""",
+        (pid,),
+    )
+    closed = [dict(r.items()) for r in closed_rows] if closed_rows else []
+
+    open_rows = query_all(
+        "SELECT id FROM simulator_positions WHERE portfolio_id = ? AND status = 'OPEN'",
+        (pid,),
+    )
+    open_count = len(open_rows) if open_rows else 0
+
+    wins = [r for r in closed if float(r.get("pnl_pct") or 0) > 0]
+    losses = [r for r in closed if float(r.get("pnl_pct") or 0) <= 0]
+    win_rate = (len(wins) / len(closed) * 100) if closed else 0
+
+    avg_win = (sum(float(r.get("pnl_pct") or 0) for r in wins) / len(wins)) if wins else 0
+    avg_loss = (sum(abs(float(r.get("pnl_pct") or 0)) for r in losses) / len(losses)) if losses else 0
+    profit_factor = (avg_win * len(wins)) / (avg_loss * len(losses)) if (avg_loss * len(losses)) > 0 else 0
+
+    # Max drawdown from snapshots
+    snap_rows = query_all(
+        "SELECT drawdown_from_peak_pct FROM simulator_daily_snapshots WHERE portfolio_id = ?",
+        (pid,),
+    )
+    drawdowns = [float(dict(r.items()).get("drawdown_from_peak_pct") or 0) for r in snap_rows] if snap_rows else [0]
+    max_drawdown = min(drawdowns)
+
+    # Equity curve (last 30 snapshots)
+    equity_rows = query_all(
+        """SELECT date, total_value_kwd, cumulative_return_pct
+           FROM simulator_daily_snapshots
+           WHERE portfolio_id = ?
+           ORDER BY date DESC LIMIT 30""",
+        (pid,),
+    )
+    equity_curve = [
+        {"date": dict(r.items())["date"], "value": float(dict(r.items()).get("total_value_kwd") or 0),
+         "return_pct": float(dict(r.items()).get("cumulative_return_pct") or 0)}
+        for r in (equity_rows or [])
+    ]
+    equity_curve.reverse()
+
+    # Cumulative return
+    starting = float(portfolio.get("starting_capital_kwd") or 10000)
+    total = float(portfolio.get("total_value_kwd") or starting)
+    cumulative_return_pct = ((total - starting) / starting * 100) if starting > 0 else 0
+
+    return {
+        "id": pid,
+        "strategy_name": portfolio.get("strategy_name"),
+        "starting_capital_kwd": starting,
+        "cash_balance_kwd": float(portfolio.get("cash_balance_kwd") or 0),
+        "total_value_kwd": total,
+        "cumulative_return_pct": round(cumulative_return_pct, 2),
+        "open_positions_count": open_count,
+        "total_trades": len(closed),
+        "wins": len(wins),
+        "losses": len(losses),
+        "win_rate": round(win_rate, 2),
+        "avg_win_pct": round(avg_win, 2),
+        "avg_loss_pct": round(avg_loss, 2),
+        "profit_factor": round(profit_factor, 2),
+        "max_drawdown_pct": round(max_drawdown, 2),
+        "equity_curve": equity_curve,
+    }
+
+
+def _get_all_sim_portfolios() -> list:
+    from app.core.database import query_all
+    rows = query_all("SELECT * FROM simulator_portfolios ORDER BY id", ())
+    return [dict(r.items()) for r in rows] if rows else []
+
+
+def _get_sim_portfolio_by_strategy(strategy_name: str) -> Optional[dict]:
+    from app.core.database import query_one
+    row = query_one(
+        "SELECT * FROM simulator_portfolios WHERE strategy_name = ?",
+        (strategy_name.upper(),),
+    )
+    return dict(row.items()) if row else None
+
+
+# ---------------------------------------------------------------------------
+# GET /eagle-eye/simulator/portfolios
+# ---------------------------------------------------------------------------
+
+@router.get("/simulator/portfolios", summary="All 3 simulator portfolios overview")
+async def get_simulator_portfolios(_user: TokenData = Depends(get_current_user)):
+    portfolios = _get_all_sim_portfolios()
+    summaries = [_sim_portfolio_summary(p) for p in portfolios]
+    return {"status": "ok", "portfolios": summaries}
+
+
+# ---------------------------------------------------------------------------
+# GET /eagle-eye/simulator/compare
+# ---------------------------------------------------------------------------
+
+@router.get("/simulator/compare", summary="Side-by-side strategy comparison")
+async def get_simulator_compare(_user: TokenData = Depends(get_current_user)):
+    portfolios = _get_all_sim_portfolios()
+    summaries = {p["strategy_name"]: _sim_portfolio_summary(p) for p in portfolios}
+    return {"status": "ok", "strategies": summaries}
+
+
+# ---------------------------------------------------------------------------
+# GET /eagle-eye/simulator/portfolios/{strategy_name}
+# ---------------------------------------------------------------------------
+
+@router.get("/simulator/portfolios/{strategy_name}", summary="Full strategy detail")
+async def get_simulator_portfolio_detail(
+    strategy_name: str,
+    _user: TokenData = Depends(get_current_user),
+):
+    from app.core.database import query_all
+
+    portfolio = _get_sim_portfolio_by_strategy(strategy_name)
+    if portfolio is None:
+        raise HTTPException(status_code=404, detail=f"Strategy '{strategy_name}' not found")
+
+    summary = _sim_portfolio_summary(portfolio)
+    pid = portfolio["id"]
+
+    # Full equity curve
+    eq_rows = query_all(
+        """SELECT date, cash_balance_kwd, open_positions_value_kwd,
+                  total_value_kwd, daily_pnl_kwd, cumulative_return_pct,
+                  drawdown_from_peak_pct, open_position_count
+           FROM simulator_daily_snapshots
+           WHERE portfolio_id = ?
+           ORDER BY date ASC""",
+        (pid,),
+    )
+    equity_curve = [dict(r.items()) for r in eq_rows] if eq_rows else []
+
+    # Open positions
+    open_rows = query_all(
+        """SELECT id, ticker, entry_date, entry_price, shares, shares_remaining,
+                  size_kwd, entry_confidence, entry_stage, entry_rating, entry_thesis,
+                  planned_stop_loss, planned_tp1, planned_tp2, planned_tp3,
+                  max_unrealized_gain_pct, max_unrealized_loss_pct, created_at
+           FROM simulator_positions
+           WHERE portfolio_id = ? AND status = 'OPEN'
+           ORDER BY entry_date DESC""",
+        (pid,),
+    )
+    open_positions = [dict(r.items()) for r in open_rows] if open_rows else []
+
+    # Recent closed trades
+    closed_rows = query_all(
+        """SELECT id, ticker, entry_date, entry_price, exit_date, exit_price,
+                  exit_reason, pnl_kwd, pnl_pct, days_held,
+                  entry_confidence, entry_stage, entry_rating
+           FROM simulator_positions
+           WHERE portfolio_id = ? AND status IN ('CLOSED', 'OVERRIDDEN')
+           ORDER BY exit_date DESC LIMIT 50""",
+        (pid,),
+    )
+    closed_trades = [dict(r.items()) for r in closed_rows] if closed_rows else []
+
+    # Considered-not-taken count
+    considered_count_row = query_all(
+        "SELECT COUNT(*) as cnt FROM simulator_considered_trades WHERE portfolio_id = ?",
+        (pid,),
+    )
+    considered_count = int(dict(considered_count_row[0].items()).get("cnt") or 0) if considered_count_row else 0
+
+    # Breakdown by stage at entry
+    stage_rows = query_all(
+        """SELECT entry_stage, COUNT(*) as trades,
+                  AVG(pnl_pct) as avg_pnl, SUM(CASE WHEN pnl_pct > 0 THEN 1 ELSE 0 END) as wins
+           FROM simulator_positions
+           WHERE portfolio_id = ? AND status IN ('CLOSED', 'OVERRIDDEN')
+           GROUP BY entry_stage""",
+        (pid,),
+    )
+    by_stage = [dict(r.items()) for r in stage_rows] if stage_rows else []
+
+    # Breakdown by exit reason
+    reason_rows = query_all(
+        """SELECT exit_reason, COUNT(*) as cnt, AVG(pnl_pct) as avg_pnl
+           FROM simulator_positions
+           WHERE portfolio_id = ? AND status IN ('CLOSED', 'OVERRIDDEN')
+           GROUP BY exit_reason""",
+        (pid,),
+    )
+    by_exit_reason = [dict(r.items()) for r in reason_rows] if reason_rows else []
+
+    return {
+        "status": "ok",
+        "summary": summary,
+        "equity_curve": equity_curve,
+        "open_positions": open_positions,
+        "recent_closed_trades": closed_trades,
+        "considered_not_taken_count": considered_count,
+        "breakdown_by_stage": by_stage,
+        "breakdown_by_exit_reason": by_exit_reason,
+    }
+
+
+# ---------------------------------------------------------------------------
+# GET /eagle-eye/simulator/portfolios/{strategy_name}/trades
+# ---------------------------------------------------------------------------
+
+@router.get("/simulator/portfolios/{strategy_name}/trades", summary="All trades (paginated)")
+async def get_simulator_trades(
+    strategy_name: str,
+    status: Optional[str] = Query(None, description="OPEN | CLOSED | OVERRIDDEN"),
+    ticker: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
+    _user: TokenData = Depends(get_current_user),
+):
+    from app.core.database import query_all
+
+    portfolio = _get_sim_portfolio_by_strategy(strategy_name)
+    if portfolio is None:
+        raise HTTPException(status_code=404, detail=f"Strategy '{strategy_name}' not found")
+
+    pid = portfolio["id"]
+    offset = (page - 1) * page_size
+    conditions = ["portfolio_id = ?"]
+    params: list = [pid]
+
+    if status:
+        conditions.append("status = ?")
+        params.append(status.upper())
+    if ticker:
+        conditions.append("ticker = ?")
+        params.append(ticker.upper())
+
+    where = " AND ".join(conditions)
+    rows = query_all(
+        f"""SELECT * FROM simulator_positions WHERE {where}
+            ORDER BY COALESCE(exit_date, entry_date) DESC
+            LIMIT ? OFFSET ?""",
+        tuple(params) + (page_size, offset),
+    )
+    trades = []
+    for r in (rows or []):
+        d = dict(r.items())
+        for json_col in ("entry_signal_breakdown", "entry_indicators_snapshot"):
+            if d.get(json_col) and isinstance(d[json_col], str):
+                try:
+                    d[json_col] = json.loads(d[json_col])
+                except Exception:
+                    d[json_col] = {}
+        trades.append(d)
+
+    count_row = query_all(f"SELECT COUNT(*) as cnt FROM simulator_positions WHERE {where}", tuple(params))
+    total = int(dict(count_row[0].items()).get("cnt") or 0) if count_row else 0
+
+    return {"status": "ok", "total": total, "page": page, "page_size": page_size, "trades": trades}
+
+
+# ---------------------------------------------------------------------------
+# GET /eagle-eye/simulator/portfolios/{strategy_name}/performance
+# ---------------------------------------------------------------------------
+
+@router.get("/simulator/portfolios/{strategy_name}/performance", summary="Aggregate analytics")
+async def get_simulator_performance(
+    strategy_name: str,
+    _user: TokenData = Depends(get_current_user),
+):
+    from app.core.database import query_all
+    import math as _math
+
+    portfolio = _get_sim_portfolio_by_strategy(strategy_name)
+    if portfolio is None:
+        raise HTTPException(status_code=404, detail=f"Strategy '{strategy_name}' not found")
+
+    pid = portfolio["id"]
+    closed_rows = query_all(
+        """SELECT pnl_pct, pnl_kwd, days_held, entry_stage, entry_confidence,
+                  entry_rating, exit_reason, ticker
+           FROM simulator_positions
+           WHERE portfolio_id = ? AND status IN ('CLOSED', 'OVERRIDDEN')""",
+        (pid,),
+    )
+    closed = [dict(r.items()) for r in closed_rows] if closed_rows else []
+
+    wins = [r for r in closed if float(r.get("pnl_pct") or 0) > 0]
+    losses = [r for r in closed if float(r.get("pnl_pct") or 0) <= 0]
+
+    # Sharpe-like ratio using daily snapshots
+    daily_rows = query_all(
+        "SELECT daily_pnl_kwd FROM simulator_daily_snapshots WHERE portfolio_id = ? ORDER BY date",
+        (pid,),
+    )
+    daily_returns = [float(dict(r.items()).get("daily_pnl_kwd") or 0) for r in (daily_rows or [])]
+    starting = float(portfolio.get("starting_capital_kwd") or 10000)
+    daily_pct = [r / starting * 100 for r in daily_returns]
+    if len(daily_pct) > 1:
+        mean_r = sum(daily_pct) / len(daily_pct)
+        variance = sum((x - mean_r) ** 2 for x in daily_pct) / len(daily_pct)
+        std_r = _math.sqrt(variance)
+        sharpe = (mean_r / std_r * _math.sqrt(252)) if std_r > 0 else 0
+    else:
+        sharpe = 0
+
+    # By confidence band
+    bands = [(55, 65), (65, 75), (75, 85), (85, 100)]
+    by_confidence = []
+    for lo, hi in bands:
+        band_trades = [r for r in closed if lo <= float(r.get("entry_confidence") or 0) < hi]
+        band_wins = [r for r in band_trades if float(r.get("pnl_pct") or 0) > 0]
+        by_confidence.append({
+            "band": f"{lo}-{hi}",
+            "trades": len(band_trades),
+            "wins": len(band_wins),
+            "win_rate": round(len(band_wins) / len(band_trades) * 100, 1) if band_trades else 0,
+            "avg_pnl_pct": round(sum(float(r.get("pnl_pct") or 0) for r in band_trades) / len(band_trades), 2) if band_trades else 0,
+        })
+
+    # By stage
+    stage_map: dict = {}
+    for r in closed:
+        s = r.get("entry_stage") or "UNKNOWN"
+        if s not in stage_map:
+            stage_map[s] = {"stage": s, "trades": 0, "wins": 0, "total_pnl": 0}
+        stage_map[s]["trades"] += 1
+        pnl = float(r.get("pnl_pct") or 0)
+        if pnl > 0:
+            stage_map[s]["wins"] += 1
+        stage_map[s]["total_pnl"] += pnl
+    by_stage = [
+        {**v, "win_rate": round(v["wins"] / v["trades"] * 100, 1) if v["trades"] else 0,
+         "avg_pnl_pct": round(v["total_pnl"] / v["trades"], 2) if v["trades"] else 0}
+        for v in stage_map.values()
+    ]
+
+    # By exit reason
+    reason_map: dict = {}
+    for r in closed:
+        reason = r.get("exit_reason") or "UNKNOWN"
+        if reason not in reason_map:
+            reason_map[reason] = {"exit_reason": reason, "count": 0, "avg_pnl": 0, "total_pnl": 0}
+        reason_map[reason]["count"] += 1
+        reason_map[reason]["total_pnl"] += float(r.get("pnl_pct") or 0)
+    for v in reason_map.values():
+        v["avg_pnl"] = round(v["total_pnl"] / v["count"], 2) if v["count"] else 0
+    by_exit_reason = list(reason_map.values())
+
+    avg_duration = (sum(int(r.get("days_held") or 0) for r in closed) / len(closed)) if closed else 0
+
+    return {
+        "status": "ok",
+        "strategy_name": strategy_name.upper(),
+        "total_trades": len(closed),
+        "wins": len(wins),
+        "losses": len(losses),
+        "win_rate": round(len(wins) / len(closed) * 100, 2) if closed else 0,
+        "avg_win_pct": round(sum(float(r.get("pnl_pct") or 0) for r in wins) / len(wins), 2) if wins else 0,
+        "avg_loss_pct": round(sum(abs(float(r.get("pnl_pct") or 0)) for r in losses) / len(losses), 2) if losses else 0,
+        "avg_trade_duration_days": round(avg_duration, 1),
+        "sharpe_like_ratio": round(sharpe, 2),
+        "by_confidence_band": by_confidence,
+        "by_stage": by_stage,
+        "by_exit_reason": by_exit_reason,
+    }
+
+
+# ---------------------------------------------------------------------------
+# POST /eagle-eye/simulator/positions/{position_id}/close
+# ---------------------------------------------------------------------------
+
+@router.post("/simulator/positions/{position_id}/close", summary="Manual override close")
+async def close_simulator_position(
+    position_id: int,
+    body: dict,
+    user: TokenData = Depends(get_current_user),
+):
+    """Close an open simulator position at the provided price (manual override)."""
+    current_price = body.get("current_price")
+    if current_price is None or float(current_price) <= 0:
+        raise HTTPException(status_code=422, detail="current_price must be a positive number")
+
+    try:
+        from app.services.eagle_eye.simulator import get_engine
+        result = get_engine().manual_override_close(position_id, float(current_price))
+        return {"status": "ok", **result}
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Simulator manual close failed: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---------------------------------------------------------------------------
+# GET /eagle-eye/simulator/activity   — recent feed across all 3 strategies
+# ---------------------------------------------------------------------------
+
+@router.get("/simulator/activity", summary="Recent activity across all strategies")
+async def get_simulator_activity(
+    limit: int = Query(20, ge=1, le=100),
+    _user: TokenData = Depends(get_current_user),
+):
+    from app.core.database import query_all
+
+    rows = query_all(
+        """SELECT sp.strategy_name, pos.ticker, pos.status, pos.entry_date,
+                  pos.exit_date, pos.exit_reason, pos.pnl_kwd, pos.pnl_pct,
+                  pos.entry_stage
+           FROM simulator_positions pos
+           JOIN simulator_portfolios sp ON sp.id = pos.portfolio_id
+           WHERE pos.status IN ('CLOSED', 'OVERRIDDEN')
+           ORDER BY pos.exit_date DESC
+           LIMIT ?""",
+        (limit,),
+    )
+    entries = query_all(
+        """SELECT sp.strategy_name, pos.ticker, 'ENTERED' as action,
+                  pos.entry_date as event_date, pos.size_kwd, pos.entry_stage, pos.entry_confidence
+           FROM simulator_positions pos
+           JOIN simulator_portfolios sp ON sp.id = pos.portfolio_id
+           ORDER BY pos.entry_date DESC
+           LIMIT ?""",
+        (limit,),
+    )
+
+    exits = [{"action": "EXIT", **dict(r.items())} for r in (rows or [])]
+    opens = [{"action": "ENTRY", **dict(r.items())} for r in (entries or [])]
+    feed = sorted(exits + opens, key=lambda x: x.get("exit_date") or x.get("event_date") or "", reverse=True)[:limit]
+
+    return {"status": "ok", "feed": feed}
+
+
+# ---------------------------------------------------------------------------
+# POST /eagle-eye/simulator/run   — manual trigger (admin / testing)
+# ---------------------------------------------------------------------------
+
+@router.post("/simulator/run", summary="Manually trigger simulator daily run")
+async def run_simulator_now(
+    user: TokenData = Depends(get_current_user),
+):
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin only")
+    try:
+        from app.services.eagle_eye.simulator import get_engine
+        result = get_engine().run_daily()
+        return {"status": "ok", "result": result}
+    except Exception as exc:
+        logger.exception("Manual simulator run failed: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
 
     job_id = str(uuid.uuid4())
     est_minutes = round(len(body.tickers) * 0.5, 1)
