@@ -210,111 +210,71 @@ async def get_scanner(
         raise HTTPException(status_code=500, detail=f"Eagle Eye service unavailable: {exc}")
 
     # ── DB fast path: read pre-computed ratings ──────────────────────
+    # NOTE: Live compute fallback removed — it fetched OHLCV for 100+ stocks
+    # synchronously in an async handler, blocking the event loop for minutes.
+    # The background warmup (started at app startup) populates ee_ratings_cache.
+    # Return warming_up immediately when cache is cold so the UI stays responsive.
     try:
         from app.services.eagle_eye.store import load_all_ratings
 
         db_rows = load_all_ratings()
-        if db_rows:
-            # Build StockMeta map for names/sectors (quick, from adapter)
-            adapter = TickerChartAdapter()
-            meta_map = {s.ticker: s for s in adapter.list_stocks()}
+        if not db_rows:
+            # Cache is cold — background warmup is running; respond immediately
+            logger.info("Eagle Eye scanner: cache cold, returning warming_up status")
+            return ScannerResponse(status="warming_up", count=0, stocks=[])
 
-            results: List[RatedStock] = []
-            for row in db_rows:
-                t = str(row.get("ticker") or "").upper()
-                meta = meta_map.get(t)
-                row_sector = str(row.get("sector") or (meta.sector if meta else "Kuwait"))
-                row_name = str(row.get("name_en") or (meta.name_en if meta else t))
-                row_tier = meta.market_tier if meta else "premier"
+        # Build StockMeta map for names/sectors (quick, from adapter)
+        adapter = TickerChartAdapter()
+        meta_map = {s.ticker: s for s in adapter.list_stocks()}
 
-                if sector and row_sector.lower() != sector.lower():
-                    continue
-                if tier and row_tier.lower() != tier.lower():
-                    continue
-                conf = float(row.get("confidence") or 0.0)
-                if conf < min_confidence:
-                    continue
+        results: List[RatedStock] = []
+        for row in db_rows:
+            t = str(row.get("ticker") or "").upper()
+            meta = meta_map.get(t)
+            row_sector = str(row.get("sector") or (meta.sector if meta else "Kuwait"))
+            row_name = str(row.get("name_en") or (meta.name_en if meta else t))
+            row_tier = meta.market_tier if meta else "premier"
 
-                vc_raw = row.get("volume_context") or {}
-                vc_summary = VolumeContextSummary(
-                    relative_volume=float(vc_raw.get("relative_volume") or 1.0),
-                    liquidity_tier=str(vc_raw.get("liquidity_tier") or "TRADEABLE"),
-                    is_volume_confirmed=bool(vc_raw.get("is_volume_confirmed", True)),
-                    volume_character=str(vc_raw.get("volume_character") or "NEUTRAL"),
-                    volume_trend_5d=str(vc_raw.get("volume_trend_5d") or "NEUTRAL"),
-                ) if vc_raw else None
+            if sector and row_sector.lower() != sector.lower():
+                continue
+            if tier and row_tier.lower() != tier.lower():
+                continue
+            conf = float(row.get("confidence") or 0.0)
+            if conf < min_confidence:
+                continue
 
-                results.append(RatedStock(
-                    ticker=t,
-                    name_en=row_name,
-                    sector=row_sector,
-                    stage=row.get("stage"),
-                    rating=row.get("rating"),
-                    confidence=conf,
-                    thesis=row.get("thesis"),
-                    entry_primary=row.get("entry_primary"),
-                    stop_loss=row.get("stop_loss"),
-                    tp1=row.get("tp1"),
-                    last_price=row.get("last_price"),
-                    computed_at=row.get("computed_at"),
-                    volume_context=vc_summary,
-                ))
-                if len(results) >= limit:
-                    break
+            vc_raw = row.get("volume_context") or {}
+            vc_summary = VolumeContextSummary(
+                relative_volume=float(vc_raw.get("relative_volume") or 1.0),
+                liquidity_tier=str(vc_raw.get("liquidity_tier") or "TRADEABLE"),
+                is_volume_confirmed=bool(vc_raw.get("is_volume_confirmed", True)),
+                volume_character=str(vc_raw.get("volume_character") or "NEUTRAL"),
+                volume_trend_5d=str(vc_raw.get("volume_trend_5d") or "NEUTRAL"),
+            ) if vc_raw else None
 
-            if results:
-                return ScannerResponse(status="ok", count=len(results), stocks=results)
+            results.append(RatedStock(
+                ticker=t,
+                name_en=row_name,
+                sector=row_sector,
+                stage=row.get("stage"),
+                rating=row.get("rating"),
+                confidence=conf,
+                thesis=row.get("thesis"),
+                entry_primary=row.get("entry_primary"),
+                stop_loss=row.get("stop_loss"),
+                tp1=row.get("tp1"),
+                last_price=row.get("last_price"),
+                computed_at=row.get("computed_at"),
+                volume_context=vc_summary,
+            ))
+            if len(results) >= limit:
+                break
+
+        return ScannerResponse(status="ok", count=len(results), stocks=results)
+
     except Exception as exc:
-        logger.debug("DB scanner fast path failed, using live compute: %s", exc)
-
-    # ── Live compute fallback (first run / cache empty) ───────────────
-    adapter = TickerChartAdapter()
-    stocks_meta = adapter.list_stocks()
-
-    # Apply sector / tier filter before computing
-    if sector:
-        stocks_meta = [s for s in stocks_meta if s.sector.lower() == sector.lower()]
-    if tier:
-        stocks_meta = [s for s in stocks_meta if s.market_tier.lower() == tier.lower()]
-
-    results: List[RatedStock] = []
-    for meta in stocks_meta[:limit * 2]:  # compute extra to allow confidence filter
-        analysis = _run_analysis(meta.ticker)
-        if analysis is None:
-            continue
-        if analysis["confidence"] < min_confidence:
-            continue
-
-        et = analysis.get("entry", {})
-        vc_raw = analysis.get("volume_context") or {}
-        vc_summary = VolumeContextSummary(
-            relative_volume=float(vc_raw.get("relative_volume") or 1.0),
-            liquidity_tier=str(vc_raw.get("liquidity_tier") or "TRADEABLE"),
-            is_volume_confirmed=bool(vc_raw.get("is_volume_confirmed", True)),
-            volume_character=str(vc_raw.get("volume_character") or "NEUTRAL"),
-            volume_trend_5d=str(vc_raw.get("volume_trend_5d") or "NEUTRAL"),
-        ) if vc_raw else None
-        results.append(RatedStock(
-            ticker=analysis["ticker"],
-            name_en=meta.name_en,
-            sector=meta.sector,
-            stage=analysis["stage"],
-            rating=analysis["rating"],
-            confidence=analysis["confidence"],
-            thesis=analysis["thesis"],
-            entry_primary=et.get("entry_primary"),
-            stop_loss=et.get("stop_loss"),
-            tp1=et.get("tp1"),
-            last_price=float(analysis["indicators"].get("close") or 0) or None,
-            computed_at=analysis.get("computed_at"),
-            volume_context=vc_summary,
-        ))
-        if len(results) >= limit:
-            break
-
-    # Sort by confidence descending
-    results.sort(key=lambda x: -(x.confidence or 0))
-    return ScannerResponse(status="ok", count=len(results), stocks=results)
+        logger.warning("DB scanner failed: %s", exc)
+        return ScannerResponse(status="error", count=0, stocks=[])
 
 
 # ---------------------------------------------------------------------------
