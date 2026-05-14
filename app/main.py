@@ -113,6 +113,32 @@ async def lifespan(app: FastAPI):
         except Exception as ee_err:
             logger.warning("⚠️  Eagle Eye schema init failed: %s", ee_err)
 
+        # ── Eagle Eye cache warmup: if ratings cache is cold (<50 rows),
+        # trigger a full background recompute so the scanner shows all
+        # ~141 Kuwait stocks instead of only the on-demand-fetched ones.
+        try:
+            from app.services.eagle_eye.store import load_all_ratings as _ee_load_ratings
+            _ee_cached = _ee_load_ratings()
+            if len(_ee_cached) < 50:
+                import threading
+                from app.services.eagle_eye.ingest import run_nightly_recompute as _ee_recompute
+                _ee_warmup = threading.Thread(
+                    target=_ee_recompute,
+                    kwargs={"dna_refresh": False, "verbose": False},
+                    daemon=True,
+                    name="ee_startup_warmup",
+                )
+                _ee_warmup.start()
+                logger.info(
+                    "🔥  Eagle Eye ratings cache is cold (%d rows) — "
+                    "background warmup started for all Kuwait stocks",
+                    len(_ee_cached),
+                )
+            else:
+                logger.info("✅  Eagle Eye ratings cache warm (%d stocks)", len(_ee_cached))
+        except Exception as _ee_warmup_err:
+            logger.warning("⚠️  Eagle Eye startup warmup skipped: %s", _ee_warmup_err)
+
         # ── Additive migration: portfolios.currency (missing in early prod DBs) ──
         try:
             from app.core.database import add_column_if_missing
