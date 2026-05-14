@@ -433,9 +433,31 @@ def query_all(sql: str, params: tuple = ()) -> list:
         return [_DualRow(keys, tuple(r)) for r in rows]
 
 
+def _normalize_ddl_for_pg(sql: str) -> str:
+    """
+    Rewrite SQLite-specific DDL idioms to PostgreSQL equivalents.
+
+    Handles:
+      - ``INTEGER PRIMARY KEY AUTOINCREMENT`` → ``SERIAL PRIMARY KEY``
+      - ``BOOLEAN DEFAULT 0``               → ``BOOLEAN DEFAULT FALSE``
+      - ``BOOLEAN DEFAULT 1``               → ``BOOLEAN DEFAULT TRUE``
+    """
+    import re
+    sql = re.sub(
+        r"\bINTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT\b",
+        "SERIAL PRIMARY KEY",
+        sql,
+        flags=re.IGNORECASE,
+    )
+    sql = re.sub(r"\bBOOLEAN\s+DEFAULT\s+0\b", "BOOLEAN DEFAULT FALSE", sql, flags=re.IGNORECASE)
+    sql = re.sub(r"\bBOOLEAN\s+DEFAULT\s+1\b", "BOOLEAN DEFAULT TRUE",  sql, flags=re.IGNORECASE)
+    return sql
+
+
 def exec_sql(sql: str, params: tuple = ()) -> None:
     """Execute a write statement (INSERT / UPDATE / DELETE)."""
     if _USE_PG:
+        sql = _normalize_ddl_for_pg(sql)
         pg_sql, named = _pg_sql_named(sql, params)
         with engine.begin() as conn:
             conn.execute(text(pg_sql), named)
