@@ -281,6 +281,7 @@ def compute_all_ratings(verbose: bool = False) -> dict:
         compute_entry_stop_targets,
         compute_rating,
         compute_support_resistance,
+        compute_volume_context,
         generate_thesis,
     )
     from app.services.eagle_eye.store import (
@@ -318,6 +319,19 @@ def compute_all_ratings(verbose: bool = False) -> dict:
 
             stage = classify_stage(latest)
             confidence = compute_confidence(latest, stage, dna=None)
+
+            # ── Volume context + confidence multiplier ───────────────────
+            volume_context = compute_volume_context(df, stage)
+            tier = volume_context["liquidity_tier"]
+            _LIQUIDITY_MULTIPLIERS = {"ILLIQUID": 0.50, "WATCH_ONLY": 0.70}
+            if tier in _LIQUIDITY_MULTIPLIERS:
+                confidence = confidence * _LIQUIDITY_MULTIPLIERS[tier]
+            elif not volume_context["is_volume_confirmed"]:
+                confidence = confidence * 0.85
+            elif volume_context["relative_volume_percentile"] > 80:
+                confidence = min(confidence * 1.10, 100)
+            confidence = round(min(confidence, 100), 2)
+
             rating = compute_rating(confidence)
             sr = compute_support_resistance(df, latest)
             et = compute_entry_stop_targets(df, latest, sr, stage=stage)
@@ -339,6 +353,7 @@ def compute_all_ratings(verbose: bool = False) -> dict:
                 "resistances": sr.get("resistances", []),
                 "entry": et,
                 "indicators": latest,
+                "volume_context": volume_context,
                 "days_of_history": len(df),
                 "computed_at": today_str,
             }

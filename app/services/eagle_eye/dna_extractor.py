@@ -46,6 +46,8 @@ class BehavioralDNA:
     avg_move_magnitude_pct: float
     most_reliable_signals_overall: List[SignalReliability]
     fakeout_signatures: List[str]
+    pre_move_volume_profile: Dict[str, Any] = field(default_factory=dict)
+    fakeout_volume_profile: Dict[str, Any] = field(default_factory=dict)
 
 
 def _aggregate_signal_reliability(
@@ -104,6 +106,54 @@ def _classify_personality(dna_inputs: Dict[str, Any]) -> str:
     if avg_magnitude < 20:
         return "range_grinder"
     return "balanced_mover"
+
+
+def _compute_volume_profile(snapshots: List[ForensicSnapshot]) -> Dict[str, Any]:
+    """
+    Aggregate relative-volume at each standard lookback across all events.
+    Returns a pre_move_volume_profile dict or an empty dict if no data.
+    """
+    LOOKBACKS = [90, 60, 30, 14, 7, 3, 0]
+    keys = {lb: f"avg_rel_vol_t{lb}" for lb in LOOKBACKS}
+
+    # Collect rel_volume at each lookback across events
+    accum: Dict[int, List[float]] = {lb: [] for lb in LOOKBACKS}
+    for snap in snapshots:
+        for lb in LOOKBACKS:
+            rv = (snap.indicator_snapshots.get(lb) or {}).get("rel_volume")
+            if rv is not None and not (isinstance(rv, float) and np.isnan(rv)):
+                accum[lb].append(float(rv))
+
+    avgs = {}
+    for lb in LOOKBACKS:
+        vals = accum[lb]
+        avgs[lb] = round(float(np.mean(vals)), 3) if vals else None
+
+    # Classify pattern based on t0 vs t90 trend
+    t90 = avgs.get(90)
+    t30 = avgs.get(30)
+    t7  = avgs.get(7)
+    t0  = avgs.get(0)
+
+    if t90 is None or t0 is None:
+        pattern = "NO_CLEAR_PATTERN"
+    elif t0 > (t7 or 0) > (t30 or 0) > (t90 or 0):
+        pattern = "GRADUAL_BUILD"
+    elif t0 is not None and (t7 or 0) < 1.0 and t0 > 1.5:
+        pattern = "LATE_SPIKE"
+    elif t30 is not None and t30 >= 1.2 and t0 is not None:
+        pattern = "EARLY_SIGNAL"
+    else:
+        pattern = "NO_CLEAR_PATTERN"
+
+    # min_rel_vol_for_real_move: 10th percentile of t0 values
+    t0_vals = accum.get(0, [])
+    min_rv = round(float(np.percentile(t0_vals, 10)), 3) if len(t0_vals) >= 5 else None
+
+    profile: Dict[str, Any] = {k: avgs[lb] for lb, k in keys.items()}
+    profile["volume_pattern"] = pattern
+    profile["min_rel_vol_for_real_move"] = min_rv
+    return profile
 
 
 def extract_dna(
@@ -168,6 +218,9 @@ def extract_dna(
         'avg_magnitude':     float(np.mean([s.event.gain_pct for s in real_moves])),
     }
 
+    pre_move_volume_profile = _compute_volume_profile(real_moves)
+    fakeout_volume_profile  = _compute_volume_profile(fakeouts) if fakeouts else {}
+
     return BehavioralDNA(
         ticker=ticker,
         total_events_studied=len(real_moves),
@@ -179,6 +232,8 @@ def extract_dna(
         avg_move_magnitude_pct=dna_inputs['avg_magnitude'],
         most_reliable_signals_overall=top_overall,
         fakeout_signatures=fakeout_sigs,
+        pre_move_volume_profile=pre_move_volume_profile,
+        fakeout_volume_profile=fakeout_volume_profile,
     )
 
 
@@ -227,4 +282,6 @@ def dna_to_dict(dna: BehavioralDNA) -> Dict[str, Any]:
             for p in dna.profiles_by_threshold
         ],
         "fakeout_signatures": dna.fakeout_signatures,
+        "pre_move_volume_profile": dna.pre_move_volume_profile,
+        "fakeout_volume_profile": dna.fakeout_volume_profile,
     }

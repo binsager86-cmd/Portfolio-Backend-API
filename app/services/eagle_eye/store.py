@@ -105,6 +105,10 @@ def ensure_tables() -> None:
         (),
     )
 
+    # Additive migration: volume_context_json (added Phase 2)
+    from app.core.database import add_column_if_missing as _acim
+    _acim("ee_ratings_cache", "volume_context_json", "TEXT")
+
     exec_sql(
         """
         CREATE TABLE IF NOT EXISTS ee_compute_log (
@@ -357,8 +361,8 @@ def save_rating(
             entry_primary, entry_aggressive, entry_conservative,
             stop_loss, tp1, tp1_probability, tp2, tp2_probability, tp3, tp3_probability,
             last_price, supports_json, resistances_json, signals_json, indicators_json,
-            days_of_history, computed_at, updated_at
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            days_of_history, computed_at, updated_at, volume_context_json
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """,
         (
             ticker.upper(),
@@ -386,6 +390,7 @@ def save_rating(
             result.get("days_of_history"),
             result.get("computed_at", date.today().isoformat()),
             int(time.time()),
+            json.dumps(result.get("volume_context") or {}),
         ),
     )
 
@@ -400,13 +405,25 @@ def load_all_ratings() -> List[dict]:
     rows = query_all(
         """
         SELECT ticker, name_en, sector, stage, rating, confidence, thesis,
-               entry_primary, stop_loss, tp1, last_price, computed_at
+               entry_primary, stop_loss, tp1, last_price, computed_at,
+               volume_context_json
         FROM   ee_ratings_cache
         ORDER  BY confidence DESC
         """,
         (),
     )
-    return [dict(r.items()) for r in rows] if rows else []
+    if not rows:
+        return []
+    result = []
+    for r in rows:
+        d = dict(r.items())
+        vc_raw = d.pop("volume_context_json", None)
+        try:
+            d["volume_context"] = json.loads(vc_raw) if vc_raw else {}
+        except Exception:
+            d["volume_context"] = {}
+        result.append(d)
+    return result
 
 
 def load_rating(ticker: str) -> Optional[dict]:

@@ -29,6 +29,15 @@ class SignalBreakdown(BaseModel):
 # Scanner endpoint
 # ---------------------------------------------------------------------------
 
+class VolumeContextSummary(BaseModel):
+    """Subset of volume context surfaced in scanner rows."""
+    relative_volume: float = 1.0
+    liquidity_tier: str = "TRADEABLE"
+    is_volume_confirmed: bool = True
+    volume_character: str = "NEUTRAL"
+    volume_trend_5d: str = "NEUTRAL"
+
+
 class RatedStock(BaseModel):
     ticker: str
     name_en: str
@@ -42,6 +51,7 @@ class RatedStock(BaseModel):
     tp1: Optional[float] = None
     last_price: Optional[float] = None
     computed_at: Optional[str] = None   # ISO date string
+    volume_context: Optional[VolumeContextSummary] = None
 
 
 class ScannerResponse(BaseModel):

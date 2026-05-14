@@ -406,6 +406,16 @@ class SimulatorEngine:
         if _sector_exposure_pct(strategy.portfolio_id, sector, portfolio_value) >= SECTOR_CAP_PCT:
             return _skip("SECTOR_CAP_REACHED")
 
+        # ── Volume gates ─────────────────────────────────────────────────
+        vc = rating.get("volume_context") or {}
+        if vc:
+            if vc.get("liquidity_tier") == "ILLIQUID":
+                return _skip("ILLIQUID_STOCK")
+            if stage == "EARLY_BREAKOUT" and not vc.get("is_volume_confirmed", True):
+                return _skip("BREAKOUT_WITHOUT_VOLUME_CONFIRMATION")
+            if float(vc.get("relative_volume") or 1.0) < 0.5:
+                return _skip("EXTREMELY_LOW_VOLUME_DAY")
+
         return _enter()
 
     # ── Position sizing ──────────────────────────────────────────────────
@@ -529,6 +539,7 @@ class SimulatorEngine:
                 planned_stop_loss, planned_tp1, planned_tp2, planned_tp3,
                 tp1_hit, tp2_hit,
                 max_unrealized_gain_pct, max_unrealized_loss_pct,
+                entry_relative_volume,
                 created_at, updated_at
             ) VALUES (
                 ?, ?, 'OPEN', ?, ?,
@@ -538,6 +549,7 @@ class SimulatorEngine:
                 ?, ?, ?, ?,
                 0, 0,
                 0.0, 0.0,
+                ?,
                 ?, ?
             )
             """,
@@ -561,6 +573,7 @@ class SimulatorEngine:
                 round(planned_tp1, 6),
                 round(planned_tp2, 6),
                 round(planned_tp3, 6),
+                float((rating.get("volume_context") or {}).get("relative_volume") or 1.0),
                 _now_ts(),
                 _now_ts(),
             ),
@@ -806,7 +819,7 @@ class SimulatorEngine:
         rows = _query_all(
             """SELECT ticker, name_en, sector, stage, rating, confidence, thesis,
                       entry_primary, stop_loss, tp1, tp2, tp3, last_price,
-                      signals_json, indicators_json, computed_at
+                      signals_json, indicators_json, volume_context_json, computed_at
                FROM   ee_ratings_cache
                ORDER  BY confidence DESC""",
             (),
@@ -819,6 +832,11 @@ class SimulatorEngine:
                     r["indicators_json"] = json.loads(indicators)
                 except Exception:
                     r["indicators_json"] = {}
+            vc_raw = r.get("volume_context_json")
+            try:
+                r["volume_context"] = json.loads(vc_raw) if vc_raw else {}
+            except Exception:
+                r["volume_context"] = {}
             result.append(r)
         return result
 

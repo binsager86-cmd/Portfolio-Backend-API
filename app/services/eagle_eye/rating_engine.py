@@ -31,13 +31,107 @@ __all__ = [
     "compute_confidence",
     "compute_rating",
     "generate_thesis",
+    "compute_volume_context",
 ]
 
 IndicatorsRow = Dict[str, Any]
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# 0. Volume Context
+# ---------------------------------------------------------------------------
+
+def compute_volume_context(df: pd.DataFrame, stage: str) -> Dict[str, Any]:
+    """
+    Compute volume context for today's bar.
+
+    Returns a dict with relative volume, liquidity tier, confirmation flag,
+    volume character, and trend — used to gate confidence and simulator entries.
+    """
+    if df is None or len(df) < 2:
+        return {
+            "today_volume": 0,
+            "today_turnover_kwd": 0.0,
+            "avg_20d_volume": 0,
+            "avg_20d_turnover_kwd": 0.0,
+            "relative_volume": 1.0,
+            "relative_volume_percentile": 50.0,
+            "volume_trend_5d": "NEUTRAL",
+            "volume_trend_20d": "NEUTRAL",
+            "liquidity_tier": "WATCH_ONLY",
+            "is_volume_confirmed": True,
+            "volume_character": "NEUTRAL",
+            "institutional_volume_flag": False,
+        }
+
+    today = df.iloc[-1]
+
+    avg_20d_vol = df["volume"].tail(20).mean()
+    avg_20d_turnover = df["turnover_kwd"].tail(20).mean()
+
+    relative_volume = float(today["volume"]) / avg_20d_vol if avg_20d_vol > 0 else 1.0
+
+    # Percentile in 252-day volume history
+    vol_252 = df["volume"].tail(252)
+    rv_percentile = float((vol_252 < today["volume"]).sum() / len(vol_252) * 100)
+
+    # Volume trends
+    avg_5d = df["volume"].tail(5).mean()
+    avg_40d = df["volume"].tail(40).mean()
+    vol_trend_5d = (
+        "EXPANDING" if avg_5d > avg_20d_vol * 1.1
+        else ("CONTRACTING" if avg_5d < avg_20d_vol * 0.9 else "NEUTRAL")
+    )
+    vol_trend_20d = (
+        "EXPANDING" if avg_20d_vol > avg_40d * 1.1
+        else ("CONTRACTING" if avg_20d_vol < avg_40d * 0.9 else "NEUTRAL")
+    )
+
+    # Volume character: up-day vs down-day volume ratio over last 10 bars
+    last_10 = df.tail(10).copy()
+    last_10["prev_close"] = last_10["close"].shift(1)
+    up_vol = float(last_10.loc[last_10["close"] > last_10["prev_close"], "volume"].sum())
+    down_vol = float(last_10.loc[last_10["close"] < last_10["prev_close"], "volume"].sum())
+    total_vol = up_vol + down_vol
+    if total_vol > 0:
+        up_ratio = up_vol / total_vol
+        character = (
+            "ACCUMULATION" if up_ratio > 0.6
+            else ("DISTRIBUTION" if up_ratio < 0.4 else "NEUTRAL")
+        )
+    else:
+        character = "NEUTRAL"
+
+    # Liquidity tier
+    if avg_20d_turnover >= 25_000:
+        tier = "TRADEABLE"
+    elif avg_20d_turnover >= 5_000:
+        tier = "WATCH_ONLY"
+    else:
+        tier = "ILLIQUID"
+
+    # Signal confirmation: EARLY_BREAKOUT needs 1.5× volume; others 0.8×
+    if stage == "EARLY_BREAKOUT":
+        is_confirmed = relative_volume >= 1.5
+    else:
+        is_confirmed = relative_volume >= 0.8
+
+    institutional_flag = relative_volume > 3.0
+
+    return {
+        "today_volume": int(today["volume"]),
+        "today_turnover_kwd": float(today["turnover_kwd"]),
+        "avg_20d_volume": int(avg_20d_vol),
+        "avg_20d_turnover_kwd": float(avg_20d_turnover),
+        "relative_volume": round(float(relative_volume), 2),
+        "relative_volume_percentile": round(rv_percentile, 1),
+        "volume_trend_5d": vol_trend_5d,
+        "volume_trend_20d": vol_trend_20d,
+        "liquidity_tier": tier,
+        "is_volume_confirmed": is_confirmed,
+        "volume_character": character,
+        "institutional_volume_flag": institutional_flag,
+    }
 # ---------------------------------------------------------------------------
 
 def _safe(v, default=None):
