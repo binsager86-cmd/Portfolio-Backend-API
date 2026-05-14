@@ -1,0 +1,36 @@
+{
+  "auc": 0.5,
+  "log_loss": 0.6241700230662357,
+  "calibration_error": 0.4725702748481898,
+  "n_train_events": 372,
+  "train_date_range": {
+    "start": "2023-11-23",
+    "end": "2026-04-19"
+  },
+  "rejected_reason": "auc_below_threshold_0.5000",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.13432191246399852,
+      "calibration_max_error": 0.22044182270425638,
+      "calibration_mean_error": 0.10491077670059745,
+      "fold": 2,
+      "train_size": 260,
+      "test_size": 37,
+      "best_iteration": 95
+    },
+    {
+      "auc": 0.0,
+      "log_loss": 1.114018133668473,
+      "calibration_max_error": 0.7246987269921232,
+      "calibration_mean_error": 0.5136105385450558,
+      "fold": 3,
+      "train_size": 297,
+      "test_size": 37,
+      "best_iteration": 1
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "FTI",
+  "version": "2026-05-13"
+}

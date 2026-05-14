@@ -1,0 +1,26 @@
+{
+  "auc": 1.0,
+  "log_loss": 1.528736480237969e-05,
+  "calibration_error": 5.1789495009392487e-05,
+  "n_train_events": 275,
+  "train_date_range": {
+    "start": "2023-07-06",
+    "end": "2026-04-28"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 1.528736480237969e-05,
+      "calibration_max_error": 5.1789495009392487e-05,
+      "calibration_mean_error": 3.2862385139054835e-05,
+      "fold": 2,
+      "train_size": 192,
+      "test_size": 28,
+      "best_iteration": 200
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "AQAR",
+  "version": "2026-05-13"
+}

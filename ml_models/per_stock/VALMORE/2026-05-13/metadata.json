@@ -1,0 +1,26 @@
+{
+  "auc": 0.7142857142857143,
+  "log_loss": 0.5558512643018297,
+  "calibration_error": 0.3043626515322267,
+  "n_train_events": 185,
+  "train_date_range": {
+    "start": "2024-01-30",
+    "end": "2026-04-13"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.7142857142857143,
+      "log_loss": 0.5558512643018297,
+      "calibration_max_error": 0.3043626515322267,
+      "calibration_mean_error": 0.18738529919176458,
+      "fold": 3,
+      "train_size": 148,
+      "test_size": 18,
+      "best_iteration": 15
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "VALMORE",
+  "version": "2026-05-13"
+}

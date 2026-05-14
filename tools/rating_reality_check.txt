@@ -1,0 +1,138 @@
+======================================================================
+EAGLE EYE RATING REALITY CHECK
+Window: 2024-01-01 → 2025-09-30
+Horizon: 20 trading days | Sample every 5th day
+======================================================================
+
+COLUMN GUIDE:
+  Band     = Confidence score bucket
+  N        = Number of prediction days in bucket
+  TP1 Hit% = % of days where price hit TP1 within 20 days
+  Mean Ret = Average max gain achievable in 20-day window
+  Mean DD  = Average worst drawdown in 20-day window
+  Cal Δ    = |bucket_midpoint - actual_hit_rate| (calibration error)
+             Lower is better. 0% = perfectly calibrated.
+
+
+──────────────────────────────────────────────────────────────────────
+TICKER: KFH  |  ML: available  |  N Predictions: 84
+──────────────────────────────────────────────────────────────────────
+  Stage distribution:
+    DORMANT                           62  (74%)
+    MARKUP_TRENDING                   10  (12%)
+    STEALTH_ACCUMULATION               8  (10%)
+    EARLY_BREAKOUT                     2  (2%)
+    MARKDOWN_DECLINE                   2  (2%)
+
+  KFH — RULE-BASED
+      Band      N   TP1 Hit%   Mean Ret%   Mean DD%    Cal Δ
+  --------  -----  ---------  ----------  ---------  -------
+     00-49     64      34.4%       2.63%     -2.75%     9.9%
+     50-59     11      54.5%       2.53%     -4.22%     0.1%
+     60-69      6      50.0%       2.29%     -2.95%    14.5%
+     70-79      0          —           —          —        —
+     80-89      0          —           —          —        —
+    90-100      3      66.7%       1.90%     -2.81%    28.3%
+
+  [KFH] ML: Model not trained yet — N/A
+
+──────────────────────────────────────────────────────────────────────
+TICKER: NBK  |  ML: available  |  N Predictions: 84
+──────────────────────────────────────────────────────────────────────
+  Stage distribution:
+    DORMANT                           50  (60%)
+    MARKUP_TRENDING                   12  (14%)
+    MARKDOWN_DECLINE                  11  (13%)
+    STEALTH_ACCUMULATION               8  (10%)
+    CAPITULATION_EXHAUSTION            1  (1%)
+    EARLY_BREAKOUT                     1  (1%)
+    DISTRIBUTION_TOPPING               1  (1%)
+
+  NBK — RULE-BASED
+      Band      N   TP1 Hit%   Mean Ret%   Mean DD%    Cal Δ
+  --------  -----  ---------  ----------  ---------  -------
+     00-49     63      27.0%       3.70%     -2.44%     2.5%
+     50-59     14      42.9%       2.40%     -3.97%    11.6%
+     60-69      3     100.0%       3.06%    -12.69%    35.5%
+     70-79      0          —           —          —        —
+     80-89      0          —           —          —        —
+    90-100      4      75.0%       2.35%     -5.08%    20.0%
+
+  [NBK] ML: Model not trained yet — N/A
+
+──────────────────────────────────────────────────────────────────────
+TICKER: BOUBYAN  |  ML: available  |  N Predictions: 84
+──────────────────────────────────────────────────────────────────────
+  Stage distribution:
+    DORMANT                           61  (73%)
+    MARKUP_TRENDING                   13  (15%)
+    MARKDOWN_DECLINE                   6  (7%)
+    STEALTH_ACCUMULATION               3  (4%)
+    EARLY_BREAKOUT                     1  (1%)
+
+  BOUBYAN — RULE-BASED
+      Band      N   TP1 Hit%   Mean Ret%   Mean DD%    Cal Δ
+  --------  -----  ---------  ----------  ---------  -------
+     00-49     67      29.8%       3.63%     -3.17%     5.3%
+     50-59     14      57.1%       2.79%     -4.14%     2.6%
+     60-69      1     100.0%       4.60%     -1.69%    35.5%
+     70-79      0          —           —          —        —
+     80-89      0          —           —          —        —
+    90-100      2     100.0%       1.78%     -4.89%     5.0%
+
+  [BOUBYAN] ML: Model not trained yet — N/A
+
+──────────────────────────────────────────────────────────────────────
+TICKER: MABANEE  |  ML: available  |  N Predictions: 84
+──────────────────────────────────────────────────────────────────────
+  Stage distribution:
+    DORMANT                           60  (71%)
+    MARKUP_TRENDING                   12  (14%)
+    DISTRIBUTION_TOPPING               5  (6%)
+    EARLY_BREAKOUT                     4  (5%)
+    MARKDOWN_DECLINE                   2  (2%)
+    CAPITULATION_EXHAUSTION            1  (1%)
+
+  MABANEE — RULE-BASED
+      Band      N   TP1 Hit%   Mean Ret%   Mean DD%    Cal Δ
+  --------  -----  ---------  ----------  ---------  -------
+     00-49     69      33.3%       4.64%     -3.00%     8.8%
+     50-59     14      50.0%       4.26%     -2.02%     4.5%
+     60-69      0          —           —          —        —
+     70-79      0          —           —          —        —
+     80-89      0          —           —          —        —
+    90-100      1       0.0%       2.73%     -8.06%    95.0%
+
+  [MABANEE] ML: Model not trained yet — N/A
+
+AGILITY: SKIPPED — no_ohlcv_data
+
+======================================================================
+OVERALL AGGREGATE (all 5 tickers combined)
+======================================================================
+Total predictions: 336
+
+  ALL — RULE-BASED AGGREGATE
+      Band      N   TP1 Hit%   Mean Ret%   Mean DD%    Cal Δ
+  --------  -----  ---------  ----------  ---------  -------
+     00-49    263      31.2%       3.67%     -2.85%     6.7%
+     50-59     53      50.9%       3.02%     -3.55%     3.6%
+     60-69     10      70.0%       2.75%     -5.75%     5.5%
+     70-79      0          —           —          —        —
+     80-89      0          —           —          —        —
+    90-100     10      70.0%       2.14%     -4.66%    25.0%
+
+  [ALL] ML AGGREGATE: No ML models trained yet
+
+──────────────────────────────────────────────────────────────────────
+CALIBRATION VERDICT:
+  Band 00-49: hit=31.2% target≈24%  cal_err=6.7%  → WELL-CAL
+  Band 50-59: hit=50.9% target≈54%  cal_err=3.6%  → WELL-CAL
+  Band 60-69: hit=70.0% target≈64%  cal_err=5.5%  → WELL-CAL
+  Band 90-100: hit=70.0% target≈95%  cal_err=25.0%  → OVER-CONF
+
+INTERPRETING THIS OUTPUT:
+  If TP1 hit rate RISES with confidence band → signal is discriminative
+  If Cal Δ < 15% across all bands → ratings are well-calibrated
+  If high-conf (80-100) bands show hit_rate > 60% → system is actionable
+  If all bands show ~same hit rate → confidence score has no predictive value

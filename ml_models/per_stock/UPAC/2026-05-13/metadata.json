@@ -1,0 +1,46 @@
+{
+  "auc": 0.8148148148148149,
+  "log_loss": 0.31533681492829296,
+  "calibration_error": 0.23974530346455625,
+  "n_train_events": 419,
+  "train_date_range": {
+    "start": "2023-06-18",
+    "end": "2026-04-23"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.5,
+      "log_loss": 0.5195875502576397,
+      "calibration_max_error": 0.0016084557287918966,
+      "calibration_mean_error": 0.0016084557287918966,
+      "fold": 1,
+      "train_size": 251,
+      "test_size": 42,
+      "best_iteration": 35
+    },
+    {
+      "auc": 0.9444444444444444,
+      "log_loss": 0.2649337412009761,
+      "calibration_max_error": 0.7167085516783149,
+      "calibration_mean_error": 0.31920170179704643,
+      "fold": 2,
+      "train_size": 293,
+      "test_size": 42,
+      "best_iteration": 81
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.16148915332626315,
+      "calibration_max_error": 0.0009189029865619425,
+      "calibration_mean_error": 0.0009189029865619425,
+      "fold": 5,
+      "train_size": 398,
+      "test_size": 21,
+      "best_iteration": 36
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "UPAC",
+  "version": "2026-05-13"
+}

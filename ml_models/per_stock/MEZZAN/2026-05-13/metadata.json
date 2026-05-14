@@ -1,0 +1,26 @@
+{
+  "auc": 0.9285714285714286,
+  "log_loss": 0.2683231012569935,
+  "calibration_error": 0.053805226994457334,
+  "n_train_events": 307,
+  "train_date_range": {
+    "start": "2024-04-02",
+    "end": "2026-04-06"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.9285714285714286,
+      "log_loss": 0.2683231012569935,
+      "calibration_max_error": 0.053805226994457334,
+      "calibration_mean_error": 0.053805226994457334,
+      "fold": 4,
+      "train_size": 276,
+      "test_size": 15,
+      "best_iteration": 14
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "MEZZAN",
+  "version": "2026-05-13"
+}

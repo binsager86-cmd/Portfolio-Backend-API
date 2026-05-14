@@ -1,0 +1,26 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.25249248777530814,
+  "calibration_error": 0.5325903350396578,
+  "n_train_events": 206,
+  "train_date_range": {
+    "start": "2023-06-05",
+    "end": "2026-04-13"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.25249248777530814,
+      "calibration_max_error": 0.5325903350396578,
+      "calibration_mean_error": 0.32433531092836576,
+      "fold": 2,
+      "train_size": 144,
+      "test_size": 20,
+      "best_iteration": 57
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "SHIP",
+  "version": "2026-05-13"
+}

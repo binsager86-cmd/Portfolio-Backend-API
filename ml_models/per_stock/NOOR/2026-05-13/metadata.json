@@ -1,0 +1,26 @@
+{
+  "auc": 0.5,
+  "log_loss": 0.6941257979662655,
+  "calibration_error": 0.11309421891837773,
+  "n_train_events": 287,
+  "train_date_range": {
+    "start": "2023-06-18",
+    "end": "2026-04-09"
+  },
+  "rejected_reason": "auc_below_threshold_0.5000",
+  "fold_metrics": [
+    {
+      "auc": 0.5,
+      "log_loss": 0.6941257979662655,
+      "calibration_max_error": 0.11309421891837773,
+      "calibration_mean_error": 0.11309421891837773,
+      "fold": 2,
+      "train_size": 200,
+      "test_size": 29,
+      "best_iteration": 1
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "NOOR",
+  "version": "2026-05-13"
+}

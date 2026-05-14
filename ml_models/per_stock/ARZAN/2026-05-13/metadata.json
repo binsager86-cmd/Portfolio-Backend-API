@@ -1,0 +1,36 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.2008552230200663,
+  "calibration_error": 0.4588885906213953,
+  "n_train_events": 319,
+  "train_date_range": {
+    "start": "2023-07-09",
+    "end": "2026-04-29"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.013051237562488431,
+      "calibration_max_error": 0.2584922182327027,
+      "calibration_mean_error": 0.09155298256825244,
+      "fold": 1,
+      "train_size": 191,
+      "test_size": 32,
+      "best_iteration": 200
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.3886592084776442,
+      "calibration_max_error": 0.659284963010088,
+      "calibration_mean_error": 0.4747475416671184,
+      "fold": 3,
+      "train_size": 255,
+      "test_size": 32,
+      "best_iteration": 2
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "ARZAN",
+  "version": "2026-05-13"
+}

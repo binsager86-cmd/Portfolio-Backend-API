@@ -1,0 +1,430 @@
+{
+  "ticker": "MABANEE",
+  "personality_tag": "high_amplitude_trender",
+  "total_events_studied": 201,
+  "fakeouts_studied": 19,
+  "avg_pre_move_consolidation_days": 4.2,
+  "avg_move_duration_days": 144.0,
+  "avg_move_magnitude_pct": 54.8,
+  "most_reliable_signals_overall": [
+    {
+      "signal": "bb_squeeze_active",
+      "avg_lead_days": 23.4,
+      "reliability_pct": 77.6,
+      "false_positive_rate": 42.1,
+      "discriminative_power": 35.5
+    },
+    {
+      "signal": "ema_ribbon_bullish",
+      "avg_lead_days": 47.9,
+      "reliability_pct": 77.6,
+      "false_positive_rate": 42.1,
+      "discriminative_power": 35.5
+    },
+    {
+      "signal": "wyckoff_in_accumulation",
+      "avg_lead_days": 2.9,
+      "reliability_pct": 27.4,
+      "false_positive_rate": 0.0,
+      "discriminative_power": 27.4
+    },
+    {
+      "signal": "wyckoff_in_markup",
+      "avg_lead_days": 13.7,
+      "reliability_pct": 60.2,
+      "false_positive_rate": 42.1,
+      "discriminative_power": 18.1
+    },
+    {
+      "signal": "volume_breakout_2x",
+      "avg_lead_days": 15.0,
+      "reliability_pct": 10.0,
+      "false_positive_rate": 0.0,
+      "discriminative_power": 10.0
+    },
+    {
+      "signal": "adx_crossed_20",
+      "avg_lead_days": 27.6,
+      "reliability_pct": 100.0,
+      "false_positive_rate": 100.0,
+      "discriminative_power": 0.0
+    },
+    {
+      "signal": "plus_di_dominates",
+      "avg_lead_days": 7.6,
+      "reliability_pct": 100.0,
+      "false_positive_rate": 100.0,
+      "discriminative_power": 0.0
+    },
+    {
+      "signal": "rsi_in_bullish_zone",
+      "avg_lead_days": 3.4,
+      "reliability_pct": 100.0,
+      "false_positive_rate": 100.0,
+      "discriminative_power": 0.0
+    }
+  ],
+  "profiles_by_threshold": [
+    {
+      "threshold_pct": 10.0,
+      "occurrences": 49,
+      "fakeouts": 0,
+      "success_rate": 100.0,
+      "avg_consolidation_days": 5.2,
+      "avg_duration_days": 132.7,
+      "avg_gain_pct": 52.6,
+      "earliest_reliable_signals": [
+        {
+          "signal": "bb_squeeze_active",
+          "avg_lead_days": 23.2,
+          "reliability_pct": 87.8,
+          "discriminative_power": 45.6
+        },
+        {
+          "signal": "ema_ribbon_bullish",
+          "avg_lead_days": 48.7,
+          "reliability_pct": 87.8,
+          "discriminative_power": 45.6
+        },
+        {
+          "signal": "wyckoff_in_markup",
+          "avg_lead_days": 14.7,
+          "reliability_pct": 71.4,
+          "discriminative_power": 29.3
+        },
+        {
+          "signal": "volume_breakout_2x",
+          "avg_lead_days": 15.0,
+          "reliability_pct": 16.3,
+          "discriminative_power": 16.3
+        },
+        {
+          "signal": "adx_crossed_20",
+          "avg_lead_days": 21.8,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        }
+      ],
+      "confirmation_signals": [
+        {
+          "signal": "wyckoff_in_accumulation",
+          "avg_lead_days": 2.5,
+          "reliability_pct": 32.7,
+          "discriminative_power": 32.7
+        },
+        {
+          "signal": "rsi_in_bullish_zone",
+          "avg_lead_days": 3.0,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        },
+        {
+          "signal": "price_above_vwap",
+          "avg_lead_days": 5.1,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        },
+        {
+          "signal": "volume_breakout_15x",
+          "avg_lead_days": 1.4,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        }
+      ]
+    },
+    {
+      "threshold_pct": 15.0,
+      "occurrences": 65,
+      "fakeouts": 0,
+      "success_rate": 100.0,
+      "avg_consolidation_days": 4.6,
+      "avg_duration_days": 142.8,
+      "avg_gain_pct": 49.6,
+      "earliest_reliable_signals": [
+        {
+          "signal": "bb_squeeze_active",
+          "avg_lead_days": 28.8,
+          "reliability_pct": 73.8,
+          "discriminative_power": 31.7
+        },
+        {
+          "signal": "ema_ribbon_bullish",
+          "avg_lead_days": 43.7,
+          "reliability_pct": 73.8,
+          "discriminative_power": 31.7
+        },
+        {
+          "signal": "volume_breakout_2x",
+          "avg_lead_days": 15.0,
+          "reliability_pct": 12.3,
+          "discriminative_power": 12.3
+        },
+        {
+          "signal": "adx_crossed_20",
+          "avg_lead_days": 27.2,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        },
+        {
+          "signal": "obv_60d_slope_strongly_positive",
+          "avg_lead_days": 52.0,
+          "reliability_pct": 95.4,
+          "discriminative_power": -4.6
+        }
+      ],
+      "confirmation_signals": [
+        {
+          "signal": "wyckoff_in_accumulation",
+          "avg_lead_days": 2.5,
+          "reliability_pct": 24.6,
+          "discriminative_power": 24.6
+        },
+        {
+          "signal": "plus_di_dominates",
+          "avg_lead_days": 6.8,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        },
+        {
+          "signal": "rsi_in_bullish_zone",
+          "avg_lead_days": 3.3,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        },
+        {
+          "signal": "price_above_vwap",
+          "avg_lead_days": 4.4,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        },
+        {
+          "signal": "volume_breakout_15x",
+          "avg_lead_days": 1.0,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        }
+      ]
+    },
+    {
+      "threshold_pct": 25.0,
+      "occurrences": 59,
+      "fakeouts": 0,
+      "success_rate": 100.0,
+      "avg_consolidation_days": 3.8,
+      "avg_duration_days": 147.3,
+      "avg_gain_pct": 52.4,
+      "earliest_reliable_signals": [
+        {
+          "signal": "bb_squeeze_active",
+          "avg_lead_days": 24.4,
+          "reliability_pct": 71.2,
+          "discriminative_power": 29.1
+        },
+        {
+          "signal": "ema_ribbon_bullish",
+          "avg_lead_days": 43.6,
+          "reliability_pct": 71.2,
+          "discriminative_power": 29.1
+        },
+        {
+          "signal": "volume_breakout_2x",
+          "avg_lead_days": 15.0,
+          "reliability_pct": 6.8,
+          "discriminative_power": 6.8
+        },
+        {
+          "signal": "adx_crossed_20",
+          "avg_lead_days": 26.7,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        },
+        {
+          "signal": "obv_60d_slope_strongly_positive",
+          "avg_lead_days": 52.0,
+          "reliability_pct": 94.9,
+          "discriminative_power": -5.1
+        }
+      ],
+      "confirmation_signals": [
+        {
+          "signal": "wyckoff_in_accumulation",
+          "avg_lead_days": 3.0,
+          "reliability_pct": 20.3,
+          "discriminative_power": 20.3
+        },
+        {
+          "signal": "rsi_in_bullish_zone",
+          "avg_lead_days": 3.6,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        },
+        {
+          "signal": "macd_histogram_turned_positive",
+          "avg_lead_days": 6.5,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        },
+        {
+          "signal": "price_above_vwap",
+          "avg_lead_days": 4.8,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        },
+        {
+          "signal": "volume_breakout_15x",
+          "avg_lead_days": 0.7,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        }
+      ]
+    },
+    {
+      "threshold_pct": 50.0,
+      "occurrences": 25,
+      "fakeouts": 0,
+      "success_rate": 100.0,
+      "avg_consolidation_days": 2.7,
+      "avg_duration_days": 159.3,
+      "avg_gain_pct": 72.8,
+      "earliest_reliable_signals": [
+        {
+          "signal": "ema_ribbon_bullish",
+          "avg_lead_days": 58.7,
+          "reliability_pct": 80.0,
+          "discriminative_power": 37.9
+        },
+        {
+          "signal": "wyckoff_in_markup",
+          "avg_lead_days": 14.4,
+          "reliability_pct": 48.0,
+          "discriminative_power": 5.9
+        },
+        {
+          "signal": "obv_60d_slope_strongly_positive",
+          "avg_lead_days": 56.6,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        },
+        {
+          "signal": "rsi_bullish_divergence",
+          "avg_lead_days": 17.6,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        },
+        {
+          "signal": "above_ichimoku_cloud",
+          "avg_lead_days": 23.9,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        }
+      ],
+      "confirmation_signals": [
+        {
+          "signal": "wyckoff_in_accumulation",
+          "avg_lead_days": 4.0,
+          "reliability_pct": 32.0,
+          "discriminative_power": 32.0
+        },
+        {
+          "signal": "rsi_in_bullish_zone",
+          "avg_lead_days": 3.7,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        },
+        {
+          "signal": "price_above_vwap",
+          "avg_lead_days": 6.8,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        },
+        {
+          "signal": "mfi_in_bullish_zone",
+          "avg_lead_days": 6.8,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        },
+        {
+          "signal": "macd_histogram_turned_positive",
+          "avg_lead_days": 5.1,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        }
+      ]
+    },
+    {
+      "threshold_pct": 100.0,
+      "occurrences": 3,
+      "fakeouts": 0,
+      "success_rate": 100.0,
+      "avg_consolidation_days": 2.7,
+      "avg_duration_days": 162.7,
+      "avg_gain_pct": 101.2,
+      "earliest_reliable_signals": [
+        {
+          "signal": "ema_ribbon_bullish",
+          "avg_lead_days": 90.0,
+          "reliability_pct": 100.0,
+          "discriminative_power": 57.9
+        },
+        {
+          "signal": "adx_crossed_20",
+          "avg_lead_days": 79.0,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        },
+        {
+          "signal": "obv_60d_slope_strongly_positive",
+          "avg_lead_days": 58.0,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        }
+      ],
+      "confirmation_signals": [
+        {
+          "signal": "wyckoff_in_accumulation",
+          "avg_lead_days": 4.0,
+          "reliability_pct": 100.0,
+          "discriminative_power": 100.0
+        },
+        {
+          "signal": "bb_squeeze_active",
+          "avg_lead_days": 2.0,
+          "reliability_pct": 100.0,
+          "discriminative_power": 57.9
+        },
+        {
+          "signal": "macd_histogram_turned_positive",
+          "avg_lead_days": 4.0,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        },
+        {
+          "signal": "rsi_in_bullish_zone",
+          "avg_lead_days": 4.0,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        },
+        {
+          "signal": "price_above_vwap",
+          "avg_lead_days": 4.0,
+          "reliability_pct": 100.0,
+          "discriminative_power": 0.0
+        }
+      ]
+    }
+  ],
+  "fakeout_signatures": [
+    "supertrend_bullish fires in 100% of fakeouts vs 75% of real moves \u2014 weak signal",
+    "adx_crossed_20 fires in 100% of fakeouts vs 100% of real moves \u2014 weak signal",
+    "adx_strong_trend fires in 100% of fakeouts vs 67% of real moves \u2014 weak signal",
+    "plus_di_dominates fires in 100% of fakeouts vs 100% of real moves \u2014 weak signal",
+    "rsi_in_bullish_zone fires in 100% of fakeouts vs 100% of real moves \u2014 weak signal",
+    "macd_histogram_turned_positive fires in 100% of fakeouts vs 100% of real moves \u2014 weak signal",
+    "mfi_in_bullish_zone fires in 100% of fakeouts vs 100% of real moves \u2014 weak signal",
+    "price_above_vwap fires in 100% of fakeouts vs 100% of real moves \u2014 weak signal",
+    "volume_breakout_15x fires in 100% of fakeouts vs 100% of real moves \u2014 weak signal",
+    "rsi_bullish_divergence fires in 100% of fakeouts vs 96% of real moves \u2014 weak signal",
+    "obv_60d_slope_strongly_positive fires in 100% of fakeouts vs 96% of real moves \u2014 weak signal",
+    "above_ichimoku_cloud fires in 100% of fakeouts vs 96% of real moves \u2014 weak signal"
+  ]
+}

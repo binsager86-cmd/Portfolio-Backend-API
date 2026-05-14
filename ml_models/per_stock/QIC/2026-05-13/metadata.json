@@ -1,0 +1,15 @@
+{
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 210,
+  "train_date_range": {
+    "start": "2025-07-31",
+    "end": "2026-03-10"
+  },
+  "rejected_reason": "auc_below_threshold_nan",
+  "fold_metrics": [],
+  "tier": "per_stock",
+  "identifier": "QIC",
+  "version": "2026-05-13"
+}

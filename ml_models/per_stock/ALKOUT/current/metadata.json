@@ -1,0 +1,36 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.20629821839311002,
+  "calibration_error": 0.382429020376179,
+  "n_train_events": 170,
+  "train_date_range": {
+    "start": "2024-11-20",
+    "end": "2026-04-16"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.22267479444157112,
+      "calibration_max_error": 0.2721640834919494,
+      "calibration_mean_error": 0.14286763751016748,
+      "fold": 1,
+      "train_size": 102,
+      "test_size": 16,
+      "best_iteration": 63
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.1899216423446489,
+      "calibration_max_error": 0.49269395726040854,
+      "calibration_mean_error": 0.2564046933457424,
+      "fold": 2,
+      "train_size": 118,
+      "test_size": 18,
+      "best_iteration": 70
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "ALKOUT",
+  "version": "2026-05-13"
+}

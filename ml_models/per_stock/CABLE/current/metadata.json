@@ -1,0 +1,26 @@
+{
+  "auc": 0.6666666666666667,
+  "log_loss": 1.0334043880170891,
+  "calibration_error": 0.7237547840402604,
+  "n_train_events": 196,
+  "train_date_range": {
+    "start": "2023-07-11",
+    "end": "2026-03-31"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.6666666666666667,
+      "log_loss": 1.0334043880170891,
+      "calibration_max_error": 0.7237547840402604,
+      "calibration_mean_error": 0.5249233712308825,
+      "fold": 3,
+      "train_size": 156,
+      "test_size": 20,
+      "best_iteration": 2
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "CABLE",
+  "version": "2026-05-13"
+}

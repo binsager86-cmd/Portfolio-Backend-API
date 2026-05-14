@@ -1,0 +1,26 @@
+{
+  "auc": 0.5789473684210527,
+  "log_loss": 0.9759130657480258,
+  "calibration_error": 0.38367552666201465,
+  "n_train_events": 295,
+  "train_date_range": {
+    "start": "2023-07-04",
+    "end": "2026-04-30"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.5789473684210527,
+      "log_loss": 0.9759130657480258,
+      "calibration_max_error": 0.38367552666201465,
+      "calibration_mean_error": 0.38367552666201465,
+      "fold": 2,
+      "train_size": 206,
+      "test_size": 30,
+      "best_iteration": 1
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "MUNTAZAHAT",
+  "version": "2026-05-13"
+}

@@ -1,0 +1,56 @@
+{
+  "auc": 0.625,
+  "log_loss": 0.6873597275460002,
+  "calibration_error": 0.42307861101320954,
+  "n_train_events": 428,
+  "train_date_range": {
+    "start": "2023-06-18",
+    "end": "2026-04-23"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.15253594734147355,
+      "calibration_max_error": 0.31563688231984754,
+      "calibration_mean_error": 0.1555091530248679,
+      "fold": 1,
+      "train_size": 256,
+      "test_size": 43,
+      "best_iteration": 55
+    },
+    {
+      "auc": 0.5,
+      "log_loss": 1.282596493943129,
+      "calibration_max_error": 0.67266004006865,
+      "calibration_mean_error": 0.67266004006865,
+      "fold": 2,
+      "train_size": 299,
+      "test_size": 43,
+      "best_iteration": 1
+    },
+    {
+      "auc": 0.0,
+      "log_loss": 0.8491768190286265,
+      "calibration_max_error": 0.25026034363539745,
+      "calibration_mean_error": 0.25026034363539745,
+      "fold": 3,
+      "train_size": 342,
+      "test_size": 43,
+      "best_iteration": 1
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.4651296498707714,
+      "calibration_max_error": 0.4537571780289432,
+      "calibration_mean_error": 0.3901559842188631,
+      "fold": 4,
+      "train_size": 385,
+      "test_size": 21,
+      "best_iteration": 6
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "ERESCO",
+  "version": "2026-05-13"
+}

@@ -1,0 +1,46 @@
+{
+  "auc": 0.6666666666666666,
+  "log_loss": 1.4693335090678585,
+  "calibration_error": 0.5160464709773495,
+  "n_train_events": 290,
+  "train_date_range": {
+    "start": "2023-06-15",
+    "end": "2026-04-09"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.5,
+      "log_loss": 3.700224583034006,
+      "calibration_max_error": 0.6849693417012364,
+      "calibration_mean_error": 0.6849693417012364,
+      "fold": 2,
+      "train_size": 203,
+      "test_size": 29,
+      "best_iteration": 1
+    },
+    {
+      "auc": 0.5,
+      "log_loss": 0.5109414433846026,
+      "calibration_max_error": 0.018773092382412537,
+      "calibration_mean_error": 0.018773092382412537,
+      "fold": 3,
+      "train_size": 232,
+      "test_size": 29,
+      "best_iteration": 2
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.19683450078496745,
+      "calibration_max_error": 0.8443969788483997,
+      "calibration_mean_error": 0.31939876872969025,
+      "fold": 4,
+      "train_size": 261,
+      "test_size": 14,
+      "best_iteration": 112
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "DIGITUS",
+  "version": "2026-05-13"
+}

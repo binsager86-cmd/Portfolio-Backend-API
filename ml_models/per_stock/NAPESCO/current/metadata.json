@@ -1,0 +1,36 @@
+{
+  "auc": 0.6,
+  "log_loss": 0.7046878010699724,
+  "calibration_error": 0.28809905434724603,
+  "n_train_events": 147,
+  "train_date_range": {
+    "start": "2023-11-13",
+    "end": "2026-02-03"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.5,
+      "log_loss": 0.7584182303594477,
+      "calibration_max_error": 0.17491459005749088,
+      "calibration_mean_error": 0.17491459005749088,
+      "fold": 1,
+      "train_size": 88,
+      "test_size": 14,
+      "best_iteration": 8
+    },
+    {
+      "auc": 0.7,
+      "log_loss": 0.6509573717804972,
+      "calibration_max_error": 0.4012835186370012,
+      "calibration_mean_error": 0.22241470149129922,
+      "fold": 5,
+      "train_size": 139,
+      "test_size": 8,
+      "best_iteration": 3
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "NAPESCO",
+  "version": "2026-05-13"
+}

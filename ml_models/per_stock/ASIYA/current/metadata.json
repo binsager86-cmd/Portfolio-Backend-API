@@ -1,0 +1,46 @@
+{
+  "auc": 0.7167460317460318,
+  "log_loss": 0.566007121467564,
+  "calibration_error": 0.3638780714737302,
+  "n_train_events": 257,
+  "train_date_range": {
+    "start": "2023-06-04",
+    "end": "2026-04-26"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.47023809523809523,
+      "log_loss": 0.7411821170087,
+      "calibration_max_error": 0.2847526652791605,
+      "calibration_mean_error": 0.1697957097372597,
+      "fold": 2,
+      "train_size": 179,
+      "test_size": 26,
+      "best_iteration": 32
+    },
+    {
+      "auc": 0.68,
+      "log_loss": 0.7405789200842077,
+      "calibration_max_error": 0.7679833200937535,
+      "calibration_mean_error": 0.42559246698805986,
+      "fold": 3,
+      "train_size": 205,
+      "test_size": 26,
+      "best_iteration": 49
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.21626032730978467,
+      "calibration_max_error": 0.03889822904827667,
+      "calibration_mean_error": 0.03889822904827667,
+      "fold": 5,
+      "train_size": 244,
+      "test_size": 13,
+      "best_iteration": 60
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "ASIYA",
+  "version": "2026-05-13"
+}

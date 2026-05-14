@@ -1,0 +1,36 @@
+{
+  "auc": 0.5,
+  "log_loss": 1.4305959705600846,
+  "calibration_error": 0.4739213791488907,
+  "n_train_events": 296,
+  "train_date_range": {
+    "start": "2023-10-17",
+    "end": "2026-04-05"
+  },
+  "rejected_reason": "auc_below_threshold_0.5000",
+  "fold_metrics": [
+    {
+      "auc": 0.0,
+      "log_loss": 2.8611497562886514,
+      "calibration_max_error": 0.9477869342792687,
+      "calibration_mean_error": 0.5703160541674006,
+      "fold": 3,
+      "train_size": 236,
+      "test_size": 30,
+      "best_iteration": 3
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 4.21848315176335e-05,
+      "calibration_max_error": 5.582401851267349e-05,
+      "calibration_mean_error": 4.4457236193417667e-05,
+      "fold": 5,
+      "train_size": 281,
+      "test_size": 15,
+      "best_iteration": 200
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "RASIYAT",
+  "version": "2026-05-13"
+}

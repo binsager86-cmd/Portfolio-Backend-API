@@ -1,0 +1,36 @@
+{
+  "auc": 0.04411764705882353,
+  "log_loss": 0.4276622229427078,
+  "calibration_error": 0.6740392629917972,
+  "n_train_events": 351,
+  "train_date_range": {
+    "start": "2023-05-01",
+    "end": "2026-04-08"
+  },
+  "rejected_reason": "auc_below_threshold_0.0441",
+  "fold_metrics": [
+    {
+      "auc": 0.08823529411764706,
+      "log_loss": 0.6471785508473039,
+      "calibration_max_error": 0.4436174382205269,
+      "calibration_mean_error": 0.4436174382205269,
+      "fold": 2,
+      "train_size": 245,
+      "test_size": 35,
+      "best_iteration": 1
+    },
+    {
+      "auc": 0.0,
+      "log_loss": 0.20814589503811165,
+      "calibration_max_error": 0.9044610877630674,
+      "calibration_mean_error": 0.5196379119706014,
+      "fold": 3,
+      "train_size": 280,
+      "test_size": 35,
+      "best_iteration": 30
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "EKTTITAB",
+  "version": "2026-05-13"
+}

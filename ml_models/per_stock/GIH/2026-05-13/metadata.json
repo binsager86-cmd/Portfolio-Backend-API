@@ -1,0 +1,46 @@
+{
+  "auc": 0.8072916666666666,
+  "log_loss": 0.3638826008996614,
+  "calibration_error": 0.7134962578823673,
+  "n_train_events": 332,
+  "train_date_range": {
+    "start": "2023-05-10",
+    "end": "2026-05-12"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.421875,
+      "log_loss": 0.40873824613163584,
+      "calibration_max_error": 0.82369646788321,
+      "calibration_mean_error": 0.47127676740487473,
+      "fold": 1,
+      "train_size": 199,
+      "test_size": 33,
+      "best_iteration": 22
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.2934266946367293,
+      "calibration_max_error": 0.5671797747994812,
+      "calibration_mean_error": 0.3263611883139818,
+      "fold": 2,
+      "train_size": 232,
+      "test_size": 33,
+      "best_iteration": 65
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.38948286193061904,
+      "calibration_max_error": 0.7496125309644105,
+      "calibration_mean_error": 0.45558626565036087,
+      "fold": 5,
+      "train_size": 315,
+      "test_size": 17,
+      "best_iteration": 23
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "GIH",
+  "version": "2026-05-13"
+}

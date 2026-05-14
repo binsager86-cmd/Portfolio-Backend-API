@@ -1,0 +1,36 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.1484438627371913,
+  "calibration_error": 0.23000833456309222,
+  "n_train_events": 419,
+  "train_date_range": {
+    "start": "2023-05-07",
+    "end": "2026-01-06"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.07267445341907028,
+      "calibration_max_error": 0.01335796683662649,
+      "calibration_mean_error": 0.01335796683662649,
+      "fold": 2,
+      "train_size": 293,
+      "test_size": 42,
+      "best_iteration": 51
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.22421327205531227,
+      "calibration_max_error": 0.44665870228955795,
+      "calibration_mean_error": 0.24314104241870294,
+      "fold": 4,
+      "train_size": 377,
+      "test_size": 21,
+      "best_iteration": 17
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "ALTIJARIA",
+  "version": "2026-05-13"
+}

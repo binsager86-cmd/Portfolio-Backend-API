@@ -1,0 +1,26 @@
+{
+  "auc": 0.8,
+  "log_loss": 0.5719955100246337,
+  "calibration_error": 0.30862610904000565,
+  "n_train_events": 169,
+  "train_date_range": {
+    "start": "2023-09-21",
+    "end": "2025-08-17"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.8,
+      "log_loss": 0.5719955100246337,
+      "calibration_max_error": 0.30862610904000565,
+      "calibration_mean_error": 0.21326706515925015,
+      "fold": 5,
+      "train_size": 160,
+      "test_size": 9,
+      "best_iteration": 14
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "ALEID",
+  "version": "2026-05-13"
+}

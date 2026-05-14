@@ -1,0 +1,2680 @@
+[
+  {
+    "tier": "per_sector",
+    "identifier": "banking",
+    "training_set": {
+      "n_events": 1688,
+      "date_range": {
+        "start": "2023-06-19",
+        "end": "2026-04-26"
+      },
+      "class_balance": 0.4354265402843602
+    },
+    "walk_forward_cv": {
+      "folds": [
+        {
+          "auc": 0.9860481339379144,
+          "log_loss": 0.422981164660833,
+          "calibration_max_error": 0.8997763995965462,
+          "calibration_mean_error": 0.5275710482537677,
+          "fold": 1,
+          "train_size": 1012,
+          "test_size": 169,
+          "best_iteration": 61
+        },
+        {
+          "auc": 0.14323793490460154,
+          "log_loss": 0.752991367962437,
+          "calibration_max_error": 0.4210054607131609,
+          "calibration_mean_error": 0.42093150993989836,
+          "fold": 2,
+          "train_size": 1181,
+          "test_size": 169,
+          "best_iteration": 1
+        },
+        {
+          "auc": 0.5319548872180452,
+          "log_loss": 0.801002814149251,
+          "calibration_max_error": 0.37283435337019627,
+          "calibration_mean_error": 0.37283435337019627,
+          "fold": 3,
+          "train_size": 1350,
+          "test_size": 169,
+          "best_iteration": 1
+        },
+        {
+          "auc": 1.0,
+          "log_loss": 0.35294141464339585,
+          "calibration_max_error": 0.5585887548230947,
+          "calibration_mean_error": 0.2612611753398363,
+          "fold": 4,
+          "train_size": 1519,
+          "test_size": 84,
+          "best_iteration": 77
+        },
+        {
+          "auc": 0.4054054054054054,
+          "log_loss": 0.4952869968603323,
+          "calibration_max_error": 0.7361841369124977,
+          "calibration_mean_error": 0.3280566618751711,
+          "fold": 5,
+          "train_size": 1603,
+          "test_size": 85,
+          "best_iteration": 42
+        }
+      ],
+      "mean_auc": 0.6133292722931933,
+      "std_auc": 0.33444688425720814,
+      "mean_log_loss": 0.5650407516552499,
+      "mean_calibration_max_error": 0.5976778210830991,
+      "mean_calibration_mean_error": 0.3821309497557739
+    },
+    "calibration": {
+      "n_samples": 676,
+      "max_error": 3.3306690738754696e-16,
+      "mean_error": 7.401486830834377e-17,
+      "warning": false,
+      "fitted": true,
+      "reliability": [
+        {
+          "bin": "(-0.001, 0.1]",
+          "count": 180,
+          "predicted_mean": 0.011111111111111112,
+          "actual_rate": 0.011111111111111112,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.3, 0.4]",
+          "count": 59,
+          "predicted_mean": 0.33898305084745756,
+          "actual_rate": 0.3389830508474576,
+          "abs_error": 5.551115123125783e-17
+        },
+        {
+          "bin": "(0.4, 0.5]",
+          "count": 140,
+          "predicted_mean": 0.4285714285714285,
+          "actual_rate": 0.42857142857142855,
+          "abs_error": 5.551115123125783e-17
+        },
+        {
+          "bin": "(0.6, 0.7]",
+          "count": 159,
+          "predicted_mean": 0.6855345911949682,
+          "actual_rate": 0.6855345911949685,
+          "abs_error": 3.3306690738754696e-16
+        },
+        {
+          "bin": "(0.7, 0.8]",
+          "count": 122,
+          "predicted_mean": 0.7213114754098361,
+          "actual_rate": 0.7213114754098361,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.9, 1.0]",
+          "count": 16,
+          "predicted_mean": 1.0,
+          "actual_rate": 1.0,
+          "abs_error": 0.0
+        }
+      ]
+    },
+    "top_features": [
+      {
+        "feature": "t30_cmf",
+        "gain": 5164.058066725149
+      },
+      {
+        "feature": "obv_trajectory_slope",
+        "gain": 1343.5077820897568
+      },
+      {
+        "feature": "t30_adx",
+        "gain": 1049.485234165928
+      },
+      {
+        "feature": "t0_stoch_k",
+        "gain": 1005.473396217647
+      },
+      {
+        "feature": "t0_ema_100",
+        "gain": 635.6409858121242
+      },
+      {
+        "feature": "t30_bb_bandwidth",
+        "gain": 591.8556023833439
+      },
+      {
+        "feature": "t0_rsi",
+        "gain": 564.3639872074127
+      },
+      {
+        "feature": "t0_williams_r",
+        "gain": 462.09557542244147
+      },
+      {
+        "feature": "cmf_velocity",
+        "gain": 354.7460284611516
+      },
+      {
+        "feature": "t7_rel_volume",
+        "gain": 344.8628256917
+      },
+      {
+        "feature": "accumulation_score_velocity",
+        "gain": 343.94770179344687
+      },
+      {
+        "feature": "t0_macd_line",
+        "gain": 336.055447451399
+      },
+      {
+        "feature": "t60_bb_bandwidth",
+        "gain": 326.37905209179735
+      },
+      {
+        "feature": "t0_roc",
+        "gain": 318.78924434539294
+      },
+      {
+        "feature": "t60_adx",
+        "gain": 285.566499710083
+      }
+    ],
+    "failure_cases": [
+      {
+        "ticker": "NBK",
+        "event_id": "NBK_2024-12-02_up_15",
+        "event_date": "2025-01-08 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.02040816326530612,
+        "abs_error": 0.9795918367346939,
+        "outcome_category": "TP1_SLOW"
+      },
+      {
+        "ticker": "NBK",
+        "event_id": "NBK_2024-11-28_up_15",
+        "event_date": "2025-01-08 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.02040816326530612,
+        "abs_error": 0.9795918367346939,
+        "outcome_category": "TP1_SLOW"
+      },
+      {
+        "ticker": "CBK",
+        "event_id": "CBK_2025-10-02_fakeout",
+        "event_date": "2025-10-02 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.7213114754098361,
+        "abs_error": 0.7213114754098361,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "BOUBYAN",
+        "event_id": "BOUBYAN_2025-06-15_up_15",
+        "event_date": "2025-09-23 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.7213114754098361,
+        "abs_error": 0.7213114754098361,
+        "outcome_category": "TIMED_OUT"
+      },
+      {
+        "ticker": "GBK",
+        "event_id": "GBK_2025-04-08_up_15",
+        "event_date": "2025-08-20 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.7213114754098361,
+        "abs_error": 0.7213114754098361,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "CBK",
+        "event_id": "CBK_2025-10-12_fakeout",
+        "event_date": "2025-10-12 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.7213114754098361,
+        "abs_error": 0.7213114754098361,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "GBK",
+        "event_id": "GBK_2025-04-07_up_15",
+        "event_date": "2025-08-20 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.7213114754098361,
+        "abs_error": 0.7213114754098361,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "GBK",
+        "event_id": "GBK_2025-08-04_up_10",
+        "event_date": "2025-08-20 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.7213114754098361,
+        "abs_error": 0.7213114754098361,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "GBK",
+        "event_id": "GBK_2025-05-20_up_10",
+        "event_date": "2025-08-20 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.7213114754098361,
+        "abs_error": 0.7213114754098361,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "GBK",
+        "event_id": "GBK_2025-04-08_up_10",
+        "event_date": "2025-08-20 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.7213114754098361,
+        "abs_error": 0.7213114754098361,
+        "outcome_category": "STOPPED_OUT"
+      }
+    ]
+  },
+  {
+    "tier": "per_sector",
+    "identifier": "consumer",
+    "training_set": {
+      "n_events": 645,
+      "date_range": {
+        "start": "2023-06-14",
+        "end": "2026-04-13"
+      },
+      "class_balance": 0.765891472868217
+    },
+    "walk_forward_cv": {
+      "folds": [
+        {
+          "auc": 1.0,
+          "log_loss": 0.4190124529461706,
+          "calibration_max_error": 0.3795543257650409,
+          "calibration_mean_error": 0.32491113196218724,
+          "fold": 1,
+          "train_size": 387,
+          "test_size": 64,
+          "best_iteration": 20
+        },
+        {
+          "auc": 0.9126984126984127,
+          "log_loss": 0.19231826871365534,
+          "calibration_max_error": 0.8999250723190082,
+          "calibration_mean_error": 0.4013141414768867,
+          "fold": 2,
+          "train_size": 451,
+          "test_size": 65,
+          "best_iteration": 35
+        },
+        {
+          "auc": 0.9516129032258065,
+          "log_loss": 0.2094524317316604,
+          "calibration_max_error": 0.9018084621150981,
+          "calibration_mean_error": 0.38921063032386766,
+          "fold": 3,
+          "train_size": 516,
+          "test_size": 64,
+          "best_iteration": 42
+        },
+        {
+          "auc": 0.25806451612903225,
+          "log_loss": 0.3655301586233738,
+          "calibration_max_error": 0.25017068417217647,
+          "calibration_mean_error": 0.25017068417217647,
+          "fold": 4,
+          "train_size": 580,
+          "test_size": 32,
+          "best_iteration": 1
+        },
+        {
+          "auc": 1.0,
+          "log_loss": 0.05898634462041188,
+          "calibration_max_error": 0.7071235842609748,
+          "calibration_mean_error": 0.36463622388341616,
+          "fold": 5,
+          "train_size": 612,
+          "test_size": 33,
+          "best_iteration": 53
+        }
+      ],
+      "mean_auc": 0.8244751664106502,
+      "std_auc": 0.28509167103709443,
+      "mean_log_loss": 0.24905993132705442,
+      "mean_calibration_max_error": 0.6277164257264597,
+      "mean_calibration_mean_error": 0.34604856236370685
+    },
+    "calibration": {
+      "n_samples": 258,
+      "max_error": 1.1102230246251565e-16,
+      "mean_error": 5.551115123125783e-17,
+      "warning": false,
+      "fitted": true,
+      "reliability": [
+        {
+          "bin": "(0.1, 0.2]",
+          "count": 29,
+          "predicted_mean": 0.10344827586206896,
+          "actual_rate": 0.10344827586206896,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.9, 1.0]",
+          "count": 229,
+          "predicted_mean": 0.9868995633187774,
+          "actual_rate": 0.9868995633187773,
+          "abs_error": 1.1102230246251565e-16
+        }
+      ]
+    },
+    "top_features": [
+      {
+        "feature": "t0_ad_line",
+        "gain": 3083.9193048882116
+      },
+      {
+        "feature": "t0_mfi",
+        "gain": 792.7351331710815
+      },
+      {
+        "feature": "t0_swing_high",
+        "gain": 302.7640075683594
+      },
+      {
+        "feature": "t0_plus_di",
+        "gain": 198.40580224990845
+      },
+      {
+        "feature": "t0_macd_signal",
+        "gain": 157.25146190077066
+      },
+      {
+        "feature": "t90_cmf",
+        "gain": 141.41887855529785
+      },
+      {
+        "feature": "t0_force_index",
+        "gain": 125.49760365486145
+      },
+      {
+        "feature": "t7_macd_histogram",
+        "gain": 112.375
+      },
+      {
+        "feature": "t0_atr_percentile_252",
+        "gain": 62.694211125124475
+      },
+      {
+        "feature": "t7_rsi",
+        "gain": 59.19337010383606
+      },
+      {
+        "feature": "t3_macd_histogram",
+        "gain": 45.58083152770996
+      },
+      {
+        "feature": "accumulation_trajectory_slope",
+        "gain": 27.645219802856445
+      },
+      {
+        "feature": "t0_macd_line",
+        "gain": 24.383465929451898
+      },
+      {
+        "feature": "n_signals_fired_in_last_7d",
+        "gain": 18.30295515961354
+      },
+      {
+        "feature": "t0_obv_slope_20",
+        "gain": 12.855301222086041
+      }
+    ],
+    "failure_cases": [
+      {
+        "ticker": "NCCI",
+        "event_id": "NCCI_2025-10-20_up_10",
+        "event_date": "2025-10-22 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.9651162790697675,
+        "abs_error": 0.9651162790697675,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "NCCI",
+        "event_id": "NCCI_2025-10-06_fakeout",
+        "event_date": "2025-10-06 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.9651162790697675,
+        "abs_error": 0.9651162790697675,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "NCCI",
+        "event_id": "NCCI_2025-05-01_fakeout",
+        "event_date": "2025-05-01 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.9651162790697675,
+        "abs_error": 0.9651162790697675,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "MIDAN",
+        "event_id": "MIDAN_2025-08-14_up_15",
+        "event_date": "2025-09-28 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.10344827586206896,
+        "abs_error": 0.896551724137931,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "MIDAN",
+        "event_id": "MIDAN_2025-08-14_up_10",
+        "event_date": "2025-09-28 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.10344827586206896,
+        "abs_error": 0.896551724137931,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "MIDAN",
+        "event_id": "MIDAN_2025-08-14_up_25",
+        "event_date": "2025-09-28 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.10344827586206896,
+        "abs_error": 0.896551724137931,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "KCIN",
+        "event_id": "KCIN_2024-12-04_up_25",
+        "event_date": "2025-01-29 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.10344827586206896,
+        "abs_error": 0.10344827586206896,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "KCIN",
+        "event_id": "KCIN_2025-01-29_fakeout",
+        "event_date": "2025-01-29 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.10344827586206896,
+        "abs_error": 0.10344827586206896,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "KCIN",
+        "event_id": "KCIN_2024-10-01_up_15",
+        "event_date": "2025-01-29 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.10344827586206896,
+        "abs_error": 0.10344827586206896,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "KCIN",
+        "event_id": "KCIN_2024-10-06_up_25",
+        "event_date": "2025-01-29 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.10344827586206896,
+        "abs_error": 0.10344827586206896,
+        "outcome_category": "STOPPED_OUT"
+      }
+    ]
+  },
+  {
+    "tier": "per_sector",
+    "identifier": "energy",
+    "training_set": {
+      "n_events": 1971,
+      "date_range": {
+        "start": "2023-05-23",
+        "end": "2026-04-27"
+      },
+      "class_balance": 0.5799086757990868
+    },
+    "walk_forward_cv": {
+      "folds": [
+        {
+          "auc": 0.3505568505568506,
+          "log_loss": 0.6934074694923872,
+          "calibration_max_error": 0.3252777366300261,
+          "calibration_mean_error": 0.17350847498582372,
+          "fold": 1,
+          "train_size": 1182,
+          "test_size": 197,
+          "best_iteration": 1
+        },
+        {
+          "auc": 0.7934458788480635,
+          "log_loss": 0.5116426880363864,
+          "calibration_max_error": 0.4197863217642517,
+          "calibration_mean_error": 0.29534161567498113,
+          "fold": 2,
+          "train_size": 1379,
+          "test_size": 197,
+          "best_iteration": 16
+        },
+        {
+          "auc": 0.7523769574944071,
+          "log_loss": 0.6991144003466309,
+          "calibration_max_error": 0.4948871556332928,
+          "calibration_mean_error": 0.3742671067882233,
+          "fold": 3,
+          "train_size": 1576,
+          "test_size": 197,
+          "best_iteration": 19
+        },
+        {
+          "auc": 1.0,
+          "log_loss": 0.006661249360886899,
+          "calibration_max_error": 0.008324536036351526,
+          "calibration_mean_error": 0.004193263016395225,
+          "fold": 4,
+          "train_size": 1773,
+          "test_size": 99,
+          "best_iteration": 200
+        },
+        {
+          "auc": 1.0,
+          "log_loss": 0.5872512595163633,
+          "calibration_max_error": 0.44174861226028006,
+          "calibration_mean_error": 0.42036440331386316,
+          "fold": 5,
+          "train_size": 1872,
+          "test_size": 99,
+          "best_iteration": 2
+        }
+      ],
+      "mean_auc": 0.7792759373798643,
+      "std_auc": 0.23755530783610135,
+      "mean_log_loss": 0.4996154133505309,
+      "mean_calibration_max_error": 0.33800487246484046,
+      "mean_calibration_mean_error": 0.2535349727558573
+    },
+    "calibration": {
+      "n_samples": 789,
+      "max_error": 1.1102230246251565e-16,
+      "mean_error": 2.7755575615628914e-17,
+      "warning": false,
+      "fitted": true,
+      "reliability": [
+        {
+          "bin": "(-0.001, 0.1]",
+          "count": 117,
+          "predicted_mean": 0.008547008547008548,
+          "actual_rate": 0.008547008547008548,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.5, 0.6]",
+          "count": 50,
+          "predicted_mean": 0.6000000000000001,
+          "actual_rate": 0.6,
+          "abs_error": 1.1102230246251565e-16
+        },
+        {
+          "bin": "(0.7, 0.8]",
+          "count": 529,
+          "predicted_mean": 0.7599243856332704,
+          "actual_rate": 0.7599243856332704,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.9, 1.0]",
+          "count": 93,
+          "predicted_mean": 1.0,
+          "actual_rate": 1.0,
+          "abs_error": 0.0
+        }
+      ]
+    },
+    "top_features": [
+      {
+        "feature": "t0_swing_high",
+        "gain": 6310.761796951294
+      },
+      {
+        "feature": "t1_rel_volume",
+        "gain": 1690.1744451550476
+      },
+      {
+        "feature": "t0_accumulation_score",
+        "gain": 1078.4847021102905
+      },
+      {
+        "feature": "obv_trajectory_slope",
+        "gain": 1053.8767326841958
+      },
+      {
+        "feature": "t0_vwap_distance_sigma",
+        "gain": 874.9132967158221
+      },
+      {
+        "feature": "t0_tsi",
+        "gain": 652.0540445571241
+      },
+      {
+        "feature": "t0_zscore_200",
+        "gain": 641.3302897056565
+      },
+      {
+        "feature": "days_since_last_swing_high",
+        "gain": 611.192008972168
+      },
+      {
+        "feature": "n_signals_fired_in_last_7d",
+        "gain": 607.4563517695418
+      },
+      {
+        "feature": "t3_rel_volume",
+        "gain": 589.6270701675047
+      },
+      {
+        "feature": "t0_cmf",
+        "gain": 495.70805430922485
+      },
+      {
+        "feature": "t14_cmf",
+        "gain": 429.7497908324003
+      },
+      {
+        "feature": "t14_obv",
+        "gain": 395.45452308654785
+      },
+      {
+        "feature": "macd_histogram_velocity",
+        "gain": 384.73747356983995
+      },
+      {
+        "feature": "t0_minus_di",
+        "gain": 337.433755922566
+      }
+    ],
+    "failure_cases": [
+      {
+        "ticker": "SENERGY",
+        "event_id": "SENERGY_2025-10-09_fakeout",
+        "event_date": "2025-10-09 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.010416666666666666,
+        "abs_error": 0.9895833333333334,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "ENERGYH",
+        "event_id": "ENERGYH_2024-12-08_up_50",
+        "event_date": "2025-01-08 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.7599243856332704,
+        "abs_error": 0.7599243856332704,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "ENERGYH",
+        "event_id": "ENERGYH_2024-12-09_up_10",
+        "event_date": "2025-01-08 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.7599243856332704,
+        "abs_error": 0.7599243856332704,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "ENERGYH",
+        "event_id": "ENERGYH_2024-12-09_up_50",
+        "event_date": "2025-01-08 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.7599243856332704,
+        "abs_error": 0.7599243856332704,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "SENERGY",
+        "event_id": "SENERGY_2026-04-19_fakeout",
+        "event_date": "2026-04-19 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.7599243856332704,
+        "abs_error": 0.7599243856332704,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "IPG",
+        "event_id": "IPG_2025-11-12_up_25",
+        "event_date": "2025-11-20 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.7599243856332704,
+        "abs_error": 0.7599243856332704,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "IPG",
+        "event_id": "IPG_2025-11-12_up_15",
+        "event_date": "2025-11-20 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.7599243856332704,
+        "abs_error": 0.7599243856332704,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "ENERGYH",
+        "event_id": "ENERGYH_2025-01-08_fakeout",
+        "event_date": "2025-01-08 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.7599243856332704,
+        "abs_error": 0.7599243856332704,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "IPG",
+        "event_id": "IPG_2025-11-12_up_10",
+        "event_date": "2025-11-20 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.7599243856332704,
+        "abs_error": 0.7599243856332704,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "IPG",
+        "event_id": "IPG_2025-08-26_up_15",
+        "event_date": "2025-10-07 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.7599243856332704,
+        "abs_error": 0.7599243856332704,
+        "outcome_category": "STOPPED_OUT"
+      }
+    ]
+  },
+  {
+    "tier": "per_sector",
+    "identifier": "holding_misc",
+    "training_set": {
+      "n_events": 247,
+      "date_range": {
+        "start": "2023-11-30",
+        "end": "2026-04-15"
+      },
+      "class_balance": 0.7408906882591093
+    },
+    "walk_forward_cv": {
+      "folds": [
+        {
+          "auc": 0.8863636363636364,
+          "log_loss": 0.3929552665474462,
+          "calibration_max_error": 0.10107954198482494,
+          "calibration_mean_error": 0.10107954198482494,
+          "fold": 2,
+          "train_size": 172,
+          "test_size": 25,
+          "best_iteration": 2
+        },
+        {
+          "auc": 1.0,
+          "log_loss": 0.9657250794511082,
+          "calibration_max_error": 0.8787969586529816,
+          "calibration_mean_error": 0.5474690628601887,
+          "fold": 4,
+          "train_size": 222,
+          "test_size": 12,
+          "best_iteration": 14
+        }
+      ],
+      "mean_auc": 0.9431818181818181,
+      "std_auc": 0.05681818181818182,
+      "mean_log_loss": 0.6793401729992772,
+      "mean_calibration_max_error": 0.48993825031890326,
+      "mean_calibration_mean_error": 0.3242743024225068
+    },
+    "calibration": {
+      "n_samples": 37,
+      "max_error": 1.1102230246251565e-16,
+      "mean_error": 2.7755575615628914e-17,
+      "warning": false,
+      "fitted": true,
+      "reliability": [
+        {
+          "bin": "(-0.001, 0.1]",
+          "count": 3,
+          "predicted_mean": 0.0,
+          "actual_rate": 0.0,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.6, 0.7]",
+          "count": 8,
+          "predicted_mean": 0.625,
+          "actual_rate": 0.625,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.8, 0.9]",
+          "count": 21,
+          "predicted_mean": 0.8095238095238096,
+          "actual_rate": 0.8095238095238095,
+          "abs_error": 1.1102230246251565e-16
+        },
+        {
+          "bin": "(0.9, 1.0]",
+          "count": 5,
+          "predicted_mean": 1.0,
+          "actual_rate": 1.0,
+          "abs_error": 0.0
+        }
+      ]
+    },
+    "top_features": [
+      {
+        "feature": "t7_rel_volume",
+        "gain": 1125.7748746871948
+      },
+      {
+        "feature": "t30_bb_bandwidth",
+        "gain": 322.36476135253906
+      },
+      {
+        "feature": "t60_adx",
+        "gain": 131.4695601463318
+      },
+      {
+        "feature": "t0_ichimoku_tk_cross",
+        "gain": 71.63813924822334
+      },
+      {
+        "feature": "days_since_last_swing_high",
+        "gain": 63.40858793258667
+      },
+      {
+        "feature": "rsi_velocity",
+        "gain": 60.230448961257935
+      },
+      {
+        "feature": "t0_ema_8",
+        "gain": 45.79963507661296
+      },
+      {
+        "feature": "t0_hist_vol_30d",
+        "gain": 42.30468671023846
+      },
+      {
+        "feature": "t0_stoch_k",
+        "gain": 38.52606139688396
+      },
+      {
+        "feature": "t30_obv",
+        "gain": 33.240389823913574
+      },
+      {
+        "feature": "t0_macd_line",
+        "gain": 27.610910982055838
+      },
+      {
+        "feature": "t0_zscore_200",
+        "gain": 17.535249948501587
+      },
+      {
+        "feature": "t14_rel_volume",
+        "gain": 17.515100479125977
+      },
+      {
+        "feature": "t0_ema_21",
+        "gain": 13.080959678472068
+      },
+      {
+        "feature": "t0_connors_rsi",
+        "gain": 12.111149072647095
+      }
+    ],
+    "failure_cases": [
+      {
+        "ticker": "KFH",
+        "event_id": "KFH_2025-10-12_up_10",
+        "event_date": "2025-10-29 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.8095238095238095,
+        "abs_error": 0.8095238095238095,
+        "outcome_category": "TIMED_OUT"
+      },
+      {
+        "ticker": "KFH",
+        "event_id": "KFH_2025-08-27_up_10",
+        "event_date": "2025-10-29 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.8095238095238095,
+        "abs_error": 0.8095238095238095,
+        "outcome_category": "TIMED_OUT"
+      },
+      {
+        "ticker": "KFH",
+        "event_id": "KFH_2025-08-28_up_10",
+        "event_date": "2025-10-29 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.8095238095238095,
+        "abs_error": 0.8095238095238095,
+        "outcome_category": "TIMED_OUT"
+      },
+      {
+        "ticker": "KFH",
+        "event_id": "KFH_2025-08-31_up_10",
+        "event_date": "2025-10-29 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.8095238095238095,
+        "abs_error": 0.8095238095238095,
+        "outcome_category": "TIMED_OUT"
+      },
+      {
+        "ticker": "BEYOUT",
+        "event_id": "BEYOUT_2025-02-19_fakeout",
+        "event_date": "2025-02-19 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.625,
+        "abs_error": 0.625,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "KFH",
+        "event_id": "KFH_2025-06-15_up_15",
+        "event_date": "2025-06-30 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.625,
+        "abs_error": 0.625,
+        "outcome_category": "TIMED_OUT"
+      },
+      {
+        "ticker": "KFH",
+        "event_id": "KFH_2025-06-15_up_10",
+        "event_date": "2025-06-30 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.625,
+        "abs_error": 0.625,
+        "outcome_category": "TIMED_OUT"
+      },
+      {
+        "ticker": "KFH",
+        "event_id": "KFH_2025-04-06_up_10",
+        "event_date": "2025-05-28 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.625,
+        "abs_error": 0.375,
+        "outcome_category": "TP1_SLOW"
+      },
+      {
+        "ticker": "BPCC",
+        "event_id": "BPCC_2025-04-07_up_10",
+        "event_date": "2025-04-10 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.625,
+        "abs_error": 0.375,
+        "outcome_category": "TP1_SLOW"
+      },
+      {
+        "ticker": "KFH",
+        "event_id": "KFH_2025-04-08_up_15",
+        "event_date": "2025-05-28 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.625,
+        "abs_error": 0.375,
+        "outcome_category": "TP1_SLOW"
+      }
+    ]
+  },
+  {
+    "tier": "per_sector",
+    "identifier": "industrial",
+    "training_set": {
+      "n_events": 1893,
+      "date_range": {
+        "start": "2023-05-07",
+        "end": "2026-04-23"
+      },
+      "class_balance": 0.4574749075541469
+    },
+    "walk_forward_cv": {
+      "folds": [
+        {
+          "auc": 1.0,
+          "log_loss": 0.20249332332780065,
+          "calibration_max_error": 0.6077099633284966,
+          "calibration_mean_error": 0.23755437536056687,
+          "fold": 1,
+          "train_size": 1135,
+          "test_size": 190,
+          "best_iteration": 87
+        },
+        {
+          "auc": 0.8802500000000001,
+          "log_loss": 0.4595139897845836,
+          "calibration_max_error": 0.8026422822801582,
+          "calibration_mean_error": 0.3295862330024566,
+          "fold": 2,
+          "train_size": 1325,
+          "test_size": 189,
+          "best_iteration": 50
+        },
+        {
+          "auc": 0.8548387096774194,
+          "log_loss": 0.4336795045099154,
+          "calibration_max_error": 0.8499384548026607,
+          "calibration_mean_error": 0.44015151477599146,
+          "fold": 3,
+          "train_size": 1514,
+          "test_size": 189,
+          "best_iteration": 72
+        },
+        {
+          "auc": 0.48695054945054944,
+          "log_loss": 0.6653936755785738,
+          "calibration_max_error": 0.46863197659153316,
+          "calibration_mean_error": 0.23204943036796521,
+          "fold": 4,
+          "train_size": 1703,
+          "test_size": 95,
+          "best_iteration": 3
+        },
+        {
+          "auc": 0.9756097560975611,
+          "log_loss": 0.5336015629221196,
+          "calibration_max_error": 0.7606546685069515,
+          "calibration_mean_error": 0.4438872299275532,
+          "fold": 5,
+          "train_size": 1798,
+          "test_size": 95,
+          "best_iteration": 41
+        }
+      ],
+      "mean_auc": 0.839529803045106,
+      "std_auc": 0.18464726635459175,
+      "mean_log_loss": 0.45893641122459855,
+      "mean_calibration_max_error": 0.69791546910196,
+      "mean_calibration_mean_error": 0.33664575668690666
+    },
+    "calibration": {
+      "n_samples": 758,
+      "max_error": 2.7755575615628914e-17,
+      "mean_error": 4.625929269271485e-18,
+      "warning": false,
+      "fitted": true,
+      "reliability": [
+        {
+          "bin": "(-0.001, 0.1]",
+          "count": 146,
+          "predicted_mean": 0.0,
+          "actual_rate": 0.0,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.1, 0.2]",
+          "count": 95,
+          "predicted_mean": 0.10526315789473681,
+          "actual_rate": 0.10526315789473684,
+          "abs_error": 2.7755575615628914e-17
+        },
+        {
+          "bin": "(0.2, 0.3]",
+          "count": 182,
+          "predicted_mean": 0.25824175824175827,
+          "actual_rate": 0.25824175824175827,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.6, 0.7]",
+          "count": 116,
+          "predicted_mean": 0.646551724137931,
+          "actual_rate": 0.646551724137931,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.8, 0.9]",
+          "count": 174,
+          "predicted_mean": 0.8735632183908046,
+          "actual_rate": 0.8735632183908046,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.9, 1.0]",
+          "count": 45,
+          "predicted_mean": 1.0,
+          "actual_rate": 1.0,
+          "abs_error": 0.0
+        }
+      ]
+    },
+    "top_features": [
+      {
+        "feature": "t0_tsi",
+        "gain": 3178.9758984828386
+      },
+      {
+        "feature": "t3_rsi",
+        "gain": 2660.307195507339
+      },
+      {
+        "feature": "n_signals_fired_in_last_7d",
+        "gain": 1580.4536714357594
+      },
+      {
+        "feature": "t90_adx",
+        "gain": 1440.365383796412
+      },
+      {
+        "feature": "t0_swing_high",
+        "gain": 1191.7071968913078
+      },
+      {
+        "feature": "t7_rel_volume",
+        "gain": 650.868074166181
+      },
+      {
+        "feature": "t0_roc",
+        "gain": 594.5642787598799
+      },
+      {
+        "feature": "t1_rsi",
+        "gain": 553.9616336859763
+      },
+      {
+        "feature": "days_since_last_swing_high",
+        "gain": 525.3950168017909
+      },
+      {
+        "feature": "t0_ema_8",
+        "gain": 447.92687683516215
+      },
+      {
+        "feature": "t3_macd_histogram",
+        "gain": 441.4739668434486
+      },
+      {
+        "feature": "t7_bb_bandwidth",
+        "gain": 425.116567033343
+      },
+      {
+        "feature": "t30_rel_volume",
+        "gain": 371.349717984529
+      },
+      {
+        "feature": "t0_atr",
+        "gain": 310.9148377674428
+      },
+      {
+        "feature": "t0_macd_line",
+        "gain": 306.57689639443765
+      }
+    ],
+    "failure_cases": [
+      {
+        "ticker": "NIND",
+        "event_id": "NIND_2026-03-18_up_10",
+        "event_date": "2026-04-16 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.10526315789473684,
+        "abs_error": 0.8947368421052632,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "NICBM",
+        "event_id": "NICBM_2025-08-18_up_15",
+        "event_date": "2025-10-05 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.10526315789473684,
+        "abs_error": 0.8947368421052632,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "NIND",
+        "event_id": "NIND_2026-03-29_up_10",
+        "event_date": "2026-04-16 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.10526315789473684,
+        "abs_error": 0.8947368421052632,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "NIND",
+        "event_id": "NIND_2026-03-26_up_10",
+        "event_date": "2026-04-16 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.10526315789473684,
+        "abs_error": 0.8947368421052632,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "NIND",
+        "event_id": "NIND_2026-03-17_up_10",
+        "event_date": "2026-04-16 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.10526315789473684,
+        "abs_error": 0.8947368421052632,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "NIND",
+        "event_id": "NIND_2025-07-22_up_15",
+        "event_date": "2025-08-25 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.10526315789473684,
+        "abs_error": 0.8947368421052632,
+        "outcome_category": "TP1_SLOW"
+      },
+      {
+        "ticker": "ALKOUT",
+        "event_id": "ALKOUT_2025-08-24_fakeout",
+        "event_date": "2025-08-24 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.10526315789473684,
+        "abs_error": 0.8947368421052632,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "NIND",
+        "event_id": "NIND_2026-03-24_up_10",
+        "event_date": "2026-04-16 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.10526315789473684,
+        "abs_error": 0.8947368421052632,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "NIND",
+        "event_id": "NIND_2026-03-29_up_15",
+        "event_date": "2026-04-16 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.10526315789473684,
+        "abs_error": 0.8947368421052632,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "NIND",
+        "event_id": "NIND_2026-03-02_up_10",
+        "event_date": "2026-04-16 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.10526315789473684,
+        "abs_error": 0.8947368421052632,
+        "outcome_category": "TP1_FAST"
+      }
+    ]
+  },
+  {
+    "tier": "per_sector",
+    "identifier": "insurance",
+    "training_set": {
+      "n_events": 86,
+      "date_range": {
+        "start": "2023-12-11",
+        "end": "2026-04-19"
+      },
+      "class_balance": 0.08139534883720931
+    },
+    "walk_forward_cv": {
+      "folds": [
+        {
+          "auc": 0.7142857142857143,
+          "log_loss": 0.7636790486125418,
+          "calibration_max_error": 0.1882996860249245,
+          "calibration_mean_error": 0.1882996860249245,
+          "fold": 1,
+          "train_size": 51,
+          "test_size": 9,
+          "best_iteration": 6
+        },
+        {
+          "auc": 0.5714285714285714,
+          "log_loss": 0.700808343131956,
+          "calibration_max_error": 0.1722448319774991,
+          "calibration_mean_error": 0.1722448319774991,
+          "fold": 3,
+          "train_size": 68,
+          "test_size": 9,
+          "best_iteration": 5
+        },
+        {
+          "auc": 0.5,
+          "log_loss": 0.8106127589624373,
+          "calibration_max_error": 0.22371048178528774,
+          "calibration_mean_error": 0.22371048178528774,
+          "fold": 5,
+          "train_size": 81,
+          "test_size": 5,
+          "best_iteration": 50
+        }
+      ],
+      "mean_auc": 0.5952380952380952,
+      "std_auc": 0.08908708063747481,
+      "mean_log_loss": 0.7583667169023117,
+      "mean_calibration_max_error": 0.1947516665959038,
+      "mean_calibration_mean_error": 0.1947516665959038
+    },
+    "calibration": {
+      "n_samples": 23,
+      "max_error": 5.551115123125783e-17,
+      "mean_error": 1.850371707708594e-17,
+      "warning": false,
+      "fitted": true,
+      "reliability": [
+        {
+          "bin": "(-0.001, 0.1]",
+          "count": 3,
+          "predicted_mean": 0.0,
+          "actual_rate": 0.0,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.1, 0.2]",
+          "count": 15,
+          "predicted_mean": 0.20000000000000007,
+          "actual_rate": 0.2,
+          "abs_error": 5.551115123125783e-17
+        },
+        {
+          "bin": "(0.3, 0.4]",
+          "count": 5,
+          "predicted_mean": 0.4,
+          "actual_rate": 0.4,
+          "abs_error": 0.0
+        }
+      ]
+    },
+    "top_features": [
+      {
+        "feature": "is_earnings_window",
+        "gain": 63.34510727151064
+      },
+      {
+        "feature": "t0_adx",
+        "gain": 50.65449682930921
+      },
+      {
+        "feature": "t0_klinger",
+        "gain": 37.38221389055252
+      },
+      {
+        "feature": "avg_daily_turnover_log",
+        "gain": 26.3958799082275
+      },
+      {
+        "feature": "days_since_last_swing_low",
+        "gain": 8.741199851036072
+      },
+      {
+        "feature": "t1_adx",
+        "gain": 7.8727500438690186
+      },
+      {
+        "feature": "t60_macd_histogram",
+        "gain": 7.003880023956299
+      },
+      {
+        "feature": "bb_bandwidth_trajectory",
+        "gain": 6.7289299964904785
+      },
+      {
+        "feature": "t0_roc",
+        "gain": 6.04049015045166
+      },
+      {
+        "feature": "t3_adx",
+        "gain": 5.251699924468994
+      },
+      {
+        "feature": "t0_ema_8",
+        "gain": 4.067890822887421
+      },
+      {
+        "feature": "signal_acceleration",
+        "gain": 2.9899791346388156
+      },
+      {
+        "feature": "t14_macd_histogram",
+        "gain": 1.5429159998893738
+      },
+      {
+        "feature": "t0_macd_signal",
+        "gain": 1.3960689902305603
+      },
+      {
+        "feature": "n_signals_fired_in_last_7d",
+        "gain": 0.8971134740091316
+      }
+    ],
+    "failure_cases": [
+      {
+        "ticker": "GINS",
+        "event_id": "GINS_2025-01-09_up_10",
+        "event_date": "2025-01-12 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.2,
+        "abs_error": 0.8,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "GINS",
+        "event_id": "GINS_2025-01-09_up_15",
+        "event_date": "2025-01-12 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.2,
+        "abs_error": 0.8,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "GINS",
+        "event_id": "GINS_2026-01-29_up_15",
+        "event_date": "2026-04-19 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.2,
+        "abs_error": 0.8,
+        "outcome_category": "TP1_SLOW"
+      },
+      {
+        "ticker": "GINS",
+        "event_id": "GINS_2026-04-19_fakeout",
+        "event_date": "2026-04-19 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.4,
+        "abs_error": 0.6,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "GINS",
+        "event_id": "GINS_2026-01-29_up_25",
+        "event_date": "2026-04-19 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.4,
+        "abs_error": 0.6,
+        "outcome_category": "TP1_SLOW"
+      },
+      {
+        "ticker": "GINS",
+        "event_id": "GINS_2026-01-13_up_10",
+        "event_date": "2026-04-19 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.4,
+        "abs_error": 0.4,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "GINS",
+        "event_id": "GINS_2025-12-30_up_10",
+        "event_date": "2026-04-19 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.4,
+        "abs_error": 0.4,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "GINS",
+        "event_id": "GINS_2025-12-30_up_15",
+        "event_date": "2026-04-19 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.4,
+        "abs_error": 0.4,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "GINS",
+        "event_id": "GINS_2026-01-20_up_15",
+        "event_date": "2026-04-19 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.2,
+        "abs_error": 0.2,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "GINS",
+        "event_id": "GINS_2026-01-26_up_15",
+        "event_date": "2026-04-19 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.2,
+        "abs_error": 0.2,
+        "outcome_category": "STOPPED_OUT"
+      }
+    ]
+  },
+  {
+    "tier": "per_sector",
+    "identifier": "investment",
+    "training_set": {
+      "n_events": 7505,
+      "date_range": {
+        "start": "2023-04-30",
+        "end": "2026-05-12"
+      },
+      "class_balance": 0.5596269153897402
+    },
+    "walk_forward_cv": {
+      "folds": [
+        {
+          "auc": 0.7192903128566199,
+          "log_loss": 0.6277697945066021,
+          "calibration_max_error": 0.8262677305018318,
+          "calibration_mean_error": 0.4044271462975371,
+          "fold": 1,
+          "train_size": 4503,
+          "test_size": 750,
+          "best_iteration": 19
+        },
+        {
+          "auc": 0.6896596839610984,
+          "log_loss": 0.5989529571930042,
+          "calibration_max_error": 0.5587615921017485,
+          "calibration_mean_error": 0.3090738268472554,
+          "fold": 2,
+          "train_size": 5253,
+          "test_size": 751,
+          "best_iteration": 33
+        },
+        {
+          "auc": 0.4185636486312813,
+          "log_loss": 0.6928523938922616,
+          "calibration_max_error": 0.19432702001638003,
+          "calibration_mean_error": 0.15793450357508393,
+          "fold": 3,
+          "train_size": 6004,
+          "test_size": 750,
+          "best_iteration": 1
+        },
+        {
+          "auc": 0.570442181615288,
+          "log_loss": 0.5480642010748934,
+          "calibration_max_error": 0.3679800433004222,
+          "calibration_mean_error": 0.2803504174678859,
+          "fold": 4,
+          "train_size": 6754,
+          "test_size": 375,
+          "best_iteration": 23
+        },
+        {
+          "auc": 0.7458597046413501,
+          "log_loss": 0.5579863305933395,
+          "calibration_max_error": 0.6127490533417383,
+          "calibration_mean_error": 0.2495908755800135,
+          "fold": 5,
+          "train_size": 7129,
+          "test_size": 376,
+          "best_iteration": 10
+        }
+      ],
+      "mean_auc": 0.6287631063411275,
+      "std_auc": 0.12099613539381983,
+      "mean_log_loss": 0.6051251354520202,
+      "mean_calibration_max_error": 0.5120170878524242,
+      "mean_calibration_mean_error": 0.2802753539535552
+    },
+    "calibration": {
+      "n_samples": 3002,
+      "max_error": 3.3306690738754696e-16,
+      "mean_error": 4.90059381963448e-17,
+      "warning": false,
+      "fitted": true,
+      "reliability": [
+        {
+          "bin": "(-0.001, 0.1]",
+          "count": 54,
+          "predicted_mean": 0.018518518518518514,
+          "actual_rate": 0.018518518518518517,
+          "abs_error": 3.469446951953614e-18
+        },
+        {
+          "bin": "(0.2, 0.3]",
+          "count": 292,
+          "predicted_mean": 0.2568493150684932,
+          "actual_rate": 0.2568493150684932,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.3, 0.4]",
+          "count": 345,
+          "predicted_mean": 0.35072463768115936,
+          "actual_rate": 0.3507246376811594,
+          "abs_error": 5.551115123125783e-17
+        },
+        {
+          "bin": "(0.4, 0.5]",
+          "count": 406,
+          "predicted_mean": 0.45320197044334976,
+          "actual_rate": 0.45320197044334976,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.6, 0.7]",
+          "count": 918,
+          "predicted_mean": 0.6612200435729847,
+          "actual_rate": 0.6612200435729847,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.7, 0.8]",
+          "count": 823,
+          "predicted_mean": 0.7253948967193196,
+          "actual_rate": 0.7253948967193196,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.8, 0.9]",
+          "count": 44,
+          "predicted_mean": 0.8409090909090913,
+          "actual_rate": 0.8409090909090909,
+          "abs_error": 3.3306690738754696e-16
+        },
+        {
+          "bin": "(0.9, 1.0]",
+          "count": 120,
+          "predicted_mean": 1.0,
+          "actual_rate": 1.0,
+          "abs_error": 0.0
+        }
+      ]
+    },
+    "top_features": [
+      {
+        "feature": "days_since_last_swing_high",
+        "gain": 16521.97011423111
+      },
+      {
+        "feature": "t0_klinger",
+        "gain": 7301.235523223877
+      },
+      {
+        "feature": "t0_stoch_k",
+        "gain": 5472.473058223724
+      },
+      {
+        "feature": "t0_plus_di",
+        "gain": 2681.128273487091
+      },
+      {
+        "feature": "t14_adx",
+        "gain": 2249.7032232284546
+      },
+      {
+        "feature": "t0_zscore_200",
+        "gain": 2168.655911922455
+      },
+      {
+        "feature": "signal_acceleration",
+        "gain": 2002.4403491020203
+      },
+      {
+        "feature": "t0_minus_di",
+        "gain": 1975.611783027649
+      },
+      {
+        "feature": "t0_swing_high",
+        "gain": 1814.61861038208
+      },
+      {
+        "feature": "t0_macd_signal",
+        "gain": 1485.5822315216064
+      },
+      {
+        "feature": "avg_daily_turnover_log",
+        "gain": 1436.432694196701
+      },
+      {
+        "feature": "adx_velocity",
+        "gain": 1347.0320854187012
+      },
+      {
+        "feature": "t0_connors_rsi",
+        "gain": 1205.9162316322327
+      },
+      {
+        "feature": "t0_williams_r",
+        "gain": 1130.4015774726868
+      },
+      {
+        "feature": "days_since_last_swing_low",
+        "gain": 1114.8408193588257
+      }
+    ],
+    "failure_cases": [
+      {
+        "ticker": "WARBACAP",
+        "event_id": "WARBACAP_2025-07-22_fakeout",
+        "event_date": "2025-07-22 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.045454545454545456,
+        "abs_error": 0.9545454545454546,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "KAMCO",
+        "event_id": "KAMCO_2026-03-29_up_15",
+        "event_date": "2026-04-14 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.8409090909090909,
+        "abs_error": 0.8409090909090909,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "KAMCO",
+        "event_id": "KAMCO_2026-03-30_up_15",
+        "event_date": "2026-04-14 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.8409090909090909,
+        "abs_error": 0.8409090909090909,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "KAMCO",
+        "event_id": "KAMCO_2026-03-17_up_10",
+        "event_date": "2026-04-14 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.8409090909090909,
+        "abs_error": 0.8409090909090909,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "KAMCO",
+        "event_id": "KAMCO_2026-03-18_up_10",
+        "event_date": "2026-04-14 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.8409090909090909,
+        "abs_error": 0.8409090909090909,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "KAMCO",
+        "event_id": "KAMCO_2026-03-26_up_10",
+        "event_date": "2026-04-14 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.8409090909090909,
+        "abs_error": 0.8409090909090909,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "KAMCO",
+        "event_id": "KAMCO_2026-03-29_up_10",
+        "event_date": "2026-04-14 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.8409090909090909,
+        "abs_error": 0.8409090909090909,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "KAMCO",
+        "event_id": "KAMCO_2026-03-30_up_10",
+        "event_date": "2026-04-14 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.8409090909090909,
+        "abs_error": 0.8409090909090909,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "ALOLA",
+        "event_id": "ALOLA_2025-06-01_up_50",
+        "event_date": "2025-07-09 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.2568493150684932,
+        "abs_error": 0.7431506849315068,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "ALOLA",
+        "event_id": "ALOLA_2025-06-03_up_50",
+        "event_date": "2025-07-09 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.2568493150684932,
+        "abs_error": 0.7431506849315068,
+        "outcome_category": "TP1_FAST"
+      }
+    ]
+  },
+  {
+    "tier": "per_sector",
+    "identifier": "real_estate",
+    "training_set": {
+      "n_events": 43,
+      "date_range": {
+        "start": "2023-05-03",
+        "end": "2026-04-01"
+      },
+      "class_balance": 0.16279069767441862
+    },
+    "walk_forward_cv": {
+      "folds": [
+        {
+          "auc": 0.5,
+          "log_loss": 1.5469524763168672,
+          "calibration_max_error": 0.6166666666666667,
+          "calibration_mean_error": 0.6166666666666667,
+          "fold": 2,
+          "train_size": 30,
+          "test_size": 4,
+          "best_iteration": 1
+        }
+      ],
+      "mean_auc": 0.5,
+      "std_auc": 0.0,
+      "mean_log_loss": 1.5469524763168672,
+      "mean_calibration_max_error": 0.6166666666666667,
+      "mean_calibration_mean_error": 0.6166666666666667
+    },
+    "calibration": {
+      "n_samples": 4,
+      "max_error": 0.0,
+      "mean_error": 0.0,
+      "warning": false,
+      "fitted": true,
+      "reliability": [
+        {
+          "bin": "(0.7, 0.8]",
+          "count": 4,
+          "predicted_mean": 0.75,
+          "actual_rate": 0.75,
+          "abs_error": 0.0
+        }
+      ]
+    },
+    "top_features": [],
+    "failure_cases": [
+      {
+        "ticker": "SRE",
+        "event_id": "SRE_2024-08-12_up_10",
+        "event_date": "2025-02-19 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.75,
+        "abs_error": 0.75,
+        "outcome_category": "TIMED_OUT"
+      },
+      {
+        "ticker": "SRE",
+        "event_id": "SRE_2024-01-28_up_15",
+        "event_date": "2024-02-19 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.75,
+        "abs_error": 0.25,
+        "outcome_category": "TP1_SLOW"
+      },
+      {
+        "ticker": "SRE",
+        "event_id": "SRE_2024-01-28_up_10",
+        "event_date": "2024-02-19 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.75,
+        "abs_error": 0.25,
+        "outcome_category": "TP1_SLOW"
+      },
+      {
+        "ticker": "SRE",
+        "event_id": "SRE_2024-04-18_up_10",
+        "event_date": "2024-04-21 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.75,
+        "abs_error": 0.25,
+        "outcome_category": "TP1_FAST"
+      }
+    ]
+  },
+  {
+    "tier": "per_sector",
+    "identifier": "technology",
+    "training_set": {
+      "n_events": 939,
+      "date_range": {
+        "start": "2023-06-15",
+        "end": "2026-05-10"
+      },
+      "class_balance": 0.8136315228966986
+    },
+    "walk_forward_cv": {
+      "folds": [
+        {
+          "auc": 0.9974798387096774,
+          "log_loss": 0.7666995977440628,
+          "calibration_max_error": 0.7410274445505022,
+          "calibration_mean_error": 0.38758482290406215,
+          "fold": 1,
+          "train_size": 563,
+          "test_size": 94,
+          "best_iteration": 25
+        },
+        {
+          "auc": 0.9472222222222222,
+          "log_loss": 0.24118038003409661,
+          "calibration_max_error": 0.3241475209645909,
+          "calibration_mean_error": 0.24390072585285394,
+          "fold": 2,
+          "train_size": 657,
+          "test_size": 94,
+          "best_iteration": 16
+        },
+        {
+          "auc": 0.5333333333333333,
+          "log_loss": 0.6859641614523576,
+          "calibration_max_error": 0.7758870340619997,
+          "calibration_mean_error": 0.4548283774199164,
+          "fold": 5,
+          "train_size": 892,
+          "test_size": 47,
+          "best_iteration": 1
+        }
+      ],
+      "mean_auc": 0.8260117980884109,
+      "std_auc": 0.20796950065220612,
+      "mean_log_loss": 0.5646147130768391,
+      "mean_calibration_max_error": 0.6136873331923642,
+      "mean_calibration_mean_error": 0.36210464205894416
+    },
+    "calibration": {
+      "n_samples": 235,
+      "max_error": 3.3306690738754696e-16,
+      "mean_error": 9.992007221626409e-17,
+      "warning": false,
+      "fitted": true,
+      "reliability": [
+        {
+          "bin": "(-0.001, 0.1]",
+          "count": 8,
+          "predicted_mean": 0.0,
+          "actual_rate": 0.0,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.1, 0.2]",
+          "count": 15,
+          "predicted_mean": 0.13333333333333333,
+          "actual_rate": 0.13333333333333333,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.2, 0.3]",
+          "count": 58,
+          "predicted_mean": 0.2241379310344827,
+          "actual_rate": 0.22413793103448276,
+          "abs_error": 5.551115123125783e-17
+        },
+        {
+          "bin": "(0.6, 0.7]",
+          "count": 46,
+          "predicted_mean": 0.6956521739130433,
+          "actual_rate": 0.6956521739130435,
+          "abs_error": 1.1102230246251565e-16
+        },
+        {
+          "bin": "(0.9, 1.0]",
+          "count": 108,
+          "predicted_mean": 0.990740740740741,
+          "actual_rate": 0.9907407407407407,
+          "abs_error": 3.3306690738754696e-16
+        }
+      ]
+    },
+    "top_features": [
+      {
+        "feature": "t0_linreg_slope",
+        "gain": 3904.499987589376
+      },
+      {
+        "feature": "t7_rel_volume",
+        "gain": 596.1817398071289
+      },
+      {
+        "feature": "t14_accumulation_score",
+        "gain": 554.5940945395268
+      },
+      {
+        "feature": "t0_accumulation_score",
+        "gain": 522.0059401988983
+      },
+      {
+        "feature": "t1_rel_volume",
+        "gain": 230.22873216867447
+      },
+      {
+        "feature": "n_signals_fired_in_last_30d",
+        "gain": 204.49136117619526
+      },
+      {
+        "feature": "t1_accumulation_score",
+        "gain": 186.79634046554565
+      },
+      {
+        "feature": "t0_vwap_distance_sigma",
+        "gain": 173.96743154525757
+      },
+      {
+        "feature": "t0_hist_vol_30d",
+        "gain": 135.367486584
+      },
+      {
+        "feature": "t1_adx",
+        "gain": 128.68699645996094
+      },
+      {
+        "feature": "t0_ema_8",
+        "gain": 85.50023168588297
+      },
+      {
+        "feature": "t0_bb_bandwidth",
+        "gain": 71.28835600614548
+      },
+      {
+        "feature": "t90_macd_histogram",
+        "gain": 35.42010198712386
+      },
+      {
+        "feature": "days_since_last_swing_high",
+        "gain": 29.753209590911865
+      },
+      {
+        "feature": "bb_bandwidth_trajectory",
+        "gain": 25.87509671139094
+      }
+    ],
+    "failure_cases": [
+      {
+        "ticker": "ASC",
+        "event_id": "ASC_2025-07-02_fakeout",
+        "event_date": "2025-07-02 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.9876543209876543,
+        "abs_error": 0.9876543209876543,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "DIGITUS",
+        "event_id": "DIGITUS_2026-03-12_up_25",
+        "event_date": "2026-04-06 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.13333333333333333,
+        "abs_error": 0.8666666666666667,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "DIGITUS",
+        "event_id": "DIGITUS_2026-03-31_up_25",
+        "event_date": "2026-04-06 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.13333333333333333,
+        "abs_error": 0.8666666666666667,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "DIGITUS",
+        "event_id": "DIGITUS_2025-11-06_up_15",
+        "event_date": "2025-11-27 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.22413793103448276,
+        "abs_error": 0.7758620689655172,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "DIGITUS",
+        "event_id": "DIGITUS_2025-11-11_up_10",
+        "event_date": "2025-11-27 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.22413793103448276,
+        "abs_error": 0.7758620689655172,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "ATC",
+        "event_id": "ATC_2025-11-10_up_10",
+        "event_date": "2025-11-27 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.22413793103448276,
+        "abs_error": 0.7758620689655172,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "DIGITUS",
+        "event_id": "DIGITUS_2025-11-19_up_15",
+        "event_date": "2025-11-27 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.22413793103448276,
+        "abs_error": 0.7758620689655172,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "DIGITUS",
+        "event_id": "DIGITUS_2025-11-19_up_10",
+        "event_date": "2025-11-27 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.22413793103448276,
+        "abs_error": 0.7758620689655172,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "ATC",
+        "event_id": "ATC_2025-11-10_up_25",
+        "event_date": "2025-11-27 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.22413793103448276,
+        "abs_error": 0.7758620689655172,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "DIGITUS",
+        "event_id": "DIGITUS_2025-11-06_up_25",
+        "event_date": "2025-11-27 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.22413793103448276,
+        "abs_error": 0.7758620689655172,
+        "outcome_category": "TP1_FAST"
+      }
+    ]
+  },
+  {
+    "tier": "per_sector",
+    "identifier": "telecom",
+    "training_set": {
+      "n_events": 578,
+      "date_range": {
+        "start": "2023-06-26",
+        "end": "2026-04-26"
+      },
+      "class_balance": 0.3961937716262976
+    },
+    "walk_forward_cv": {
+      "folds": [
+        {
+          "auc": 0.3695652173913043,
+          "log_loss": 0.5265353745313337,
+          "calibration_max_error": 0.20008256465643542,
+          "calibration_mean_error": 0.1307373581697608,
+          "fold": 1,
+          "train_size": 346,
+          "test_size": 58,
+          "best_iteration": 9
+        },
+        {
+          "auc": 0.6799999999999999,
+          "log_loss": 0.6782628843607116,
+          "calibration_max_error": 0.5680765320078365,
+          "calibration_mean_error": 0.32493051913037246,
+          "fold": 2,
+          "train_size": 404,
+          "test_size": 58,
+          "best_iteration": 4
+        },
+        {
+          "auc": 1.0,
+          "log_loss": 0.6088945135351345,
+          "calibration_max_error": 0.30335314389031787,
+          "calibration_mean_error": 0.25663904111759067,
+          "fold": 3,
+          "train_size": 462,
+          "test_size": 58,
+          "best_iteration": 17
+        },
+        {
+          "auc": 0.5,
+          "log_loss": 0.985747786791791,
+          "calibration_max_error": 0.7311795595374061,
+          "calibration_mean_error": 0.5135182096572156,
+          "fold": 4,
+          "train_size": 520,
+          "test_size": 29,
+          "best_iteration": 5
+        },
+        {
+          "auc": 0.6130952380952381,
+          "log_loss": 0.5211899138536334,
+          "calibration_max_error": 0.5055918889028699,
+          "calibration_mean_error": 0.30155949130638426,
+          "fold": 5,
+          "train_size": 549,
+          "test_size": 29,
+          "best_iteration": 30
+        }
+      ],
+      "mean_auc": 0.6325320910973085,
+      "std_auc": 0.21183955699579338,
+      "mean_log_loss": 0.6641260946145209,
+      "mean_calibration_max_error": 0.4616567377989732,
+      "mean_calibration_mean_error": 0.30547692387626474
+    },
+    "calibration": {
+      "n_samples": 232,
+      "max_error": 5.551115123125783e-17,
+      "mean_error": 2.7755575615628914e-17,
+      "warning": false,
+      "fitted": true,
+      "reliability": [
+        {
+          "bin": "(-0.001, 0.1]",
+          "count": 24,
+          "predicted_mean": 0.0,
+          "actual_rate": 0.0,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.3, 0.4]",
+          "count": 81,
+          "predicted_mean": 0.3580246913580246,
+          "actual_rate": 0.35802469135802467,
+          "abs_error": 5.551115123125783e-17
+        },
+        {
+          "bin": "(0.4, 0.5]",
+          "count": 56,
+          "predicted_mean": 0.46428571428571436,
+          "actual_rate": 0.4642857142857143,
+          "abs_error": 5.551115123125783e-17
+        },
+        {
+          "bin": "(0.9, 1.0]",
+          "count": 71,
+          "predicted_mean": 0.9154929577464789,
+          "actual_rate": 0.9154929577464789,
+          "abs_error": 0.0
+        }
+      ]
+    },
+    "top_features": [
+      {
+        "feature": "t14_macd_histogram",
+        "gain": 2358.193395847731
+      },
+      {
+        "feature": "t3_rel_volume",
+        "gain": 894.2413783771613
+      },
+      {
+        "feature": "accumulation_trajectory_slope",
+        "gain": 476.909995078176
+      },
+      {
+        "feature": "t90_obv",
+        "gain": 321.7640266418457
+      },
+      {
+        "feature": "avg_daily_turnover_log",
+        "gain": 270.82356203189545
+      },
+      {
+        "feature": "t0_minus_di",
+        "gain": 254.81575404667174
+      },
+      {
+        "feature": "t0_atr_percentile_252",
+        "gain": 155.74169921875
+      },
+      {
+        "feature": "t0_dc_upper",
+        "gain": 125.14020156860352
+      },
+      {
+        "feature": "t3_rsi",
+        "gain": 112.08064937591553
+      },
+      {
+        "feature": "is_earnings_window",
+        "gain": 106.15664966872716
+      },
+      {
+        "feature": "n_signals_fired_in_last_7d",
+        "gain": 77.65193870917008
+      },
+      {
+        "feature": "t0_adx",
+        "gain": 70.9704472418598
+      },
+      {
+        "feature": "t30_adx",
+        "gain": 63.160301208496094
+      },
+      {
+        "feature": "t0_bb_lower",
+        "gain": 60.51038074493408
+      },
+      {
+        "feature": "t3_macd_histogram",
+        "gain": 58.99457025527954
+      }
+    ],
+    "failure_cases": [
+      {
+        "ticker": "OOREDOO",
+        "event_id": "OOREDOO_2026-02-22_up_10",
+        "event_date": "2026-03-11 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.9047619047619048,
+        "abs_error": 0.9047619047619048,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "OOREDOO",
+        "event_id": "OOREDOO_2026-03-02_up_10",
+        "event_date": "2026-03-11 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.9047619047619048,
+        "abs_error": 0.9047619047619048,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "OOREDOO",
+        "event_id": "OOREDOO_2026-02-22_up_15",
+        "event_date": "2026-03-11 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.9047619047619048,
+        "abs_error": 0.9047619047619048,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "ZAIN",
+        "event_id": "ZAIN_2026-02-18_fakeout",
+        "event_date": "2026-02-18 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.9047619047619048,
+        "abs_error": 0.9047619047619048,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "OOREDOO",
+        "event_id": "OOREDOO_2026-03-11_fakeout",
+        "event_date": "2026-03-11 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.9047619047619048,
+        "abs_error": 0.9047619047619048,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "OOREDOO",
+        "event_id": "OOREDOO_2026-03-02_up_15",
+        "event_date": "2026-03-11 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.9047619047619048,
+        "abs_error": 0.9047619047619048,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "OOREDOO",
+        "event_id": "OOREDOO_2025-09-07_up_25",
+        "event_date": "2025-09-21 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.35802469135802467,
+        "abs_error": 0.6419753086419753,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "OOREDOO",
+        "event_id": "OOREDOO_2025-09-08_up_50",
+        "event_date": "2025-09-21 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.35802469135802467,
+        "abs_error": 0.6419753086419753,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "OOREDOO",
+        "event_id": "OOREDOO_2025-09-10_up_15",
+        "event_date": "2025-09-21 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.35802469135802467,
+        "abs_error": 0.6419753086419753,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "OOREDOO",
+        "event_id": "OOREDOO_2025-09-03_up_25",
+        "event_date": "2025-09-21 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.35802469135802467,
+        "abs_error": 0.6419753086419753,
+        "outcome_category": "TP1_FAST"
+      }
+    ]
+  },
+  {
+    "tier": "per_sector",
+    "identifier": "transport",
+    "training_set": {
+      "n_events": 1761,
+      "date_range": {
+        "start": "2023-06-05",
+        "end": "2026-04-23"
+      },
+      "class_balance": 0.5127768313458262
+    },
+    "walk_forward_cv": {
+      "folds": [
+        {
+          "auc": 0.5215841584158416,
+          "log_loss": 0.7264289180706477,
+          "calibration_max_error": 0.12924349236965005,
+          "calibration_mean_error": 0.12924349236965005,
+          "fold": 1,
+          "train_size": 1056,
+          "test_size": 176,
+          "best_iteration": 1
+        },
+        {
+          "auc": 0.8855629139072848,
+          "log_loss": 0.377505887106657,
+          "calibration_max_error": 0.6093162981466328,
+          "calibration_mean_error": 0.3475911059954457,
+          "fold": 2,
+          "train_size": 1232,
+          "test_size": 176,
+          "best_iteration": 30
+        },
+        {
+          "auc": 0.5986842105263158,
+          "log_loss": 0.5100534673163121,
+          "calibration_max_error": 0.5696321215609979,
+          "calibration_mean_error": 0.2475993271010654,
+          "fold": 3,
+          "train_size": 1408,
+          "test_size": 176,
+          "best_iteration": 43
+        },
+        {
+          "auc": 0.5555555555555556,
+          "log_loss": 0.39263510812601043,
+          "calibration_max_error": 0.2247506468041569,
+          "calibration_mean_error": 0.14856577861892126,
+          "fold": 4,
+          "train_size": 1584,
+          "test_size": 88,
+          "best_iteration": 44
+        },
+        {
+          "auc": 1.0,
+          "log_loss": 0.012883199156657161,
+          "calibration_max_error": 0.6191655257583946,
+          "calibration_mean_error": 0.3106113300431272,
+          "fold": 5,
+          "train_size": 1672,
+          "test_size": 89,
+          "best_iteration": 110
+        }
+      ],
+      "mean_auc": 0.7122773676809995,
+      "std_auc": 0.19320518910609707,
+      "mean_log_loss": 0.4039013159552568,
+      "mean_calibration_max_error": 0.43042161692796643,
+      "mean_calibration_mean_error": 0.2367222068256419
+    },
+    "calibration": {
+      "n_samples": 705,
+      "max_error": 0.0,
+      "mean_error": 0.0,
+      "warning": false,
+      "fitted": true,
+      "reliability": [
+        {
+          "bin": "(-0.001, 0.1]",
+          "count": 133,
+          "predicted_mean": 0.0,
+          "actual_rate": 0.0,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.6, 0.7]",
+          "count": 256,
+          "predicted_mean": 0.62109375,
+          "actual_rate": 0.62109375,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.7, 0.8]",
+          "count": 84,
+          "predicted_mean": 0.7023809523809523,
+          "actual_rate": 0.7023809523809523,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.9, 1.0]",
+          "count": 232,
+          "predicted_mean": 0.978448275862069,
+          "actual_rate": 0.978448275862069,
+          "abs_error": 0.0
+        }
+      ]
+    },
+    "top_features": [
+      {
+        "feature": "t90_cmf",
+        "gain": 5744.675761899622
+      },
+      {
+        "feature": "t30_macd_histogram",
+        "gain": 2911.3144912719727
+      },
+      {
+        "feature": "t7_rsi",
+        "gain": 1708.1818582916005
+      },
+      {
+        "feature": "t90_accumulation_score",
+        "gain": 1130.5285997390747
+      },
+      {
+        "feature": "t14_macd_histogram",
+        "gain": 939.4627815130298
+      },
+      {
+        "feature": "t0_vwap_distance_sigma",
+        "gain": 662.410115270626
+      },
+      {
+        "feature": "t7_accumulation_score",
+        "gain": 399.0602795504965
+      },
+      {
+        "feature": "t60_cmf",
+        "gain": 364.28847828845244
+      },
+      {
+        "feature": "t7_cmf",
+        "gain": 354.9335060119629
+      },
+      {
+        "feature": "avg_daily_turnover_log",
+        "gain": 326.42290704776156
+      },
+      {
+        "feature": "t30_rsi",
+        "gain": 321.9057834385849
+      },
+      {
+        "feature": "t14_rel_volume",
+        "gain": 237.8491973876953
+      },
+      {
+        "feature": "t14_bb_bandwidth",
+        "gain": 193.18230867385864
+      },
+      {
+        "feature": "t0_connors_rsi",
+        "gain": 174.90323224591168
+      },
+      {
+        "feature": "t0_accumulation_score",
+        "gain": 151.8113787304901
+      }
+    ],
+    "failure_cases": [
+      {
+        "ticker": "JAZEERA",
+        "event_id": "JAZEERA_2026-03-17_up_15",
+        "event_date": "2026-03-18 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.9541284403669725,
+        "abs_error": 0.9541284403669725,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "JAZEERA",
+        "event_id": "JAZEERA_2026-03-16_up_15",
+        "event_date": "2026-03-18 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.9541284403669725,
+        "abs_error": 0.9541284403669725,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "JAZEERA",
+        "event_id": "JAZEERA_2026-03-17_up_10",
+        "event_date": "2026-03-18 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.9541284403669725,
+        "abs_error": 0.9541284403669725,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "JAZEERA",
+        "event_id": "JAZEERA_2026-03-15_up_10",
+        "event_date": "2026-03-18 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.9541284403669725,
+        "abs_error": 0.9541284403669725,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "JAZEERA",
+        "event_id": "JAZEERA_2026-03-16_up_10",
+        "event_date": "2026-03-18 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.9541284403669725,
+        "abs_error": 0.9541284403669725,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "JTC",
+        "event_id": "JTC_2026-02-17_fakeout",
+        "event_date": "2026-02-17 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.7023809523809523,
+        "abs_error": 0.7023809523809523,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "JAZEERA",
+        "event_id": "JAZEERA_2025-12-30_up_15",
+        "event_date": "2026-02-02 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.7023809523809523,
+        "abs_error": 0.7023809523809523,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "JAZEERA",
+        "event_id": "JAZEERA_2026-01-19_up_25",
+        "event_date": "2026-02-02 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.7023809523809523,
+        "abs_error": 0.7023809523809523,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "JAZEERA",
+        "event_id": "JAZEERA_2026-01-13_up_10",
+        "event_date": "2026-02-02 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.7023809523809523,
+        "abs_error": 0.7023809523809523,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "JAZEERA",
+        "event_id": "JAZEERA_2026-01-12_up_10",
+        "event_date": "2026-02-02 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.7023809523809523,
+        "abs_error": 0.7023809523809523,
+        "outcome_category": "STOPPED_OUT"
+      }
+    ]
+  }
+]

@@ -1,0 +1,46 @@
+{
+  "auc": 0.8431372549019608,
+  "log_loss": 0.20012693077820068,
+  "calibration_error": 0.5006038774418623,
+  "n_train_events": 365,
+  "train_date_range": {
+    "start": "2023-11-19",
+    "end": "2026-04-15"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.5294117647058824,
+      "log_loss": 0.34293513945433357,
+      "calibration_max_error": 0.1953957037025832,
+      "calibration_mean_error": 0.19230922428606095,
+      "fold": 1,
+      "train_size": 219,
+      "test_size": 36,
+      "best_iteration": 1
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.18285362710512396,
+      "calibration_max_error": 0.8660199098285848,
+      "calibration_mean_error": 0.5751413094141969,
+      "fold": 2,
+      "train_size": 255,
+      "test_size": 37,
+      "best_iteration": 25
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.07459202577514461,
+      "calibration_max_error": 0.440396018794419,
+      "calibration_mean_error": 0.16113330963646727,
+      "fold": 5,
+      "train_size": 346,
+      "test_size": 19,
+      "best_iteration": 85
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "URC",
+  "version": "2026-05-13"
+}

@@ -1,0 +1,66 @@
+{
+  "auc": 0.55625,
+  "log_loss": 0.8848613886694426,
+  "calibration_error": 0.39646886154418964,
+  "n_train_events": 191,
+  "train_date_range": {
+    "start": "2024-01-18",
+    "end": "2026-05-03"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.5,
+      "log_loss": 0.7779629305308552,
+      "calibration_max_error": 0.2035900355661707,
+      "calibration_mean_error": 0.2035900355661707,
+      "fold": 1,
+      "train_size": 114,
+      "test_size": 19,
+      "best_iteration": 45
+    },
+    {
+      "auc": 0.03125,
+      "log_loss": 1.8263372123064978,
+      "calibration_max_error": 0.713862981898401,
+      "calibration_mean_error": 0.713862981898401,
+      "fold": 2,
+      "train_size": 133,
+      "test_size": 19,
+      "best_iteration": 14
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.37212883808797503,
+      "calibration_max_error": 0.43207311991914976,
+      "calibration_mean_error": 0.3301928895148698,
+      "fold": 3,
+      "train_size": 152,
+      "test_size": 19,
+      "best_iteration": 25
+    },
+    {
+      "auc": 0.75,
+      "log_loss": 0.9474705744694919,
+      "calibration_max_error": 0.6315597567030926,
+      "calibration_mean_error": 0.4593951613035945,
+      "fold": 4,
+      "train_size": 171,
+      "test_size": 10,
+      "best_iteration": 9
+    },
+    {
+      "auc": 0.5,
+      "log_loss": 0.5004073879523936,
+      "calibration_max_error": 0.0012584136341341479,
+      "calibration_mean_error": 0.0012584136341341479,
+      "fold": 5,
+      "train_size": 181,
+      "test_size": 10,
+      "best_iteration": 4
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "KHOT",
+  "version": "2026-05-13"
+}

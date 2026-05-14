@@ -1,0 +1,26 @@
+{
+  "auc": 0.9615384615384616,
+  "log_loss": 0.16277256992262876,
+  "calibration_error": 0.11959981382256113,
+  "n_train_events": 283,
+  "train_date_range": {
+    "start": "2024-12-08",
+    "end": "2026-04-06"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.9615384615384616,
+      "log_loss": 0.16277256992262876,
+      "calibration_max_error": 0.11959981382256113,
+      "calibration_mean_error": 0.07690240936761568,
+      "fold": 5,
+      "train_size": 268,
+      "test_size": 15,
+      "best_iteration": 35
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "THURAYA",
+  "version": "2026-05-13"
+}

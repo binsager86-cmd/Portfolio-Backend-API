@@ -1,0 +1,36 @@
+{
+  "auc": 0.8229166666666667,
+  "log_loss": 0.35129633297846796,
+  "calibration_error": 0.5875945078945619,
+  "n_train_events": 495,
+  "train_date_range": {
+    "start": "2023-06-12",
+    "end": "2026-04-15"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.3146153753967001,
+      "calibration_max_error": 0.42667733162589916,
+      "calibration_mean_error": 0.2570652094964849,
+      "fold": 2,
+      "train_size": 346,
+      "test_size": 50,
+      "best_iteration": 23
+    },
+    {
+      "auc": 0.6458333333333334,
+      "log_loss": 0.3879772905602358,
+      "calibration_max_error": 0.7485116841632246,
+      "calibration_mean_error": 0.47256179927196884,
+      "fold": 3,
+      "train_size": 396,
+      "test_size": 49,
+      "best_iteration": 41
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "ALOLA",
+  "version": "2026-05-13"
+}

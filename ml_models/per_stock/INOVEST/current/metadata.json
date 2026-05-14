@@ -1,0 +1,66 @@
+{
+  "auc": 0.9007619047619049,
+  "log_loss": 0.22233807353873652,
+  "calibration_error": 0.11694912209871222,
+  "n_train_events": 459,
+  "train_date_range": {
+    "start": "2023-06-14",
+    "end": "2026-04-21"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.0010120983056056113,
+      "calibration_max_error": 0.004118871853830197,
+      "calibration_mean_error": 0.002075940891297945,
+      "fold": 1,
+      "train_size": 275,
+      "test_size": 46,
+      "best_iteration": 198
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.00010598016496880393,
+      "calibration_max_error": 0.00010740539362075197,
+      "calibration_mean_error": 7.434109532376101e-05,
+      "fold": 2,
+      "train_size": 321,
+      "test_size": 46,
+      "best_iteration": 200
+    },
+    {
+      "auc": 0.5038095238095238,
+      "log_loss": 0.6924649549838149,
+      "calibration_max_error": 0.04004000272085784,
+      "calibration_mean_error": 0.04004000272085784,
+      "fold": 3,
+      "train_size": 367,
+      "test_size": 46,
+      "best_iteration": 1
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.41802652482980773,
+      "calibration_max_error": 0.5400083147293631,
+      "calibration_mean_error": 0.37147031389746166,
+      "fold": 4,
+      "train_size": 413,
+      "test_size": 23,
+      "best_iteration": 20
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 8.080940948541151e-05,
+      "calibration_max_error": 0.00047101579588931005,
+      "calibration_mean_error": 0.0002670407594789997,
+      "fold": 5,
+      "train_size": 436,
+      "test_size": 23,
+      "best_iteration": 190
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "INOVEST",
+  "version": "2026-05-13"
+}

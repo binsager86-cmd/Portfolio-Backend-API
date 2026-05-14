@@ -87,22 +87,11 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("✅  Database found: %s", settings.database_abs_path)
 
-        # ── [B-3] Schema managed by Alembic — run pending migrations ─
-        # `alembic upgrade head` is also called in Dockerfile/Procfile before
-        # the server starts.  This in-process call handles development restarts
-        # and any edge case where the pre-start hook was skipped.
-        try:
-            from alembic.config import Config as AlembicConfig
-            from alembic import command as alembic_command
-            import os
-            app_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-            alembic_ini = os.path.join(app_root, "alembic.ini")
-            alembic_cfg = AlembicConfig(alembic_ini)
-            alembic_cfg.set_main_option("script_location", os.path.join(app_root, "alembic"))
-            alembic_command.upgrade(alembic_cfg, "head")
-            logger.info("✅  Alembic: schema is up to date")
-        except Exception as alembic_err:
-            logger.warning("⚠️  Alembic upgrade failed (DB may be pre-stamped): %s", alembic_err)
+        # ── [B-3] Schema managed by Alembic — skipped in-process to avoid
+        # SQLite lock contention on OneDrive/networked filesystems.
+        # Run `alembic upgrade head` from the CLI before starting the server
+        # when schema changes are needed.
+        logger.info("ℹ️  Alembic in-process migration skipped (run CLI manually if needed)")
 
         # ── Ensure core tables exist for legacy/stamped databases ──
         # Some local DBs can be stamped to head without all table DDL actually
@@ -115,6 +104,14 @@ async def lifespan(app: FastAPI):
             logger.info("✅  Core schema ensured (idempotent)")
         except Exception as schema_err:
             logger.warning("⚠️  Core schema ensure failed: %s", schema_err)
+
+        # ── Eagle Eye tables ──────────────────────────────────────────────
+        try:
+            from app.services.eagle_eye.ingest import init_schema as _ee_init
+            _ee_init()
+            logger.info("✅  Eagle Eye schema ensured (idempotent)")
+        except Exception as ee_err:
+            logger.warning("⚠️  Eagle Eye schema init failed: %s", ee_err)
 
         # ── Additive migration: portfolios.currency (missing in early prod DBs) ──
         try:

@@ -1,0 +1,26 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.5675776603749809,
+  "calibration_error": 0.017972187328079925,
+  "n_train_events": 268,
+  "train_date_range": {
+    "start": "2023-12-13",
+    "end": "2026-04-01"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.5675776603749809,
+      "calibration_max_error": 0.017972187328079925,
+      "calibration_mean_error": 0.017972187328079925,
+      "fold": 5,
+      "train_size": 254,
+      "test_size": 14,
+      "best_iteration": 15
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "JTC",
+  "version": "2026-05-13"
+}

@@ -1,0 +1,26 @@
+{
+  "auc": 0.5153846153846154,
+  "log_loss": 0.7345112076357564,
+  "calibration_error": 0.15913903332299173,
+  "n_train_events": 234,
+  "train_date_range": {
+    "start": "2024-01-02",
+    "end": "2026-04-12"
+  },
+  "rejected_reason": "auc_below_threshold_0.5154",
+  "fold_metrics": [
+    {
+      "auc": 0.5153846153846154,
+      "log_loss": 0.7345112076357564,
+      "calibration_max_error": 0.15913903332299173,
+      "calibration_mean_error": 0.15631270867557207,
+      "fold": 3,
+      "train_size": 187,
+      "test_size": 23,
+      "best_iteration": 1
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "KIB",
+  "version": "2026-05-13"
+}

@@ -1,0 +1,36 @@
+{
+  "auc": 0.625,
+  "log_loss": 0.236715216989262,
+  "calibration_error": 0.2566826447094581,
+  "n_train_events": 234,
+  "train_date_range": {
+    "start": "2023-11-30",
+    "end": "2026-04-13"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.5,
+      "log_loss": 0.21993218735356865,
+      "calibration_max_error": 0.035830947603483765,
+      "calibration_mean_error": 0.035830947603483765,
+      "fold": 2,
+      "train_size": 163,
+      "test_size": 24,
+      "best_iteration": 1
+    },
+    {
+      "auc": 0.75,
+      "log_loss": 0.2534982466249554,
+      "calibration_max_error": 0.47753434181543253,
+      "calibration_mean_error": 0.2582757835149107,
+      "fold": 3,
+      "train_size": 187,
+      "test_size": 23,
+      "best_iteration": 30
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "GFC",
+  "version": "2026-05-13"
+}

@@ -1,0 +1,36 @@
+{
+  "auc": 0.5,
+  "log_loss": 0.6294164715280516,
+  "calibration_error": 0.5875645795364319,
+  "n_train_events": 186,
+  "train_date_range": {
+    "start": "2023-06-12",
+    "end": "2026-04-13"
+  },
+  "rejected_reason": "auc_below_threshold_0.5000",
+  "fold_metrics": [
+    {
+      "auc": 0.0,
+      "log_loss": 0.8200567768572661,
+      "calibration_max_error": 0.7259091232605203,
+      "calibration_mean_error": 0.5255218130539887,
+      "fold": 1,
+      "train_size": 111,
+      "test_size": 19,
+      "best_iteration": 1
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.4387761661988371,
+      "calibration_max_error": 0.4492200358123437,
+      "calibration_mean_error": 0.3588611626042334,
+      "fold": 4,
+      "train_size": 167,
+      "test_size": 9,
+      "best_iteration": 13
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "KPROJ",
+  "version": "2026-05-13"
+}

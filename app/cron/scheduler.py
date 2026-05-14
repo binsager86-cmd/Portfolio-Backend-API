@@ -292,6 +292,78 @@ def start_scheduler() -> None:
     else:
         logger.info("⏸  Technical batch scheduler disabled (TECHNICAL_BATCH_ENABLED=False)")
 
+    # ── Eagle Eye nightly recompute (Sun–Thu, after Boursa close) ────
+    try:
+        from app.services.eagle_eye.ingest import run_nightly_recompute
+
+        def _run_eagle_eye_intraday_refresh() -> None:
+            """Intraday ratings refresh — runs near market close (13:15) to
+            capture late-session signals before the post-close recompute."""
+            run_nightly_recompute(dna_refresh=False, verbose=False)
+
+        def _run_eagle_eye_daily() -> None:
+            """Nightly incremental OHLCV fetch + ratings refresh."""
+            run_nightly_recompute(dna_refresh=False, verbose=False)
+
+        def _run_eagle_eye_dna() -> None:
+            """Weekly full recompute including DNA profiles (Sundays)."""
+            run_nightly_recompute(dna_refresh=True, verbose=False)
+
+        # Sun–Thu at 13:15 Asia/Kuwait — intraday refresh near Boursa close
+        _scheduler.add_job(
+            _run_eagle_eye_intraday_refresh,
+            trigger=CronTrigger(
+                day_of_week="sun,mon,tue,wed,thu",
+                hour=13,
+                minute=15,
+                timezone="Asia/Kuwait",
+            ),
+            id="eagle_eye_intraday_refresh",
+            name="Eagle Eye intraday refresh",
+            replace_existing=True,
+            coalesce=True,
+            max_instances=1,
+        )
+
+        # Daily at 14:05 Asia/Kuwait Sun–Thu (Boursa closes ~13:45)
+        _scheduler.add_job(
+            _run_eagle_eye_daily,
+            trigger=CronTrigger(
+                day_of_week="sun,mon,tue,wed,thu",
+                hour=14,
+                minute=5,
+                timezone="Asia/Kuwait",
+            ),
+            id="eagle_eye_nightly",
+            name="Eagle Eye nightly recompute",
+            replace_existing=True,
+            coalesce=True,
+            max_instances=1,
+        )
+
+        # Sunday at 14:30 Asia/Kuwait — full DNA rebuild (after daily job)
+        _scheduler.add_job(
+            _run_eagle_eye_dna,
+            trigger=CronTrigger(
+                day_of_week="sun",
+                hour=14,
+                minute=30,
+                timezone="Asia/Kuwait",
+            ),
+            id="eagle_eye_weekly_dna",
+            name="Eagle Eye weekly DNA refresh",
+            replace_existing=True,
+            coalesce=True,
+            max_instances=1,
+        )
+
+        logger.info(
+            "Eagle Eye jobs scheduled "
+            "(Sun–Thu 13:15 intraday; Sun–Thu 14:05 nightly; DNA rebuild Sun 14:30 Asia/Kuwait)"
+        )
+    except Exception as exc:
+        logger.warning("Could not schedule Eagle Eye jobs: %s", exc)
+
     _scheduler.start()
     logger.info("🕐 Scheduler started")
 

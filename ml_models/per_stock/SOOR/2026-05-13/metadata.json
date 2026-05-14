@@ -1,0 +1,46 @@
+{
+  "auc": 0.9902597402597403,
+  "log_loss": 0.26557126280344207,
+  "calibration_error": 0.2810761448669934,
+  "n_train_events": 387,
+  "train_date_range": {
+    "start": "2023-05-31",
+    "end": "2026-04-27"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.08386787576683868,
+      "calibration_max_error": 0.4459156169921118,
+      "calibration_mean_error": 0.2314442970003595,
+      "fold": 1,
+      "train_size": 232,
+      "test_size": 38,
+      "best_iteration": 62
+    },
+    {
+      "auc": 0.9707792207792207,
+      "log_loss": 0.6808335276778408,
+      "calibration_max_error": 0.3048776090333742,
+      "calibration_mean_error": 0.21157218378461987,
+      "fold": 2,
+      "train_size": 270,
+      "test_size": 39,
+      "best_iteration": 25
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.032012384965646734,
+      "calibration_max_error": 0.09243520857549425,
+      "calibration_mean_error": 0.052438088158133805,
+      "fold": 3,
+      "train_size": 309,
+      "test_size": 39,
+      "best_iteration": 70
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "SOOR",
+  "version": "2026-05-13"
+}

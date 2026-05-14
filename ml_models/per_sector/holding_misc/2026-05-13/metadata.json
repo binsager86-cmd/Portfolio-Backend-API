@@ -1,0 +1,36 @@
+{
+  "auc": 0.9431818181818181,
+  "log_loss": 0.6793401729992772,
+  "calibration_error": 0.48993825031890326,
+  "n_train_events": 247,
+  "train_date_range": {
+    "start": "2023-11-30",
+    "end": "2026-04-15"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.8863636363636364,
+      "log_loss": 0.3929552665474462,
+      "calibration_max_error": 0.10107954198482494,
+      "calibration_mean_error": 0.10107954198482494,
+      "fold": 2,
+      "train_size": 172,
+      "test_size": 25,
+      "best_iteration": 2
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.9657250794511082,
+      "calibration_max_error": 0.8787969586529816,
+      "calibration_mean_error": 0.5474690628601887,
+      "fold": 4,
+      "train_size": 222,
+      "test_size": 12,
+      "best_iteration": 14
+    }
+  ],
+  "tier": "per_sector",
+  "identifier": "holding_misc",
+  "version": "2026-05-13"
+}

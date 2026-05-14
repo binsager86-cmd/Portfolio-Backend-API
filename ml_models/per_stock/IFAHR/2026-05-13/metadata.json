@@ -1,0 +1,26 @@
+{
+  "auc": 0.8181818181818181,
+  "log_loss": 0.2776351980292737,
+  "calibration_error": 0.0017193597967860574,
+  "n_train_events": 240,
+  "train_date_range": {
+    "start": "2023-05-31",
+    "end": "2026-04-19"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.8181818181818181,
+      "log_loss": 0.2776351980292737,
+      "calibration_max_error": 0.0017193597967860574,
+      "calibration_mean_error": 0.0017193597967860574,
+      "fold": 5,
+      "train_size": 228,
+      "test_size": 12,
+      "best_iteration": 2
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "IFAHR",
+  "version": "2026-05-13"
+}

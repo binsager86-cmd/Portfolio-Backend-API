@@ -1,0 +1,36 @@
+{
+  "auc": 0.6166666666666667,
+  "log_loss": 0.39946135875947386,
+  "calibration_error": 0.19205768738290602,
+  "n_train_events": 272,
+  "train_date_range": {
+    "start": "2023-07-10",
+    "end": "2026-04-19"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.23333333333333334,
+      "log_loss": 0.7972440028488622,
+      "calibration_max_error": 0.3818268829155943,
+      "calibration_mean_error": 0.3414943331994382,
+      "fold": 3,
+      "train_size": 217,
+      "test_size": 27,
+      "best_iteration": 1
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.001678714670085481,
+      "calibration_max_error": 0.002288491850217733,
+      "calibration_mean_error": 0.001432360416677185,
+      "fold": 5,
+      "train_size": 258,
+      "test_size": 14,
+      "best_iteration": 125
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "ALMANAR",
+  "version": "2026-05-13"
+}

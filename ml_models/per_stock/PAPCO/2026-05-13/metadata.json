@@ -1,0 +1,26 @@
+{
+  "auc": 0.5,
+  "log_loss": 0.12974315355877675,
+  "calibration_error": 0.0003679020537653774,
+  "n_train_events": 346,
+  "train_date_range": {
+    "start": "2024-09-22",
+    "end": "2026-04-26"
+  },
+  "rejected_reason": "auc_below_threshold_0.5000",
+  "fold_metrics": [
+    {
+      "auc": 0.5,
+      "log_loss": 0.12974315355877675,
+      "calibration_max_error": 0.0003679020537653774,
+      "calibration_mean_error": 0.0003679020537653774,
+      "fold": 3,
+      "train_size": 276,
+      "test_size": 35,
+      "best_iteration": 56
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "PAPCO",
+  "version": "2026-05-13"
+}

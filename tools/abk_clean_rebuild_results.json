@@ -1,0 +1,504 @@
+{
+  "ticker": "ABK",
+  "approach": "strict_causal_feature_builder_v2",
+  "excluded_feature_name_snippets": [
+    "swing_high",
+    "swing_low",
+    "stage",
+    "accumulation_score",
+    "wyckoff_phase",
+    "percentile",
+    "rank",
+    "zscore"
+  ],
+  "base_indicators": [
+    "rsi",
+    "macd_histogram",
+    "adx",
+    "bb_bandwidth",
+    "cmf",
+    "mfi",
+    "rel_volume",
+    "obv_slope_20",
+    "linreg_slope",
+    "atr",
+    "hist_vol_30d"
+  ],
+  "lags": [
+    0,
+    1,
+    3,
+    7,
+    14,
+    30
+  ],
+  "velocity_indicators": [
+    "rsi",
+    "macd_histogram",
+    "adx",
+    "bb_bandwidth",
+    "cmf",
+    "mfi",
+    "rel_volume",
+    "obv_slope_20"
+  ],
+  "strict_causality_checks": [
+    {
+      "row_index": 31,
+      "label": 1,
+      "event_date": "2023-09-24",
+      "history_max_date": "2023-09-24",
+      "history_rows": 128,
+      "compared_feature_count": 74,
+      "max_abs_diff": 0.0,
+      "exact_match_all_compared": true,
+      "no_future_rows_used": true,
+      "sample_feature_comparisons": [
+        {
+          "feature": "rsi_t0",
+          "row_value": 67.06625123263677,
+          "recomputed_value": 67.06625123263677,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rsi_t1",
+          "row_value": 64.90086619876043,
+          "recomputed_value": 64.90086619876043,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rsi_t7",
+          "row_value": 32.07116836727704,
+          "recomputed_value": 32.07116836727704,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rsi_t30",
+          "row_value": 40.577281088500854,
+          "recomputed_value": 40.577281088500854,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rsi_velocity_7d",
+          "row_value": 34.995082865359734,
+          "recomputed_value": 34.995082865359734,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "macd_histogram_t0",
+          "row_value": 2.9153559091258274,
+          "recomputed_value": 2.9153559091258274,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "adx_t0",
+          "row_value": 34.72378420882212,
+          "recomputed_value": 34.72378420882212,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rel_volume_t0",
+          "row_value": 3.0426796504466407,
+          "recomputed_value": 3.0426796504466407,
+          "abs_diff": 0.0
+        }
+      ]
+    },
+    {
+      "row_index": 153,
+      "label": 1,
+      "event_date": "2024-05-05",
+      "history_max_date": "2024-05-05",
+      "history_rows": 275,
+      "compared_feature_count": 74,
+      "max_abs_diff": 0.0,
+      "exact_match_all_compared": true,
+      "no_future_rows_used": true,
+      "sample_feature_comparisons": [
+        {
+          "feature": "rsi_t0",
+          "row_value": 53.78873779495586,
+          "recomputed_value": 53.78873779495586,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rsi_t1",
+          "row_value": 44.30364396408974,
+          "recomputed_value": 44.30364396408974,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rsi_t7",
+          "row_value": 33.749790084508064,
+          "recomputed_value": 33.749790084508064,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rsi_t30",
+          "row_value": 47.32878270869668,
+          "recomputed_value": 47.32878270869668,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rsi_velocity_7d",
+          "row_value": 20.038947710447793,
+          "recomputed_value": 20.038947710447793,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "macd_histogram_t0",
+          "row_value": 1.1974449429151477,
+          "recomputed_value": 1.1974449429151477,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "adx_t0",
+          "row_value": 35.1760158414771,
+          "recomputed_value": 35.1760158414771,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rel_volume_t0",
+          "row_value": 2.933034160023305,
+          "recomputed_value": 2.933034160023305,
+          "abs_diff": 0.0
+        }
+      ]
+    },
+    {
+      "row_index": 155,
+      "label": 1,
+      "event_date": "2024-05-05",
+      "history_max_date": "2024-05-05",
+      "history_rows": 275,
+      "compared_feature_count": 74,
+      "max_abs_diff": 0.0,
+      "exact_match_all_compared": true,
+      "no_future_rows_used": true,
+      "sample_feature_comparisons": [
+        {
+          "feature": "rsi_t0",
+          "row_value": 53.78873779495586,
+          "recomputed_value": 53.78873779495586,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rsi_t1",
+          "row_value": 44.30364396408974,
+          "recomputed_value": 44.30364396408974,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rsi_t7",
+          "row_value": 33.749790084508064,
+          "recomputed_value": 33.749790084508064,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rsi_t30",
+          "row_value": 47.32878270869668,
+          "recomputed_value": 47.32878270869668,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rsi_velocity_7d",
+          "row_value": 20.038947710447793,
+          "recomputed_value": 20.038947710447793,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "macd_histogram_t0",
+          "row_value": 1.1974449429151477,
+          "recomputed_value": 1.1974449429151477,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "adx_t0",
+          "row_value": 35.1760158414771,
+          "recomputed_value": 35.1760158414771,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rel_volume_t0",
+          "row_value": 2.933034160023305,
+          "recomputed_value": 2.933034160023305,
+          "abs_diff": 0.0
+        }
+      ]
+    },
+    {
+      "row_index": 231,
+      "label": 1,
+      "event_date": "2024-10-30",
+      "history_max_date": "2024-10-30",
+      "history_rows": 398,
+      "compared_feature_count": 74,
+      "max_abs_diff": 0.0,
+      "exact_match_all_compared": true,
+      "no_future_rows_used": true,
+      "sample_feature_comparisons": [
+        {
+          "feature": "rsi_t0",
+          "row_value": 51.0279885430047,
+          "recomputed_value": 51.0279885430047,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rsi_t1",
+          "row_value": 53.26625068392621,
+          "recomputed_value": 53.26625068392621,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rsi_t7",
+          "row_value": 39.9285696651512,
+          "recomputed_value": 39.9285696651512,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rsi_t30",
+          "row_value": 41.78519979970963,
+          "recomputed_value": 41.78519979970963,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rsi_velocity_7d",
+          "row_value": 11.099418877853502,
+          "recomputed_value": 11.099418877853502,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "macd_histogram_t0",
+          "row_value": 1.4220484849671178,
+          "recomputed_value": 1.4220484849671178,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "adx_t0",
+          "row_value": 30.824178747159536,
+          "recomputed_value": 30.824178747159536,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rel_volume_t0",
+          "row_value": 1.5706164174703054,
+          "recomputed_value": 1.5706164174703054,
+          "abs_diff": 0.0
+        }
+      ]
+    },
+    {
+      "row_index": 272,
+      "label": 1,
+      "event_date": "2025-01-28",
+      "history_max_date": "2025-01-28",
+      "history_rows": 459,
+      "compared_feature_count": 74,
+      "max_abs_diff": 0.0,
+      "exact_match_all_compared": true,
+      "no_future_rows_used": true,
+      "sample_feature_comparisons": [
+        {
+          "feature": "rsi_t0",
+          "row_value": 56.31898310246367,
+          "recomputed_value": 56.31898310246367,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rsi_t1",
+          "row_value": 51.56009829554587,
+          "recomputed_value": 51.56009829554587,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rsi_t7",
+          "row_value": 53.67993753774584,
+          "recomputed_value": 53.67993753774584,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rsi_t30",
+          "row_value": 48.46259595225691,
+          "recomputed_value": 48.46259595225691,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rsi_velocity_7d",
+          "row_value": 2.6390455647178257,
+          "recomputed_value": 2.6390455647178257,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "macd_histogram_t0",
+          "row_value": 0.3212792463965044,
+          "recomputed_value": 0.3212792463965044,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "adx_t0",
+          "row_value": 26.687548056163333,
+          "recomputed_value": 26.687548056163333,
+          "abs_diff": 0.0
+        },
+        {
+          "feature": "rel_volume_t0",
+          "row_value": 2.0934958302434423,
+          "recomputed_value": 2.0934958302434423,
+          "abs_diff": 0.0
+        }
+      ]
+    }
+  ],
+  "label_construction_positive_rows": {
+    "source": "detect_moves(ticker, ohlcv)",
+    "logic": [
+      "for event in events: if event.is_fakeout: continue",
+      "accel_ts = pd.Timestamp(event.acceleration_date).normalize()",
+      "pred_ts = previous trading day on or before accel_ts - 1 calendar day",
+      "features = compute_features_at_T(ohlcv, pred_ts)",
+      "row label y = 1"
+    ]
+  },
+  "rows_total": 355,
+  "rows_train": 205,
+  "rows_test": 150,
+  "n_features": 74,
+  "feature_columns": [
+    "rsi_t0",
+    "rsi_t1",
+    "rsi_t3",
+    "rsi_t7",
+    "rsi_t14",
+    "rsi_t30",
+    "macd_histogram_t0",
+    "macd_histogram_t1",
+    "macd_histogram_t3",
+    "macd_histogram_t7",
+    "macd_histogram_t14",
+    "macd_histogram_t30",
+    "adx_t0",
+    "adx_t1",
+    "adx_t3",
+    "adx_t7",
+    "adx_t14",
+    "adx_t30",
+    "bb_bandwidth_t0",
+    "bb_bandwidth_t1",
+    "bb_bandwidth_t3",
+    "bb_bandwidth_t7",
+    "bb_bandwidth_t14",
+    "bb_bandwidth_t30",
+    "cmf_t0",
+    "cmf_t1",
+    "cmf_t3",
+    "cmf_t7",
+    "cmf_t14",
+    "cmf_t30",
+    "mfi_t0",
+    "mfi_t1",
+    "mfi_t3",
+    "mfi_t7",
+    "mfi_t14",
+    "mfi_t30",
+    "rel_volume_t0",
+    "rel_volume_t1",
+    "rel_volume_t3",
+    "rel_volume_t7",
+    "rel_volume_t14",
+    "rel_volume_t30",
+    "obv_slope_20_t0",
+    "obv_slope_20_t1",
+    "obv_slope_20_t3",
+    "obv_slope_20_t7",
+    "obv_slope_20_t14",
+    "obv_slope_20_t30",
+    "linreg_slope_t0",
+    "linreg_slope_t1",
+    "linreg_slope_t3",
+    "linreg_slope_t7",
+    "linreg_slope_t14",
+    "linreg_slope_t30",
+    "atr_t0",
+    "atr_t1",
+    "atr_t3",
+    "atr_t7",
+    "atr_t14",
+    "atr_t30",
+    "hist_vol_30d_t0",
+    "hist_vol_30d_t1",
+    "hist_vol_30d_t3",
+    "hist_vol_30d_t7",
+    "hist_vol_30d_t14",
+    "hist_vol_30d_t30",
+    "rsi_velocity_7d",
+    "macd_histogram_velocity_7d",
+    "adx_velocity_7d",
+    "bb_bandwidth_velocity_7d",
+    "cmf_velocity_7d",
+    "mfi_velocity_7d",
+    "rel_volume_velocity_7d",
+    "obv_slope_20_velocity_7d"
+  ],
+  "train_class_counts": {
+    "positives": 177,
+    "negatives": 28
+  },
+  "test_class_counts": {
+    "positives": 66,
+    "negatives": 84
+  },
+  "cv_auc_walk_forward_train_only": 0.5,
+  "oot_auc": 0.9168470418470419,
+  "top5_feature_importance": [
+    {
+      "feature": "bb_bandwidth_t0",
+      "importance_gain": 665.8187391280662
+    },
+    {
+      "feature": "adx_t0",
+      "importance_gain": 215.14634153747673
+    },
+    {
+      "feature": "adx_t30",
+      "importance_gain": 92.90740367677445
+    },
+    {
+      "feature": "adx_t1",
+      "importance_gain": 50.98073439300232
+    },
+    {
+      "feature": "mfi_t3",
+      "importance_gain": 43.85557847144082
+    }
+  ],
+  "single_feature_top5": [
+    {
+      "feature": "rsi_t3",
+      "auc": 0.8811327561327561
+    },
+    {
+      "feature": "bb_bandwidth_t3",
+      "auc": 0.8753607503607503
+    },
+    {
+      "feature": "linreg_slope_t3",
+      "auc": 0.8511904761904762
+    },
+    {
+      "feature": "cmf_t7",
+      "auc": 0.8379329004329004
+    },
+    {
+      "feature": "hist_vol_30d_t14",
+      "auc": 0.836940836940837
+    }
+  ],
+  "single_feature_count_auc_gt_075": 12,
+  "single_feature_top5_formulas": {
+    "rsi_t3": "features['rsi_t3'] = _lag_value(ind, 'rsi', 3)",
+    "bb_bandwidth_t3": "features['bb_bandwidth_t3'] = _lag_value(ind, 'bb_bandwidth', 3)",
+    "linreg_slope_t3": "features['linreg_slope_t3'] = _lag_value(ind, 'linreg_slope', 3)",
+    "cmf_t7": "features['cmf_t7'] = _lag_value(ind, 'cmf', 7)",
+    "hist_vol_30d_t14": "features['hist_vol_30d_t14'] = _lag_value(ind, 'hist_vol_30d', 14)"
+  }
+}

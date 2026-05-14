@@ -1,0 +1,26 @@
+{
+  "auc": 0.10869565217391303,
+  "log_loss": 0.6977499576192611,
+  "calibration_error": 0.11618126497349557,
+  "n_train_events": 308,
+  "train_date_range": {
+    "start": "2023-07-24",
+    "end": "2026-04-02"
+  },
+  "rejected_reason": "auc_below_threshold_0.1087",
+  "fold_metrics": [
+    {
+      "auc": 0.10869565217391303,
+      "log_loss": 0.6977499576192611,
+      "calibration_max_error": 0.11618126497349557,
+      "calibration_mean_error": 0.11618126497349557,
+      "fold": 3,
+      "train_size": 246,
+      "test_size": 31,
+      "best_iteration": 1
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "CATTL",
+  "version": "2026-05-13"
+}

@@ -1,0 +1,46 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.11636728576630484,
+  "calibration_error": 0.2932449500734015,
+  "n_train_events": 321,
+  "train_date_range": {
+    "start": "2023-06-14",
+    "end": "2026-04-27"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 2.3432367643413727e-05,
+      "calibration_max_error": 4.111811226814588e-05,
+      "calibration_mean_error": 2.825550117499552e-05,
+      "fold": 1,
+      "train_size": 192,
+      "test_size": 32,
+      "best_iteration": 200
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.34890993674325754,
+      "calibration_max_error": 0.8774691554917238,
+      "calibration_mean_error": 0.4857912117977784,
+      "fold": 3,
+      "train_size": 256,
+      "test_size": 32,
+      "best_iteration": 12
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.00016848818801354793,
+      "calibration_max_error": 0.0022245766162126792,
+      "calibration_mean_error": 0.0011322018032268223,
+      "fold": 5,
+      "train_size": 304,
+      "test_size": 17,
+      "best_iteration": 200
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "NRE",
+  "version": "2026-05-13"
+}

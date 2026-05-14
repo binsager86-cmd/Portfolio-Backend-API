@@ -1,0 +1,46 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.6097041341049731,
+  "calibration_error": 0.368984956408922,
+  "n_train_events": 242,
+  "train_date_range": {
+    "start": "2023-05-14",
+    "end": "2025-12-09"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.6812309133206318,
+      "calibration_max_error": 0.7265888925601409,
+      "calibration_mean_error": 0.3950806598458794,
+      "fold": 1,
+      "train_size": 145,
+      "test_size": 24,
+      "best_iteration": 21
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.5372606307027968,
+      "calibration_max_error": 0.09485288332854858,
+      "calibration_mean_error": 0.09485288332854858,
+      "fold": 4,
+      "train_size": 217,
+      "test_size": 12,
+      "best_iteration": 28
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.6106208582914908,
+      "calibration_max_error": 0.2855130933380764,
+      "calibration_mean_error": 0.2855130933380764,
+      "fold": 5,
+      "train_size": 229,
+      "test_size": 13,
+      "best_iteration": 1
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "KFOUC",
+  "version": "2026-05-13"
+}

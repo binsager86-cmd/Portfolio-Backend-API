@@ -1,0 +1,36 @@
+{
+  "auc": 0.6071428571428572,
+  "log_loss": 0.5616392419163054,
+  "calibration_error": 0.4014569389221254,
+  "n_train_events": 169,
+  "train_date_range": {
+    "start": "2023-05-10",
+    "end": "2026-04-16"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 4.207078081852614e-05,
+      "calibration_max_error": 0.0004331587047643019,
+      "calibration_mean_error": 0.00022539023502519091,
+      "fold": 3,
+      "train_size": 135,
+      "test_size": 17,
+      "best_iteration": 190
+    },
+    {
+      "auc": 0.2142857142857143,
+      "log_loss": 1.1232364130517922,
+      "calibration_max_error": 0.8024807191394865,
+      "calibration_mean_error": 0.4856173145163073,
+      "fold": 4,
+      "train_size": 152,
+      "test_size": 8,
+      "best_iteration": 12
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "ALG",
+  "version": "2026-05-13"
+}

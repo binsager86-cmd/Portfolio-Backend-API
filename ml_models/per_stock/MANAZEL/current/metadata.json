@@ -1,0 +1,46 @@
+{
+  "auc": 0.9143518518518517,
+  "log_loss": 0.16942880065957042,
+  "calibration_error": 0.47678887285100496,
+  "n_train_events": 404,
+  "train_date_range": {
+    "start": "2023-06-14",
+    "end": "2026-04-27"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.0005104846173460369,
+      "calibration_max_error": 0.0032070386633381576,
+      "calibration_mean_error": 0.0016203753901000522,
+      "fold": 1,
+      "train_size": 242,
+      "test_size": 40,
+      "best_iteration": 200
+    },
+    {
+      "auc": 0.7430555555555556,
+      "log_loss": 0.2917828443315863,
+      "calibration_max_error": 0.7555369970252314,
+      "calibration_mean_error": 0.39261092789584806,
+      "fold": 3,
+      "train_size": 323,
+      "test_size": 40,
+      "best_iteration": 58
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.21599307302977885,
+      "calibration_max_error": 0.6716225828644454,
+      "calibration_mean_error": 0.3558477155421781,
+      "fold": 4,
+      "train_size": 363,
+      "test_size": 20,
+      "best_iteration": 74
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "MANAZEL",
+  "version": "2026-05-13"
+}

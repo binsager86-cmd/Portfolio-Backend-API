@@ -1,0 +1,46 @@
+{
+  "auc": 0.3717948717948718,
+  "log_loss": 0.6750739017946198,
+  "calibration_error": 0.45585123657383697,
+  "n_train_events": 317,
+  "train_date_range": {
+    "start": "2023-07-23",
+    "end": "2026-04-21"
+  },
+  "rejected_reason": "auc_below_threshold_0.3718",
+  "fold_metrics": [
+    {
+      "auc": 0.5,
+      "log_loss": 0.14250645664450243,
+      "calibration_max_error": 0.00019217457625276407,
+      "calibration_mean_error": 0.00019217457625276407,
+      "fold": 1,
+      "train_size": 190,
+      "test_size": 31,
+      "best_iteration": 47
+    },
+    {
+      "auc": 0.0,
+      "log_loss": 1.1477157607058657,
+      "calibration_max_error": 0.6363109725624873,
+      "calibration_mean_error": 0.6363109725624873,
+      "fold": 2,
+      "train_size": 221,
+      "test_size": 32,
+      "best_iteration": 1
+    },
+    {
+      "auc": 0.6153846153846154,
+      "log_loss": 0.7349994880334915,
+      "calibration_max_error": 0.7310505625827709,
+      "calibration_mean_error": 0.46880250815303703,
+      "fold": 3,
+      "train_size": 253,
+      "test_size": 32,
+      "best_iteration": 20
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "ALAQARIA",
+  "version": "2026-05-13"
+}

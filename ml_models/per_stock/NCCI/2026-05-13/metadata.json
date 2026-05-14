@@ -1,0 +1,36 @@
+{
+  "auc": 0.7424242424242424,
+  "log_loss": 0.137685376481476,
+  "calibration_error": 0.4221011844513775,
+  "n_train_events": 346,
+  "train_date_range": {
+    "start": "2023-06-14",
+    "end": "2026-04-13"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.48484848484848486,
+      "log_loss": 0.14087779419921995,
+      "calibration_max_error": 0.01048906473872524,
+      "calibration_mean_error": 0.01048906473872524,
+      "fold": 2,
+      "train_size": 242,
+      "test_size": 34,
+      "best_iteration": 12
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.13449295876373202,
+      "calibration_max_error": 0.8337133041640298,
+      "calibration_mean_error": 0.402693343895469,
+      "fold": 4,
+      "train_size": 311,
+      "test_size": 17,
+      "best_iteration": 40
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "NCCI",
+  "version": "2026-05-13"
+}

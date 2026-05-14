@@ -1,0 +1,56 @@
+{
+  "auc": 0.5114889705882353,
+  "log_loss": 0.6291034170956055,
+  "calibration_error": 0.2814890575690089,
+  "n_train_events": 353,
+  "train_date_range": {
+    "start": "2023-12-26",
+    "end": "2026-03-12"
+  },
+  "rejected_reason": "auc_below_threshold_0.5115",
+  "fold_metrics": [
+    {
+      "auc": 0.0,
+      "log_loss": 0.24891837224632804,
+      "calibration_max_error": 0.14592065593936165,
+      "calibration_mean_error": 0.14592065593936165,
+      "fold": 2,
+      "train_size": 247,
+      "test_size": 35,
+      "best_iteration": 1
+    },
+    {
+      "auc": 0.5147058823529411,
+      "log_loss": 0.2256064896187505,
+      "calibration_max_error": 0.1356543800245078,
+      "calibration_mean_error": 0.1356543800245078,
+      "fold": 3,
+      "train_size": 282,
+      "test_size": 35,
+      "best_iteration": 1
+    },
+    {
+      "auc": 0.53125,
+      "log_loss": 2.0411601121251612,
+      "calibration_max_error": 0.8418640777517944,
+      "calibration_mean_error": 0.8126036537287538,
+      "fold": 4,
+      "train_size": 317,
+      "test_size": 18,
+      "best_iteration": 1
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.0007286943921822422,
+      "calibration_max_error": 0.0025171165603715684,
+      "calibration_mean_error": 0.0012783675007496803,
+      "fold": 5,
+      "train_size": 335,
+      "test_size": 18,
+      "best_iteration": 198
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "DALQANRE",
+  "version": "2026-05-13"
+}

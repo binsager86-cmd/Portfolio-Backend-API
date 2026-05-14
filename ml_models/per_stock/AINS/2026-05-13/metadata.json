@@ -1,0 +1,36 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.2786031579734344,
+  "calibration_error": 0.39267941310896115,
+  "n_train_events": 167,
+  "train_date_range": {
+    "start": "2023-12-28",
+    "end": "2026-03-31"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.0007557683664989095,
+      "calibration_max_error": 0.0008893559936218842,
+      "calibration_mean_error": 0.0007859047807584878,
+      "fold": 2,
+      "train_size": 116,
+      "test_size": 17,
+      "best_iteration": 157
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.5564505475803698,
+      "calibration_max_error": 0.7844694702243005,
+      "calibration_mean_error": 0.3131510738277979,
+      "fold": 5,
+      "train_size": 158,
+      "test_size": 9,
+      "best_iteration": 8
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "AINS",
+  "version": "2026-05-13"
+}

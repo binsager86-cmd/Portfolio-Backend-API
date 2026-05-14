@@ -1,0 +1,36 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.023039442786107648,
+  "calibration_error": 0.3737465222259479,
+  "n_train_events": 364,
+  "train_date_range": {
+    "start": "2023-08-01",
+    "end": "2026-04-27"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 3.2073408335033066e-05,
+      "calibration_max_error": 3.369886110871079e-05,
+      "calibration_mean_error": 3.119177317814068e-05,
+      "fold": 2,
+      "train_size": 254,
+      "test_size": 37,
+      "best_iteration": 200
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.04604681216388026,
+      "calibration_max_error": 0.7474593455907871,
+      "calibration_mean_error": 0.37773499926433646,
+      "fold": 3,
+      "train_size": 291,
+      "test_size": 36,
+      "best_iteration": 94
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "FUTUREKID",
+  "version": "2026-05-13"
+}

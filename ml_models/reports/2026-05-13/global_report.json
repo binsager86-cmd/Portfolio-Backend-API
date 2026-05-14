@@ -1,0 +1,299 @@
+[
+  {
+    "tier": "global",
+    "identifier": "baseline",
+    "training_set": {
+      "n_events": 38460,
+      "date_range": {
+        "start": "2023-04-30",
+        "end": "2026-05-12"
+      },
+      "class_balance": 0.571866874674987
+    },
+    "walk_forward_cv": {
+      "folds": [
+        {
+          "auc": 0.8265690707154556,
+          "log_loss": 0.5199066865899598,
+          "calibration_max_error": 0.5385594133366457,
+          "calibration_mean_error": 0.16950978260261945,
+          "fold": 1,
+          "train_size": 23076,
+          "test_size": 3846,
+          "best_iteration": 69
+        },
+        {
+          "auc": 0.8165241060943689,
+          "log_loss": 0.5264933436127235,
+          "calibration_max_error": 0.36770520647168925,
+          "calibration_mean_error": 0.10420049089189773,
+          "fold": 2,
+          "train_size": 26922,
+          "test_size": 3846,
+          "best_iteration": 39
+        },
+        {
+          "auc": 0.7403394095347778,
+          "log_loss": 0.5529847903095705,
+          "calibration_max_error": 0.31314619890900397,
+          "calibration_mean_error": 0.09425559868893478,
+          "fold": 3,
+          "train_size": 30768,
+          "test_size": 3846,
+          "best_iteration": 51
+        },
+        {
+          "auc": 0.7624244336467471,
+          "log_loss": 0.4979306498869766,
+          "calibration_max_error": 0.5392892487269688,
+          "calibration_mean_error": 0.22621598860351905,
+          "fold": 4,
+          "train_size": 34614,
+          "test_size": 1923,
+          "best_iteration": 66
+        },
+        {
+          "auc": 0.806712721381953,
+          "log_loss": 0.3795072385404572,
+          "calibration_max_error": 0.6985602593423816,
+          "calibration_mean_error": 0.2425276131076289,
+          "fold": 5,
+          "train_size": 36537,
+          "test_size": 1923,
+          "best_iteration": 101
+        }
+      ],
+      "mean_auc": 0.7905139482746605,
+      "std_auc": 0.03330286949798818,
+      "mean_log_loss": 0.49536454178793754,
+      "mean_calibration_max_error": 0.4914520653573378,
+      "mean_calibration_mean_error": 0.16734189477891998
+    },
+    "calibration": {
+      "n_samples": 15384,
+      "max_error": 2.220446049250313e-16,
+      "mean_error": 2.4671622769447922e-17,
+      "warning": false,
+      "fitted": true,
+      "reliability": [
+        {
+          "bin": "(-0.001, 0.1]",
+          "count": 74,
+          "predicted_mean": 0.08108108108108109,
+          "actual_rate": 0.08108108108108109,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.2, 0.3]",
+          "count": 104,
+          "predicted_mean": 0.2403846153846154,
+          "actual_rate": 0.2403846153846154,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.3, 0.4]",
+          "count": 2148,
+          "predicted_mean": 0.3659217877094972,
+          "actual_rate": 0.3659217877094972,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.4, 0.5]",
+          "count": 1220,
+          "predicted_mean": 0.4565573770491803,
+          "actual_rate": 0.4565573770491803,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.5, 0.6]",
+          "count": 46,
+          "predicted_mean": 0.5652173913043478,
+          "actual_rate": 0.5652173913043478,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.6, 0.7]",
+          "count": 5808,
+          "predicted_mean": 0.6441115702479341,
+          "actual_rate": 0.6441115702479339,
+          "abs_error": 2.220446049250313e-16
+        },
+        {
+          "bin": "(0.7, 0.8]",
+          "count": 4260,
+          "predicted_mean": 0.7504694835680751,
+          "actual_rate": 0.7504694835680751,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.8, 0.9]",
+          "count": 1697,
+          "predicted_mean": 0.8485562757807896,
+          "actual_rate": 0.8485562757807896,
+          "abs_error": 0.0
+        },
+        {
+          "bin": "(0.9, 1.0]",
+          "count": 27,
+          "predicted_mean": 1.0,
+          "actual_rate": 1.0,
+          "abs_error": 0.0
+        }
+      ]
+    },
+    "top_features": [
+      {
+        "feature": "t0_swing_high",
+        "gain": 60883.110580444336
+      },
+      {
+        "feature": "days_since_last_swing_high",
+        "gain": 37106.03612136841
+      },
+      {
+        "feature": "t0_stoch_k",
+        "gain": 11797.888164520264
+      },
+      {
+        "feature": "t0_cmf",
+        "gain": 5853.175399780273
+      },
+      {
+        "feature": "macd_histogram_velocity",
+        "gain": 5832.189281463623
+      },
+      {
+        "feature": "cmf_velocity",
+        "gain": 5789.053787231445
+      },
+      {
+        "feature": "t90_accumulation_score",
+        "gain": 5293.240524291992
+      },
+      {
+        "feature": "t0_williams_r",
+        "gain": 4788.490604400635
+      },
+      {
+        "feature": "signal_acceleration",
+        "gain": 4704.371299743652
+      },
+      {
+        "feature": "t3_adx",
+        "gain": 4576.359897613525
+      },
+      {
+        "feature": "t3_macd_histogram",
+        "gain": 4284.5869216918945
+      },
+      {
+        "feature": "t14_bb_bandwidth",
+        "gain": 4265.2708740234375
+      },
+      {
+        "feature": "t30_adx",
+        "gain": 4215.916980743408
+      },
+      {
+        "feature": "t7_macd_histogram",
+        "gain": 4112.016708374023
+      },
+      {
+        "feature": "t60_adx",
+        "gain": 3978.4765014648438
+      }
+    ],
+    "failure_cases": [
+      {
+        "ticker": "KMEFIC",
+        "event_id": "KMEFIC_2026-03-02_up_15",
+        "event_date": "2026-04-26 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.08108108108108109,
+        "abs_error": 0.9189189189189189,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "ALAQARIA",
+        "event_id": "ALAQARIA_2026-02-18_up_25",
+        "event_date": "2026-04-21 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.08108108108108109,
+        "abs_error": 0.9189189189189189,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "UPAC",
+        "event_id": "UPAC_2025-12-25_up_15",
+        "event_date": "2026-04-20 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.08108108108108109,
+        "abs_error": 0.9189189189189189,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "FTI",
+        "event_id": "FTI_2026-03-29_up_25",
+        "event_date": "2026-04-19 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.08108108108108109,
+        "abs_error": 0.9189189189189189,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "UNICAP",
+        "event_id": "UNICAP_2026-03-29_up_25",
+        "event_date": "2026-04-21 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.08108108108108109,
+        "abs_error": 0.9189189189189189,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "KUWAITRE",
+        "event_id": "KUWAITRE_2026-04-28_up_10",
+        "event_date": "2026-05-04 00:00:00",
+        "actual": 1.0,
+        "predicted": 0.08108108108108109,
+        "abs_error": 0.9189189189189189,
+        "outcome_category": "TP1_FAST"
+      },
+      {
+        "ticker": "BPCC",
+        "event_id": "BPCC_2026-01-15_up_10",
+        "event_date": "2026-04-15 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.8874458874458875,
+        "abs_error": 0.8874458874458875,
+        "outcome_category": "TIMED_OUT"
+      },
+      {
+        "ticker": "KAMCO",
+        "event_id": "KAMCO_2026-03-29_up_15",
+        "event_date": "2026-04-14 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.8874458874458875,
+        "abs_error": 0.8874458874458875,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "ALKOUT",
+        "event_id": "ALKOUT_2026-04-16_fakeout",
+        "event_date": "2026-04-16 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.8874458874458875,
+        "abs_error": 0.8874458874458875,
+        "outcome_category": "STOPPED_OUT"
+      },
+      {
+        "ticker": "OSOUL",
+        "event_id": "OSOUL_2026-04-29_fakeout",
+        "event_date": "2026-04-29 00:00:00",
+        "actual": 0.0,
+        "predicted": 0.8874458874458875,
+        "abs_error": 0.8874458874458875,
+        "outcome_category": "STOPPED_OUT"
+      }
+    ]
+  }
+]

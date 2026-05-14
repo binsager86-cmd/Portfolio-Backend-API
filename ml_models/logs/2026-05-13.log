@@ -1,0 +1,1584 @@
+2026-05-13 20:15:32,944 | INFO | __main__ | Starting Eagle Eye ML train_cli (tier=all)
+2026-05-13 20:15:32,947 | INFO | app.services.eagle_eye.ml.trainer | Building forensic event feature rows from cached OHLCV...
+2026-05-13 20:15:35,714 | INFO | httpx | HTTP Request: POST https://www.tickerchart.com/m/v2/tickerchart/live/login?version=4.8.7.31&rand=920365349&t=2026-05-13&h=7510d563f281a62a6b2be045f42359d0 "HTTP/1.1 200 OK"
+2026-05-13 20:15:37,165 | INFO | httpx | HTTP Request: GET https://livedata.tickerchart.net/tcdata/ondemandDataLoader.php?user_name=sager123&language=ENGLISH&symbol=PMI.KSE&interval=day&period=5years&version=4.8.7.31&rand=1037699606&t=2026-05-13&h=98f63fb3673502ac96bedf393253c678 "HTTP/1.1 200 OK"
+2026-05-13 20:15:38,614 | INFO | httpx | HTTP Request: GET https://livedata.tickerchart.net/tcdata/ondemandDataLoader.php?user_name=sager123&language=ENGLISH&symbol=BRENT.KSE&interval=day&period=5years&version=4.8.7.31&rand=293523426&t=2026-05-13&h=434a331e0d155d958388a5437f282768 "HTTP/1.1 200 OK"
+2026-05-13 20:39:38,603 | INFO | __main__ | Starting Eagle Eye ML train_cli (tier=all)
+2026-05-13 20:39:38,611 | INFO | app.services.eagle_eye.ml.trainer | Building forensic event feature rows from cached OHLCV...
+2026-05-13 20:39:41,399 | INFO | httpx | HTTP Request: POST https://www.tickerchart.com/m/v2/tickerchart/live/login?version=4.8.7.31&rand=1845522563&t=2026-05-13&h=f766459ab294e9b79ebbe0c7d08797f7 "HTTP/1.1 200 OK"
+2026-05-13 20:39:42,830 | INFO | httpx | HTTP Request: GET https://livedata.tickerchart.net/tcdata/ondemandDataLoader.php?user_name=sager123&language=ENGLISH&symbol=PMI.KSE&interval=day&period=5years&version=4.8.7.31&rand=1899624963&t=2026-05-13&h=049811705d07eaeacff280b3be5dcde7 "HTTP/1.1 200 OK"
+2026-05-13 20:39:44,255 | INFO | httpx | HTTP Request: GET https://livedata.tickerchart.net/tcdata/ondemandDataLoader.php?user_name=sager123&language=ENGLISH&symbol=BRENT.KSE&interval=day&period=5years&version=4.8.7.31&rand=776232163&t=2026-05-13&h=9833ae8cfb91ee65041e365a2b94b051 "HTTP/1.1 200 OK"
+2026-05-13 22:19:53,293 | INFO | app.services.eagle_eye.ml.trainer | Generated 38488 raw event rows
+2026-05-13 22:19:57,580 | INFO | app.services.eagle_eye.ml.trainer | Rejected 2 events for ABK due to >30% NaN feature ratio
+2026-05-13 22:19:57,580 | INFO | app.services.eagle_eye.ml.trainer | Rejected 1 events for ALOLA due to >30% NaN feature ratio
+2026-05-13 22:19:57,580 | INFO | app.services.eagle_eye.ml.trainer | Rejected 15 events for ASC due to >30% NaN feature ratio
+2026-05-13 22:19:57,581 | INFO | app.services.eagle_eye.ml.trainer | Rejected 1 events for CABLE due to >30% NaN feature ratio
+2026-05-13 22:19:57,581 | INFO | app.services.eagle_eye.ml.trainer | Rejected 5 events for IFA due to >30% NaN feature ratio
+2026-05-13 22:19:57,581 | INFO | app.services.eagle_eye.ml.trainer | Rejected 1 events for KBT due to >30% NaN feature ratio
+2026-05-13 22:19:57,581 | INFO | app.services.eagle_eye.ml.trainer | Rejected 1 events for KCEM due to >30% NaN feature ratio
+2026-05-13 22:19:57,582 | INFO | app.services.eagle_eye.ml.trainer | Rejected 1 events for MUNSHAAT due to >30% NaN feature ratio
+2026-05-13 22:19:57,582 | INFO | app.services.eagle_eye.ml.trainer | Rejected 1 events for NIH due to >30% NaN feature ratio
+2026-05-13 22:20:01,751 | INFO | app.services.eagle_eye.ml.trainer | Dataset ready: 38460 rows, 138 tickers, build 6023.1s
+2026-05-13 22:20:02,043 | INFO | app.services.eagle_eye.ml.trainer | [1/131] per_stock AAYAN
+2026-05-13 22:20:02,373 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:02,448 | INFO | app.services.eagle_eye.ml.trainer | [2/131] per_stock AAYANRE
+2026-05-13 22:20:02,460 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:02,460 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:02,460 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:02,460 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:02,574 | INFO | app.services.eagle_eye.ml.trainer | [3/131] per_stock ABAR
+2026-05-13 22:20:02,588 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:02,686 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:02,686 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:02,766 | INFO | app.services.eagle_eye.ml.trainer | [4/131] per_stock ABK
+2026-05-13 22:20:02,845 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:02,918 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:02,982 | INFO | app.services.eagle_eye.ml.trainer | [5/131] per_stock ACICO
+2026-05-13 22:20:02,993 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:02,993 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:03,128 | INFO | app.services.eagle_eye.ml.trainer | [6/131] per_stock AINS
+2026-05-13 22:20:03,140 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:03,213 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:03,213 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:03,320 | INFO | app.services.eagle_eye.ml.trainer | [7/131] per_stock ALAQARIA
+2026-05-13 22:20:03,453 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:03,453 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:03,478 | INFO | app.services.eagle_eye.ml.trainer | [8/131] per_stock ALDEERA
+2026-05-13 22:20:03,491 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:03,492 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:03,492 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:03,492 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:03,492 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:03,503 | INFO | app.services.eagle_eye.ml.trainer | [9/131] per_stock ALEID
+2026-05-13 22:20:03,517 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:03,517 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:03,517 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:03,517 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:03,602 | INFO | app.services.eagle_eye.ml.trainer | [10/131] per_stock ALG
+2026-05-13 22:20:03,612 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:03,612 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:03,717 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:03,812 | INFO | app.services.eagle_eye.ml.trainer | [11/131] per_stock ALIMTIAZ
+2026-05-13 22:20:03,825 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:03,856 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:03,856 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:03,856 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:03,924 | INFO | app.services.eagle_eye.ml.trainer | [12/131] per_stock ALKOUT
+2026-05-13 22:20:04,023 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:04,023 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:04,024 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:04,074 | INFO | app.services.eagle_eye.ml.trainer | [13/131] per_stock ALMANAR
+2026-05-13 22:20:04,084 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:04,084 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:04,119 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:04,303 | INFO | app.services.eagle_eye.ml.trainer | [14/131] per_stock ALOLA
+2026-05-13 22:20:04,321 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:04,439 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:04,439 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:04,516 | INFO | app.services.eagle_eye.ml.trainer | [15/131] per_stock ALSAFAT
+2026-05-13 22:20:04,531 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:04,532 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:04,532 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:04,584 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:04,647 | INFO | app.services.eagle_eye.ml.trainer | [16/131] per_stock ALTIJARIA
+2026-05-13 22:20:04,663 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:04,708 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:04,751 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:04,820 | INFO | app.services.eagle_eye.ml.trainer | [17/131] per_stock AMAR
+2026-05-13 22:20:04,835 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:04,835 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:04,836 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:04,836 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:04,837 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:04,850 | INFO | app.services.eagle_eye.ml.trainer | [18/131] per_stock AQAR
+2026-05-13 22:20:04,865 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:04,972 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:04,973 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:04,973 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:05,146 | INFO | app.services.eagle_eye.ml.trainer | [19/131] per_stock ARABREC
+2026-05-13 22:20:05,401 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:05,474 | INFO | app.services.eagle_eye.ml.trainer | [20/131] per_stock AREEC
+2026-05-13 22:20:05,486 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:05,541 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:05,542 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:05,655 | INFO | app.services.eagle_eye.ml.trainer | [21/131] per_stock ARGAN
+2026-05-13 22:20:05,671 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:05,776 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:05,776 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:05,852 | INFO | app.services.eagle_eye.ml.trainer | [22/131] per_stock ARKAN
+2026-05-13 22:20:05,865 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:06,208 | INFO | app.services.eagle_eye.ml.trainer | [23/131] per_stock ARZAN
+2026-05-13 22:20:06,335 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:06,374 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:06,374 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:06,482 | INFO | app.services.eagle_eye.ml.trainer | [24/131] per_stock ASC
+2026-05-13 22:20:06,498 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:06,538 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:06,538 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:06,716 | INFO | app.services.eagle_eye.ml.trainer | [25/131] per_stock ASIYA
+2026-05-13 22:20:06,730 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:06,842 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:07,006 | INFO | app.services.eagle_eye.ml.trainer | [26/131] per_stock ATC
+2026-05-13 22:20:07,016 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:07,137 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:07,138 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:07,162 | INFO | app.services.eagle_eye.ml.trainer | [27/131] per_stock AZNOULA
+2026-05-13 22:20:07,177 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:07,177 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:07,178 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:07,178 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:07,369 | INFO | app.services.eagle_eye.ml.trainer | [28/131] per_stock BAYANINV
+2026-05-13 22:20:07,384 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:07,384 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:07,489 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:07,576 | INFO | app.services.eagle_eye.ml.trainer | [29/131] per_stock BOUBYAN
+2026-05-13 22:20:07,588 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:07,588 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:07,661 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:07,661 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:07,756 | INFO | app.services.eagle_eye.ml.trainer | [30/131] per_stock BOURSA
+2026-05-13 22:20:07,914 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:07,915 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:08,083 | INFO | app.services.eagle_eye.ml.trainer | [31/131] per_stock BURG
+2026-05-13 22:20:08,093 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:08,093 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:08,093 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:08,094 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:08,190 | INFO | app.services.eagle_eye.ml.trainer | [32/131] per_stock CABLE
+2026-05-13 22:20:08,201 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:08,202 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:08,236 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:08,237 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:08,322 | INFO | app.services.eagle_eye.ml.trainer | [33/131] per_stock CATTL
+2026-05-13 22:20:08,335 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:08,339 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:08,408 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:08,409 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:08,438 | INFO | app.services.eagle_eye.ml.trainer | [34/131] per_stock CBK
+2026-05-13 22:20:08,452 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:08,547 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:08,547 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:08,615 | INFO | app.services.eagle_eye.ml.trainer | [35/131] per_stock CGC
+2026-05-13 22:20:08,708 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:08,862 | INFO | app.services.eagle_eye.ml.trainer | [36/131] per_stock CLEANING
+2026-05-13 22:20:08,878 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:08,975 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:08,975 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:09,282 | INFO | app.services.eagle_eye.ml.trainer | [37/131] per_stock COAST
+2026-05-13 22:20:09,296 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:09,296 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:09,342 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:09,342 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:09,417 | INFO | app.services.eagle_eye.ml.trainer | [38/131] per_stock DALQANRE
+2026-05-13 22:20:09,430 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:09,683 | INFO | app.services.eagle_eye.ml.trainer | [39/131] per_stock DIGITUS
+2026-05-13 22:20:09,696 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:09,860 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:09,920 | INFO | app.services.eagle_eye.ml.trainer | [40/131] per_stock EKTTITAB
+2026-05-13 22:20:09,933 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:10,052 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:10,053 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:10,076 | INFO | app.services.eagle_eye.ml.trainer | [41/131] per_stock EMIRATES
+2026-05-13 22:20:10,142 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:10,175 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:10,176 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:10,253 | INFO | app.services.eagle_eye.ml.trainer | [42/131] per_stock ENERGYH
+2026-05-13 22:20:10,457 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:10,527 | INFO | app.services.eagle_eye.ml.trainer | [43/131] per_stock EQUIPMENT
+2026-05-13 22:20:10,540 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:10,751 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:10,938 | INFO | app.services.eagle_eye.ml.trainer | [44/131] per_stock ERESCO
+2026-05-13 22:20:11,124 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:11,196 | INFO | app.services.eagle_eye.ml.trainer | [45/131] per_stock FACIL
+2026-05-13 22:20:11,210 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:11,210 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:11,210 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:11,211 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:11,272 | INFO | app.services.eagle_eye.ml.trainer | [46/131] per_stock FTI
+2026-05-13 22:20:11,285 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:11,411 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:11,411 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:11,437 | INFO | app.services.eagle_eye.ml.trainer | [47/131] per_stock FUTUREKID
+2026-05-13 22:20:11,450 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:11,696 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:11,697 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:11,850 | INFO | app.services.eagle_eye.ml.trainer | [48/131] per_stock GBK
+2026-05-13 22:20:12,040 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:12,040 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:12,117 | INFO | app.services.eagle_eye.ml.trainer | [49/131] per_stock GFC
+2026-05-13 22:20:12,130 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:12,227 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:12,228 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:12,305 | INFO | app.services.eagle_eye.ml.trainer | [50/131] per_stock GFH
+2026-05-13 22:20:12,412 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:12,453 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:12,453 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:12,553 | INFO | app.services.eagle_eye.ml.trainer | [51/131] per_stock GIH
+2026-05-13 22:20:12,671 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:12,671 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:12,793 | INFO | app.services.eagle_eye.ml.trainer | [52/131] per_stock HUMANSOFT
+2026-05-13 22:20:12,842 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:12,875 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:12,875 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:12,928 | INFO | app.services.eagle_eye.ml.trainer | [53/131] per_stock IFA
+2026-05-13 22:20:13,111 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:13,111 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:13,112 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:13,181 | INFO | app.services.eagle_eye.ml.trainer | [54/131] per_stock IFAHR
+2026-05-13 22:20:13,191 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:13,191 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:13,191 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:13,192 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:13,293 | INFO | app.services.eagle_eye.ml.trainer | [55/131] per_stock INJAZZAT
+2026-05-13 22:20:13,379 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:13,380 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:13,380 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:13,435 | INFO | app.services.eagle_eye.ml.trainer | [56/131] per_stock INOVEST
+2026-05-13 22:20:14,250 | INFO | app.services.eagle_eye.ml.trainer | [57/131] per_stock INTEGRATED
+2026-05-13 22:20:14,299 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:14,300 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:14,506 | INFO | app.services.eagle_eye.ml.trainer | [58/131] per_stock IPG
+2026-05-13 22:20:14,663 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:14,805 | INFO | app.services.eagle_eye.ml.trainer | [59/131] per_stock JAZEERA
+2026-05-13 22:20:14,817 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:14,818 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:14,853 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:14,936 | INFO | app.services.eagle_eye.ml.trainer | [60/131] per_stock JTC
+2026-05-13 22:20:14,948 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:14,949 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:14,949 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:14,949 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:15,082 | INFO | app.services.eagle_eye.ml.trainer | [61/131] per_stock KAMCO
+2026-05-13 22:20:15,094 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:15,232 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:15,305 | INFO | app.services.eagle_eye.ml.trainer | [62/131] per_stock KBT
+2026-05-13 22:20:15,464 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:15,648 | INFO | app.services.eagle_eye.ml.trainer | [63/131] per_stock KCEM
+2026-05-13 22:20:15,664 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:15,709 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:16,143 | INFO | app.services.eagle_eye.ml.trainer | [64/131] per_stock KCIN
+2026-05-13 22:20:16,230 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:16,231 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:16,231 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:16,231 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:16,325 | INFO | app.services.eagle_eye.ml.trainer | [65/131] per_stock KCPC
+2026-05-13 22:20:16,340 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:16,345 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:16,346 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:16,661 | INFO | app.services.eagle_eye.ml.trainer | [66/131] per_stock KFIC
+2026-05-13 22:20:16,673 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:16,757 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:16,757 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:16,783 | INFO | app.services.eagle_eye.ml.trainer | [67/131] per_stock KFOUC
+2026-05-13 22:20:16,837 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:16,838 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:16,999 | INFO | app.services.eagle_eye.ml.trainer | [68/131] per_stock KGL
+2026-05-13 22:20:17,042 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:17,120 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:17,225 | INFO | app.services.eagle_eye.ml.trainer | [69/131] per_stock KHOT
+2026-05-13 22:20:17,488 | INFO | app.services.eagle_eye.ml.trainer | [70/131] per_stock KIB
+2026-05-13 22:20:17,501 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:17,501 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:17,541 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:17,542 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:17,567 | INFO | app.services.eagle_eye.ml.trainer | [71/131] per_stock KINS
+2026-05-13 22:20:17,580 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:17,617 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:17,618 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:17,618 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:17,679 | INFO | app.services.eagle_eye.ml.trainer | [72/131] per_stock KINV
+2026-05-13 22:20:17,691 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:17,692 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:17,692 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:17,889 | INFO | app.services.eagle_eye.ml.trainer | [73/131] per_stock KMEFIC
+2026-05-13 22:20:18,142 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:18,142 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:18,231 | INFO | app.services.eagle_eye.ml.trainer | [74/131] per_stock KPPC
+2026-05-13 22:20:18,289 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:18,289 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:18,330 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:18,389 | INFO | app.services.eagle_eye.ml.trainer | [75/131] per_stock KPROJ
+2026-05-13 22:20:18,434 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:18,435 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:18,478 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:18,500 | INFO | app.services.eagle_eye.ml.trainer | [76/131] per_stock KRE
+2026-05-13 22:20:18,513 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:18,549 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:18,549 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:18,549 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:18,582 | INFO | app.services.eagle_eye.ml.trainer | [77/131] per_stock KUWAITRE
+2026-05-13 22:20:18,594 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:18,628 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:18,629 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:18,741 | INFO | app.services.eagle_eye.ml.trainer | [78/131] per_stock MABANEE
+2026-05-13 22:20:18,755 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:18,756 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:18,756 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:18,797 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:18,863 | INFO | app.services.eagle_eye.ml.trainer | [79/131] per_stock MADAR
+2026-05-13 22:20:19,078 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:19,080 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:19,148 | INFO | app.services.eagle_eye.ml.trainer | [80/131] per_stock MANAZEL
+2026-05-13 22:20:19,301 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:19,452 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:19,540 | INFO | app.services.eagle_eye.ml.trainer | [81/131] per_stock MARAKEZ
+2026-05-13 22:20:19,552 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:19,552 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:19,587 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:19,737 | INFO | app.services.eagle_eye.ml.trainer | [82/131] per_stock MARKAZ
+2026-05-13 22:20:19,821 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:19,821 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:19,822 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:20,050 | INFO | app.services.eagle_eye.ml.trainer | [83/131] per_stock MASAKEN
+2026-05-13 22:20:20,197 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:20,433 | INFO | app.services.eagle_eye.ml.trainer | [84/131] per_stock MASHAER
+2026-05-13 22:20:20,447 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:20,564 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:20,564 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:20,585 | INFO | app.services.eagle_eye.ml.trainer | [85/131] per_stock MAZAYA
+2026-05-13 22:20:20,598 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:20,730 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:20,730 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:20,799 | INFO | app.services.eagle_eye.ml.trainer | [86/131] per_stock MENA
+2026-05-13 22:20:20,810 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:20,847 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:20,847 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:20,972 | INFO | app.services.eagle_eye.ml.trainer | [87/131] per_stock MEZZAN
+2026-05-13 22:20:20,999 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:20,999 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:20,999 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:21,041 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:21,103 | INFO | app.services.eagle_eye.ml.trainer | [88/131] per_stock MKHZN
+2026-05-13 22:20:21,149 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:21,149 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:21,150 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:21,150 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:21,211 | INFO | app.services.eagle_eye.ml.trainer | [89/131] per_stock MRC
+2026-05-13 22:20:21,430 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:21,431 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:21,508 | INFO | app.services.eagle_eye.ml.trainer | [90/131] per_stock MUBARRAD
+2026-05-13 22:20:21,602 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:21,683 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:21,684 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:21,786 | INFO | app.services.eagle_eye.ml.trainer | [91/131] per_stock MUNSHAAT
+2026-05-13 22:20:21,796 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:21,924 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:22,086 | INFO | app.services.eagle_eye.ml.trainer | [92/131] per_stock MUNTAZAHAT
+2026-05-13 22:20:22,098 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:22,137 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:22,138 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:22,138 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:22,213 | INFO | app.services.eagle_eye.ml.trainer | [93/131] per_stock NAPESCO
+2026-05-13 22:20:22,257 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:22,258 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:22,258 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:22,378 | INFO | app.services.eagle_eye.ml.trainer | [94/131] per_stock NBK
+2026-05-13 22:20:22,399 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:22,456 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:22,456 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:22,483 | INFO | app.services.eagle_eye.ml.trainer | [95/131] per_stock NCCI
+2026-05-13 22:20:22,495 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:22,533 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:22,585 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:22,663 | INFO | app.services.eagle_eye.ml.trainer | [96/131] per_stock NICBM
+2026-05-13 22:20:22,677 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:22,762 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:22,863 | INFO | app.services.eagle_eye.ml.trainer | [97/131] per_stock NIH
+2026-05-13 22:20:22,877 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:22,930 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:22,930 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:22,931 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:22,999 | INFO | app.services.eagle_eye.ml.trainer | [98/131] per_stock NIND
+2026-05-13 22:20:23,010 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:23,439 | INFO | app.services.eagle_eye.ml.trainer | [99/131] per_stock NINV
+2026-05-13 22:20:23,520 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:23,520 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:23,625 | INFO | app.services.eagle_eye.ml.trainer | [100/131] per_stock NOOR
+2026-05-13 22:20:23,639 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:23,677 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:23,678 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:23,678 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:23,698 | INFO | app.services.eagle_eye.ml.trainer | [101/131] per_stock NRE
+2026-05-13 22:20:23,816 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:23,857 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:24,156 | INFO | app.services.eagle_eye.ml.trainer | [102/131] per_stock OOREDOO
+2026-05-13 22:20:24,167 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:24,167 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:24,527 | INFO | app.services.eagle_eye.ml.trainer | [103/131] per_stock OSOS
+2026-05-13 22:20:24,540 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:24,542 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:24,542 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:24,543 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:24,543 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:24,555 | INFO | app.services.eagle_eye.ml.trainer | [104/131] per_stock OSOUL
+2026-05-13 22:20:24,612 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:24,612 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:24,613 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:24,879 | INFO | app.services.eagle_eye.ml.trainer | [105/131] per_stock OULAFUEL
+2026-05-13 22:20:24,891 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:25,021 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:25,115 | INFO | app.services.eagle_eye.ml.trainer | [106/131] per_stock PAPCO
+2026-05-13 22:20:25,127 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:25,128 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:25,174 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:25,174 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:25,196 | INFO | app.services.eagle_eye.ml.trainer | [107/131] per_stock PAPER
+2026-05-13 22:20:25,466 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:25,675 | INFO | app.services.eagle_eye.ml.trainer | [108/131] per_stock QIC
+2026-05-13 22:20:25,690 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:25,691 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:25,691 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:25,691 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:25,691 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:25,703 | INFO | app.services.eagle_eye.ml.trainer | [109/131] per_stock RASIYAT
+2026-05-13 22:20:25,713 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:25,714 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:25,752 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:25,913 | INFO | app.services.eagle_eye.ml.trainer | [110/131] per_stock SANAM
+2026-05-13 22:20:26,092 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:26,093 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:26,215 | INFO | app.services.eagle_eye.ml.trainer | [111/131] per_stock SECH
+2026-05-13 22:20:26,230 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:26,278 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:26,531 | INFO | app.services.eagle_eye.ml.trainer | [112/131] per_stock SENERGY
+2026-05-13 22:20:26,542 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:26,627 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:26,716 | INFO | app.services.eagle_eye.ml.trainer | [113/131] per_stock SHIP
+2026-05-13 22:20:26,732 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:26,779 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:26,779 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:26,779 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:26,835 | INFO | app.services.eagle_eye.ml.trainer | [114/131] per_stock SOKOUK
+2026-05-13 22:20:26,846 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:27,119 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:27,119 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:27,273 | INFO | app.services.eagle_eye.ml.trainer | [115/131] per_stock SOOR
+2026-05-13 22:20:27,456 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:27,456 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:27,530 | INFO | app.services.eagle_eye.ml.trainer | [116/131] per_stock SPEC
+2026-05-13 22:20:27,544 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:27,584 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:27,584 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:27,584 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:27,606 | INFO | app.services.eagle_eye.ml.trainer | [117/131] per_stock STC
+2026-05-13 22:20:27,620 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:27,651 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:27,651 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:27,652 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:27,672 | INFO | app.services.eagle_eye.ml.trainer | [118/131] per_stock TAHSSILAT
+2026-05-13 22:20:27,918 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:27,918 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:28,044 | INFO | app.services.eagle_eye.ml.trainer | [119/131] per_stock TAM
+2026-05-13 22:20:28,056 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:28,057 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:28,120 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:28,266 | INFO | app.services.eagle_eye.ml.trainer | [120/131] per_stock TAMINV
+2026-05-13 22:20:28,278 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:28,279 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:28,312 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:28,393 | INFO | app.services.eagle_eye.ml.trainer | [121/131] per_stock THURAYA
+2026-05-13 22:20:28,407 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:28,407 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:28,407 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:28,407 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:28,529 | INFO | app.services.eagle_eye.ml.trainer | [122/131] per_stock TIJARA
+2026-05-13 22:20:28,728 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:28,728 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:28,729 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:28,850 | INFO | app.services.eagle_eye.ml.trainer | [123/131] per_stock UNICAP
+2026-05-13 22:20:29,197 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:29,292 | INFO | app.services.eagle_eye.ml.trainer | [124/131] per_stock UPAC
+2026-05-13 22:20:29,408 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:29,408 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:29,531 | INFO | app.services.eagle_eye.ml.trainer | [125/131] per_stock URC
+2026-05-13 22:20:29,624 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:29,624 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:29,778 | INFO | app.services.eagle_eye.ml.trainer | [126/131] per_stock VALMORE
+2026-05-13 22:20:29,790 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:29,790 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:29,824 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:29,824 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:29,900 | INFO | app.services.eagle_eye.ml.trainer | [127/131] per_stock WARBABANK
+2026-05-13 22:20:29,911 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:29,911 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:29,950 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:30,182 | INFO | app.services.eagle_eye.ml.trainer | [128/131] per_stock WARBACAP
+2026-05-13 22:20:30,244 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:30,244 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:30,390 | INFO | app.services.eagle_eye.ml.trainer | [129/131] per_stock WETHAQ
+2026-05-13 22:20:30,404 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:30,477 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:30,477 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:30,477 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:30,563 | INFO | app.services.eagle_eye.ml.trainer | [130/131] per_stock WINSRE
+2026-05-13 22:20:30,635 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:30,635 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:30,635 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:30,635 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:30,700 | INFO | app.services.eagle_eye.ml.trainer | [131/131] per_stock ZAIN
+2026-05-13 22:20:30,789 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:30,818 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:30,951 | INFO | app.services.eagle_eye.ml.trainer | [1/3] per_sector holding_misc
+2026-05-13 22:20:30,955 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:30,992 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:31,039 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:31,120 | INFO | app.services.eagle_eye.ml.trainer | [2/3] per_sector insurance
+2026-05-13 22:20:31,157 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:20:31,192 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:31,311 | INFO | app.services.eagle_eye.ml.trainer | [3/3] per_sector real_estate
+2026-05-13 22:20:31,317 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:20:31,344 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:20:31,344 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:20:31,344 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:20:42,078 | INFO | app.services.eagle_eye.ml.trainer | Training run complete in 6063.5s
+2026-05-13 22:22:14,997 | INFO | __main__ | Starting Eagle Eye ML train_cli (tier=all)
+2026-05-13 22:22:15,001 | INFO | app.services.eagle_eye.ml.trainer | Loading cached event features: C:\Users\Sager\OneDrive\Desktop\portfolio_app\mobile-migration\backend-api\ml_models\cache\event_features_latest.pkl
+2026-05-13 22:22:15,112 | INFO | app.services.eagle_eye.ml.trainer | [1/131] per_stock AAYAN
+2026-05-13 22:22:15,709 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:15,791 | INFO | app.services.eagle_eye.ml.trainer | [2/131] per_stock AAYANRE
+2026-05-13 22:22:15,800 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:15,800 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:15,801 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:15,801 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:15,922 | INFO | app.services.eagle_eye.ml.trainer | [3/131] per_stock ABAR
+2026-05-13 22:22:15,934 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:16,069 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:16,071 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:16,300 | INFO | app.services.eagle_eye.ml.trainer | [4/131] per_stock ABK
+2026-05-13 22:22:16,407 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:16,494 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:16,568 | INFO | app.services.eagle_eye.ml.trainer | [5/131] per_stock ACICO
+2026-05-13 22:22:16,577 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:16,579 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:16,723 | INFO | app.services.eagle_eye.ml.trainer | [6/131] per_stock AINS
+2026-05-13 22:22:16,732 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:16,815 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:16,816 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:16,916 | INFO | app.services.eagle_eye.ml.trainer | [7/131] per_stock ALAQARIA
+2026-05-13 22:22:17,057 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:17,057 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:17,082 | INFO | app.services.eagle_eye.ml.trainer | [8/131] per_stock ALDEERA
+2026-05-13 22:22:17,093 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:17,093 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:17,093 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:17,094 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:17,094 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:17,107 | INFO | app.services.eagle_eye.ml.trainer | [9/131] per_stock ALEID
+2026-05-13 22:22:17,115 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:17,116 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:17,116 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:17,116 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:17,206 | INFO | app.services.eagle_eye.ml.trainer | [10/131] per_stock ALG
+2026-05-13 22:22:17,215 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:17,215 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:17,392 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:17,483 | INFO | app.services.eagle_eye.ml.trainer | [11/131] per_stock ALIMTIAZ
+2026-05-13 22:22:17,493 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:17,533 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:17,534 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:17,534 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:17,601 | INFO | app.services.eagle_eye.ml.trainer | [12/131] per_stock ALKOUT
+2026-05-13 22:22:17,702 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:17,702 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:17,703 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:17,760 | INFO | app.services.eagle_eye.ml.trainer | [13/131] per_stock ALMANAR
+2026-05-13 22:22:17,767 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:17,767 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:17,805 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:18,009 | INFO | app.services.eagle_eye.ml.trainer | [14/131] per_stock ALOLA
+2026-05-13 22:22:18,021 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:18,145 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:18,146 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:18,224 | INFO | app.services.eagle_eye.ml.trainer | [15/131] per_stock ALSAFAT
+2026-05-13 22:22:18,234 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:18,235 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:18,235 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:18,289 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:18,367 | INFO | app.services.eagle_eye.ml.trainer | [16/131] per_stock ALTIJARIA
+2026-05-13 22:22:18,378 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:18,422 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:18,487 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:18,567 | INFO | app.services.eagle_eye.ml.trainer | [17/131] per_stock AMAR
+2026-05-13 22:22:18,576 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:18,576 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:18,577 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:18,577 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:18,577 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:18,589 | INFO | app.services.eagle_eye.ml.trainer | [18/131] per_stock AQAR
+2026-05-13 22:22:18,599 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:18,702 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:18,703 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:18,703 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:18,849 | INFO | app.services.eagle_eye.ml.trainer | [19/131] per_stock ARABREC
+2026-05-13 22:22:19,144 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:19,219 | INFO | app.services.eagle_eye.ml.trainer | [20/131] per_stock AREEC
+2026-05-13 22:22:19,227 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:19,266 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:19,266 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:19,377 | INFO | app.services.eagle_eye.ml.trainer | [21/131] per_stock ARGAN
+2026-05-13 22:22:19,388 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:19,509 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:19,509 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:19,588 | INFO | app.services.eagle_eye.ml.trainer | [22/131] per_stock ARKAN
+2026-05-13 22:22:19,601 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:19,935 | INFO | app.services.eagle_eye.ml.trainer | [23/131] per_stock ARZAN
+2026-05-13 22:22:20,069 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:20,108 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:20,109 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:20,214 | INFO | app.services.eagle_eye.ml.trainer | [24/131] per_stock ASC
+2026-05-13 22:22:20,225 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:20,267 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:20,268 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:20,425 | INFO | app.services.eagle_eye.ml.trainer | [25/131] per_stock ASIYA
+2026-05-13 22:22:20,433 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:20,575 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:20,829 | INFO | app.services.eagle_eye.ml.trainer | [26/131] per_stock ATC
+2026-05-13 22:22:20,839 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:20,945 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:20,946 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:20,966 | INFO | app.services.eagle_eye.ml.trainer | [27/131] per_stock AZNOULA
+2026-05-13 22:22:20,977 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:20,978 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:20,978 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:20,978 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:21,161 | INFO | app.services.eagle_eye.ml.trainer | [28/131] per_stock BAYANINV
+2026-05-13 22:22:21,171 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:21,171 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:21,289 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:21,413 | INFO | app.services.eagle_eye.ml.trainer | [29/131] per_stock BOUBYAN
+2026-05-13 22:22:21,422 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:21,422 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:21,502 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:21,503 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:21,583 | INFO | app.services.eagle_eye.ml.trainer | [30/131] per_stock BOURSA
+2026-05-13 22:22:21,744 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:21,744 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:21,976 | INFO | app.services.eagle_eye.ml.trainer | [31/131] per_stock BURG
+2026-05-13 22:22:21,985 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:21,985 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:21,985 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:21,986 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:22,084 | INFO | app.services.eagle_eye.ml.trainer | [32/131] per_stock CABLE
+2026-05-13 22:22:22,093 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:22,093 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:22,128 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:22,129 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:22,192 | INFO | app.services.eagle_eye.ml.trainer | [33/131] per_stock CATTL
+2026-05-13 22:22:22,201 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:22,201 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:22,239 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:22,239 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:22,263 | INFO | app.services.eagle_eye.ml.trainer | [34/131] per_stock CBK
+2026-05-13 22:22:22,270 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:22,343 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:22,344 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:22,403 | INFO | app.services.eagle_eye.ml.trainer | [35/131] per_stock CGC
+2026-05-13 22:22:22,493 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:22,649 | INFO | app.services.eagle_eye.ml.trainer | [36/131] per_stock CLEANING
+2026-05-13 22:22:22,661 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:22,752 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:22,752 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:23,127 | INFO | app.services.eagle_eye.ml.trainer | [37/131] per_stock COAST
+2026-05-13 22:22:23,137 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:23,138 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:23,188 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:23,188 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:23,249 | INFO | app.services.eagle_eye.ml.trainer | [38/131] per_stock DALQANRE
+2026-05-13 22:22:23,260 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:23,506 | INFO | app.services.eagle_eye.ml.trainer | [39/131] per_stock DIGITUS
+2026-05-13 22:22:23,514 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:23,675 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:23,746 | INFO | app.services.eagle_eye.ml.trainer | [40/131] per_stock EKTTITAB
+2026-05-13 22:22:23,756 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:23,857 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:23,857 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:23,881 | INFO | app.services.eagle_eye.ml.trainer | [41/131] per_stock EMIRATES
+2026-05-13 22:22:23,955 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:23,992 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:23,993 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:24,061 | INFO | app.services.eagle_eye.ml.trainer | [42/131] per_stock ENERGYH
+2026-05-13 22:22:24,305 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:24,376 | INFO | app.services.eagle_eye.ml.trainer | [43/131] per_stock EQUIPMENT
+2026-05-13 22:22:24,388 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:24,603 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:24,786 | INFO | app.services.eagle_eye.ml.trainer | [44/131] per_stock ERESCO
+2026-05-13 22:22:24,961 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:25,049 | INFO | app.services.eagle_eye.ml.trainer | [45/131] per_stock FACIL
+2026-05-13 22:22:25,060 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:25,063 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:25,064 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:25,064 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:25,129 | INFO | app.services.eagle_eye.ml.trainer | [46/131] per_stock FTI
+2026-05-13 22:22:25,138 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:25,259 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:25,259 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:25,285 | INFO | app.services.eagle_eye.ml.trainer | [47/131] per_stock FUTUREKID
+2026-05-13 22:22:25,293 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:25,549 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:25,550 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:25,681 | INFO | app.services.eagle_eye.ml.trainer | [48/131] per_stock GBK
+2026-05-13 22:22:25,868 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:25,868 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:25,943 | INFO | app.services.eagle_eye.ml.trainer | [49/131] per_stock GFC
+2026-05-13 22:22:25,951 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:26,026 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:26,026 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:26,085 | INFO | app.services.eagle_eye.ml.trainer | [50/131] per_stock GFH
+2026-05-13 22:22:26,172 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:26,224 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:26,225 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:26,388 | INFO | app.services.eagle_eye.ml.trainer | [51/131] per_stock GIH
+2026-05-13 22:22:26,574 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:26,575 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:26,717 | INFO | app.services.eagle_eye.ml.trainer | [52/131] per_stock HUMANSOFT
+2026-05-13 22:22:26,764 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:26,795 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:26,795 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:26,842 | INFO | app.services.eagle_eye.ml.trainer | [53/131] per_stock IFA
+2026-05-13 22:22:26,991 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:26,992 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:26,992 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:27,073 | INFO | app.services.eagle_eye.ml.trainer | [54/131] per_stock IFAHR
+2026-05-13 22:22:27,081 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:27,081 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:27,082 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:27,082 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:27,182 | INFO | app.services.eagle_eye.ml.trainer | [55/131] per_stock INJAZZAT
+2026-05-13 22:22:27,275 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:27,276 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:27,276 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:27,347 | INFO | app.services.eagle_eye.ml.trainer | [56/131] per_stock INOVEST
+2026-05-13 22:22:28,156 | INFO | app.services.eagle_eye.ml.trainer | [57/131] per_stock INTEGRATED
+2026-05-13 22:22:28,200 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:28,200 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:28,377 | INFO | app.services.eagle_eye.ml.trainer | [58/131] per_stock IPG
+2026-05-13 22:22:28,499 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:28,633 | INFO | app.services.eagle_eye.ml.trainer | [59/131] per_stock JAZEERA
+2026-05-13 22:22:28,642 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:28,642 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:28,678 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:28,763 | INFO | app.services.eagle_eye.ml.trainer | [60/131] per_stock JTC
+2026-05-13 22:22:28,772 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:28,772 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:28,772 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:28,773 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:28,898 | INFO | app.services.eagle_eye.ml.trainer | [61/131] per_stock KAMCO
+2026-05-13 22:22:28,908 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:29,040 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:29,109 | INFO | app.services.eagle_eye.ml.trainer | [62/131] per_stock KBT
+2026-05-13 22:22:29,266 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:29,444 | INFO | app.services.eagle_eye.ml.trainer | [63/131] per_stock KCEM
+2026-05-13 22:22:29,455 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:29,506 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:29,754 | INFO | app.services.eagle_eye.ml.trainer | [64/131] per_stock KCIN
+2026-05-13 22:22:29,832 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:29,832 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:29,832 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:29,833 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:29,901 | INFO | app.services.eagle_eye.ml.trainer | [65/131] per_stock KCPC
+2026-05-13 22:22:29,908 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:29,909 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:29,910 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:30,255 | INFO | app.services.eagle_eye.ml.trainer | [66/131] per_stock KFIC
+2026-05-13 22:22:30,264 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:30,329 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:30,329 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:30,355 | INFO | app.services.eagle_eye.ml.trainer | [67/131] per_stock KFOUC
+2026-05-13 22:22:30,404 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:30,404 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:30,569 | INFO | app.services.eagle_eye.ml.trainer | [68/131] per_stock KGL
+2026-05-13 22:22:30,610 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:30,698 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:30,802 | INFO | app.services.eagle_eye.ml.trainer | [69/131] per_stock KHOT
+2026-05-13 22:22:31,069 | INFO | app.services.eagle_eye.ml.trainer | [70/131] per_stock KIB
+2026-05-13 22:22:31,084 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:31,084 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:31,119 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:31,120 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:31,156 | INFO | app.services.eagle_eye.ml.trainer | [71/131] per_stock KINS
+2026-05-13 22:22:31,169 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:31,209 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:31,209 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:31,209 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:31,278 | INFO | app.services.eagle_eye.ml.trainer | [72/131] per_stock KINV
+2026-05-13 22:22:31,285 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:31,286 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:31,286 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:31,492 | INFO | app.services.eagle_eye.ml.trainer | [73/131] per_stock KMEFIC
+2026-05-13 22:22:31,739 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:31,739 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:31,839 | INFO | app.services.eagle_eye.ml.trainer | [74/131] per_stock KPPC
+2026-05-13 22:22:31,890 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:31,891 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:31,937 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:32,130 | INFO | app.services.eagle_eye.ml.trainer | [75/131] per_stock KPROJ
+2026-05-13 22:22:32,214 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:32,214 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:32,322 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:32,354 | INFO | app.services.eagle_eye.ml.trainer | [76/131] per_stock KRE
+2026-05-13 22:22:32,363 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:32,403 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:32,403 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:32,404 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:32,425 | INFO | app.services.eagle_eye.ml.trainer | [77/131] per_stock KUWAITRE
+2026-05-13 22:22:32,432 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:32,463 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:32,464 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:32,558 | INFO | app.services.eagle_eye.ml.trainer | [78/131] per_stock MABANEE
+2026-05-13 22:22:32,565 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:32,569 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:32,570 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:32,608 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:32,657 | INFO | app.services.eagle_eye.ml.trainer | [79/131] per_stock MADAR
+2026-05-13 22:22:32,826 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:32,826 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:32,891 | INFO | app.services.eagle_eye.ml.trainer | [80/131] per_stock MANAZEL
+2026-05-13 22:22:33,033 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:33,182 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:33,271 | INFO | app.services.eagle_eye.ml.trainer | [81/131] per_stock MARAKEZ
+2026-05-13 22:22:33,280 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:33,281 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:33,318 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:33,506 | INFO | app.services.eagle_eye.ml.trainer | [82/131] per_stock MARKAZ
+2026-05-13 22:22:33,581 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:33,581 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:33,581 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:33,805 | INFO | app.services.eagle_eye.ml.trainer | [83/131] per_stock MASAKEN
+2026-05-13 22:22:33,970 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:34,240 | INFO | app.services.eagle_eye.ml.trainer | [84/131] per_stock MASHAER
+2026-05-13 22:22:34,251 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:34,364 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:34,364 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:34,387 | INFO | app.services.eagle_eye.ml.trainer | [85/131] per_stock MAZAYA
+2026-05-13 22:22:34,394 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:34,540 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:34,540 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:34,637 | INFO | app.services.eagle_eye.ml.trainer | [86/131] per_stock MENA
+2026-05-13 22:22:34,645 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:34,690 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:34,690 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:34,809 | INFO | app.services.eagle_eye.ml.trainer | [87/131] per_stock MEZZAN
+2026-05-13 22:22:34,818 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:34,818 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:34,818 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:34,859 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:34,915 | INFO | app.services.eagle_eye.ml.trainer | [88/131] per_stock MKHZN
+2026-05-13 22:22:34,953 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:34,954 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:34,954 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:34,954 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:35,010 | INFO | app.services.eagle_eye.ml.trainer | [89/131] per_stock MRC
+2026-05-13 22:22:35,216 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:35,216 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:35,295 | INFO | app.services.eagle_eye.ml.trainer | [90/131] per_stock MUBARRAD
+2026-05-13 22:22:35,387 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:35,464 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:35,464 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:35,561 | INFO | app.services.eagle_eye.ml.trainer | [91/131] per_stock MUNSHAAT
+2026-05-13 22:22:35,570 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:35,701 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:35,887 | INFO | app.services.eagle_eye.ml.trainer | [92/131] per_stock MUNTAZAHAT
+2026-05-13 22:22:35,894 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:35,927 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:35,928 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:35,928 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:35,996 | INFO | app.services.eagle_eye.ml.trainer | [93/131] per_stock NAPESCO
+2026-05-13 22:22:36,037 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:36,038 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:36,038 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:36,141 | INFO | app.services.eagle_eye.ml.trainer | [94/131] per_stock NBK
+2026-05-13 22:22:36,150 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:36,216 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:36,216 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:36,236 | INFO | app.services.eagle_eye.ml.trainer | [95/131] per_stock NCCI
+2026-05-13 22:22:36,246 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:36,285 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:36,347 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:36,403 | INFO | app.services.eagle_eye.ml.trainer | [96/131] per_stock NICBM
+2026-05-13 22:22:36,408 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:36,493 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:36,592 | INFO | app.services.eagle_eye.ml.trainer | [97/131] per_stock NIH
+2026-05-13 22:22:36,604 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:36,657 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:36,657 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:36,657 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:36,722 | INFO | app.services.eagle_eye.ml.trainer | [98/131] per_stock NIND
+2026-05-13 22:22:36,729 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:37,171 | INFO | app.services.eagle_eye.ml.trainer | [99/131] per_stock NINV
+2026-05-13 22:22:37,249 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:37,249 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:37,359 | INFO | app.services.eagle_eye.ml.trainer | [100/131] per_stock NOOR
+2026-05-13 22:22:37,368 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:37,406 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:37,406 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:37,406 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:37,428 | INFO | app.services.eagle_eye.ml.trainer | [101/131] per_stock NRE
+2026-05-13 22:22:37,546 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:37,594 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:37,888 | INFO | app.services.eagle_eye.ml.trainer | [102/131] per_stock OOREDOO
+2026-05-13 22:22:37,898 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:37,898 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:38,248 | INFO | app.services.eagle_eye.ml.trainer | [103/131] per_stock OSOS
+2026-05-13 22:22:38,259 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:38,259 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:38,259 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:38,259 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:38,260 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:38,273 | INFO | app.services.eagle_eye.ml.trainer | [104/131] per_stock OSOUL
+2026-05-13 22:22:38,326 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:38,326 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:38,326 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:38,600 | INFO | app.services.eagle_eye.ml.trainer | [105/131] per_stock OULAFUEL
+2026-05-13 22:22:38,608 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:38,743 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:38,819 | INFO | app.services.eagle_eye.ml.trainer | [106/131] per_stock PAPCO
+2026-05-13 22:22:38,830 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:38,830 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:38,888 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:38,888 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:38,910 | INFO | app.services.eagle_eye.ml.trainer | [107/131] per_stock PAPER
+2026-05-13 22:22:39,179 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:39,387 | INFO | app.services.eagle_eye.ml.trainer | [108/131] per_stock QIC
+2026-05-13 22:22:39,396 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:39,396 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:39,396 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:39,396 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:39,397 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:39,408 | INFO | app.services.eagle_eye.ml.trainer | [109/131] per_stock RASIYAT
+2026-05-13 22:22:39,417 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:39,417 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:39,452 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:39,621 | INFO | app.services.eagle_eye.ml.trainer | [110/131] per_stock SANAM
+2026-05-13 22:22:39,781 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:39,781 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:39,897 | INFO | app.services.eagle_eye.ml.trainer | [111/131] per_stock SECH
+2026-05-13 22:22:39,907 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:39,947 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:40,212 | INFO | app.services.eagle_eye.ml.trainer | [112/131] per_stock SENERGY
+2026-05-13 22:22:40,221 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:40,296 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:40,418 | INFO | app.services.eagle_eye.ml.trainer | [113/131] per_stock SHIP
+2026-05-13 22:22:40,429 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:40,477 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:40,477 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:40,478 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:40,534 | INFO | app.services.eagle_eye.ml.trainer | [114/131] per_stock SOKOUK
+2026-05-13 22:22:40,542 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:40,869 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:40,870 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:41,042 | INFO | app.services.eagle_eye.ml.trainer | [115/131] per_stock SOOR
+2026-05-13 22:22:41,229 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:41,229 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:41,310 | INFO | app.services.eagle_eye.ml.trainer | [116/131] per_stock SPEC
+2026-05-13 22:22:41,317 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:41,357 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:41,358 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:41,358 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:41,383 | INFO | app.services.eagle_eye.ml.trainer | [117/131] per_stock STC
+2026-05-13 22:22:41,392 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:41,424 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:41,424 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:41,424 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:41,445 | INFO | app.services.eagle_eye.ml.trainer | [118/131] per_stock TAHSSILAT
+2026-05-13 22:22:41,662 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:41,663 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:41,759 | INFO | app.services.eagle_eye.ml.trainer | [119/131] per_stock TAM
+2026-05-13 22:22:41,769 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:41,769 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:41,842 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:41,996 | INFO | app.services.eagle_eye.ml.trainer | [120/131] per_stock TAMINV
+2026-05-13 22:22:42,004 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:42,009 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:42,044 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:42,131 | INFO | app.services.eagle_eye.ml.trainer | [121/131] per_stock THURAYA
+2026-05-13 22:22:42,142 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:42,142 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:42,142 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:42,142 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:42,246 | INFO | app.services.eagle_eye.ml.trainer | [122/131] per_stock TIJARA
+2026-05-13 22:22:42,433 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:42,434 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:42,434 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:42,542 | INFO | app.services.eagle_eye.ml.trainer | [123/131] per_stock UNICAP
+2026-05-13 22:22:42,826 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:42,901 | INFO | app.services.eagle_eye.ml.trainer | [124/131] per_stock UPAC
+2026-05-13 22:22:43,045 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:43,046 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:43,176 | INFO | app.services.eagle_eye.ml.trainer | [125/131] per_stock URC
+2026-05-13 22:22:43,254 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:43,255 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:43,402 | INFO | app.services.eagle_eye.ml.trainer | [126/131] per_stock VALMORE
+2026-05-13 22:22:43,412 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:43,413 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:43,448 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:43,449 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:43,513 | INFO | app.services.eagle_eye.ml.trainer | [127/131] per_stock WARBABANK
+2026-05-13 22:22:43,519 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:43,519 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:43,559 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:43,722 | INFO | app.services.eagle_eye.ml.trainer | [128/131] per_stock WARBACAP
+2026-05-13 22:22:43,779 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:43,779 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:43,946 | INFO | app.services.eagle_eye.ml.trainer | [129/131] per_stock WETHAQ
+2026-05-13 22:22:43,955 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:44,027 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:44,027 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:44,027 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:44,119 | INFO | app.services.eagle_eye.ml.trainer | [130/131] per_stock WINSRE
+2026-05-13 22:22:44,171 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:44,171 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:44,172 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:44,172 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:44,241 | INFO | app.services.eagle_eye.ml.trainer | [131/131] per_stock ZAIN
+2026-05-13 22:22:44,332 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:44,363 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:44,483 | INFO | app.services.eagle_eye.ml.trainer | [1/11] per_sector banking
+2026-05-13 22:22:45,677 | INFO | app.services.eagle_eye.ml.trainer | [2/11] per_sector consumer
+2026-05-13 22:22:47,126 | INFO | app.services.eagle_eye.ml.trainer | [3/11] per_sector energy
+2026-05-13 22:22:48,855 | INFO | app.services.eagle_eye.ml.trainer | [4/11] per_sector holding_misc
+2026-05-13 22:22:48,860 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:48,898 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:48,945 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:49,020 | INFO | app.services.eagle_eye.ml.trainer | [5/11] per_sector industrial
+2026-05-13 22:22:50,669 | INFO | app.services.eagle_eye.ml.trainer | [6/11] per_sector insurance
+2026-05-13 22:22:50,709 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:22:50,741 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:50,903 | INFO | app.services.eagle_eye.ml.trainer | [7/11] per_sector investment
+2026-05-13 22:22:54,045 | INFO | app.services.eagle_eye.ml.trainer | [8/11] per_sector real_estate
+2026-05-13 22:22:54,052 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:22:54,089 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:54,089 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:54,090 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:22:54,109 | INFO | app.services.eagle_eye.ml.trainer | [9/11] per_sector technology
+2026-05-13 22:22:54,266 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:22:54,268 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:22:54,726 | INFO | app.services.eagle_eye.ml.trainer | [10/11] per_sector telecom
+2026-05-13 22:22:55,202 | INFO | app.services.eagle_eye.ml.trainer | [11/11] per_sector transport
+2026-05-13 22:23:07,606 | INFO | app.services.eagle_eye.ml.trainer | Training run complete in 52.6s
+2026-05-13 22:28:55,641 | INFO | __main__ | Starting Eagle Eye ML train_cli (tier=global)
+2026-05-13 22:28:55,643 | INFO | app.services.eagle_eye.ml.trainer | Loading cached event features: C:\Users\Sager\OneDrive\Desktop\portfolio_app\mobile-migration\backend-api\ml_models\cache\event_features_latest.pkl
+2026-05-13 22:29:05,730 | INFO | app.services.eagle_eye.ml.trainer | Training run complete in 10.1s
+2026-05-13 22:29:27,710 | INFO | __main__ | Starting Eagle Eye ML train_cli (tier=all)
+2026-05-13 22:29:27,713 | INFO | app.services.eagle_eye.ml.trainer | Loading cached event features: C:\Users\Sager\OneDrive\Desktop\portfolio_app\mobile-migration\backend-api\ml_models\cache\event_features_latest.pkl
+2026-05-13 22:29:27,782 | INFO | app.services.eagle_eye.ml.trainer | [1/131] [------------------------]   0.8% per_stock AAYAN
+2026-05-13 22:29:28,050 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:28,117 | INFO | app.services.eagle_eye.ml.trainer | [2/131] [------------------------]   1.5% per_stock AAYANRE
+2026-05-13 22:29:28,126 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:28,127 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:28,127 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:28,127 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:28,241 | INFO | app.services.eagle_eye.ml.trainer | [3/131] [#-----------------------]   2.3% per_stock ABAR
+2026-05-13 22:29:28,250 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:28,363 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:28,363 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:28,438 | INFO | app.services.eagle_eye.ml.trainer | [4/131] [#-----------------------]   3.1% per_stock ABK
+2026-05-13 22:29:28,524 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:28,609 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:28,682 | INFO | app.services.eagle_eye.ml.trainer | [5/131] [#-----------------------]   3.8% per_stock ACICO
+2026-05-13 22:29:28,692 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:28,694 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:28,839 | INFO | app.services.eagle_eye.ml.trainer | [6/131] [#-----------------------]   4.6% per_stock AINS
+2026-05-13 22:29:28,847 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:28,932 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:28,933 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:29,030 | INFO | app.services.eagle_eye.ml.trainer | [7/131] [#-----------------------]   5.3% per_stock ALAQARIA
+2026-05-13 22:29:29,177 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:29,178 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:29,210 | INFO | app.services.eagle_eye.ml.trainer | [8/131] [#-----------------------]   6.1% per_stock ALDEERA
+2026-05-13 22:29:29,223 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:29,223 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:29,224 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:29,224 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:29,225 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:29,238 | INFO | app.services.eagle_eye.ml.trainer | [9/131] [##----------------------]   6.9% per_stock ALEID
+2026-05-13 22:29:29,246 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:29,247 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:29,247 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:29,247 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:29,339 | INFO | app.services.eagle_eye.ml.trainer | [10/131] [##----------------------]   7.6% per_stock ALG
+2026-05-13 22:29:29,349 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:29,349 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:29,512 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:29,687 | INFO | app.services.eagle_eye.ml.trainer | [11/131] [##----------------------]   8.4% per_stock ALIMTIAZ
+2026-05-13 22:29:29,697 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:29,731 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:29,732 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:29,732 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:29,814 | INFO | app.services.eagle_eye.ml.trainer | [12/131] [##----------------------]   9.2% per_stock ALKOUT
+2026-05-13 22:29:29,912 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:29,912 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:29,913 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:29,965 | INFO | app.services.eagle_eye.ml.trainer | [13/131] [##----------------------]   9.9% per_stock ALMANAR
+2026-05-13 22:29:29,977 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:29,978 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:30,012 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:30,198 | INFO | app.services.eagle_eye.ml.trainer | [14/131] [###---------------------]  10.7% per_stock ALOLA
+2026-05-13 22:29:30,207 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:30,331 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:30,331 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:30,541 | INFO | app.services.eagle_eye.ml.trainer | [15/131] [###---------------------]  11.5% per_stock ALSAFAT
+2026-05-13 22:29:30,550 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:30,550 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:30,550 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:30,605 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:30,706 | INFO | app.services.eagle_eye.ml.trainer | [16/131] [###---------------------]  12.2% per_stock ALTIJARIA
+2026-05-13 22:29:30,717 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:30,766 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:30,809 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:30,886 | INFO | app.services.eagle_eye.ml.trainer | [17/131] [###---------------------]  13.0% per_stock AMAR
+2026-05-13 22:29:30,894 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:30,894 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:30,894 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:30,894 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:30,895 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:30,906 | INFO | app.services.eagle_eye.ml.trainer | [18/131] [###---------------------]  13.7% per_stock AQAR
+2026-05-13 22:29:30,914 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:31,013 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:31,013 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:31,013 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:31,180 | INFO | app.services.eagle_eye.ml.trainer | [19/131] [###---------------------]  14.5% per_stock ARABREC
+2026-05-13 22:29:31,459 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:31,532 | INFO | app.services.eagle_eye.ml.trainer | [20/131] [####--------------------]  15.3% per_stock AREEC
+2026-05-13 22:29:31,540 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:31,577 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:31,578 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:31,681 | INFO | app.services.eagle_eye.ml.trainer | [21/131] [####--------------------]  16.0% per_stock ARGAN
+2026-05-13 22:29:31,689 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:31,882 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:31,882 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:31,977 | INFO | app.services.eagle_eye.ml.trainer | [22/131] [####--------------------]  16.8% per_stock ARKAN
+2026-05-13 22:29:31,989 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:32,321 | INFO | app.services.eagle_eye.ml.trainer | [23/131] [####--------------------]  17.6% per_stock ARZAN
+2026-05-13 22:29:32,438 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:32,477 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:32,478 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:32,583 | INFO | app.services.eagle_eye.ml.trainer | [24/131] [####--------------------]  18.3% per_stock ASC
+2026-05-13 22:29:32,594 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:32,632 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:32,633 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:32,796 | INFO | app.services.eagle_eye.ml.trainer | [25/131] [#####-------------------]  19.1% per_stock ASIYA
+2026-05-13 22:29:32,803 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:32,907 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:33,076 | INFO | app.services.eagle_eye.ml.trainer | [26/131] [#####-------------------]  19.8% per_stock ATC
+2026-05-13 22:29:33,084 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:33,185 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:33,186 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:33,210 | INFO | app.services.eagle_eye.ml.trainer | [27/131] [#####-------------------]  20.6% per_stock AZNOULA
+2026-05-13 22:29:33,219 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:33,219 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:33,219 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:33,219 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:33,377 | INFO | app.services.eagle_eye.ml.trainer | [28/131] [#####-------------------]  21.4% per_stock BAYANINV
+2026-05-13 22:29:33,387 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:33,387 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:33,487 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:33,616 | INFO | app.services.eagle_eye.ml.trainer | [29/131] [#####-------------------]  22.1% per_stock BOUBYAN
+2026-05-13 22:29:33,623 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:33,623 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:33,697 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:33,698 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:33,780 | INFO | app.services.eagle_eye.ml.trainer | [30/131] [#####-------------------]  22.9% per_stock BOURSA
+2026-05-13 22:29:33,928 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:33,928 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:34,170 | INFO | app.services.eagle_eye.ml.trainer | [31/131] [######------------------]  23.7% per_stock BURG
+2026-05-13 22:29:34,180 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:34,180 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:34,180 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:34,181 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:34,291 | INFO | app.services.eagle_eye.ml.trainer | [32/131] [######------------------]  24.4% per_stock CABLE
+2026-05-13 22:29:34,299 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:34,300 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:34,331 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:34,332 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:34,389 | INFO | app.services.eagle_eye.ml.trainer | [33/131] [######------------------]  25.2% per_stock CATTL
+2026-05-13 22:29:34,397 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:34,398 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:34,429 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:34,430 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:34,450 | INFO | app.services.eagle_eye.ml.trainer | [34/131] [######------------------]  26.0% per_stock CBK
+2026-05-13 22:29:34,457 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:34,531 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:34,532 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:34,592 | INFO | app.services.eagle_eye.ml.trainer | [35/131] [######------------------]  26.7% per_stock CGC
+2026-05-13 22:29:34,668 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:34,812 | INFO | app.services.eagle_eye.ml.trainer | [36/131] [#######-----------------]  27.5% per_stock CLEANING
+2026-05-13 22:29:34,823 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:34,913 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:34,914 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:35,239 | INFO | app.services.eagle_eye.ml.trainer | [37/131] [#######-----------------]  28.2% per_stock COAST
+2026-05-13 22:29:35,251 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:35,252 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:35,315 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:35,316 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:35,384 | INFO | app.services.eagle_eye.ml.trainer | [38/131] [#######-----------------]  29.0% per_stock DALQANRE
+2026-05-13 22:29:35,392 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:35,627 | INFO | app.services.eagle_eye.ml.trainer | [39/131] [#######-----------------]  29.8% per_stock DIGITUS
+2026-05-13 22:29:35,636 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:35,815 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:35,883 | INFO | app.services.eagle_eye.ml.trainer | [40/131] [#######-----------------]  30.5% per_stock EKTTITAB
+2026-05-13 22:29:35,894 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:35,988 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:35,988 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:36,011 | INFO | app.services.eagle_eye.ml.trainer | [41/131] [########----------------]  31.3% per_stock EMIRATES
+2026-05-13 22:29:36,078 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:36,119 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:36,119 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:36,194 | INFO | app.services.eagle_eye.ml.trainer | [42/131] [########----------------]  32.1% per_stock ENERGYH
+2026-05-13 22:29:36,465 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:36,537 | INFO | app.services.eagle_eye.ml.trainer | [43/131] [########----------------]  32.8% per_stock EQUIPMENT
+2026-05-13 22:29:36,546 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:36,744 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:36,916 | INFO | app.services.eagle_eye.ml.trainer | [44/131] [########----------------]  33.6% per_stock ERESCO
+2026-05-13 22:29:37,095 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:37,164 | INFO | app.services.eagle_eye.ml.trainer | [45/131] [########----------------]  34.4% per_stock FACIL
+2026-05-13 22:29:37,178 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:37,178 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:37,178 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:37,179 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:37,240 | INFO | app.services.eagle_eye.ml.trainer | [46/131] [########----------------]  35.1% per_stock FTI
+2026-05-13 22:29:37,248 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:37,370 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:37,370 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:37,392 | INFO | app.services.eagle_eye.ml.trainer | [47/131] [#########---------------]  35.9% per_stock FUTUREKID
+2026-05-13 22:29:37,401 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:37,668 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:37,668 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:37,804 | INFO | app.services.eagle_eye.ml.trainer | [48/131] [#########---------------]  36.6% per_stock GBK
+2026-05-13 22:29:37,988 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:37,988 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:38,059 | INFO | app.services.eagle_eye.ml.trainer | [49/131] [#########---------------]  37.4% per_stock GFC
+2026-05-13 22:29:38,068 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:38,143 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:38,144 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:38,215 | INFO | app.services.eagle_eye.ml.trainer | [50/131] [#########---------------]  38.2% per_stock GFH
+2026-05-13 22:29:38,309 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:38,353 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:38,353 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:38,454 | INFO | app.services.eagle_eye.ml.trainer | [51/131] [#########---------------]  38.9% per_stock GIH
+2026-05-13 22:29:38,584 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:38,584 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:38,742 | INFO | app.services.eagle_eye.ml.trainer | [52/131] [##########--------------]  39.7% per_stock HUMANSOFT
+2026-05-13 22:29:38,798 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:38,834 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:38,834 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:38,885 | INFO | app.services.eagle_eye.ml.trainer | [53/131] [##########--------------]  40.5% per_stock IFA
+2026-05-13 22:29:39,044 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:39,044 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:39,044 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:39,114 | INFO | app.services.eagle_eye.ml.trainer | [54/131] [##########--------------]  41.2% per_stock IFAHR
+2026-05-13 22:29:39,121 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:39,123 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:39,123 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:39,123 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:39,233 | INFO | app.services.eagle_eye.ml.trainer | [55/131] [##########--------------]  42.0% per_stock INJAZZAT
+2026-05-13 22:29:39,325 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:39,325 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:39,326 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:39,386 | INFO | app.services.eagle_eye.ml.trainer | [56/131] [##########--------------]  42.7% per_stock INOVEST
+2026-05-13 22:29:40,407 | INFO | app.services.eagle_eye.ml.trainer | [57/131] [##########--------------]  43.5% per_stock INTEGRATED
+2026-05-13 22:29:40,448 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:40,449 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:40,628 | INFO | app.services.eagle_eye.ml.trainer | [58/131] [###########-------------]  44.3% per_stock IPG
+2026-05-13 22:29:40,759 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:40,907 | INFO | app.services.eagle_eye.ml.trainer | [59/131] [###########-------------]  45.0% per_stock JAZEERA
+2026-05-13 22:29:40,942 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:40,943 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:40,994 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:41,087 | INFO | app.services.eagle_eye.ml.trainer | [60/131] [###########-------------]  45.8% per_stock JTC
+2026-05-13 22:29:41,094 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:41,094 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:41,094 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:41,095 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:41,204 | INFO | app.services.eagle_eye.ml.trainer | [61/131] [###########-------------]  46.6% per_stock KAMCO
+2026-05-13 22:29:41,213 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:41,351 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:41,417 | INFO | app.services.eagle_eye.ml.trainer | [62/131] [###########-------------]  47.3% per_stock KBT
+2026-05-13 22:29:41,581 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:41,767 | INFO | app.services.eagle_eye.ml.trainer | [63/131] [############------------]  48.1% per_stock KCEM
+2026-05-13 22:29:41,776 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:41,824 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:42,072 | INFO | app.services.eagle_eye.ml.trainer | [64/131] [############------------]  48.9% per_stock KCIN
+2026-05-13 22:29:42,170 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:42,171 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:42,171 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:42,172 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:42,247 | INFO | app.services.eagle_eye.ml.trainer | [65/131] [############------------]  49.6% per_stock KCPC
+2026-05-13 22:29:42,255 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:42,257 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:42,258 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:42,555 | INFO | app.services.eagle_eye.ml.trainer | [66/131] [############------------]  50.4% per_stock KFIC
+2026-05-13 22:29:42,563 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:42,632 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:42,632 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:42,657 | INFO | app.services.eagle_eye.ml.trainer | [67/131] [############------------]  51.1% per_stock KFOUC
+2026-05-13 22:29:42,709 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:42,709 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:42,868 | INFO | app.services.eagle_eye.ml.trainer | [68/131] [############------------]  51.9% per_stock KGL
+2026-05-13 22:29:42,909 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:43,009 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:43,126 | INFO | app.services.eagle_eye.ml.trainer | [69/131] [#############-----------]  52.7% per_stock KHOT
+2026-05-13 22:29:43,432 | INFO | app.services.eagle_eye.ml.trainer | [70/131] [#############-----------]  53.4% per_stock KIB
+2026-05-13 22:29:43,439 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:43,439 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:43,475 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:43,475 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:43,497 | INFO | app.services.eagle_eye.ml.trainer | [71/131] [#############-----------]  54.2% per_stock KINS
+2026-05-13 22:29:43,506 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:43,540 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:43,540 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:43,541 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:43,601 | INFO | app.services.eagle_eye.ml.trainer | [72/131] [#############-----------]  55.0% per_stock KINV
+2026-05-13 22:29:43,608 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:43,609 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:43,609 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:43,829 | INFO | app.services.eagle_eye.ml.trainer | [73/131] [#############-----------]  55.7% per_stock KMEFIC
+2026-05-13 22:29:44,066 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:44,066 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:44,162 | INFO | app.services.eagle_eye.ml.trainer | [74/131] [##############----------]  56.5% per_stock KPPC
+2026-05-13 22:29:44,211 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:44,212 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:44,258 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:44,332 | INFO | app.services.eagle_eye.ml.trainer | [75/131] [##############----------]  57.3% per_stock KPROJ
+2026-05-13 22:29:44,394 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:44,395 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:44,443 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:44,464 | INFO | app.services.eagle_eye.ml.trainer | [76/131] [##############----------]  58.0% per_stock KRE
+2026-05-13 22:29:44,472 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:44,522 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:44,523 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:44,523 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:44,549 | INFO | app.services.eagle_eye.ml.trainer | [77/131] [##############----------]  58.8% per_stock KUWAITRE
+2026-05-13 22:29:44,560 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:44,590 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:44,590 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:44,686 | INFO | app.services.eagle_eye.ml.trainer | [78/131] [##############----------]  59.5% per_stock MABANEE
+2026-05-13 22:29:44,694 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:44,694 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:44,695 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:44,737 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:44,789 | INFO | app.services.eagle_eye.ml.trainer | [79/131] [##############----------]  60.3% per_stock MADAR
+2026-05-13 22:29:44,966 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:44,967 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:45,032 | INFO | app.services.eagle_eye.ml.trainer | [80/131] [###############---------]  61.1% per_stock MANAZEL
+2026-05-13 22:29:45,183 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:45,371 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:45,459 | INFO | app.services.eagle_eye.ml.trainer | [81/131] [###############---------]  61.8% per_stock MARAKEZ
+2026-05-13 22:29:45,479 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:45,479 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:45,535 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:45,719 | INFO | app.services.eagle_eye.ml.trainer | [82/131] [###############---------]  62.6% per_stock MARKAZ
+2026-05-13 22:29:45,793 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:45,793 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:45,794 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:46,033 | INFO | app.services.eagle_eye.ml.trainer | [83/131] [###############---------]  63.4% per_stock MASAKEN
+2026-05-13 22:29:46,170 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:46,408 | INFO | app.services.eagle_eye.ml.trainer | [84/131] [###############---------]  64.1% per_stock MASHAER
+2026-05-13 22:29:46,417 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:46,543 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:46,544 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:46,571 | INFO | app.services.eagle_eye.ml.trainer | [85/131] [################--------]  64.9% per_stock MAZAYA
+2026-05-13 22:29:46,580 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:46,739 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:46,740 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:46,811 | INFO | app.services.eagle_eye.ml.trainer | [86/131] [################--------]  65.6% per_stock MENA
+2026-05-13 22:29:46,818 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:46,852 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:46,852 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:46,974 | INFO | app.services.eagle_eye.ml.trainer | [87/131] [################--------]  66.4% per_stock MEZZAN
+2026-05-13 22:29:46,983 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:46,984 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:46,984 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:47,023 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:47,080 | INFO | app.services.eagle_eye.ml.trainer | [88/131] [################--------]  67.2% per_stock MKHZN
+2026-05-13 22:29:47,119 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:47,119 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:47,119 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:47,120 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:47,177 | INFO | app.services.eagle_eye.ml.trainer | [89/131] [################--------]  67.9% per_stock MRC
+2026-05-13 22:29:47,393 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:47,394 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:47,473 | INFO | app.services.eagle_eye.ml.trainer | [90/131] [################--------]  68.7% per_stock MUBARRAD
+2026-05-13 22:29:47,572 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:47,653 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:47,653 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:47,751 | INFO | app.services.eagle_eye.ml.trainer | [91/131] [#################-------]  69.5% per_stock MUNSHAAT
+2026-05-13 22:29:47,761 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:47,930 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:48,061 | INFO | app.services.eagle_eye.ml.trainer | [92/131] [#################-------]  70.2% per_stock MUNTAZAHAT
+2026-05-13 22:29:48,067 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:48,102 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:48,103 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:48,103 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:48,175 | INFO | app.services.eagle_eye.ml.trainer | [93/131] [#################-------]  71.0% per_stock NAPESCO
+2026-05-13 22:29:48,213 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:48,214 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:48,214 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:48,306 | INFO | app.services.eagle_eye.ml.trainer | [94/131] [#################-------]  71.8% per_stock NBK
+2026-05-13 22:29:48,314 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:48,376 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:48,376 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:48,398 | INFO | app.services.eagle_eye.ml.trainer | [95/131] [#################-------]  72.5% per_stock NCCI
+2026-05-13 22:29:48,408 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:48,446 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:48,504 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:48,562 | INFO | app.services.eagle_eye.ml.trainer | [96/131] [##################------]  73.3% per_stock NICBM
+2026-05-13 22:29:48,569 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:48,662 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:48,761 | INFO | app.services.eagle_eye.ml.trainer | [97/131] [##################------]  74.0% per_stock NIH
+2026-05-13 22:29:48,770 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:48,825 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:48,825 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:48,826 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:48,899 | INFO | app.services.eagle_eye.ml.trainer | [98/131] [##################------]  74.8% per_stock NIND
+2026-05-13 22:29:48,907 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:49,339 | INFO | app.services.eagle_eye.ml.trainer | [99/131] [##################------]  75.6% per_stock NINV
+2026-05-13 22:29:49,420 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:49,420 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:49,533 | INFO | app.services.eagle_eye.ml.trainer | [100/131] [##################------]  76.3% per_stock NOOR
+2026-05-13 22:29:49,541 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:49,619 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:49,620 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:49,620 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:49,646 | INFO | app.services.eagle_eye.ml.trainer | [101/131] [###################-----]  77.1% per_stock NRE
+2026-05-13 22:29:49,760 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:49,806 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:50,141 | INFO | app.services.eagle_eye.ml.trainer | [102/131] [###################-----]  77.9% per_stock OOREDOO
+2026-05-13 22:29:50,168 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:50,168 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:50,488 | INFO | app.services.eagle_eye.ml.trainer | [103/131] [###################-----]  78.6% per_stock OSOS
+2026-05-13 22:29:50,497 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:50,497 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:50,497 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:50,497 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:50,498 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:50,508 | INFO | app.services.eagle_eye.ml.trainer | [104/131] [###################-----]  79.4% per_stock OSOUL
+2026-05-13 22:29:50,565 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:50,566 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:50,566 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:50,816 | INFO | app.services.eagle_eye.ml.trainer | [105/131] [###################-----]  80.2% per_stock OULAFUEL
+2026-05-13 22:29:50,824 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:50,958 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:51,036 | INFO | app.services.eagle_eye.ml.trainer | [106/131] [###################-----]  80.9% per_stock PAPCO
+2026-05-13 22:29:51,045 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:51,046 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:51,089 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:51,089 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:51,110 | INFO | app.services.eagle_eye.ml.trainer | [107/131] [####################----]  81.7% per_stock PAPER
+2026-05-13 22:29:51,425 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:51,582 | INFO | app.services.eagle_eye.ml.trainer | [108/131] [####################----]  82.4% per_stock QIC
+2026-05-13 22:29:51,592 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:51,593 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:51,593 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:51,593 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:51,593 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:51,606 | INFO | app.services.eagle_eye.ml.trainer | [109/131] [####################----]  83.2% per_stock RASIYAT
+2026-05-13 22:29:51,614 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:51,614 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:51,651 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:51,843 | INFO | app.services.eagle_eye.ml.trainer | [110/131] [####################----]  84.0% per_stock SANAM
+2026-05-13 22:29:52,014 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:52,015 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:52,132 | INFO | app.services.eagle_eye.ml.trainer | [111/131] [####################----]  84.7% per_stock SECH
+2026-05-13 22:29:52,144 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:52,189 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:52,474 | INFO | app.services.eagle_eye.ml.trainer | [112/131] [#####################---]  85.5% per_stock SENERGY
+2026-05-13 22:29:52,482 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:52,568 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:52,647 | INFO | app.services.eagle_eye.ml.trainer | [113/131] [#####################---]  86.3% per_stock SHIP
+2026-05-13 22:29:52,655 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:52,702 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:52,702 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:52,702 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:52,759 | INFO | app.services.eagle_eye.ml.trainer | [114/131] [#####################---]  87.0% per_stock SOKOUK
+2026-05-13 22:29:52,769 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:53,040 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:53,040 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:53,205 | INFO | app.services.eagle_eye.ml.trainer | [115/131] [#####################---]  87.8% per_stock SOOR
+2026-05-13 22:29:53,406 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:53,406 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:53,492 | INFO | app.services.eagle_eye.ml.trainer | [116/131] [#####################---]  88.5% per_stock SPEC
+2026-05-13 22:29:53,502 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:53,554 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:53,554 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:53,555 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:53,587 | INFO | app.services.eagle_eye.ml.trainer | [117/131] [#####################---]  89.3% per_stock STC
+2026-05-13 22:29:53,599 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:53,629 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:53,629 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:53,629 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:53,653 | INFO | app.services.eagle_eye.ml.trainer | [118/131] [######################--]  90.1% per_stock TAHSSILAT
+2026-05-13 22:29:53,846 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:53,846 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:53,941 | INFO | app.services.eagle_eye.ml.trainer | [119/131] [######################--]  90.8% per_stock TAM
+2026-05-13 22:29:53,949 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:53,949 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:54,015 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:54,172 | INFO | app.services.eagle_eye.ml.trainer | [120/131] [######################--]  91.6% per_stock TAMINV
+2026-05-13 22:29:54,181 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:54,181 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:54,214 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:54,303 | INFO | app.services.eagle_eye.ml.trainer | [121/131] [######################--]  92.4% per_stock THURAYA
+2026-05-13 22:29:54,310 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:54,310 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:54,311 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:54,311 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:54,413 | INFO | app.services.eagle_eye.ml.trainer | [122/131] [######################--]  93.1% per_stock TIJARA
+2026-05-13 22:29:54,614 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:54,615 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:54,615 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:54,768 | INFO | app.services.eagle_eye.ml.trainer | [123/131] [#######################-]  93.9% per_stock UNICAP
+2026-05-13 22:29:55,011 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:55,085 | INFO | app.services.eagle_eye.ml.trainer | [124/131] [#######################-]  94.7% per_stock UPAC
+2026-05-13 22:29:55,196 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:55,197 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:55,315 | INFO | app.services.eagle_eye.ml.trainer | [125/131] [#######################-]  95.4% per_stock URC
+2026-05-13 22:29:55,399 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:55,399 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:55,538 | INFO | app.services.eagle_eye.ml.trainer | [126/131] [#######################-]  96.2% per_stock VALMORE
+2026-05-13 22:29:55,545 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:55,545 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:55,581 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:55,581 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:55,645 | INFO | app.services.eagle_eye.ml.trainer | [127/131] [#######################-]  96.9% per_stock WARBABANK
+2026-05-13 22:29:55,653 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:55,653 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:55,691 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:55,908 | INFO | app.services.eagle_eye.ml.trainer | [128/131] [#######################-]  97.7% per_stock WARBACAP
+2026-05-13 22:29:55,956 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:55,957 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:56,101 | INFO | app.services.eagle_eye.ml.trainer | [129/131] [########################]  98.5% per_stock WETHAQ
+2026-05-13 22:29:56,111 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:29:56,194 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:56,194 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:56,195 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:56,310 | INFO | app.services.eagle_eye.ml.trainer | [130/131] [########################]  99.2% per_stock WINSRE
+2026-05-13 22:29:56,357 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:56,358 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:29:56,358 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:56,358 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:29:56,423 | INFO | app.services.eagle_eye.ml.trainer | [131/131] [########################] 100.0% per_stock ZAIN
+2026-05-13 22:29:56,513 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:29:56,543 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:29:56,651 | INFO | app.services.eagle_eye.ml.trainer | [1/11] [##----------------------]   9.1% per_sector banking
+2026-05-13 22:29:57,774 | INFO | app.services.eagle_eye.ml.trainer | [2/11] [####--------------------]  18.2% per_sector consumer
+2026-05-13 22:29:59,055 | INFO | app.services.eagle_eye.ml.trainer | [3/11] [#######-----------------]  27.3% per_sector energy
+2026-05-13 22:30:00,654 | INFO | app.services.eagle_eye.ml.trainer | [4/11] [#########---------------]  36.4% per_sector holding_misc
+2026-05-13 22:30:00,660 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:30:00,695 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:30:00,741 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:30:00,806 | INFO | app.services.eagle_eye.ml.trainer | [5/11] [###########-------------]  45.5% per_sector industrial
+2026-05-13 22:30:02,293 | INFO | app.services.eagle_eye.ml.trainer | [6/11] [#############-----------]  54.5% per_sector insurance
+2026-05-13 22:30:02,331 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 2 due to single-class split
+2026-05-13 22:30:02,365 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:30:02,461 | INFO | app.services.eagle_eye.ml.trainer | [7/11] [###############---------]  63.6% per_sector investment
+2026-05-13 22:30:05,045 | INFO | app.services.eagle_eye.ml.trainer | [8/11] [#################-------]  72.7% per_sector real_estate
+2026-05-13 22:30:05,052 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 1 due to single-class split
+2026-05-13 22:30:05,093 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:30:05,093 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:30:05,094 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 5 due to single-class split
+2026-05-13 22:30:05,119 | INFO | app.services.eagle_eye.ml.trainer | [9/11] [####################----]  81.8% per_sector technology
+2026-05-13 22:30:05,341 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 3 due to single-class split
+2026-05-13 22:30:05,341 | INFO | app.services.eagle_eye.ml.trainer | Skipping fold 4 due to single-class split
+2026-05-13 22:30:05,530 | INFO | app.services.eagle_eye.ml.trainer | [10/11] [######################--]  90.9% per_sector telecom
+2026-05-13 22:30:05,997 | INFO | app.services.eagle_eye.ml.trainer | [11/11] [########################] 100.0% per_sector transport
+2026-05-13 22:30:18,108 | INFO | app.services.eagle_eye.ml.trainer | Training run complete in 50.4s

@@ -1,0 +1,46 @@
+{
+  "auc": 0.5922619047619048,
+  "log_loss": 0.8358488062487727,
+  "calibration_error": 0.6036063301851715,
+  "n_train_events": 431,
+  "train_date_range": {
+    "start": "2023-10-01",
+    "end": "2026-04-16"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 1.3236320530961523,
+      "calibration_max_error": 0.785243587639558,
+      "calibration_mean_error": 0.39269649685841657,
+      "fold": 1,
+      "train_size": 258,
+      "test_size": 43,
+      "best_iteration": 84
+    },
+    {
+      "auc": 0.3125,
+      "log_loss": 0.8153904683588165,
+      "calibration_max_error": 0.9154745214052767,
+      "calibration_mean_error": 0.5610162664173284,
+      "fold": 2,
+      "train_size": 301,
+      "test_size": 43,
+      "best_iteration": 8
+    },
+    {
+      "auc": 0.4642857142857143,
+      "log_loss": 0.3685238972913492,
+      "calibration_max_error": 0.11010088151067982,
+      "calibration_mean_error": 0.04986780129480419,
+      "fold": 3,
+      "train_size": 344,
+      "test_size": 43,
+      "best_iteration": 80
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "TAHSSILAT",
+  "version": "2026-05-13"
+}

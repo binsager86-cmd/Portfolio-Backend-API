@@ -1,0 +1,56 @@
+{
+  "auc": 0.6422413793103449,
+  "log_loss": 0.25681140242055067,
+  "calibration_error": 0.41580327793015415,
+  "n_train_events": 363,
+  "train_date_range": {
+    "start": "2023-05-07",
+    "end": "2026-04-23"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.047714713360177796,
+      "calibration_max_error": 0.29182602783810685,
+      "calibration_mean_error": 0.15171518338294226,
+      "fold": 1,
+      "train_size": 217,
+      "test_size": 37,
+      "best_iteration": 75
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.015671287620712546,
+      "calibration_max_error": 0.3923161651102036,
+      "calibration_mean_error": 0.13326074302656643,
+      "fold": 2,
+      "train_size": 254,
+      "test_size": 36,
+      "best_iteration": 165
+    },
+    {
+      "auc": 0.5689655172413793,
+      "log_loss": 0.7224482910487722,
+      "calibration_max_error": 0.4815557113485413,
+      "calibration_mean_error": 0.3971603652704274,
+      "fold": 3,
+      "train_size": 290,
+      "test_size": 36,
+      "best_iteration": 1
+    },
+    {
+      "auc": 0.0,
+      "log_loss": 0.2414113176525401,
+      "calibration_max_error": 0.49751520742376487,
+      "calibration_mean_error": 0.25483174788024543,
+      "fold": 5,
+      "train_size": 344,
+      "test_size": 19,
+      "best_iteration": 45
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "PAPER",
+  "version": "2026-05-13"
+}

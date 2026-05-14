@@ -1,0 +1,46 @@
+{
+  "auc": 0.40972222222222227,
+  "log_loss": 1.0586348274047253,
+  "calibration_error": 0.5955644373084173,
+  "n_train_events": 206,
+  "train_date_range": {
+    "start": "2024-07-17",
+    "end": "2026-04-08"
+  },
+  "rejected_reason": "auc_below_threshold_0.4097",
+  "fold_metrics": [
+    {
+      "auc": 0.5,
+      "log_loss": 1.8177112664267998,
+      "calibration_max_error": 0.6330925337234771,
+      "calibration_mean_error": 0.6330925337234771,
+      "fold": 3,
+      "train_size": 164,
+      "test_size": 21,
+      "best_iteration": 1
+    },
+    {
+      "auc": 0.0625,
+      "log_loss": 0.7825165736205248,
+      "calibration_max_error": 0.549599565909467,
+      "calibration_mean_error": 0.39284350080746655,
+      "fold": 4,
+      "train_size": 185,
+      "test_size": 10,
+      "best_iteration": 14
+    },
+    {
+      "auc": 0.6666666666666667,
+      "log_loss": 0.5756766421668513,
+      "calibration_max_error": 0.604001212292308,
+      "calibration_mean_error": 0.288212872737572,
+      "fold": 5,
+      "train_size": 195,
+      "test_size": 11,
+      "best_iteration": 16
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "ACICO",
+  "version": "2026-05-13"
+}

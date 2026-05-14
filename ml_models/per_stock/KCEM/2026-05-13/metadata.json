@@ -1,0 +1,46 @@
+{
+  "auc": 0.6666666666666666,
+  "log_loss": 0.3058145907219422,
+  "calibration_error": 0.3532286747913767,
+  "n_train_events": 466,
+  "train_date_range": {
+    "start": "2023-06-14",
+    "end": "2026-04-23"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.0,
+      "log_loss": 0.625814142831785,
+      "calibration_max_error": 0.8806594836317676,
+      "calibration_mean_error": 0.5679688766931176,
+      "fold": 2,
+      "train_size": 326,
+      "test_size": 46,
+      "best_iteration": 22
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.020011774145947965,
+      "calibration_max_error": 0.1652821944206021,
+      "calibration_mean_error": 0.06477086696314029,
+      "fold": 4,
+      "train_size": 419,
+      "test_size": 23,
+      "best_iteration": 86
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.2716178551880935,
+      "calibration_max_error": 0.013744346321760276,
+      "calibration_mean_error": 0.013744346321760276,
+      "fold": 5,
+      "train_size": 442,
+      "test_size": 24,
+      "best_iteration": 38
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "KCEM",
+  "version": "2026-05-13"
+}

@@ -1,0 +1,26 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.22689844898634937,
+  "calibration_error": 0.8957811959519603,
+  "n_train_events": 330,
+  "train_date_range": {
+    "start": "2023-06-15",
+    "end": "2026-05-10"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.22689844898634937,
+      "calibration_max_error": 0.8957811959519603,
+      "calibration_mean_error": 0.4724512482615914,
+      "fold": 4,
+      "train_size": 297,
+      "test_size": 16,
+      "best_iteration": 30
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "ALSAFAT",
+  "version": "2026-05-13"
+}

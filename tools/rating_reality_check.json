@@ -1,0 +1,294 @@
+{
+  "meta": {
+    "tickers": [
+      "KFH",
+      "NBK",
+      "BOUBYAN",
+      "MABANEE",
+      "AGILITY"
+    ],
+    "eval_start": "2024-01-01",
+    "eval_end": "2025-09-30",
+    "horizon_days": 20,
+    "sample_every_n": 5,
+    "total_predictions": 336
+  },
+  "per_ticker": [
+    {
+      "ticker": "KFH",
+      "ml_status": "available",
+      "n_predictions": 84,
+      "n_skipped": 2,
+      "date_range": {
+        "start": "2024-01-02",
+        "end": "2025-09-25"
+      },
+      "rule_based_buckets": {
+        "00-49": {
+          "n": 64,
+          "tp1_hit_rate": 0.3438,
+          "mean_return_pct": 2.6287,
+          "mean_drawdown_pct": -2.7532,
+          "calibration_delta": 0.0988
+        },
+        "50-59": {
+          "n": 11,
+          "tp1_hit_rate": 0.5455,
+          "mean_return_pct": 2.5299,
+          "mean_drawdown_pct": -4.2182,
+          "calibration_delta": 0.0005
+        },
+        "60-69": {
+          "n": 6,
+          "tp1_hit_rate": 0.5,
+          "mean_return_pct": 2.2864,
+          "mean_drawdown_pct": -2.9492,
+          "calibration_delta": 0.145
+        },
+        "70-79": {
+          "n": 0,
+          "tp1_hit_rate": null,
+          "mean_return_pct": null,
+          "mean_drawdown_pct": null,
+          "calibration_delta": null
+        },
+        "80-89": {
+          "n": 0,
+          "tp1_hit_rate": null,
+          "mean_return_pct": null,
+          "mean_drawdown_pct": null,
+          "calibration_delta": null
+        },
+        "90-100": {
+          "n": 3,
+          "tp1_hit_rate": 0.6667,
+          "mean_return_pct": 1.9039,
+          "mean_drawdown_pct": -2.8106,
+          "calibration_delta": 0.2833
+        }
+      },
+      "ml_buckets": null
+    },
+    {
+      "ticker": "NBK",
+      "ml_status": "available",
+      "n_predictions": 84,
+      "n_skipped": 2,
+      "date_range": {
+        "start": "2024-01-02",
+        "end": "2025-09-25"
+      },
+      "rule_based_buckets": {
+        "00-49": {
+          "n": 63,
+          "tp1_hit_rate": 0.2698,
+          "mean_return_pct": 3.7039,
+          "mean_drawdown_pct": -2.4435,
+          "calibration_delta": 0.0248
+        },
+        "50-59": {
+          "n": 14,
+          "tp1_hit_rate": 0.4286,
+          "mean_return_pct": 2.403,
+          "mean_drawdown_pct": -3.9732,
+          "calibration_delta": 0.1164
+        },
+        "60-69": {
+          "n": 3,
+          "tp1_hit_rate": 1.0,
+          "mean_return_pct": 3.0616,
+          "mean_drawdown_pct": -12.6907,
+          "calibration_delta": 0.355
+        },
+        "70-79": {
+          "n": 0,
+          "tp1_hit_rate": null,
+          "mean_return_pct": null,
+          "mean_drawdown_pct": null,
+          "calibration_delta": null
+        },
+        "80-89": {
+          "n": 0,
+          "tp1_hit_rate": null,
+          "mean_return_pct": null,
+          "mean_drawdown_pct": null,
+          "calibration_delta": null
+        },
+        "90-100": {
+          "n": 4,
+          "tp1_hit_rate": 0.75,
+          "mean_return_pct": 2.349,
+          "mean_drawdown_pct": -5.0789,
+          "calibration_delta": 0.2
+        }
+      },
+      "ml_buckets": null
+    },
+    {
+      "ticker": "BOUBYAN",
+      "ml_status": "available",
+      "n_predictions": 84,
+      "n_skipped": 2,
+      "date_range": {
+        "start": "2024-01-02",
+        "end": "2025-09-25"
+      },
+      "rule_based_buckets": {
+        "00-49": {
+          "n": 67,
+          "tp1_hit_rate": 0.2985,
+          "mean_return_pct": 3.634,
+          "mean_drawdown_pct": -3.168,
+          "calibration_delta": 0.0535
+        },
+        "50-59": {
+          "n": 14,
+          "tp1_hit_rate": 0.5714,
+          "mean_return_pct": 2.795,
+          "mean_drawdown_pct": -4.1428,
+          "calibration_delta": 0.0264
+        },
+        "60-69": {
+          "n": 1,
+          "tp1_hit_rate": 1.0,
+          "mean_return_pct": 4.6012,
+          "mean_drawdown_pct": -1.6871,
+          "calibration_delta": 0.355
+        },
+        "70-79": {
+          "n": 0,
+          "tp1_hit_rate": null,
+          "mean_return_pct": null,
+          "mean_drawdown_pct": null,
+          "calibration_delta": null
+        },
+        "80-89": {
+          "n": 0,
+          "tp1_hit_rate": null,
+          "mean_return_pct": null,
+          "mean_drawdown_pct": null,
+          "calibration_delta": null
+        },
+        "90-100": {
+          "n": 2,
+          "tp1_hit_rate": 1.0,
+          "mean_return_pct": 1.7832,
+          "mean_drawdown_pct": -4.8886,
+          "calibration_delta": 0.05
+        }
+      },
+      "ml_buckets": null
+    },
+    {
+      "ticker": "MABANEE",
+      "ml_status": "available",
+      "n_predictions": 84,
+      "n_skipped": 2,
+      "date_range": {
+        "start": "2024-01-02",
+        "end": "2025-09-25"
+      },
+      "rule_based_buckets": {
+        "00-49": {
+          "n": 69,
+          "tp1_hit_rate": 0.3333,
+          "mean_return_pct": 4.6399,
+          "mean_drawdown_pct": -2.9991,
+          "calibration_delta": 0.0883
+        },
+        "50-59": {
+          "n": 14,
+          "tp1_hit_rate": 0.5,
+          "mean_return_pct": 4.2599,
+          "mean_drawdown_pct": -2.0164,
+          "calibration_delta": 0.045
+        },
+        "60-69": {
+          "n": 0,
+          "tp1_hit_rate": null,
+          "mean_return_pct": null,
+          "mean_drawdown_pct": null,
+          "calibration_delta": null
+        },
+        "70-79": {
+          "n": 0,
+          "tp1_hit_rate": null,
+          "mean_return_pct": null,
+          "mean_drawdown_pct": null,
+          "calibration_delta": null
+        },
+        "80-89": {
+          "n": 0,
+          "tp1_hit_rate": null,
+          "mean_return_pct": null,
+          "mean_drawdown_pct": null,
+          "calibration_delta": null
+        },
+        "90-100": {
+          "n": 1,
+          "tp1_hit_rate": 0.0,
+          "mean_return_pct": 2.7251,
+          "mean_drawdown_pct": -8.0569,
+          "calibration_delta": 0.95
+        }
+      },
+      "ml_buckets": null
+    },
+    {
+      "ticker": "AGILITY",
+      "ml_status": "N/A",
+      "n_predictions": 0,
+      "n_skipped": 0,
+      "date_range": null,
+      "rule_based_buckets": null,
+      "ml_buckets": null
+    }
+  ],
+  "aggregate": {
+    "rule_based_buckets": {
+      "00-49": {
+        "n": 263,
+        "tp1_hit_rate": 0.3118,
+        "mean_return_pct": 3.67,
+        "mean_drawdown_pct": -2.8492,
+        "calibration_delta": 0.0668
+      },
+      "50-59": {
+        "n": 53,
+        "tp1_hit_rate": 0.5094,
+        "mean_return_pct": 3.0234,
+        "mean_drawdown_pct": -3.5519,
+        "calibration_delta": 0.0356
+      },
+      "60-69": {
+        "n": 10,
+        "tp1_hit_rate": 0.7,
+        "mean_return_pct": 2.7504,
+        "mean_drawdown_pct": -5.7454,
+        "calibration_delta": 0.055
+      },
+      "70-79": {
+        "n": 0,
+        "tp1_hit_rate": null,
+        "mean_return_pct": null,
+        "mean_drawdown_pct": null,
+        "calibration_delta": null
+      },
+      "80-89": {
+        "n": 0,
+        "tp1_hit_rate": null,
+        "mean_return_pct": null,
+        "mean_drawdown_pct": null,
+        "calibration_delta": null
+      },
+      "90-100": {
+        "n": 10,
+        "tp1_hit_rate": 0.7,
+        "mean_return_pct": 2.1399,
+        "mean_drawdown_pct": -4.6582,
+        "calibration_delta": 0.25
+      }
+    },
+    "ml_buckets": null
+  }
+}

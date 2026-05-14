@@ -1,0 +1,36 @@
+{
+  "auc": 0.5,
+  "log_loss": 0.7101918020326558,
+  "calibration_error": 0.17456297274518107,
+  "n_train_events": 109,
+  "train_date_range": {
+    "start": "2023-12-12",
+    "end": "2025-09-18"
+  },
+  "rejected_reason": "auc_below_threshold_0.5000",
+  "fold_metrics": [
+    {
+      "auc": 0.5,
+      "log_loss": 0.8045287767550462,
+      "calibration_max_error": 0.23274014468905868,
+      "calibration_mean_error": 0.23274014468905868,
+      "fold": 2,
+      "train_size": 76,
+      "test_size": 11,
+      "best_iteration": 1
+    },
+    {
+      "auc": 0.5,
+      "log_loss": 0.6158548273102653,
+      "calibration_max_error": 0.11638580080130345,
+      "calibration_mean_error": 0.11638580080130345,
+      "fold": 3,
+      "train_size": 87,
+      "test_size": 11,
+      "best_iteration": 1
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "NBK",
+  "version": "2026-05-13"
+}

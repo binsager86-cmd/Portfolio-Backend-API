@@ -1,0 +1,36 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.1288855209785272,
+  "calibration_error": 0.6701384736056502,
+  "n_train_events": 510,
+  "train_date_range": {
+    "start": "2023-10-02",
+    "end": "2026-04-19"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.2177038305087917,
+      "calibration_max_error": 0.7276230652083823,
+      "calibration_mean_error": 0.45281968363242986,
+      "fold": 2,
+      "train_size": 357,
+      "test_size": 51,
+      "best_iteration": 7
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.040067211448262724,
+      "calibration_max_error": 0.6126538820029181,
+      "calibration_mean_error": 0.30818968003780034,
+      "fold": 5,
+      "train_size": 484,
+      "test_size": 26,
+      "best_iteration": 75
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "ASC",
+  "version": "2026-05-13"
+}

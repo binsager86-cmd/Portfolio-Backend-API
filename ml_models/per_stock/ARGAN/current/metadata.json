@@ -1,0 +1,36 @@
+{
+  "auc": 0.7364864864864865,
+  "log_loss": 0.8148730852293514,
+  "calibration_error": 0.37339790320631744,
+  "n_train_events": 463,
+  "train_date_range": {
+    "start": "2023-06-20",
+    "end": "2026-04-06"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.5,
+      "log_loss": 1.4737881559171142,
+      "calibration_max_error": 0.5953032650198447,
+      "calibration_mean_error": 0.5953032650198447,
+      "fold": 2,
+      "train_size": 324,
+      "test_size": 46,
+      "best_iteration": 1
+    },
+    {
+      "auc": 0.972972972972973,
+      "log_loss": 0.1559580145415887,
+      "calibration_max_error": 0.15149254139279023,
+      "calibration_mean_error": 0.08593721961921398,
+      "fold": 3,
+      "train_size": 370,
+      "test_size": 46,
+      "best_iteration": 57
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "ARGAN",
+  "version": "2026-05-13"
+}

@@ -1,0 +1,36 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.0007627197617796274,
+  "calibration_error": 0.0010039767256584953,
+  "n_train_events": 278,
+  "train_date_range": {
+    "start": "2023-05-14",
+    "end": "2026-04-14"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.0014733760120635793,
+      "calibration_max_error": 0.001955792217821495,
+      "calibration_mean_error": 0.001089160944247226,
+      "fold": 2,
+      "train_size": 194,
+      "test_size": 28,
+      "best_iteration": 200
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 5.2063511495675506e-05,
+      "calibration_max_error": 5.216123349549573e-05,
+      "calibration_mean_error": 5.075470684700212e-05,
+      "fold": 3,
+      "train_size": 222,
+      "test_size": 28,
+      "best_iteration": 200
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "SOKOUK",
+  "version": "2026-05-13"
+}

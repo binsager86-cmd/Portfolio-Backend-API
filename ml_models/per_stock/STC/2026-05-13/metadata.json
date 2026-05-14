@@ -1,0 +1,26 @@
+{
+  "auc": 0.2272727272727273,
+  "log_loss": 0.6633234771277197,
+  "calibration_error": 0.4321058745109064,
+  "n_train_events": 154,
+  "train_date_range": {
+    "start": "2023-07-13",
+    "end": "2026-01-22"
+  },
+  "rejected_reason": "auc_below_threshold_0.2273",
+  "fold_metrics": [
+    {
+      "auc": 0.2272727272727273,
+      "log_loss": 0.6633234771277197,
+      "calibration_max_error": 0.4321058745109064,
+      "calibration_mean_error": 0.27507759103631835,
+      "fold": 2,
+      "train_size": 107,
+      "test_size": 16,
+      "best_iteration": 1
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "STC",
+  "version": "2026-05-13"
+}

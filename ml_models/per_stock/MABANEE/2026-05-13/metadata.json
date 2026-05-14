@@ -1,0 +1,26 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.31823387065057673,
+  "calibration_error": 0.004108557331070517,
+  "n_train_events": 180,
+  "train_date_range": {
+    "start": "2023-06-11",
+    "end": "2026-04-16"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.31823387065057673,
+      "calibration_max_error": 0.004108557331070517,
+      "calibration_mean_error": 0.004108557331070517,
+      "fold": 4,
+      "train_size": 162,
+      "test_size": 9,
+      "best_iteration": 26
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "MABANEE",
+  "version": "2026-05-13"
+}

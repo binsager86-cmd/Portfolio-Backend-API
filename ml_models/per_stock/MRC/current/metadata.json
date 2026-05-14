@@ -1,0 +1,46 @@
+{
+  "auc": 0.6734711455641689,
+  "log_loss": 0.36909398690214523,
+  "calibration_error": 0.3168238831058768,
+  "n_train_events": 455,
+  "train_date_range": {
+    "start": "2023-07-05",
+    "end": "2026-04-16"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 2.2269229743449782e-05,
+      "calibration_max_error": 3.461290205264422e-05,
+      "calibration_mean_error": 2.689793998149461e-05,
+      "fold": 1,
+      "train_size": 273,
+      "test_size": 45,
+      "best_iteration": 200
+    },
+    {
+      "auc": 0.8111111111111111,
+      "log_loss": 0.8083097003533565,
+      "calibration_max_error": 0.693177607095401,
+      "calibration_mean_error": 0.5368853144341571,
+      "fold": 2,
+      "train_size": 318,
+      "test_size": 46,
+      "best_iteration": 9
+    },
+    {
+      "auc": 0.20930232558139536,
+      "log_loss": 0.29894999112333576,
+      "calibration_max_error": 0.25725942932017676,
+      "calibration_mean_error": 0.1355262819461273,
+      "fold": 3,
+      "train_size": 364,
+      "test_size": 45,
+      "best_iteration": 37
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "MRC",
+  "version": "2026-05-13"
+}

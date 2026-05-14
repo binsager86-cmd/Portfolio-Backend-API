@@ -1,0 +1,36 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.17011826734964866,
+  "calibration_error": 0.2803543562314489,
+  "n_train_events": 256,
+  "train_date_range": {
+    "start": "2023-05-22",
+    "end": "2026-04-27"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 2.405872119366715e-05,
+      "calibration_max_error": 3.0745259252284995e-05,
+      "calibration_mean_error": 2.5312200581651404e-05,
+      "fold": 1,
+      "train_size": 153,
+      "test_size": 26,
+      "best_iteration": 200
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.34021247597810367,
+      "calibration_max_error": 0.5606779672036455,
+      "calibration_mean_error": 0.3347823271034869,
+      "fold": 3,
+      "train_size": 204,
+      "test_size": 26,
+      "best_iteration": 30
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "GFH",
+  "version": "2026-05-13"
+}

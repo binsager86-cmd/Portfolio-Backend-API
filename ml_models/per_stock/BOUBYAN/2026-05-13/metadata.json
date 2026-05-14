@@ -1,0 +1,26 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.0003988994351180439,
+  "calibration_error": 0.0004905275775714036,
+  "n_train_events": 102,
+  "train_date_range": {
+    "start": "2024-01-07",
+    "end": "2025-09-23"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.0003988994351180439,
+      "calibration_max_error": 0.0004905275775714036,
+      "calibration_mean_error": 0.00033766506175714477,
+      "fold": 3,
+      "train_size": 81,
+      "test_size": 10,
+      "best_iteration": 173
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "BOUBYAN",
+  "version": "2026-05-13"
+}

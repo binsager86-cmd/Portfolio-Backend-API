@@ -1,0 +1,36 @@
+{
+  "auc": 0.8795405982905983,
+  "log_loss": 0.6469001144632514,
+  "calibration_error": 0.5178693049977194,
+  "n_train_events": 441,
+  "train_date_range": {
+    "start": "2023-05-30",
+    "end": "2026-04-29"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.9465811965811965,
+      "log_loss": 0.6795649509524939,
+      "calibration_max_error": 0.49557473242189587,
+      "calibration_mean_error": 0.34157203678999615,
+      "fold": 3,
+      "train_size": 352,
+      "test_size": 44,
+      "best_iteration": 21
+    },
+    {
+      "auc": 0.8125,
+      "log_loss": 0.6142352779740087,
+      "calibration_max_error": 0.540163877573543,
+      "calibration_mean_error": 0.37298207963019775,
+      "fold": 4,
+      "train_size": 396,
+      "test_size": 22,
+      "best_iteration": 7
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "BAYANINV",
+  "version": "2026-05-13"
+}

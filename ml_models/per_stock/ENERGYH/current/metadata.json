@@ -1,0 +1,56 @@
+{
+  "auc": 0.737781954887218,
+  "log_loss": 0.5533381201251291,
+  "calibration_error": 0.537784582384837,
+  "n_train_events": 305,
+  "train_date_range": {
+    "start": "2024-01-21",
+    "end": "2026-04-21"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.4642857142857143,
+      "log_loss": 0.7017551460403839,
+      "calibration_max_error": 0.6651880319208108,
+      "calibration_mean_error": 0.33992202263923105,
+      "fold": 1,
+      "train_size": 183,
+      "test_size": 30,
+      "best_iteration": 3
+    },
+    {
+      "auc": 0.9868421052631579,
+      "log_loss": 0.2128086202105129,
+      "calibration_max_error": 0.6085175215727413,
+      "calibration_mean_error": 0.28075997662246166,
+      "fold": 2,
+      "train_size": 213,
+      "test_size": 31,
+      "best_iteration": 115
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.6621134627471099,
+      "calibration_max_error": 0.5514434306244425,
+      "calibration_mean_error": 0.36774773805435573,
+      "fold": 3,
+      "train_size": 244,
+      "test_size": 30,
+      "best_iteration": 25
+    },
+    {
+      "auc": 0.5,
+      "log_loss": 0.6366752515025098,
+      "calibration_max_error": 0.3259893454213534,
+      "calibration_mean_error": 0.3259893454213534,
+      "fold": 4,
+      "train_size": 274,
+      "test_size": 15,
+      "best_iteration": 1
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "ENERGYH",
+  "version": "2026-05-13"
+}

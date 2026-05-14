@@ -1,0 +1,26 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.5353955570726635,
+  "calibration_error": 0.0014160999982982814,
+  "n_train_events": 464,
+  "train_date_range": {
+    "start": "2023-09-13",
+    "end": "2026-04-08"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.5353955570726635,
+      "calibration_max_error": 0.0014160999982982814,
+      "calibration_mean_error": 0.0014160999982982814,
+      "fold": 2,
+      "train_size": 324,
+      "test_size": 47,
+      "best_iteration": 26
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "NIH",
+  "version": "2026-05-13"
+}

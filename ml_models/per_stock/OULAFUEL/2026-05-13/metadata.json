@@ -1,0 +1,46 @@
+{
+  "auc": 0.7054843304843305,
+  "log_loss": 0.7961987913445973,
+  "calibration_error": 0.5067029961837033,
+  "n_train_events": 375,
+  "train_date_range": {
+    "start": "2023-05-31",
+    "end": "2026-04-14"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.4775641025641026,
+      "log_loss": 1.2768181575539974,
+      "calibration_max_error": 0.5274785694495469,
+      "calibration_mean_error": 0.4034118685171432,
+      "fold": 2,
+      "train_size": 262,
+      "test_size": 38,
+      "best_iteration": 1
+    },
+    {
+      "auc": 0.7500000000000001,
+      "log_loss": 0.6842603979259462,
+      "calibration_max_error": 0.76256043467554,
+      "calibration_mean_error": 0.3860017802247862,
+      "fold": 3,
+      "train_size": 300,
+      "test_size": 37,
+      "best_iteration": 4
+    },
+    {
+      "auc": 0.8888888888888888,
+      "log_loss": 0.42751781855384824,
+      "calibration_max_error": 0.230069984426023,
+      "calibration_mean_error": 0.14339240215263416,
+      "fold": 4,
+      "train_size": 337,
+      "test_size": 19,
+      "best_iteration": 33
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "OULAFUEL",
+  "version": "2026-05-13"
+}

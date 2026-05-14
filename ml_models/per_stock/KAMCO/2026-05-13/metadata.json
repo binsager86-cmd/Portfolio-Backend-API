@@ -1,0 +1,46 @@
+{
+  "auc": 0.6,
+  "log_loss": 0.47011041379723134,
+  "calibration_error": 0.18489052720255497,
+  "n_train_events": 356,
+  "train_date_range": {
+    "start": "2023-07-11",
+    "end": "2026-04-15"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.8,
+      "log_loss": 0.5821679166542867,
+      "calibration_max_error": 0.005363483089676158,
+      "calibration_mean_error": 0.005363483089676158,
+      "fold": 2,
+      "train_size": 249,
+      "test_size": 35,
+      "best_iteration": 17
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.12687689739181035,
+      "calibration_max_error": 0.0006323624589446644,
+      "calibration_mean_error": 0.0006323624589446644,
+      "fold": 3,
+      "train_size": 284,
+      "test_size": 36,
+      "best_iteration": 60
+    },
+    {
+      "auc": 0.0,
+      "log_loss": 0.7012864273455971,
+      "calibration_max_error": 0.5486757360590441,
+      "calibration_mean_error": 0.5249853283701802,
+      "fold": 4,
+      "train_size": 320,
+      "test_size": 18,
+      "best_iteration": 1
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "KAMCO",
+  "version": "2026-05-13"
+}

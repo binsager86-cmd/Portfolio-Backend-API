@@ -1,0 +1,46 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.41520180333543677,
+  "calibration_error": 0.31709305256635983,
+  "n_train_events": 263,
+  "train_date_range": {
+    "start": "2023-09-25",
+    "end": "2026-04-20"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.00019307749361917377,
+      "calibration_max_error": 0.0007953439712260567,
+      "calibration_mean_error": 0.0004081272268281521,
+      "fold": 1,
+      "train_size": 157,
+      "test_size": 27,
+      "best_iteration": 200
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.6047098025013271,
+      "calibration_max_error": 0.4571060485317651,
+      "calibration_mean_error": 0.4545485674888514,
+      "fold": 3,
+      "train_size": 210,
+      "test_size": 26,
+      "best_iteration": 4
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.640702530011364,
+      "calibration_max_error": 0.49337776519608834,
+      "calibration_mean_error": 0.2593593840483647,
+      "fold": 4,
+      "train_size": 236,
+      "test_size": 13,
+      "best_iteration": 7
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "ABK",
+  "version": "2026-05-13"
+}

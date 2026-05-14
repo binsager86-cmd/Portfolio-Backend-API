@@ -1,0 +1,36 @@
+{
+  "auc": 0.5777777777777777,
+  "log_loss": 0.5346897656384364,
+  "calibration_error": 0.5242892845556025,
+  "n_train_events": 208,
+  "train_date_range": {
+    "start": "2023-08-01",
+    "end": "2026-04-15"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.6,
+      "log_loss": 0.49675686305795097,
+      "calibration_max_error": 0.3239358441756052,
+      "calibration_mean_error": 0.17301797096186963,
+      "fold": 2,
+      "train_size": 145,
+      "test_size": 21,
+      "best_iteration": 15
+    },
+    {
+      "auc": 0.5555555555555556,
+      "log_loss": 0.5726226682189219,
+      "calibration_max_error": 0.7246427249355999,
+      "calibration_mean_error": 0.3699497350476072,
+      "fold": 5,
+      "train_size": 197,
+      "test_size": 11,
+      "best_iteration": 18
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "AREEC",
+  "version": "2026-05-13"
+}

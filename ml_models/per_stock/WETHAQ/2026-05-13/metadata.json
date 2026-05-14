@@ -1,0 +1,26 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.22272115223143155,
+  "calibration_error": 0.8320178060482494,
+  "n_train_events": 431,
+  "train_date_range": {
+    "start": "2023-06-15",
+    "end": "2026-04-16"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.22272115223143155,
+      "calibration_max_error": 0.8320178060482494,
+      "calibration_mean_error": 0.409934549391632,
+      "fold": 2,
+      "train_size": 301,
+      "test_size": 43,
+      "best_iteration": 65
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "WETHAQ",
+  "version": "2026-05-13"
+}

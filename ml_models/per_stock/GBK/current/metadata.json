@@ -1,0 +1,46 @@
+{
+  "auc": 0.8333333333333334,
+  "log_loss": 0.24262721628474657,
+  "calibration_error": 0.05214810136473146,
+  "n_train_events": 197,
+  "train_date_range": {
+    "start": "2023-07-11",
+    "end": "2026-04-26"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.00039086815371958887,
+      "calibration_max_error": 0.000594595942407042,
+      "calibration_mean_error": 0.0003179534567123014,
+      "fold": 1,
+      "train_size": 118,
+      "test_size": 19,
+      "best_iteration": 194
+    },
+    {
+      "auc": 0.5,
+      "log_loss": 0.653618821618777,
+      "calibration_max_error": 0.05160804593793911,
+      "calibration_mean_error": 0.05160804593793911,
+      "fold": 2,
+      "train_size": 137,
+      "test_size": 20,
+      "best_iteration": 1
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.07387195908174307,
+      "calibration_max_error": 0.10424166221384823,
+      "calibration_mean_error": 0.053447065798755765,
+      "fold": 3,
+      "train_size": 157,
+      "test_size": 20,
+      "best_iteration": 69
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "GBK",
+  "version": "2026-05-13"
+}

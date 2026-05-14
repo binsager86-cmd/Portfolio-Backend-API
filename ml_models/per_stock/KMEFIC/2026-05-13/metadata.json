@@ -1,0 +1,46 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.09996651415389107,
+  "calibration_error": 0.4034166198408669,
+  "n_train_events": 295,
+  "train_date_range": {
+    "start": "2023-08-17",
+    "end": "2026-04-26"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.21684823303718848,
+      "calibration_max_error": 0.4230285624066213,
+      "calibration_mean_error": 0.2745523250757449,
+      "fold": 1,
+      "train_size": 177,
+      "test_size": 29,
+      "best_iteration": 27
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.00034976959002667204,
+      "calibration_max_error": 0.0005275269330138403,
+      "calibration_mean_error": 0.00042873789817604943,
+      "fold": 2,
+      "train_size": 206,
+      "test_size": 30,
+      "best_iteration": 157
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.08270153983445806,
+      "calibration_max_error": 0.7866937701829656,
+      "calibration_mean_error": 0.23673080286552003,
+      "fold": 3,
+      "train_size": 236,
+      "test_size": 29,
+      "best_iteration": 106
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "KMEFIC",
+  "version": "2026-05-13"
+}

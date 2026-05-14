@@ -1,0 +1,36 @@
+{
+  "auc": 0.7916666666666666,
+  "log_loss": 0.2902611722801915,
+  "calibration_error": 0.23074862605777613,
+  "n_train_events": 257,
+  "train_date_range": {
+    "start": "2023-04-30",
+    "end": "2026-04-12"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.5833333333333333,
+      "log_loss": 0.5687793032281515,
+      "calibration_max_error": 0.29944930776703255,
+      "calibration_mean_error": 0.23391507135795228,
+      "fold": 1,
+      "train_size": 154,
+      "test_size": 25,
+      "best_iteration": 10
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.011743041332231445,
+      "calibration_max_error": 0.1620479443485197,
+      "calibration_mean_error": 0.08357355574868389,
+      "fold": 2,
+      "train_size": 179,
+      "test_size": 26,
+      "best_iteration": 132
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "IFA",
+  "version": "2026-05-13"
+}

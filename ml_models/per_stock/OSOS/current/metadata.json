@@ -1,0 +1,15 @@
+{
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 332,
+  "train_date_range": {
+    "start": "2023-08-02",
+    "end": "2026-04-28"
+  },
+  "rejected_reason": "auc_below_threshold_nan",
+  "fold_metrics": [],
+  "tier": "per_stock",
+  "identifier": "OSOS",
+  "version": "2026-05-13"
+}

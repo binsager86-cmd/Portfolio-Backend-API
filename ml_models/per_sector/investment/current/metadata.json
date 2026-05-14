@@ -1,0 +1,66 @@
+{
+  "auc": 0.6287631063411275,
+  "log_loss": 0.6051251354520202,
+  "calibration_error": 0.5120170878524242,
+  "n_train_events": 7505,
+  "train_date_range": {
+    "start": "2023-04-30",
+    "end": "2026-05-12"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.7192903128566199,
+      "log_loss": 0.6277697945066021,
+      "calibration_max_error": 0.8262677305018318,
+      "calibration_mean_error": 0.4044271462975371,
+      "fold": 1,
+      "train_size": 4503,
+      "test_size": 750,
+      "best_iteration": 19
+    },
+    {
+      "auc": 0.6896596839610984,
+      "log_loss": 0.5989529571930042,
+      "calibration_max_error": 0.5587615921017485,
+      "calibration_mean_error": 0.3090738268472554,
+      "fold": 2,
+      "train_size": 5253,
+      "test_size": 751,
+      "best_iteration": 33
+    },
+    {
+      "auc": 0.4185636486312813,
+      "log_loss": 0.6928523938922616,
+      "calibration_max_error": 0.19432702001638003,
+      "calibration_mean_error": 0.15793450357508393,
+      "fold": 3,
+      "train_size": 6004,
+      "test_size": 750,
+      "best_iteration": 1
+    },
+    {
+      "auc": 0.570442181615288,
+      "log_loss": 0.5480642010748934,
+      "calibration_max_error": 0.3679800433004222,
+      "calibration_mean_error": 0.2803504174678859,
+      "fold": 4,
+      "train_size": 6754,
+      "test_size": 375,
+      "best_iteration": 23
+    },
+    {
+      "auc": 0.7458597046413501,
+      "log_loss": 0.5579863305933395,
+      "calibration_max_error": 0.6127490533417383,
+      "calibration_mean_error": 0.2495908755800135,
+      "fold": 5,
+      "train_size": 7129,
+      "test_size": 376,
+      "best_iteration": 10
+    }
+  ],
+  "tier": "per_sector",
+  "identifier": "investment",
+  "version": "2026-05-13"
+}

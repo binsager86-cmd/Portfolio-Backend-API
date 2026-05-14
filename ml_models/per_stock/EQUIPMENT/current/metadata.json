@@ -1,0 +1,46 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.07736696191586284,
+  "calibration_error": 0.5006185677425118,
+  "n_train_events": 387,
+  "train_date_range": {
+    "start": "2023-08-27",
+    "end": "2026-04-21"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.09216547218216266,
+      "calibration_max_error": 0.004605130974969063,
+      "calibration_mean_error": 0.004605130974969063,
+      "fold": 2,
+      "train_size": 270,
+      "test_size": 39,
+      "best_iteration": 68
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.050620489445865065,
+      "calibration_max_error": 0.6931090861638899,
+      "calibration_mean_error": 0.3567270119423948,
+      "fold": 3,
+      "train_size": 309,
+      "test_size": 39,
+      "best_iteration": 155
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.08931492411956078,
+      "calibration_max_error": 0.8041414860886762,
+      "calibration_mean_error": 0.40615752166653096,
+      "fold": 5,
+      "train_size": 367,
+      "test_size": 20,
+      "best_iteration": 76
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "EQUIPMENT",
+  "version": "2026-05-13"
+}

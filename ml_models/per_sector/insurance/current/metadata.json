@@ -1,0 +1,46 @@
+{
+  "auc": 0.5952380952380952,
+  "log_loss": 0.7583667169023117,
+  "calibration_error": 0.1947516665959038,
+  "n_train_events": 86,
+  "train_date_range": {
+    "start": "2023-12-11",
+    "end": "2026-04-19"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.7142857142857143,
+      "log_loss": 0.7636790486125418,
+      "calibration_max_error": 0.1882996860249245,
+      "calibration_mean_error": 0.1882996860249245,
+      "fold": 1,
+      "train_size": 51,
+      "test_size": 9,
+      "best_iteration": 6
+    },
+    {
+      "auc": 0.5714285714285714,
+      "log_loss": 0.700808343131956,
+      "calibration_max_error": 0.1722448319774991,
+      "calibration_mean_error": 0.1722448319774991,
+      "fold": 3,
+      "train_size": 68,
+      "test_size": 9,
+      "best_iteration": 5
+    },
+    {
+      "auc": 0.5,
+      "log_loss": 0.8106127589624373,
+      "calibration_max_error": 0.22371048178528774,
+      "calibration_mean_error": 0.22371048178528774,
+      "fold": 5,
+      "train_size": 81,
+      "test_size": 5,
+      "best_iteration": 50
+    }
+  ],
+  "tier": "per_sector",
+  "identifier": "insurance",
+  "version": "2026-05-13"
+}

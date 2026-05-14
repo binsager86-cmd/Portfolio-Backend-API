@@ -1,0 +1,36 @@
+{
+  "auc": 0.75,
+  "log_loss": 0.5484783065380784,
+  "calibration_error": 0.6578968929040087,
+  "n_train_events": 179,
+  "train_date_range": {
+    "start": "2024-05-01",
+    "end": "2026-04-21"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.5,
+      "log_loss": 0.8500847587450564,
+      "calibration_max_error": 0.4783465905049427,
+      "calibration_mean_error": 0.4783465905049427,
+      "fold": 2,
+      "train_size": 125,
+      "test_size": 18,
+      "best_iteration": 1
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.2468718543311004,
+      "calibration_max_error": 0.8374471953030747,
+      "calibration_mean_error": 0.4434116551461055,
+      "fold": 5,
+      "train_size": 170,
+      "test_size": 9,
+      "best_iteration": 43
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "MENA",
+  "version": "2026-05-13"
+}

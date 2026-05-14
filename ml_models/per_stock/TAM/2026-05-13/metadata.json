@@ -1,0 +1,36 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.00017412689476350667,
+  "calibration_error": 0.0007665445557640502,
+  "n_train_events": 105,
+  "train_date_range": {
+    "start": "2023-12-11",
+    "end": "2025-12-14"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.00031340850553691457,
+      "calibration_max_error": 0.0014697951076731398,
+      "calibration_mean_error": 0.0007469181843532658,
+      "fold": 3,
+      "train_size": 84,
+      "test_size": 10,
+      "best_iteration": 194
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 3.484528399009876e-05,
+      "calibration_max_error": 6.329400385496063e-05,
+      "calibration_mean_error": 4.195685687424649e-05,
+      "fold": 5,
+      "train_size": 99,
+      "test_size": 6,
+      "best_iteration": 193
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "TAM",
+  "version": "2026-05-13"
+}

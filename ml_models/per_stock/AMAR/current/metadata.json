@@ -1,0 +1,15 @@
+{
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 232,
+  "train_date_range": {
+    "start": "2023-10-04",
+    "end": "2026-04-12"
+  },
+  "rejected_reason": "auc_below_threshold_nan",
+  "fold_metrics": [],
+  "tier": "per_stock",
+  "identifier": "AMAR",
+  "version": "2026-05-13"
+}

@@ -1,0 +1,36 @@
+{
+  "auc": 0.75,
+  "log_loss": 0.3993653825615376,
+  "calibration_error": 0.3233204060906083,
+  "n_train_events": 104,
+  "train_date_range": {
+    "start": "2023-06-15",
+    "end": "2025-12-22"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.2982574403271795,
+      "calibration_max_error": 0.6418493451713695,
+      "calibration_mean_error": 0.37574111440774693,
+      "fold": 1,
+      "train_size": 62,
+      "test_size": 10,
+      "best_iteration": 38
+    },
+    {
+      "auc": 0.5,
+      "log_loss": 0.5004733247958957,
+      "calibration_max_error": 0.004791467009847117,
+      "calibration_mean_error": 0.004791467009847117,
+      "fold": 3,
+      "train_size": 83,
+      "test_size": 10,
+      "best_iteration": 6
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "HUMANSOFT",
+  "version": "2026-05-13"
+}

@@ -1,0 +1,36 @@
+{
+  "auc": 0.8571428571428572,
+  "log_loss": 0.6740863392068823,
+  "calibration_error": 0.5401895572929875,
+  "n_train_events": 370,
+  "train_date_range": {
+    "start": "2023-07-05",
+    "end": "2026-05-06"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.25675168888130956,
+      "calibration_max_error": 0.40246376346174034,
+      "calibration_mean_error": 0.27202054017149363,
+      "fold": 1,
+      "train_size": 222,
+      "test_size": 37,
+      "best_iteration": 11
+    },
+    {
+      "auc": 0.7142857142857143,
+      "log_loss": 1.0914209895324551,
+      "calibration_max_error": 0.6779153511242346,
+      "calibration_mean_error": 0.5198155389116238,
+      "fold": 4,
+      "train_size": 333,
+      "test_size": 18,
+      "best_iteration": 10
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "KPPC",
+  "version": "2026-05-13"
+}

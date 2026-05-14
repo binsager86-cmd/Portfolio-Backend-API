@@ -1,0 +1,36 @@
+{
+  "auc": 0.65,
+  "log_loss": 1.0644632721661431,
+  "calibration_error": 0.8963068082929275,
+  "n_train_events": 210,
+  "train_date_range": {
+    "start": "2023-09-25",
+    "end": "2026-04-19"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.5301796667421163,
+      "calibration_max_error": 0.8845635015630061,
+      "calibration_mean_error": 0.4527518087378732,
+      "fold": 1,
+      "train_size": 126,
+      "test_size": 21,
+      "best_iteration": 31
+    },
+    {
+      "auc": 0.3,
+      "log_loss": 1.5987468775901699,
+      "calibration_max_error": 0.9080501150228488,
+      "calibration_mean_error": 0.6560360919031359,
+      "fold": 2,
+      "train_size": 147,
+      "test_size": 21,
+      "best_iteration": 22
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "INJAZZAT",
+  "version": "2026-05-13"
+}

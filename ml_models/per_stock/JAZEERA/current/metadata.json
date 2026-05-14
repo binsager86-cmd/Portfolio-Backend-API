@@ -1,0 +1,36 @@
+{
+  "auc": 0.5227272727272727,
+  "log_loss": 0.46512891668614886,
+  "calibration_error": 0.061081806092765284,
+  "n_train_events": 243,
+  "train_date_range": {
+    "start": "2023-07-06",
+    "end": "2026-04-14"
+  },
+  "rejected_reason": "auc_below_threshold_0.5227",
+  "fold_metrics": [
+    {
+      "auc": 0.5,
+      "log_loss": 0.5710042563383849,
+      "calibration_max_error": 0.05393310528443929,
+      "calibration_mean_error": 0.05393310528443929,
+      "fold": 3,
+      "train_size": 194,
+      "test_size": 24,
+      "best_iteration": 1
+    },
+    {
+      "auc": 0.5454545454545454,
+      "log_loss": 0.35925357703391286,
+      "calibration_max_error": 0.06823050690109128,
+      "calibration_mean_error": 0.06030711524113158,
+      "fold": 5,
+      "train_size": 230,
+      "test_size": 13,
+      "best_iteration": 47
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "JAZEERA",
+  "version": "2026-05-13"
+}

@@ -1,0 +1,46 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.236550858802666,
+  "calibration_error": 0.21131708005048488,
+  "n_train_events": 250,
+  "train_date_range": {
+    "start": "2024-03-03",
+    "end": "2026-03-15"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.443943189873903,
+      "calibration_max_error": 0.5869801583396802,
+      "calibration_mean_error": 0.3461684879777403,
+      "fold": 2,
+      "train_size": 175,
+      "test_size": 25,
+      "best_iteration": 17
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.020763181675724652,
+      "calibration_max_error": 0.03560776995534687,
+      "calibration_mean_error": 0.027042645281949666,
+      "fold": 3,
+      "train_size": 200,
+      "test_size": 25,
+      "best_iteration": 65
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.2449462048583702,
+      "calibration_max_error": 0.011363311856427583,
+      "calibration_mean_error": 0.011363311856427583,
+      "fold": 5,
+      "train_size": 237,
+      "test_size": 13,
+      "best_iteration": 48
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "NICBM",
+  "version": "2026-05-13"
+}

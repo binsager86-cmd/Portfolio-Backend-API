@@ -1,0 +1,36 @@
+{
+  "auc": 1.0,
+  "log_loss": 4.107883723815054e-05,
+  "calibration_error": 4.1764127567789355e-05,
+  "n_train_events": 258,
+  "train_date_range": {
+    "start": "2023-06-07",
+    "end": "2026-04-08"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 4.216507917029666e-05,
+      "calibration_max_error": 4.3004568740512283e-05,
+      "calibration_mean_error": 3.2079206842292916e-05,
+      "fold": 1,
+      "train_size": 154,
+      "test_size": 26,
+      "best_iteration": 200
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 3.9992595306004415e-05,
+      "calibration_max_error": 4.052368639506643e-05,
+      "calibration_mean_error": 3.3608780613973446e-05,
+      "fold": 3,
+      "train_size": 206,
+      "test_size": 26,
+      "best_iteration": 200
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "MUBARRAD",
+  "version": "2026-05-13"
+}

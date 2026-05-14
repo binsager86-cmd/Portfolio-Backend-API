@@ -1,0 +1,46 @@
+{
+  "auc": 0.8260117980884109,
+  "log_loss": 0.5646147130768391,
+  "calibration_error": 0.6136873331923642,
+  "n_train_events": 939,
+  "train_date_range": {
+    "start": "2023-06-15",
+    "end": "2026-05-10"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.9974798387096774,
+      "log_loss": 0.7666995977440628,
+      "calibration_max_error": 0.7410274445505022,
+      "calibration_mean_error": 0.38758482290406215,
+      "fold": 1,
+      "train_size": 563,
+      "test_size": 94,
+      "best_iteration": 25
+    },
+    {
+      "auc": 0.9472222222222222,
+      "log_loss": 0.24118038003409661,
+      "calibration_max_error": 0.3241475209645909,
+      "calibration_mean_error": 0.24390072585285394,
+      "fold": 2,
+      "train_size": 657,
+      "test_size": 94,
+      "best_iteration": 16
+    },
+    {
+      "auc": 0.5333333333333333,
+      "log_loss": 0.6859641614523576,
+      "calibration_max_error": 0.7758870340619997,
+      "calibration_mean_error": 0.4548283774199164,
+      "fold": 5,
+      "train_size": 892,
+      "test_size": 47,
+      "best_iteration": 1
+    }
+  ],
+  "tier": "per_sector",
+  "identifier": "technology",
+  "version": "2026-05-13"
+}

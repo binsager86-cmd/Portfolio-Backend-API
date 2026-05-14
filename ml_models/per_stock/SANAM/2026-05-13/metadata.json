@@ -1,0 +1,46 @@
+{
+  "auc": 0.8142857142857144,
+  "log_loss": 0.6769569946262858,
+  "calibration_error": 0.3757709918595311,
+  "n_train_events": 408,
+  "train_date_range": {
+    "start": "2023-07-16",
+    "end": "2026-04-02"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.0005337126569242223,
+      "calibration_max_error": 0.0006336040817586644,
+      "calibration_mean_error": 0.0003405766577501963,
+      "fold": 1,
+      "train_size": 244,
+      "test_size": 41,
+      "best_iteration": 200
+    },
+    {
+      "auc": 0.9428571428571428,
+      "log_loss": 0.9735414097584295,
+      "calibration_max_error": 0.510809742509934,
+      "calibration_mean_error": 0.510809742509934,
+      "fold": 2,
+      "train_size": 285,
+      "test_size": 41,
+      "best_iteration": 1
+    },
+    {
+      "auc": 0.5,
+      "log_loss": 1.0567958614635033,
+      "calibration_max_error": 0.6158696289869006,
+      "calibration_mean_error": 0.6158696289869006,
+      "fold": 5,
+      "train_size": 387,
+      "test_size": 21,
+      "best_iteration": 1
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "SANAM",
+  "version": "2026-05-13"
+}

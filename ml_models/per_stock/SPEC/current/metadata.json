@@ -1,0 +1,26 @@
+{
+  "auc": 0.07836990595611283,
+  "log_loss": 0.6165516703830226,
+  "calibration_error": 0.10134730177525897,
+  "n_train_events": 401,
+  "train_date_range": {
+    "start": "2023-07-09",
+    "end": "2026-04-26"
+  },
+  "rejected_reason": "auc_below_threshold_0.0784",
+  "fold_metrics": [
+    {
+      "auc": 0.07836990595611283,
+      "log_loss": 0.6165516703830226,
+      "calibration_max_error": 0.10134730177525897,
+      "calibration_mean_error": 0.10134730177525897,
+      "fold": 2,
+      "train_size": 280,
+      "test_size": 40,
+      "best_iteration": 15
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "SPEC",
+  "version": "2026-05-13"
+}

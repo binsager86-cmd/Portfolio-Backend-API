@@ -1,0 +1,36 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.057161032260506534,
+  "calibration_error": 0.5654024956920951,
+  "n_train_events": 481,
+  "train_date_range": {
+    "start": "2023-06-15",
+    "end": "2026-03-25"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.0788520404100118,
+      "calibration_max_error": 0.5441822702767323,
+      "calibration_mean_error": 0.29440350494958123,
+      "fold": 2,
+      "train_size": 336,
+      "test_size": 48,
+      "best_iteration": 94
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.035470024111001267,
+      "calibration_max_error": 0.586622721107458,
+      "calibration_mean_error": 0.29338127249837703,
+      "fold": 5,
+      "train_size": 456,
+      "test_size": 25,
+      "best_iteration": 165
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "CLEANING",
+  "version": "2026-05-13"
+}

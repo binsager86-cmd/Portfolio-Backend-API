@@ -1,0 +1,36 @@
+{
+  "auc": 0.75,
+  "log_loss": 0.7895686115482892,
+  "calibration_error": 0.4627061634391789,
+  "n_train_events": 173,
+  "train_date_range": {
+    "start": "2024-03-06",
+    "end": "2025-11-12"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.5,
+      "log_loss": 0.9684914728109083,
+      "calibration_max_error": 0.44782583818297256,
+      "calibration_mean_error": 0.44782583818297256,
+      "fold": 3,
+      "train_size": 138,
+      "test_size": 17,
+      "best_iteration": 1
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.6106457502856701,
+      "calibration_max_error": 0.47758648869538534,
+      "calibration_mean_error": 0.45385429141463396,
+      "fold": 5,
+      "train_size": 164,
+      "test_size": 9,
+      "best_iteration": 6
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "TAMINV",
+  "version": "2026-05-13"
+}

@@ -1,0 +1,36 @@
+{
+  "auc": 0.5,
+  "log_loss": 0.39492522759023485,
+  "calibration_error": 0.2727853609422188,
+  "n_train_events": 139,
+  "train_date_range": {
+    "start": "2023-07-18",
+    "end": "2026-05-10"
+  },
+  "rejected_reason": "auc_below_threshold_0.5000",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.5217754508930504,
+      "calibration_max_error": 0.545439607439699,
+      "calibration_mean_error": 0.42860648891710146,
+      "fold": 2,
+      "train_size": 97,
+      "test_size": 14,
+      "best_iteration": 11
+    },
+    {
+      "auc": 0.0,
+      "log_loss": 0.26807500428741926,
+      "calibration_max_error": 0.00013111444473856704,
+      "calibration_mean_error": 0.00013111444473856704,
+      "fold": 3,
+      "train_size": 111,
+      "test_size": 14,
+      "best_iteration": 91
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "ATC",
+  "version": "2026-05-13"
+}

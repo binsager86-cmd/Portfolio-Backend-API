@@ -1,0 +1,36 @@
+{
+  "auc": 0.7536764705882353,
+  "log_loss": 0.13270651577315623,
+  "calibration_error": 0.11008292107869588,
+  "n_train_events": 365,
+  "train_date_range": {
+    "start": "2023-07-10",
+    "end": "2026-04-29"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.5073529411764706,
+      "log_loss": 0.26508357126431653,
+      "calibration_max_error": 0.2149466531104669,
+      "calibration_mean_error": 0.14227060857347007,
+      "fold": 1,
+      "train_size": 219,
+      "test_size": 36,
+      "best_iteration": 28
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.00032946028199592846,
+      "calibration_max_error": 0.005219189046924862,
+      "calibration_mean_error": 0.0026381183978045324,
+      "fold": 5,
+      "train_size": 346,
+      "test_size": 19,
+      "best_iteration": 175
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "OSOUL",
+  "version": "2026-05-13"
+}

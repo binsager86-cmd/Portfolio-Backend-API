@@ -1,0 +1,36 @@
+{
+  "auc": 0.75,
+  "log_loss": 0.3991878466296272,
+  "calibration_error": 0.11121477427832491,
+  "n_train_events": 318,
+  "train_date_range": {
+    "start": "2023-07-12",
+    "end": "2026-04-27"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.0817359059796428,
+      "calibration_max_error": 0.11530987875443732,
+      "calibration_mean_error": 0.05959092414081335,
+      "fold": 1,
+      "train_size": 190,
+      "test_size": 32,
+      "best_iteration": 85
+    },
+    {
+      "auc": 0.5,
+      "log_loss": 0.7166397872796116,
+      "calibration_max_error": 0.10711966980221249,
+      "calibration_mean_error": 0.10711966980221249,
+      "fold": 3,
+      "train_size": 254,
+      "test_size": 32,
+      "best_iteration": 1
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "EMIRATES",
+  "version": "2026-05-13"
+}

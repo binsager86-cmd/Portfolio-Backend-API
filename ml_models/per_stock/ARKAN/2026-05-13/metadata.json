@@ -1,0 +1,56 @@
+{
+  "auc": 0.8633928571428572,
+  "log_loss": 0.36748262748009264,
+  "calibration_error": 0.7234826154768743,
+  "n_train_events": 300,
+  "train_date_range": {
+    "start": "2023-12-12",
+    "end": "2026-03-31"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.5535714285714286,
+      "log_loss": 0.21918491062810583,
+      "calibration_max_error": 0.8440340324623044,
+      "calibration_mean_error": 0.42622165698865294,
+      "fold": 2,
+      "train_size": 210,
+      "test_size": 30,
+      "best_iteration": 105
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.6143155745512066,
+      "calibration_max_error": 0.4224677751065221,
+      "calibration_mean_error": 0.4224677751065221,
+      "fold": 3,
+      "train_size": 240,
+      "test_size": 30,
+      "best_iteration": 2
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.20792560766147333,
+      "calibration_max_error": 0.8889417351139796,
+      "calibration_mean_error": 0.4763112715163813,
+      "fold": 4,
+      "train_size": 270,
+      "test_size": 15,
+      "best_iteration": 37
+    },
+    {
+      "auc": 0.9,
+      "log_loss": 0.4285044170795848,
+      "calibration_max_error": 0.7384869192246913,
+      "calibration_mean_error": 0.41249017999808446,
+      "fold": 5,
+      "train_size": 285,
+      "test_size": 15,
+      "best_iteration": 80
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "ARKAN",
+  "version": "2026-05-13"
+}

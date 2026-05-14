@@ -1,0 +1,26 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.6659634183580752,
+  "calibration_error": 0.6931702585236623,
+  "n_train_events": 327,
+  "train_date_range": {
+    "start": "2023-07-13",
+    "end": "2026-04-14"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.6659634183580752,
+      "calibration_max_error": 0.6931702585236623,
+      "calibration_mean_error": 0.45299116097859576,
+      "fold": 3,
+      "train_size": 261,
+      "test_size": 33,
+      "best_iteration": 19
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "COAST",
+  "version": "2026-05-13"
+}

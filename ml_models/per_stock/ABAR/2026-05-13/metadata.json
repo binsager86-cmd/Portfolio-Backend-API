@@ -1,0 +1,36 @@
+{
+  "auc": 0.8586309523809523,
+  "log_loss": 0.4464691668596048,
+  "calibration_error": 0.2222123004205963,
+  "n_train_events": 382,
+  "train_date_range": {
+    "start": "2023-06-19",
+    "end": "2026-04-19"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.33258820816889284,
+      "calibration_max_error": 0.3033457602699685,
+      "calibration_mean_error": 0.27494437591316534,
+      "fold": 2,
+      "train_size": 267,
+      "test_size": 38,
+      "best_iteration": 20
+    },
+    {
+      "auc": 0.7172619047619048,
+      "log_loss": 0.5603501255503168,
+      "calibration_max_error": 0.1410788405712241,
+      "calibration_mean_error": 0.0865455227423142,
+      "fold": 3,
+      "train_size": 305,
+      "test_size": 38,
+      "best_iteration": 9
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "ABAR",
+  "version": "2026-05-13"
+}

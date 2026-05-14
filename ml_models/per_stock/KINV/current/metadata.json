@@ -1,0 +1,36 @@
+{
+  "auc": 0.8888888888888888,
+  "log_loss": 0.4339119521599059,
+  "calibration_error": 0.5506885317404178,
+  "n_train_events": 294,
+  "train_date_range": {
+    "start": "2023-06-01",
+    "end": "2026-04-14"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.4745923146180983,
+      "calibration_max_error": 0.32428007535909753,
+      "calibration_mean_error": 0.21427629192019043,
+      "fold": 4,
+      "train_size": 264,
+      "test_size": 15,
+      "best_iteration": 27
+    },
+    {
+      "auc": 0.7777777777777778,
+      "log_loss": 0.3932315897017135,
+      "calibration_max_error": 0.777096988121738,
+      "calibration_mean_error": 0.31577266685223404,
+      "fold": 5,
+      "train_size": 279,
+      "test_size": 15,
+      "best_iteration": 73
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "KINV",
+  "version": "2026-05-13"
+}

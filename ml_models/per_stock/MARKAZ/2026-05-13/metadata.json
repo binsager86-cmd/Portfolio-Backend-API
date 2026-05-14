@@ -1,0 +1,36 @@
+{
+  "auc": 0.9166666666666667,
+  "log_loss": 0.15675024060462706,
+  "calibration_error": 0.09097409311321514,
+  "n_train_events": 323,
+  "train_date_range": {
+    "start": "2023-07-05",
+    "end": "2026-04-21"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.11915718197239768,
+      "calibration_max_error": 0.06931699485634235,
+      "calibration_mean_error": 0.0423046508774007,
+      "fold": 1,
+      "train_size": 193,
+      "test_size": 33,
+      "best_iteration": 115
+    },
+    {
+      "auc": 0.8333333333333334,
+      "log_loss": 0.19434329923685642,
+      "calibration_max_error": 0.11263119137008792,
+      "calibration_mean_error": 0.07910699245565932,
+      "fold": 5,
+      "train_size": 306,
+      "test_size": 17,
+      "best_iteration": 122
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "MARKAZ",
+  "version": "2026-05-13"
+}

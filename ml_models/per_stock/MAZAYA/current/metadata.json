@@ -1,0 +1,36 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.8084550933678785,
+  "calibration_error": 0.6858745667346835,
+  "n_train_events": 215,
+  "train_date_range": {
+    "start": "2023-06-01",
+    "end": "2026-04-14"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 1.499983156364715,
+      "calibration_max_error": 0.7160559737239127,
+      "calibration_mean_error": 0.7006920334271822,
+      "fold": 2,
+      "train_size": 150,
+      "test_size": 22,
+      "best_iteration": 3
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.11692703037104184,
+      "calibration_max_error": 0.6556931597454542,
+      "calibration_mean_error": 0.25028685706427495,
+      "fold": 3,
+      "train_size": 172,
+      "test_size": 21,
+      "best_iteration": 120
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "MAZAYA",
+  "version": "2026-05-13"
+}

@@ -1,0 +1,36 @@
+{
+  "auc": 0.95,
+  "log_loss": 0.4987785158414888,
+  "calibration_error": 0.2721133751653835,
+  "n_train_events": 120,
+  "train_date_range": {
+    "start": "2024-01-21",
+    "end": "2026-05-10"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.7220309051470438,
+      "calibration_max_error": 0.3730591964457737,
+      "calibration_mean_error": 0.3730591964457737,
+      "fold": 2,
+      "train_size": 84,
+      "test_size": 12,
+      "best_iteration": 1
+    },
+    {
+      "auc": 0.9,
+      "log_loss": 0.2755261265359338,
+      "calibration_max_error": 0.17116755388499327,
+      "calibration_mean_error": 0.10303905746996782,
+      "fold": 5,
+      "train_size": 114,
+      "test_size": 6,
+      "best_iteration": 52
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "KUWAITRE",
+  "version": "2026-05-13"
+}

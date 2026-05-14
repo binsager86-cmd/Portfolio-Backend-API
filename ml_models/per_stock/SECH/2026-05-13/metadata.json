@@ -1,0 +1,46 @@
+{
+  "auc": 0.8989898989898989,
+  "log_loss": 0.3496082840421267,
+  "calibration_error": 0.2735758569910126,
+  "n_train_events": 283,
+  "train_date_range": {
+    "start": "2023-05-09",
+    "end": "2026-04-19"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.6969696969696969,
+      "log_loss": 0.4932454902506152,
+      "calibration_max_error": 0.23663278749184566,
+      "calibration_mean_error": 0.17202856058042953,
+      "fold": 2,
+      "train_size": 198,
+      "test_size": 28,
+      "best_iteration": 25
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.5491424172377642,
+      "calibration_max_error": 0.5117440607885233,
+      "calibration_mean_error": 0.41440920749204013,
+      "fold": 4,
+      "train_size": 254,
+      "test_size": 14,
+      "best_iteration": 18
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.006436944638000538,
+      "calibration_max_error": 0.07235072269266883,
+      "calibration_mean_error": 0.03694093956602983,
+      "fold": 5,
+      "train_size": 268,
+      "test_size": 15,
+      "best_iteration": 125
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "SECH",
+  "version": "2026-05-13"
+}

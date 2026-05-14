@@ -1,0 +1,26 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.0006615968865321303,
+  "calibration_error": 0.0016087751326465422,
+  "n_train_events": 162,
+  "train_date_range": {
+    "start": "2023-06-15",
+    "end": "2026-04-01"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.0006615968865321303,
+      "calibration_max_error": 0.0016087751326465422,
+      "calibration_mean_error": 0.0008980195896675522,
+      "fold": 5,
+      "train_size": 153,
+      "test_size": 9,
+      "best_iteration": 187
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "AZNOULA",
+  "version": "2026-05-13"
+}

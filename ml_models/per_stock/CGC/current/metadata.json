@@ -1,0 +1,56 @@
+{
+  "auc": 0.7980769230769231,
+  "log_loss": 0.6644075055998624,
+  "calibration_error": 0.48758199704809513,
+  "n_train_events": 293,
+  "train_date_range": {
+    "start": "2023-12-28",
+    "end": "2026-05-04"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.5,
+      "log_loss": 1.0811730357034137,
+      "calibration_max_error": 0.635315211199716,
+      "calibration_mean_error": 0.635315211199716,
+      "fold": 1,
+      "train_size": 175,
+      "test_size": 30,
+      "best_iteration": 1
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.4635530923709822,
+      "calibration_max_error": 0.7887533609681137,
+      "calibration_mean_error": 0.34364763101303614,
+      "fold": 2,
+      "train_size": 205,
+      "test_size": 29,
+      "best_iteration": 35
+    },
+    {
+      "auc": 0.6923076923076923,
+      "log_loss": 0.422677265571421,
+      "calibration_max_error": 0.0017721101657722782,
+      "calibration_mean_error": 0.0017721101657722782,
+      "fold": 4,
+      "train_size": 263,
+      "test_size": 15,
+      "best_iteration": 28
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.6902266287536326,
+      "calibration_max_error": 0.5244873058587786,
+      "calibration_mean_error": 0.4521353011000417,
+      "fold": 5,
+      "train_size": 278,
+      "test_size": 15,
+      "best_iteration": 3
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "CGC",
+  "version": "2026-05-13"
+}

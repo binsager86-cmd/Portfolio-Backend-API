@@ -1,0 +1,46 @@
+{
+  "auc": 0.6392676767676768,
+  "log_loss": 0.5591720253731681,
+  "calibration_error": 0.10425809641223827,
+  "n_train_events": 423,
+  "train_date_range": {
+    "start": "2023-05-31",
+    "end": "2026-04-16"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.6136363636363636,
+      "log_loss": 0.6139832536934211,
+      "calibration_max_error": 0.05304041128534076,
+      "calibration_mean_error": 0.02711715740093637,
+      "fold": 1,
+      "train_size": 253,
+      "test_size": 43,
+      "best_iteration": 34
+    },
+    {
+      "auc": 0.4375,
+      "log_loss": 0.5555536300294639,
+      "calibration_max_error": 0.004530953323055531,
+      "calibration_mean_error": 0.004530953323055531,
+      "fold": 4,
+      "train_size": 380,
+      "test_size": 21,
+      "best_iteration": 1
+    },
+    {
+      "auc": 0.8666666666666667,
+      "log_loss": 0.5079791923966194,
+      "calibration_max_error": 0.2552029246283185,
+      "calibration_mean_error": 0.18192221301097686,
+      "fold": 5,
+      "train_size": 401,
+      "test_size": 22,
+      "best_iteration": 38
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "WARBACAP",
+  "version": "2026-05-13"
+}

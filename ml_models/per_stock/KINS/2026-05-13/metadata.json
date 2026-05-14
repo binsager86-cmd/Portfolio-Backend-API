@@ -1,0 +1,26 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.6477891044563528,
+  "calibration_error": 0.48199938341356563,
+  "n_train_events": 225,
+  "train_date_range": {
+    "start": "2024-01-11",
+    "end": "2026-04-13"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.6477891044563528,
+      "calibration_max_error": 0.48199938341356563,
+      "calibration_mean_error": 0.47771367139957993,
+      "fold": 2,
+      "train_size": 157,
+      "test_size": 23,
+      "best_iteration": 4
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "KINS",
+  "version": "2026-05-13"
+}

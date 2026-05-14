@@ -1,0 +1,36 @@
+{
+  "auc": 0.875,
+  "log_loss": 0.07547898499101047,
+  "calibration_error": 0.03473165810184424,
+  "n_train_events": 299,
+  "train_date_range": {
+    "start": "2023-06-14",
+    "end": "2026-04-13"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.75,
+      "log_loss": 0.15086226644309866,
+      "calibration_max_error": 0.0693414663669367,
+      "calibration_mean_error": 0.03891997627425196,
+      "fold": 1,
+      "train_size": 179,
+      "test_size": 30,
+      "best_iteration": 48
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 9.570353892226051e-05,
+      "calibration_max_error": 0.00012184983675178618,
+      "calibration_mean_error": 8.262249491470744e-05,
+      "fold": 2,
+      "train_size": 209,
+      "test_size": 30,
+      "best_iteration": 190
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "TIJARA",
+  "version": "2026-05-13"
+}

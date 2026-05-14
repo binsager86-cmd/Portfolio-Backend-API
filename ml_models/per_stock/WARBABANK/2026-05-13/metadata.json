@@ -1,0 +1,36 @@
+{
+  "auc": 0.625,
+  "log_loss": 0.5703159213477316,
+  "calibration_error": 0.5995749180617256,
+  "n_train_events": 290,
+  "train_date_range": {
+    "start": "2023-12-12",
+    "end": "2026-04-16"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.5,
+      "log_loss": 0.8747506788439364,
+      "calibration_max_error": 0.2894396497270696,
+      "calibration_mean_error": 0.2894396497270696,
+      "fold": 3,
+      "train_size": 232,
+      "test_size": 29,
+      "best_iteration": 1
+    },
+    {
+      "auc": 0.75,
+      "log_loss": 0.2658811638515267,
+      "calibration_max_error": 0.9097101863963817,
+      "calibration_mean_error": 0.326105032301595,
+      "fold": 5,
+      "train_size": 275,
+      "test_size": 15,
+      "best_iteration": 117
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "WARBABANK",
+  "version": "2026-05-13"
+}

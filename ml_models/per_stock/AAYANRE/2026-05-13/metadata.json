@@ -1,0 +1,26 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.0995404884874548,
+  "calibration_error": 0.6193618125990527,
+  "n_train_events": 313,
+  "train_date_range": {
+    "start": "2023-06-15",
+    "end": "2026-04-26"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.0995404884874548,
+      "calibration_max_error": 0.6193618125990527,
+      "calibration_mean_error": 0.3195874539856416,
+      "fold": 5,
+      "train_size": 297,
+      "test_size": 16,
+      "best_iteration": 35
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "AAYANRE",
+  "version": "2026-05-13"
+}

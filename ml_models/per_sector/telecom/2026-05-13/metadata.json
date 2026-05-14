@@ -1,0 +1,66 @@
+{
+  "auc": 0.6325320910973085,
+  "log_loss": 0.6641260946145209,
+  "calibration_error": 0.4616567377989732,
+  "n_train_events": 578,
+  "train_date_range": {
+    "start": "2023-06-26",
+    "end": "2026-04-26"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.3695652173913043,
+      "log_loss": 0.5265353745313337,
+      "calibration_max_error": 0.20008256465643542,
+      "calibration_mean_error": 0.1307373581697608,
+      "fold": 1,
+      "train_size": 346,
+      "test_size": 58,
+      "best_iteration": 9
+    },
+    {
+      "auc": 0.6799999999999999,
+      "log_loss": 0.6782628843607116,
+      "calibration_max_error": 0.5680765320078365,
+      "calibration_mean_error": 0.32493051913037246,
+      "fold": 2,
+      "train_size": 404,
+      "test_size": 58,
+      "best_iteration": 4
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.6088945135351345,
+      "calibration_max_error": 0.30335314389031787,
+      "calibration_mean_error": 0.25663904111759067,
+      "fold": 3,
+      "train_size": 462,
+      "test_size": 58,
+      "best_iteration": 17
+    },
+    {
+      "auc": 0.5,
+      "log_loss": 0.985747786791791,
+      "calibration_max_error": 0.7311795595374061,
+      "calibration_mean_error": 0.5135182096572156,
+      "fold": 4,
+      "train_size": 520,
+      "test_size": 29,
+      "best_iteration": 5
+    },
+    {
+      "auc": 0.6130952380952381,
+      "log_loss": 0.5211899138536334,
+      "calibration_max_error": 0.5055918889028699,
+      "calibration_mean_error": 0.30155949130638426,
+      "fold": 5,
+      "train_size": 549,
+      "test_size": 29,
+      "best_iteration": 30
+    }
+  ],
+  "tier": "per_sector",
+  "identifier": "telecom",
+  "version": "2026-05-13"
+}

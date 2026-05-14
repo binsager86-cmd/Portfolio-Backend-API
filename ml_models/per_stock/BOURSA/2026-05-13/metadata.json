@@ -1,0 +1,46 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.09342599833404752,
+  "calibration_error": 0.013832611084317693,
+  "n_train_events": 212,
+  "train_date_range": {
+    "start": "2024-01-03",
+    "end": "2026-03-10"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 2.0121172254384075e-05,
+      "calibration_max_error": 3.48073969869086e-05,
+      "calibration_mean_error": 2.4526867775651438e-05,
+      "fold": 1,
+      "train_size": 127,
+      "test_size": 21,
+      "best_iteration": 198
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.0008265412446796861,
+      "calibration_max_error": 0.0009098175107771223,
+      "calibration_mean_error": 0.0004706497239616311,
+      "fold": 2,
+      "train_size": 148,
+      "test_size": 21,
+      "best_iteration": 200
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.27943133258520847,
+      "calibration_max_error": 0.04055320834518905,
+      "calibration_mean_error": 0.04055320834518905,
+      "fold": 5,
+      "train_size": 201,
+      "test_size": 11,
+      "best_iteration": 31
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "BOURSA",
+  "version": "2026-05-13"
+}

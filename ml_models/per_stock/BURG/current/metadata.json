@@ -1,0 +1,26 @@
+{
+  "auc": 0.8,
+  "log_loss": 0.7485383046134566,
+  "calibration_error": 0.8602125536642223,
+  "n_train_events": 205,
+  "train_date_range": {
+    "start": "2023-06-19",
+    "end": "2026-04-08"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.8,
+      "log_loss": 0.7485383046134566,
+      "calibration_max_error": 0.8602125536642223,
+      "calibration_mean_error": 0.46211827136388434,
+      "fold": 5,
+      "train_size": 194,
+      "test_size": 11,
+      "best_iteration": 15
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "BURG",
+  "version": "2026-05-13"
+}

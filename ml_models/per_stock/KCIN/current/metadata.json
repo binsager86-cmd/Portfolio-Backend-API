@@ -1,0 +1,26 @@
+{
+  "auc": 1.0,
+  "log_loss": 0.0036862049114795665,
+  "calibration_error": 0.035931410604973846,
+  "n_train_events": 102,
+  "train_date_range": {
+    "start": "2023-07-13",
+    "end": "2025-10-21"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 0.0036862049114795665,
+      "calibration_max_error": 0.035931410604973846,
+      "calibration_mean_error": 0.017980661358622193,
+      "fold": 1,
+      "train_size": 61,
+      "test_size": 10,
+      "best_iteration": 170
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "KCIN",
+  "version": "2026-05-13"
+}

@@ -1,0 +1,56 @@
+{
+  "auc": 0.8125,
+  "log_loss": 0.32742928360013523,
+  "calibration_error": 0.2249528816211655,
+  "n_train_events": 216,
+  "train_date_range": {
+    "start": "2023-07-05",
+    "end": "2026-04-16"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.75,
+      "log_loss": 0.847693093332712,
+      "calibration_max_error": 0.8439273589436701,
+      "calibration_mean_error": 0.486375280005811,
+      "fold": 2,
+      "train_size": 151,
+      "test_size": 21,
+      "best_iteration": 11
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.00258399991220899,
+      "calibration_max_error": 0.004033731739452873,
+      "calibration_mean_error": 0.0020332124498819906,
+      "fold": 3,
+      "train_size": 172,
+      "test_size": 22,
+      "best_iteration": 200
+    },
+    {
+      "auc": 0.5,
+      "log_loss": 0.45066212172644915,
+      "calibration_max_error": 0.04133784730362089,
+      "calibration_mean_error": 0.04133784730362089,
+      "fold": 4,
+      "train_size": 194,
+      "test_size": 11,
+      "best_iteration": 18
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.008777919429170729,
+      "calibration_max_error": 0.01051258849791814,
+      "calibration_mean_error": 0.005616911346478496,
+      "fold": 5,
+      "train_size": 205,
+      "test_size": 11,
+      "best_iteration": 194
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "NIND",
+  "version": "2026-05-13"
+}

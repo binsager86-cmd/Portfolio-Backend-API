@@ -1,0 +1,46 @@
+{
+  "auc": 0.8333333333333334,
+  "log_loss": 0.3136896340789658,
+  "calibration_error": 0.49395880911145157,
+  "n_train_events": 317,
+  "train_date_range": {
+    "start": "2023-07-03",
+    "end": "2025-10-12"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 0.5,
+      "log_loss": 0.5942587117885963,
+      "calibration_max_error": 0.13347572374558103,
+      "calibration_mean_error": 0.13347572374558103,
+      "fold": 1,
+      "train_size": 190,
+      "test_size": 31,
+      "best_iteration": 1
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.04758285910377721,
+      "calibration_max_error": 0.5733831855989214,
+      "calibration_mean_error": 0.20769539240359808,
+      "fold": 3,
+      "train_size": 253,
+      "test_size": 32,
+      "best_iteration": 89
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.29922733134452373,
+      "calibration_max_error": 0.7750175179898524,
+      "calibration_mean_error": 0.4911950643779172,
+      "fold": 5,
+      "train_size": 301,
+      "test_size": 16,
+      "best_iteration": 10
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "KGL",
+  "version": "2026-05-13"
+}

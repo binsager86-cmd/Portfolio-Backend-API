@@ -1,0 +1,46 @@
+{
+  "auc": 0.8333333333333334,
+  "log_loss": 0.7640436823169523,
+  "calibration_error": 0.27198245249278613,
+  "n_train_events": 134,
+  "train_date_range": {
+    "start": "2023-11-15",
+    "end": "2026-03-03"
+  },
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "auc": 1.0,
+      "log_loss": 9.006308471137495e-05,
+      "calibration_max_error": 0.00017159108998365813,
+      "calibration_mean_error": 0.00010534460245073799,
+      "fold": 1,
+      "train_size": 80,
+      "test_size": 13,
+      "best_iteration": 171
+    },
+    {
+      "auc": 0.5,
+      "log_loss": 1.9111107128966616,
+      "calibration_max_error": 0.7394905098097525,
+      "calibration_mean_error": 0.7394905098097525,
+      "fold": 3,
+      "train_size": 107,
+      "test_size": 13,
+      "best_iteration": 1
+    },
+    {
+      "auc": 1.0,
+      "log_loss": 0.38093027096948406,
+      "calibration_max_error": 0.07628525657862217,
+      "calibration_mean_error": 0.07010072997626313,
+      "fold": 5,
+      "train_size": 127,
+      "test_size": 7,
+      "best_iteration": 36
+    }
+  ],
+  "tier": "per_stock",
+  "identifier": "ZAIN",
+  "version": "2026-05-13"
+}
