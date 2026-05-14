@@ -112,11 +112,11 @@ def compute_volume_context(df: pd.DataFrame, stage: str) -> Dict[str, Any]:
 
     # Signal confirmation: EARLY_BREAKOUT needs 1.5× volume; others 0.8×
     if stage == "EARLY_BREAKOUT":
-        is_confirmed = relative_volume >= 1.5
+        is_confirmed = bool(relative_volume >= 1.5)
     else:
-        is_confirmed = relative_volume >= 0.8
+        is_confirmed = bool(relative_volume >= 0.8)
 
-    institutional_flag = relative_volume > 3.0
+    institutional_flag = bool(relative_volume > 3.0)
 
     return {
         "today_volume": int(today["volume"]),
