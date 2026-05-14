@@ -40,6 +40,7 @@ from app.schemas.eagle_eye import (
     StockAnalysisResponse,
     SupportResistanceLevel,
     ThresholdProfileResponse,
+    VolumeContextSummary,
 )
 
 logger = logging.getLogger(__name__)
@@ -126,6 +127,7 @@ def _run_analysis(ticker: str) -> Optional[dict]:
             compute_entry_stop_targets,
             compute_rating,
             compute_support_resistance,
+            compute_volume_context,
             generate_thesis,
         )
 
@@ -145,6 +147,19 @@ def _run_analysis(ticker: str) -> Optional[dict]:
 
         stage = classify_stage(latest)
         confidence = compute_confidence(latest, stage, dna=None)
+
+        # Volume context + confidence multiplier
+        volume_context = compute_volume_context(df, stage)
+        _tier = volume_context["liquidity_tier"]
+        _LMUL = {"ILLIQUID": 0.50, "WATCH_ONLY": 0.70}
+        if _tier in _LMUL:
+            confidence = confidence * _LMUL[_tier]
+        elif not volume_context["is_volume_confirmed"]:
+            confidence = confidence * 0.85
+        elif volume_context["relative_volume_percentile"] > 80:
+            confidence = min(confidence * 1.10, 100)
+        confidence = round(min(confidence, 100), 2)
+
         rating = compute_rating(confidence)
         sr = compute_support_resistance(df, latest)
         et = compute_entry_stop_targets(df, latest, sr, stage=stage)
@@ -160,6 +175,7 @@ def _run_analysis(ticker: str) -> Optional[dict]:
             "resistances": sr.get("resistances", []),
             "entry": et,
             "indicators": latest,
+            "volume_context": volume_context,
             "days_of_history": len(df),
             "computed_at": datetime.utcnow().date().isoformat(),
         }
@@ -219,6 +235,15 @@ async def get_scanner(
                 if conf < min_confidence:
                     continue
 
+                vc_raw = row.get("volume_context") or {}
+                vc_summary = VolumeContextSummary(
+                    relative_volume=float(vc_raw.get("relative_volume") or 1.0),
+                    liquidity_tier=str(vc_raw.get("liquidity_tier") or "TRADEABLE"),
+                    is_volume_confirmed=bool(vc_raw.get("is_volume_confirmed", True)),
+                    volume_character=str(vc_raw.get("volume_character") or "NEUTRAL"),
+                    volume_trend_5d=str(vc_raw.get("volume_trend_5d") or "NEUTRAL"),
+                ) if vc_raw else None
+
                 results.append(RatedStock(
                     ticker=t,
                     name_en=row_name,
@@ -232,6 +257,7 @@ async def get_scanner(
                     tp1=row.get("tp1"),
                     last_price=row.get("last_price"),
                     computed_at=row.get("computed_at"),
+                    volume_context=vc_summary,
                 ))
                 if len(results) >= limit:
                     break
@@ -260,6 +286,14 @@ async def get_scanner(
             continue
 
         et = analysis.get("entry", {})
+        vc_raw = analysis.get("volume_context") or {}
+        vc_summary = VolumeContextSummary(
+            relative_volume=float(vc_raw.get("relative_volume") or 1.0),
+            liquidity_tier=str(vc_raw.get("liquidity_tier") or "TRADEABLE"),
+            is_volume_confirmed=bool(vc_raw.get("is_volume_confirmed", True)),
+            volume_character=str(vc_raw.get("volume_character") or "NEUTRAL"),
+            volume_trend_5d=str(vc_raw.get("volume_trend_5d") or "NEUTRAL"),
+        ) if vc_raw else None
         results.append(RatedStock(
             ticker=analysis["ticker"],
             name_en=meta.name_en,
@@ -273,6 +307,7 @@ async def get_scanner(
             tp1=et.get("tp1"),
             last_price=float(analysis["indicators"].get("close") or 0) or None,
             computed_at=analysis.get("computed_at"),
+            volume_context=vc_summary,
         ))
         if len(results) >= limit:
             break
@@ -566,6 +601,14 @@ async def refresh_stocks(
         )
     except Exception as exc:
         logger.warning("Could not start Eagle Eye background recompute: %s", exc)
+
+    job_id = str(uuid.uuid4())
+    return RefreshResponse(
+        status="ok",
+        job_id=job_id,
+        tickers_queued=len(body.tickers),
+        estimated_minutes=round(len(body.tickers) * 0.5, 1) or 0.5,
+    )
 
 
 # ===========================================================================
