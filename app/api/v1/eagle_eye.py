@@ -1023,8 +1023,6 @@ async def get_simulator_activity(
 async def run_simulator_now(
     user: TokenData = Depends(get_current_user),
 ):
-    if not user.is_admin:
-        raise HTTPException(status_code=403, detail="Admin only")
     try:
         from app.services.eagle_eye.simulator import get_engine
         result = get_engine().run_daily()
