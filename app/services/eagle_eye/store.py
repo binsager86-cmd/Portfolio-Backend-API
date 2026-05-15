@@ -20,7 +20,7 @@ import logging
 import math
 import time
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pandas as pd
 
@@ -177,7 +177,8 @@ def save_ohlcv(ticker: str, df: pd.DataFrame) -> int:
             conn.close()
     else:
         # PostgreSQL: remove affected dates then bulk-insert via pandas
-        from app.core.database import exec_sql, engine as db_engine
+        from app.core.database import engine as db_engine
+        from app.core.database import exec_sql
 
         dates = [r[1] for r in rows]
         placeholders = ", ".join(["?"] * len(dates))
@@ -203,8 +204,8 @@ def save_ohlcv(ticker: str, df: pd.DataFrame) -> int:
 
 def load_ohlcv(
     ticker: str,
-    start: Optional[date] = None,
-    end: Optional[date] = None,
+    start: date | None = None,
+    end: date | None = None,
 ) -> pd.DataFrame:
     """
     Load cached OHLCV rows for *ticker* from the DB.
@@ -250,7 +251,7 @@ def load_ohlcv(
     return df
 
 
-def get_latest_ohlcv_date(ticker: str) -> Optional[date]:
+def get_latest_ohlcv_date(ticker: str) -> date | None:
     """Return the most recent bar_date stored for *ticker*, or None."""
     from app.core.database import query_one
 
@@ -269,7 +270,7 @@ def get_latest_ohlcv_date(ticker: str) -> Optional[date]:
         return None
 
 
-def list_tickers_with_ohlcv() -> List[str]:
+def list_tickers_with_ohlcv() -> list[str]:
     """Return all distinct tickers that have data in ee_ohlcv_cache."""
     from app.core.database import query_all
 
@@ -287,29 +288,35 @@ def save_dna(
     ticker: str,
     dna_dict: dict,
     total_events: int = 0,
-    dominant_pattern: Optional[str] = None,
+    dominant_pattern: str | None = None,
 ) -> None:
     """Upsert a DNA profile for *ticker*."""
     from app.core.database import exec_sql
 
-    exec_sql(
-        """
-        INSERT OR REPLACE INTO ee_dna_profiles
-            (ticker, dna_json, total_events, dominant_pattern, computed_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-        """,
-        (
-            ticker.upper(),
-            json.dumps(dna_dict),
-            total_events,
-            dominant_pattern,
-            date.today().isoformat(),
-            int(time.time()),
-        ),
+    columns = (
+        "ticker",
+        "dna_json",
+        "total_events",
+        "dominant_pattern",
+        "computed_at",
+        "updated_at",
     )
+    params = (
+        ticker.upper(),
+        json.dumps(dna_dict),
+        total_events,
+        dominant_pattern,
+        date.today().isoformat(),
+        int(time.time()),
+    )
+    try:
+        exec_sql(_build_ticker_upsert_sql("ee_dna_profiles", columns), params)
+    except Exception:
+        logger.exception("Failed to persist Eagle Eye DNA profile for %s", ticker.upper())
+        raise
 
 
-def load_dna(ticker: str) -> Optional[dict]:
+def load_dna(ticker: str) -> dict | None:
     """Load and deserialize the DNA JSON blob for *ticker*, or None."""
     from app.core.database import query_one
 
@@ -325,7 +332,7 @@ def load_dna(ticker: str) -> Optional[dict]:
         return None
 
 
-def list_tickers_with_dna() -> List[str]:
+def list_tickers_with_dna() -> list[str]:
     """Return all tickers that have a stored DNA profile."""
     from app.core.database import query_all
 
@@ -353,49 +360,70 @@ def save_rating(
 
     et = result.get("entry") or {}
     ind = result.get("indicators") or {}
-
-    exec_sql(
-        """
-        INSERT OR REPLACE INTO ee_ratings_cache (
-            ticker, name_en, sector, stage, rating, confidence, thesis,
-            entry_primary, entry_aggressive, entry_conservative,
-            stop_loss, tp1, tp1_probability, tp2, tp2_probability, tp3, tp3_probability,
-            last_price, supports_json, resistances_json, signals_json, indicators_json,
-            days_of_history, computed_at, updated_at, volume_context_json
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-        """,
-        (
-            ticker.upper(),
-            name_en,
-            sector,
-            result.get("stage"),
-            result.get("rating"),
-            result.get("confidence"),
-            result.get("thesis"),
-            _f(et.get("entry_primary")),
-            _f(et.get("entry_aggressive")),
-            _f(et.get("entry_conservative")),
-            _f(et.get("stop_loss")),
-            _f(et.get("tp1")),
-            _f(et.get("tp1_probability")),
-            _f(et.get("tp2")),
-            _f(et.get("tp2_probability")),
-            _f(et.get("tp3")),
-            _f(et.get("tp3_probability")),
-            _f(ind.get("close")),
-            json.dumps(result.get("supports") or []),
-            json.dumps(result.get("resistances") or []),
-            json.dumps([]),
-            json.dumps({k: _j(v) for k, v in ind.items()}),
-            result.get("days_of_history"),
-            result.get("computed_at", date.today().isoformat()),
-            int(time.time()),
-            json.dumps(result.get("volume_context") or {}),
-        ),
+    columns = (
+        "ticker",
+        "name_en",
+        "sector",
+        "stage",
+        "rating",
+        "confidence",
+        "thesis",
+        "entry_primary",
+        "entry_aggressive",
+        "entry_conservative",
+        "stop_loss",
+        "tp1",
+        "tp1_probability",
+        "tp2",
+        "tp2_probability",
+        "tp3",
+        "tp3_probability",
+        "last_price",
+        "supports_json",
+        "resistances_json",
+        "signals_json",
+        "indicators_json",
+        "days_of_history",
+        "computed_at",
+        "updated_at",
+        "volume_context_json",
     )
+    params = (
+        ticker.upper(),
+        name_en,
+        sector,
+        result.get("stage"),
+        result.get("rating"),
+        result.get("confidence"),
+        result.get("thesis"),
+        _f(et.get("entry_primary")),
+        _f(et.get("entry_aggressive")),
+        _f(et.get("entry_conservative")),
+        _f(et.get("stop_loss")),
+        _f(et.get("tp1")),
+        _f(et.get("tp1_probability")),
+        _f(et.get("tp2")),
+        _f(et.get("tp2_probability")),
+        _f(et.get("tp3")),
+        _f(et.get("tp3_probability")),
+        _f(ind.get("close")),
+        json.dumps(result.get("supports") or []),
+        json.dumps(result.get("resistances") or []),
+        json.dumps([]),
+        json.dumps({k: _j(v) for k, v in ind.items()}),
+        result.get("days_of_history"),
+        result.get("computed_at", date.today().isoformat()),
+        int(time.time()),
+        json.dumps(result.get("volume_context") or {}),
+    )
+    try:
+        exec_sql(_build_ticker_upsert_sql("ee_ratings_cache", columns), params)
+    except Exception:
+        logger.exception("Failed to persist Eagle Eye rating cache row for %s", ticker.upper())
+        raise
 
 
-def load_all_ratings() -> List[dict]:
+def load_all_ratings() -> list[dict]:
     """
     Load all rows from ee_ratings_cache, ordered by confidence descending.
     Fast path for the scanner endpoint.
@@ -426,7 +454,7 @@ def load_all_ratings() -> List[dict]:
     return result
 
 
-def load_rating(ticker: str) -> Optional[dict]:
+def load_rating(ticker: str) -> dict | None:
     """Load the full rating row for a single ticker, or None."""
     from app.core.database import query_one
 
@@ -461,7 +489,7 @@ def load_rating(ticker: str) -> Optional[dict]:
 
 def log_compute(
     run_type: str,
-    ticker: Optional[str],
+    ticker: str | None,
     status: str,
     message: str = "",
 ) -> None:
@@ -481,7 +509,7 @@ def log_compute(
 # Private numeric helpers
 # ---------------------------------------------------------------------------
 
-def _f(v: Any) -> Optional[float]:
+def _f(v: Any) -> float | None:
     """Safely coerce *v* to float; return None for NaN / Inf / non-numeric."""
     if v is None:
         return None
@@ -502,3 +530,30 @@ def _j(v: Any) -> Any:
         return float(v)
     except Exception:
         return None
+
+
+def _use_postgres_backend() -> bool:
+    """Return True when the active database is PostgreSQL."""
+    from app.core.config import get_settings
+
+    return get_settings().use_postgres
+
+
+def _build_ticker_upsert_sql(table: str, columns: tuple[str, ...]) -> str:
+    """Build backend-safe upsert SQL for Eagle Eye tables keyed by ticker."""
+    column_sql = ", ".join(columns)
+    placeholder_sql = ", ".join(["?"] * len(columns))
+    if not _use_postgres_backend():
+        return (
+            f"INSERT OR REPLACE INTO {table} ({column_sql}) "
+            f"VALUES ({placeholder_sql})"
+        )
+
+    update_columns = ", ".join(
+        f"{column} = EXCLUDED.{column}" for column in columns if column != "ticker"
+    )
+    return (
+        f"INSERT INTO {table} ({column_sql}) "
+        f"VALUES ({placeholder_sql}) "
+        f"ON CONFLICT (ticker) DO UPDATE SET {update_columns}"
+    )
