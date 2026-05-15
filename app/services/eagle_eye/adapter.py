@@ -79,17 +79,34 @@ class TickerChartAdapter(DataAdapter):
     """
 
     # Stocks in the KSE universe are looked up from the analysis_stocks
-    # table (exchange = 'KW' or currency = 'KWD').  When the table is
-    # empty or missing (common in fresh dev environments), we fall back
-    # to the hardcoded KUWAIT_STOCKS reference list so the Eagle Eye
-    # pipeline works out of the box without a pre-populated DB.
+    # table (exchange = 'KW' or currency = 'KWD') to enrich names/metadata.
+    # The scanner universe itself is always seeded from the hardcoded
+    # KUWAIT_STOCKS reference list so Eagle Eye remains market-wide even
+    # when analysis_stocks only contains user-selected holdings.
     def list_stocks(self) -> List[StockMeta]:
         from app.core.database import query_all  # type: ignore[import-untyped]
+        from app.data.stock_lists import KUWAIT_STOCKS
+
+        stock_map: dict[str, StockMeta] = {}
+        for s in KUWAIT_STOCKS:
+            sym = str(s.get("symbol") or "").upper().replace(".KW", "").strip()
+            if not sym:
+                continue
+            stock_map[sym] = StockMeta(
+                ticker=sym,
+                name_en=str(s.get("name") or sym),
+                name_ar=None,
+                sector="Kuwait",
+                sub_sector=None,
+                market_tier="premier",
+                listing_date=None,
+                shares_outstanding=None,
+            )
 
         try:
             rows = query_all(
                 """
-                SELECT DISTINCT symbol, company_name, exchange, currency
+                SELECT DISTINCT symbol, company_name, exchange, currency, sector
                 FROM analysis_stocks
                 WHERE (exchange IN ('KW', 'KSE') OR currency = 'KWD')
                 ORDER BY symbol
@@ -99,13 +116,12 @@ class TickerChartAdapter(DataAdapter):
         except Exception:
             rows = []
 
-        result: List[StockMeta] = []
         for r in (rows or []):
             sym = str(r.get("symbol") or "").upper()
             ticker = sym.replace(".KW", "").strip()
             if not ticker:
                 continue
-            result.append(StockMeta(
+            stock_map[ticker] = StockMeta(
                 ticker=ticker,
                 name_en=str(r.get("company_name") or ticker),
                 name_ar=None,
@@ -114,29 +130,9 @@ class TickerChartAdapter(DataAdapter):
                 market_tier="premier",
                 listing_date=None,
                 shares_outstanding=None,
-            ))
+            )
 
-        # Fall back to the static KUWAIT_STOCKS list when the DB table is
-        # empty or unavailable (dev environments, fresh deployments).
-        if not result:
-            from app.data.stock_lists import KUWAIT_STOCKS
-
-            for s in KUWAIT_STOCKS:
-                sym = str(s.get("symbol") or "").upper().replace(".KW", "").strip()
-                if not sym:
-                    continue
-                result.append(StockMeta(
-                    ticker=sym,
-                    name_en=str(s.get("name") or sym),
-                    name_ar=None,
-                    sector="Kuwait",
-                    sub_sector=None,
-                    market_tier="premier",
-                    listing_date=None,
-                    shares_outstanding=None,
-                ))
-
-        return result
+        return [stock_map[t] for t in sorted(stock_map.keys())]
 
     def get_ohlcv_daily(
         self, ticker: str, start: date, end: date
