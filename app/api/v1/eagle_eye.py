@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
+import time
 import uuid
 from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional
@@ -53,13 +55,61 @@ router = APIRouter(prefix="/eagle-eye", tags=["Eagle Eye"])
 _cache: Dict[str, dict] = {}
 _DNA_CACHE: Dict[str, dict] = {}
 _EVENTS_CACHE: Dict[str, list] = {}
+_RECOMPUTE_LOCK = threading.Lock()
+_RECOMPUTE_IN_PROGRESS = False
+_RECOMPUTE_LAST_ATTEMPT_AT = 0.0
 
 _LOOKBACK_YEARS = 5
+_RECOMPUTE_COOLDOWN_SEC = 300
 
 
 def _cache_key(ticker: str, as_of: Optional[date] = None) -> str:
     d = (as_of or date.today()).isoformat()
     return f"{ticker.upper()}:{d}"
+
+
+def _trigger_eagle_eye_recompute(reason: str, *, force: bool = False) -> bool:
+    """Best-effort background recompute trigger with per-process cooldown."""
+    global _RECOMPUTE_IN_PROGRESS, _RECOMPUTE_LAST_ATTEMPT_AT
+
+    now = time.time()
+    with _RECOMPUTE_LOCK:
+        if _RECOMPUTE_IN_PROGRESS:
+            logger.info("Eagle Eye recompute already in progress; skip trigger (%s)", reason)
+            return False
+        if not force and (now - _RECOMPUTE_LAST_ATTEMPT_AT) < _RECOMPUTE_COOLDOWN_SEC:
+            logger.info("Eagle Eye recompute cooldown active; skip trigger (%s)", reason)
+            return False
+        _RECOMPUTE_IN_PROGRESS = True
+        _RECOMPUTE_LAST_ATTEMPT_AT = now
+
+    def _runner() -> None:
+        global _RECOMPUTE_IN_PROGRESS
+        try:
+            from app.services.eagle_eye.ingest import run_nightly_recompute
+
+            result = run_nightly_recompute(dna_refresh=False, verbose=False)
+            logger.info("Eagle Eye background recompute finished (%s): %s", reason, result)
+        except Exception:
+            logger.exception("Eagle Eye background recompute failed (%s)", reason)
+        finally:
+            with _RECOMPUTE_LOCK:
+                _RECOMPUTE_IN_PROGRESS = False
+
+    try:
+        thread = threading.Thread(
+            target=_runner,
+            daemon=True,
+            name=f"ee_recompute_{reason}",
+        )
+        thread.start()
+        logger.info("Eagle Eye background recompute triggered (%s)", reason)
+        return True
+    except Exception:
+        with _RECOMPUTE_LOCK:
+            _RECOMPUTE_IN_PROGRESS = False
+        logger.exception("Could not start Eagle Eye background recompute (%s)", reason)
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -219,7 +269,8 @@ async def get_scanner(
 
         db_rows = load_all_ratings()
         if not db_rows:
-            # Cache is cold — background warmup is running; respond immediately
+            # Cache is cold — retrigger a best-effort background warmup and respond immediately.
+            _trigger_eagle_eye_recompute("scanner_cache_cold")
             logger.info("Eagle Eye scanner: cache cold, returning warming_up status")
             return ScannerResponse(status="warming_up", count=0, stocks=[])
 
@@ -545,20 +596,8 @@ async def refresh_stocks(
     # Spawn a background thread to re-run the full nightly pipeline so
     # ee_ratings_cache is refreshed without blocking this response.
     try:
-        import threading
-        from app.services.eagle_eye.ingest import run_nightly_recompute
-
-        thread = threading.Thread(
-            target=run_nightly_recompute,
-            kwargs={"dna_refresh": False, "verbose": False},
-            daemon=True,
-            name="ee_refresh_bg",
-        )
-        thread.start()
-        logger.info(
-            "Eagle Eye background recompute triggered for %d ticker(s)",
-            len(body.tickers),
-        )
+        _trigger_eagle_eye_recompute("manual_refresh", force=True)
+        logger.info("Eagle Eye background recompute requested for %d ticker(s)", len(body.tickers))
     except Exception as exc:
         logger.warning("Could not start Eagle Eye background recompute: %s", exc)
 
