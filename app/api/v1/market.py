@@ -92,7 +92,7 @@ async def market_summary(
         return {"status": status, "data": data}
     except Exception as e:
         logger.error("Market summary failed: %s", e, exc_info=True)
-        raise HTTPException(status_code=503, detail="Market data temporarily unavailable due to scraping service failure")
+        raise HTTPException(status_code=503, detail="Market data temporarily unavailable. Please try again later.")
 
 
 @router.get("/refresh")
@@ -106,7 +106,7 @@ async def market_refresh(
         return {"status": status, "data": data}
     except Exception as e:
         logger.error("Market refresh failed: %s", e, exc_info=True)
-        raise HTTPException(status_code=503, detail="Market data scrape temporarily unavailable due to scraping service failure")
+        raise HTTPException(status_code=503, detail="Market data temporarily unavailable. Please try again later.")
 
 
 @router.get("/history")

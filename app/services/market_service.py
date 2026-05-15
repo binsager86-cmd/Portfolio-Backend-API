@@ -24,7 +24,16 @@ _PLAYWRIGHT_BROWSER_MISSING_HINT = "Executable doesn't exist"
 
 
 def _build_unavailable_market_payload(trade_date: str, exception: Exception) -> dict:
-    """Return a safe fallback payload when scraping and cache are unavailable."""
+    """
+    Return a safe fallback payload when scraping and cache are unavailable.
+
+    Parameters
+    ----------
+    trade_date:
+        UTC trade date string used for cache/snapshot grouping.
+    exception:
+        Caught scrape exception used for server-side diagnostics.
+    """
     return {
         "indices": [],
         "market_summary": {
@@ -47,7 +56,8 @@ def _build_unavailable_market_payload(trade_date: str, exception: Exception) -> 
         "_degraded": True,
         "_trade_date": trade_date,
         "_fetched_at": int(time.time()),
-        "_error": str(exception),
+        "_error": "market_data_unavailable",
+        "_error_type": exception.__class__.__name__,
     }
 
 
