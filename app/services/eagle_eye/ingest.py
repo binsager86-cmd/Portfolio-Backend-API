@@ -59,12 +59,23 @@ def ingest_all_ohlcv(verbose: bool = False) -> dict:
 
     Returns a summary dict: {ok, skipped, errors, insufficient, gaps}.
     """
+    from app.core.config import get_settings
     from app.services.eagle_eye.adapter import TickerChartAdapter
     from app.services.eagle_eye.store import (
         ensure_tables, get_latest_ohlcv_date, log_compute, save_ohlcv,
     )
 
     ensure_tables()
+    settings = get_settings()
+    if not (settings.TICKERCHART_USERNAME or "").strip() or not (settings.TICKERCHART_PASSWORD or "").strip():
+        msg = (
+            "TickerChart credentials are not configured; "
+            "Eagle Eye OHLCV warmup cannot populate the scanner cache"
+        )
+        logger.error(msg)
+        log_compute("ohlcv_fetch", None, "error", msg)
+        return {"ok": 0, "skipped": 0, "errors": 1, "insufficient": [], "gaps": [], "error": msg}
+
     adapter = TickerChartAdapter()
     stocks = adapter.list_stocks()
 
@@ -399,10 +410,14 @@ def run_nightly_recompute(dna_refresh: bool = False, verbose: bool = False) -> d
         "Eagle Eye nightly recompute starting (dna_refresh=%s)", dna_refresh
     )
     t0 = time.time()
+    from app.core.database import query_val
+    from app.services.eagle_eye.store import log_compute
 
     ohlcv_stats: dict = {}
     dna_stats: dict = {}
     rating_stats: dict = {}
+
+    log_compute("nightly_recompute", None, "start", f"dna_refresh={dna_refresh}")
 
     try:
         ohlcv_stats = ingest_all_ohlcv(verbose=verbose)
@@ -424,11 +439,29 @@ def run_nightly_recompute(dna_refresh: bool = False, verbose: bool = False) -> d
         rating_stats = {"error": str(exc)}
 
     elapsed = round(time.time() - t0, 1)
-    logger.info("Eagle Eye nightly recompute finished in %.1fs", elapsed)
+    cache_rows = int(query_val("SELECT COUNT(*) FROM ee_ratings_cache", ()) or 0)
+    summary = (
+        "elapsed_sec=%s ohlcv_ok=%s ohlcv_errors=%s ratings_ok=%s "
+        "ratings_errors=%s cache_rows=%s"
+    ) % (
+        elapsed,
+        ohlcv_stats.get("ok", 0),
+        ohlcv_stats.get("errors", 0),
+        rating_stats.get("ok", 0),
+        rating_stats.get("errors", 0),
+        cache_rows,
+    )
+    if cache_rows == 0:
+        logger.error("Eagle Eye nightly recompute finished with empty ratings cache: %s", summary)
+        log_compute("nightly_recompute", None, "error", summary)
+    else:
+        logger.info("Eagle Eye nightly recompute finished in %.1fs (%s)", elapsed, summary)
+        log_compute("nightly_recompute", None, "ok", summary)
 
     return {
         "elapsed_sec": elapsed,
         "ohlcv": ohlcv_stats,
         "dna": dna_stats,
         "ratings": rating_stats,
+        "cache_rows": cache_rows,
     }
