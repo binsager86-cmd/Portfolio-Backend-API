@@ -88,10 +88,11 @@ async def market_summary(
     """Return cached market data for today (auto-scrapes if stale)."""
     try:
         data = await asyncio.to_thread(get_market_data)
-        return {"status": "ok", "data": data}
+        status = "degraded" if data.get("_degraded") else "ok"
+        return {"status": status, "data": data}
     except Exception as e:
-        logger.error("Market summary failed: %s", e)
-        raise HTTPException(status_code=502, detail="Market data unavailable")
+        logger.error("Market summary failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=503, detail="Market data temporarily unavailable. Please try again later.")
 
 
 @router.get("/refresh")
@@ -101,10 +102,11 @@ async def market_refresh(
     """Force re-scrape market data (bypasses cache)."""
     try:
         data = await asyncio.to_thread(get_market_data, True)
-        return {"status": "ok", "data": data}
+        status = "degraded" if data.get("_degraded") else "ok"
+        return {"status": status, "data": data}
     except Exception as e:
-        logger.error("Market refresh failed: %s", e)
-        raise HTTPException(status_code=502, detail="Market data scrape failed")
+        logger.error("Market refresh failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=503, detail="Market data temporarily unavailable. Please try again later.")
 
 
 @router.get("/history")

@@ -20,6 +20,51 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 BOURSA_URL = "https://www.boursakuwait.com.kw/en"
+_PLAYWRIGHT_BROWSER_MISSING_MARKERS = ("BrowserType.launch", "Executable doesn't exist", "ms-playwright")
+
+
+def _is_playwright_browser_missing_error(exception: Exception) -> bool:
+    """Return True when the scrape failure matches Playwright missing-browser startup errors."""
+    message = str(exception)
+    return all(marker in message for marker in _PLAYWRIGHT_BROWSER_MISSING_MARKERS)
+
+
+def _build_degraded_market_payload(trade_date: str, exception: Exception) -> dict:
+    """
+    Return a safe fallback payload when scraping and cache are unavailable.
+
+    Parameters
+    ----------
+    trade_date:
+        UTC trade date string used for cache/snapshot grouping.
+    exception:
+        Caught scrape exception type captured in ``_error_type`` for diagnostics.
+    """
+    return {
+        "indices": [],
+        "market_summary": {
+            "gainers": 0,
+            "losers": 0,
+            "neutral": 0,
+            "stock_gainers": 0,
+            "stock_losers": 0,
+        },
+        "premier_summary": {},
+        "main_summary": {},
+        "top_gainers": [],
+        "top_losers": [],
+        "top_value": [],
+        "sectors": [],
+        "date": trade_date,
+        "status": "unavailable",
+        "_cached": False,
+        "_stale": True,
+        "_degraded": True,
+        "_trade_date": trade_date,
+        "_fetched_at": int(time.time()),
+        "_error": "market_data_unavailable",
+        "_error_type": exception.__class__.__name__,
+    }
 
 
 def _parse_number(raw: str) -> float | None:
@@ -395,7 +440,14 @@ def get_market_data(force_refresh: bool = False) -> dict:
         return data
 
     except Exception as e:
-        logger.error("Market data scrape failed: %s", e, exc_info=True)
+        if _is_playwright_browser_missing_error(e):
+            logger.error(
+                "Market data scrape failed: Playwright Chromium is unavailable at runtime. "
+                "Ensure deployment build runs Playwright browser install (e.g. via `bin/post_compile`).",
+                exc_info=True,
+            )
+        else:
+            logger.error("Market data scrape failed: %s", e, exc_info=True)
         # Fall back to most recent cached data
         row = query_one(
             "SELECT data_json, fetched_at FROM market_data ORDER BY trade_date DESC, fetched_at DESC LIMIT 1"
@@ -405,8 +457,10 @@ def get_market_data(force_refresh: bool = False) -> dict:
             cached["_cached"] = True
             cached["_stale"] = True
             cached["_fetched_at"] = row["fetched_at"]
+            logger.warning("Serving stale cached market snapshot because live scrape failed")
             return cached
-        raise
+        logger.warning("No cached market snapshot available; serving degraded empty payload")
+        return _build_degraded_market_payload(today, e)
 
 
 def get_market_history(
