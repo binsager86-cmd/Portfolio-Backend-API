@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Installing Playwright Chromium browser for runtime..."
+PLAYWRIGHT_BROWSERS_PATH="${BUILD_DIR}/.cache/ms-playwright" python -m playwright install chromium

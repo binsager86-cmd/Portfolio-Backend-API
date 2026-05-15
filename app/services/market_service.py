@@ -20,6 +20,35 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 BOURSA_URL = "https://www.boursakuwait.com.kw/en"
+_PLAYWRIGHT_BROWSER_MISSING_HINT = "Executable doesn't exist"
+
+
+def _build_unavailable_market_payload(trade_date: str, error: Exception) -> dict:
+    """Return a safe fallback payload when scraping and cache are unavailable."""
+    return {
+        "indices": [],
+        "market_summary": {
+            "gainers": 0,
+            "losers": 0,
+            "neutral": 0,
+            "stock_gainers": 0,
+            "stock_losers": 0,
+        },
+        "premier_summary": {},
+        "main_summary": {},
+        "top_gainers": [],
+        "top_losers": [],
+        "top_value": [],
+        "sectors": [],
+        "date": trade_date,
+        "status": "unavailable",
+        "_cached": False,
+        "_stale": True,
+        "_degraded": True,
+        "_trade_date": trade_date,
+        "_fetched_at": int(time.time()),
+        "_error": str(error),
+    }
 
 
 def _parse_number(raw: str) -> float | None:
@@ -395,7 +424,14 @@ def get_market_data(force_refresh: bool = False) -> dict:
         return data
 
     except Exception as e:
-        logger.error("Market data scrape failed: %s", e, exc_info=True)
+        if _PLAYWRIGHT_BROWSER_MISSING_HINT in str(e):
+            logger.error(
+                "Market data scrape failed: Playwright Chromium is unavailable at runtime. "
+                "Ensure deployment build installs browsers (e.g. `python -m playwright install chromium`).",
+                exc_info=True,
+            )
+        else:
+            logger.error("Market data scrape failed: %s", e, exc_info=True)
         # Fall back to most recent cached data
         row = query_one(
             "SELECT data_json, fetched_at FROM market_data ORDER BY trade_date DESC, fetched_at DESC LIMIT 1"
@@ -405,8 +441,10 @@ def get_market_data(force_refresh: bool = False) -> dict:
             cached["_cached"] = True
             cached["_stale"] = True
             cached["_fetched_at"] = row["fetched_at"]
+            logger.warning("Serving stale cached market snapshot because live scrape failed")
             return cached
-        raise
+        logger.warning("No cached market snapshot available; serving degraded empty payload")
+        return _build_unavailable_market_payload(today, e)
 
 
 def get_market_history(
