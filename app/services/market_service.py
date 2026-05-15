@@ -23,7 +23,7 @@ BOURSA_URL = "https://www.boursakuwait.com.kw/en"
 _PLAYWRIGHT_BROWSER_MISSING_HINT = "Executable doesn't exist"
 
 
-def _build_unavailable_market_payload(trade_date: str, error: Exception) -> dict:
+def _build_unavailable_market_payload(trade_date: str, exception: Exception) -> dict:
     """Return a safe fallback payload when scraping and cache are unavailable."""
     return {
         "indices": [],
@@ -47,7 +47,7 @@ def _build_unavailable_market_payload(trade_date: str, error: Exception) -> dict
         "_degraded": True,
         "_trade_date": trade_date,
         "_fetched_at": int(time.time()),
-        "_error": str(error),
+        "_error": str(exception),
     }
 
 
