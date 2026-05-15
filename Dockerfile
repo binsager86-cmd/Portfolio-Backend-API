@@ -3,10 +3,13 @@ FROM mcr.microsoft.com/playwright/python:v1.59.0-jammy
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PORT=8004
+    PORT=8004 \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt \
+    && python -m playwright install chromium
 
 # Copy app code & set permissions
 COPY . .
