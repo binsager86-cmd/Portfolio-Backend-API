@@ -8,7 +8,8 @@ Creates and manages 4 tables in the shared SQLite/PostgreSQL database:
   - ee_compute_log      : audit trail for pipeline runs
 
 All DDL uses CREATE TABLE/INDEX IF NOT EXISTS — fully idempotent.
-Single-row writes use the backend's exec_sql helper (?-style params).
+Single-row writes use portable ``ON CONFLICT`` upserts via the backend's
+``exec_sql`` helper (?-style params) so both SQLite and PostgreSQL work.
 Bulk OHLCV writes bypass the proxy layer for performance:
   - SQLite: raw sqlite3.executemany with INSERT OR REPLACE
   - PostgreSQL: delete-then-insert via pandas to_sql
@@ -292,19 +293,28 @@ def save_dna(
     """Upsert a DNA profile for *ticker*."""
     from app.core.database import exec_sql
 
+    computed_at = date.today().isoformat()
+    updated_at = int(time.time())
+
     exec_sql(
         """
-        INSERT OR REPLACE INTO ee_dna_profiles
+        INSERT INTO ee_dna_profiles
             (ticker, dna_json, total_events, dominant_pattern, computed_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT (ticker) DO UPDATE SET
+            dna_json = excluded.dna_json,
+            total_events = excluded.total_events,
+            dominant_pattern = excluded.dominant_pattern,
+            computed_at = excluded.computed_at,
+            updated_at = excluded.updated_at
         """,
         (
             ticker.upper(),
             json.dumps(dna_dict),
             total_events,
             dominant_pattern,
-            date.today().isoformat(),
-            int(time.time()),
+            computed_at,
+            updated_at,
         ),
     )
 
@@ -356,13 +366,39 @@ def save_rating(
 
     exec_sql(
         """
-        INSERT OR REPLACE INTO ee_ratings_cache (
+        INSERT INTO ee_ratings_cache (
             ticker, name_en, sector, stage, rating, confidence, thesis,
             entry_primary, entry_aggressive, entry_conservative,
             stop_loss, tp1, tp1_probability, tp2, tp2_probability, tp3, tp3_probability,
             last_price, supports_json, resistances_json, signals_json, indicators_json,
             days_of_history, computed_at, updated_at, volume_context_json
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT (ticker) DO UPDATE SET
+            name_en = excluded.name_en,
+            sector = excluded.sector,
+            stage = excluded.stage,
+            rating = excluded.rating,
+            confidence = excluded.confidence,
+            thesis = excluded.thesis,
+            entry_primary = excluded.entry_primary,
+            entry_aggressive = excluded.entry_aggressive,
+            entry_conservative = excluded.entry_conservative,
+            stop_loss = excluded.stop_loss,
+            tp1 = excluded.tp1,
+            tp1_probability = excluded.tp1_probability,
+            tp2 = excluded.tp2,
+            tp2_probability = excluded.tp2_probability,
+            tp3 = excluded.tp3,
+            tp3_probability = excluded.tp3_probability,
+            last_price = excluded.last_price,
+            supports_json = excluded.supports_json,
+            resistances_json = excluded.resistances_json,
+            signals_json = excluded.signals_json,
+            indicators_json = excluded.indicators_json,
+            days_of_history = excluded.days_of_history,
+            computed_at = excluded.computed_at,
+            updated_at = excluded.updated_at,
+            volume_context_json = excluded.volume_context_json
         """,
         (
             ticker.upper(),

@@ -256,7 +256,7 @@ def build_all_dna(verbose: bool = False) -> dict:
                 )
 
         except Exception as exc:
-            logger.warning("[%s] DNA build failed: %s", ticker, exc)
+            logger.exception("[%s] DNA build failed", ticker)
             stats["errors"] += 1
             log_compute("dna_build", ticker, "error", str(exc)[:300])
             if verbose:
@@ -380,7 +380,7 @@ def compute_all_ratings(verbose: bool = False) -> dict:
                 print(f"  [{ticker}] {rating} (conf={confidence:.0f}%) stage={stage}")
 
         except Exception as exc:
-            logger.warning("[%s] rating computation failed: %s", ticker, exc)
+            logger.exception("[%s] rating computation/persistence failed", ticker)
             stats["errors"] += 1
             log_compute("rating_run", ticker, "error", str(exc)[:300])
 
