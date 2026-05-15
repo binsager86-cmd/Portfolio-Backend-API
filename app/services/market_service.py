@@ -32,7 +32,7 @@ def _build_unavailable_market_payload(trade_date: str, exception: Exception) -> 
     trade_date:
         UTC trade date string used for cache/snapshot grouping.
     exception:
-        Caught scrape exception used for server-side diagnostics.
+        Caught scrape exception type captured in ``_error_type`` for diagnostics.
     """
     return {
         "indices": [],
@@ -437,7 +437,7 @@ def get_market_data(force_refresh: bool = False) -> dict:
         if _PLAYWRIGHT_BROWSER_MISSING_HINT in str(e):
             logger.error(
                 "Market data scrape failed: Playwright Chromium is unavailable at runtime. "
-                "Ensure deployment build installs browsers (e.g. `python -m playwright install chromium`).",
+                "Ensure deployment build runs Playwright browser install (e.g. via `bin/post_compile`).",
                 exc_info=True,
             )
         else:
