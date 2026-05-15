@@ -10,7 +10,7 @@ RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r re
 
 # Copy app code & set permissions
 COPY . .
-RUN chown -R pwuser:pwuser /app
+RUN chown -R pwuser:pwuser /app && chmod -R 555 /app
 
 USER pwuser
 EXPOSE 8004
