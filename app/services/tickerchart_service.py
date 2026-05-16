@@ -249,14 +249,26 @@ def _parse_ondemand_csv(text: str) -> list[dict]:
         except ValueError:
             continue
         try:
-            out.append({
+            row: dict = {
                 "date": d,
                 "open": float(parts[1] or 0),
                 "high": float(parts[2] or 0),
                 "low": float(parts[3] or 0),
                 "close": float(parts[4] or 0),
                 "volume": float(parts[5] or 0),
-            })
+            }
+            # Capture optional value and trades columns when present
+            if len(parts) > 6 and parts[6].strip():
+                try:
+                    row["value"] = float(parts[6].strip() or 0)
+                except ValueError:
+                    pass
+            if len(parts) > 7 and parts[7].strip():
+                try:
+                    row["trades"] = int(float(parts[7].strip() or 0))
+                except ValueError:
+                    pass
+            out.append(row)
         except ValueError:
             continue
     
@@ -478,4 +490,173 @@ def _parse_order_book_csv(text: str, symbol: str, market: str) -> dict:
         "asks": asks,
         "total_bid_volume": total_bid,
         "total_ask_volume": total_ask,
+    }
+
+
+# ── KSE Market Snapshot ──────────────────────────────────────────────
+
+# Candidate TickerChart symbols for KSE market indices.
+# Each entry: (display_name, tc_base_symbol, tc_market_abb)
+_KSE_INDEX_CANDIDATES: list[tuple[str, str, str]] = [
+    ("Premier Market", "BKPM", "KSE"),
+    ("Main Market", "BKMM", "KSE"),
+    ("All-Share", "BKALL", "KSE"),
+    ("BK Main 50", "BK50", "KSE"),
+]
+
+
+async def _fetch_index_row(
+    display_name: str,
+    tc_symbol: str,
+    market_abb: str,
+    from_d: date,
+    to_d: date,
+) -> Optional[dict]:
+    """Attempt to fetch one index via TickerChart OHLCV. Returns None on any failure."""
+    try:
+        rows = await fetch_ohlcv(tc_symbol, market_abb, from_d=from_d, to_d=to_d, interval="day")
+        if not rows:
+            return None
+        rows_sorted = sorted(rows, key=lambda r: r["date"])
+        last_row = rows_sorted[-1]
+        prev_row = rows_sorted[-2] if len(rows_sorted) >= 2 else None
+        last = float(last_row.get("close") or 0)
+        if last == 0:
+            return None
+        change: Optional[float] = None
+        change_pct: Optional[float] = None
+        if prev_row:
+            prev = float(prev_row.get("close") or 0)
+            if prev > 0:
+                change = last - prev
+                change_pct = round((change / prev) * 100, 4)
+        return {
+            "name": display_name,
+            "value": last,
+            "change": change,
+            "changePercent": change_pct,
+        }
+    except Exception as exc:
+        logger.debug("Index fetch failed for %s.%s: %s", tc_symbol, market_abb, exc)
+        return None
+
+
+async def fetch_kse_market_snapshot(symbols: list[str], stock_name_map: dict[str, str]) -> dict:
+    """
+    Fetch a market-wide snapshot for Kuwait (KSE) from TickerChart.
+
+    Concurrently fetches the last 7 calendar days of OHLCV for every supplied
+    symbol, computes per-stock day changes from the last two trading candles,
+    then aggregates gainers / losers / movers and total market statistics.
+
+    Returns a dict in the same shape as the legacy Boursa Kuwait scraper.
+    """
+    import asyncio as _asyncio
+    from datetime import timedelta
+
+    today_d = date.today()
+    from_d = today_d - timedelta(days=7)
+
+    # ── Fetch all stocks concurrently ────────────────────────────────
+    async def _safe_fetch(symbol: str) -> tuple[str, list[dict]]:
+        try:
+            rows = await fetch_ohlcv(symbol, "KSE", from_d=from_d, to_d=today_d, interval="day")
+            return symbol, rows
+        except Exception as exc:
+            logger.debug("Market snapshot: fetch failed for %s: %s", symbol, exc)
+            return symbol, []
+
+    stock_results = await _asyncio.gather(*[_safe_fetch(sym) for sym in symbols])
+
+    # ── Fetch indices concurrently ───────────────────────────────────
+    index_tasks = [
+        _fetch_index_row(name, tc_sym, mkt, from_d, today_d)
+        for name, tc_sym, mkt in _KSE_INDEX_CANDIDATES
+    ]
+    index_results = await _asyncio.gather(*index_tasks)
+    indices = [r for r in index_results if r is not None]
+
+    # ── Compute per-stock stats ──────────────────────────────────────
+    stocks: list[dict] = []
+    total_volume = 0.0
+    total_value = 0.0
+    total_trades = 0
+
+    for symbol, rows in stock_results:
+        if not rows:
+            continue
+        rows_sorted = sorted(rows, key=lambda r: r["date"])
+        today_row = rows_sorted[-1]
+        prev_row = rows_sorted[-2] if len(rows_sorted) >= 2 else None
+
+        last = float(today_row.get("close") or 0)
+        volume = float(today_row.get("volume") or 0)
+        value = float(today_row.get("value") or (last * volume))
+        trades = int(today_row.get("trades") or 0)
+
+        if last == 0:
+            continue  # skip stocks with no price data
+
+        change: Optional[float] = None
+        change_pct: Optional[float] = None
+        if prev_row:
+            prev = float(prev_row.get("close") or 0)
+            if prev > 0:
+                change = round(last - prev, 4)
+                change_pct = round((change / prev) * 100, 4)
+
+        total_volume += volume
+        total_value += value
+        total_trades += trades
+
+        stocks.append({
+            "symbol": symbol,
+            "name": stock_name_map.get(symbol, symbol),
+            "last": last,
+            "change": change,
+            "changePercent": change_pct,
+            "volume": volume,
+            "value": value,
+        })
+
+    # ── Classify movers ──────────────────────────────────────────────
+    with_change = [s for s in stocks if s["changePercent"] is not None]
+    gainers = [s for s in with_change if s["changePercent"] > 0]
+    losers = [s for s in with_change if s["changePercent"] < 0]
+    neutral_count = len(stocks) - len(gainers) - len(losers)
+
+    top_gainers = sorted(gainers, key=lambda s: s["changePercent"], reverse=True)[:5]
+    top_losers = sorted(losers, key=lambda s: s["changePercent"])[:5]
+    top_value_list = sorted(stocks, key=lambda s: s["value"], reverse=True)[:5]
+
+    def _to_mover(s: dict) -> dict:
+        return {
+            "symbol": s["symbol"],
+            "last": s["last"],
+            "change": s["change"],
+            "changePercent": s["changePercent"],
+            "volume": s["volume"],
+        }
+
+    return {
+        "indices": indices,
+        "market_summary": {
+            "volume": total_volume,
+            "value_traded": total_value,
+            "trades": total_trades or None,
+            "market_cap": None,
+            "gainers": len(gainers),
+            "losers": len(losers),
+            "neutral": neutral_count,
+            "stock_gainers": len(gainers),
+            "stock_losers": len(losers),
+        },
+        "premier_summary": {"volume": None, "value_traded": None, "trades": None},
+        "main_summary": {"volume": None, "value_traded": None, "trades": None},
+        "top_gainers": [_to_mover(s) for s in top_gainers],
+        "top_losers": [_to_mover(s) for s in top_losers],
+        "top_value": [_to_mover(s) for s in top_value_list],
+        "sectors": [],
+        "date": today_d.isoformat(),
+        "status": "open",
     }

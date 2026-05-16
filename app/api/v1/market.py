@@ -1,8 +1,8 @@
 """
-Market API v1 — Boursa Kuwait market summary data.
+Market API v1 — KSE market summary data (via TickerChart Live).
 
 Endpoints:
-  GET /summary     — full market summary (indices, sectors, gainers/losers)
+  GET /summary     — full market summary (indices, gainers/losers, movers)
   GET /refresh     — force refresh cached data
   GET /history     — historical market snapshots for a date range
 """
@@ -42,9 +42,9 @@ async def market_overview(
     if cached is not None and not live:
         return {"data": cached, "live": False, "status": "cached"}
 
-    # Serve the most recent DB snapshot (no scraping)
+    # Serve the most recent DB snapshot
     try:
-        snapshot = await asyncio.to_thread(get_market_data, False)
+        snapshot = await get_market_data(False)
     except Exception as e:
         logger.error("Market overview snapshot failed: %s", e)
         raise HTTPException(status_code=502, detail="Market snapshot unavailable")
@@ -70,7 +70,7 @@ async def market_overview(
         # Fire-and-forget background refresh; caller gets the stale snapshot now
         async def _bg_refresh():
             try:
-                fresh = await asyncio.to_thread(get_market_data, True)
+                fresh = await get_market_data(True)
                 set_cached(price_cache, overview_cache_key, fresh)
             except Exception as _e:
                 logger.warning("Background market refresh failed: %s", _e)
@@ -85,9 +85,9 @@ async def market_overview(
 async def market_summary(
     current_user: TokenData = Depends(get_current_user),
 ):
-    """Return cached market data for today (auto-scrapes if stale)."""
+    """Return cached market data for today (fetches fresh from TickerChart if stale)."""
     try:
-        data = await asyncio.to_thread(get_market_data)
+        data = await get_market_data()
         status = "degraded" if data.get("_degraded") else "ok"
         return {"status": status, "data": data}
     except Exception as e:
@@ -99,9 +99,9 @@ async def market_summary(
 async def market_refresh(
     current_user: TokenData = Depends(get_current_user),
 ):
-    """Force re-scrape market data (bypasses cache)."""
+    """Force refresh market data from TickerChart (bypasses cache)."""
     try:
-        data = await asyncio.to_thread(get_market_data, True)
+        data = await get_market_data(True)
         status = "degraded" if data.get("_degraded") else "ok"
         return {"status": status, "data": data}
     except Exception as e:
