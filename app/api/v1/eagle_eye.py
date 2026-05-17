@@ -458,14 +458,27 @@ async def get_stock_dna(
         stored = None
 
     if stored is None:
-        # Pipeline hasn't built the DNA for this ticker yet — return pending
+        # DNA not in DB — compute on-demand in a thread to avoid blocking the event loop
+        import asyncio
+
+        from app.services.eagle_eye.ingest import build_dna_for_ticker
+
+        logger.info("Building DNA on-demand for %s", t)
+        loop = asyncio.get_event_loop()
+        try:
+            stored = await loop.run_in_executor(None, build_dna_for_ticker, t)
+        except Exception as exc:
+            logger.warning("On-demand DNA build failed for %s: %s", t, exc)
+            stored = None
+
+    if stored is None:
         return JSONResponse(
             status_code=200,
             content={
-                "status": "pending",
+                "status": "unavailable",
                 "message": (
-                    "Behavioral DNA is still being computed for this stock. "
-                    "Check back in a few minutes."
+                    "Insufficient price history to compute Behavioral DNA "
+                    "for this stock."
                 ),
                 "ticker": t,
             },
@@ -1159,3 +1172,40 @@ async def get_market_regime(
             regime="NEUTRAL",
             last_updated=datetime.utcnow().date().isoformat(),
         )
+
+
+# ---------------------------------------------------------------------------
+# Addendum A.1 — ML eligibility summary for frontend Settings page
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/ml/eligibility-summary",
+    summary="ML eligibility coverage summary (Settings page)",
+)
+async def get_ml_eligibility_summary(
+    _user: TokenData = Depends(get_current_user),
+):
+    """
+    Return a compact summary of how many stocks are ML-eligible, rules-only,
+    and watch-only.  Used by the frontend Settings page.
+
+    Example response::
+
+        {
+            "status": "ok",
+            "total": 139,
+            "ml_eligible": 62,
+            "rules_only": 59,
+            "watch_only": 18,
+            "label": "62 of 139 stocks are ML-eligible. 59 are rules-only. 18 are watch-only."
+        }
+    """
+    from app.services.eagle_eye.ml.eligibility_report import get_eligibility_summary_for_frontend
+
+    counts = get_eligibility_summary_for_frontend()
+    label = (
+        f"{counts['ml_eligible']} of {counts['total']} stocks are ML-eligible. "
+        f"{counts['rules_only']} are rules-only. "
+        f"{counts['watch_only']} are watch-only."
+    )
+    return {"status": "ok", **counts, "label": label}

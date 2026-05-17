@@ -72,6 +72,12 @@ class Settings(BaseSettings):
     TICKERCHART_USERNAME: str = ""     # TickerChart Live account (replaces EODHD)
     TICKERCHART_PASSWORD: str = ""     # TickerChart Live password (plaintext; sent base64-encoded)
 
+    # Eagle Eye — ML artifact paths (relative to backend-api/ or absolute)
+    ML_MATRIX_ROOT: str = "./ml_training_matrix"
+    ML_MODEL_ROOT: str = "./ml_models"
+    ML_REPORTS_ROOT: str = "./reports"
+    EAGLE_EYE_LOG_LEVEL: str = "INFO"
+
     # SMTP / Email (for password reset OTP)
     SMTP_HOST: str = ""                 # e.g. "smtp.gmail.com"
     SMTP_PORT: int = 587                # 587 for STARTTLS, 465 for SSL

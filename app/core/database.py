@@ -435,12 +435,14 @@ def query_all(sql: str, params: tuple = ()) -> list:
 
 def _normalize_ddl_for_pg(sql: str) -> str:
     """
-    Rewrite SQLite-specific DDL idioms to PostgreSQL equivalents.
+    Rewrite SQLite-specific idioms to PostgreSQL equivalents.
 
-    Handles:
+    Handles DDL and DML:
       - ``INTEGER PRIMARY KEY AUTOINCREMENT`` → ``SERIAL PRIMARY KEY``
       - ``BOOLEAN DEFAULT 0``               → ``BOOLEAN DEFAULT FALSE``
       - ``BOOLEAN DEFAULT 1``               → ``BOOLEAN DEFAULT TRUE``
+      - ``datetime('now')``                 → ``CURRENT_TIMESTAMP``
+      - ``BLOB``                            → ``BYTEA``
     """
     import re
     sql = re.sub(
@@ -451,6 +453,8 @@ def _normalize_ddl_for_pg(sql: str) -> str:
     )
     sql = re.sub(r"\bBOOLEAN\s+DEFAULT\s+0\b", "BOOLEAN DEFAULT FALSE", sql, flags=re.IGNORECASE)
     sql = re.sub(r"\bBOOLEAN\s+DEFAULT\s+1\b", "BOOLEAN DEFAULT TRUE",  sql, flags=re.IGNORECASE)
+    sql = re.sub(r"\bdatetime\('now'\)", "CURRENT_TIMESTAMP", sql, flags=re.IGNORECASE)
+    sql = re.sub(r"\bBLOB\b", "BYTEA", sql, flags=re.IGNORECASE)
     return sql
 
 

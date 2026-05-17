@@ -3,10 +3,16 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.egg-info/
+*.pyc
+*.pyo
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Virtual Environment
 .venv/
 venv/
+env/
 
 # Environment — NEVER commit secrets
 .env
@@ -20,6 +26,10 @@ venv/
 # Database files
 *.db
 *.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+dev_portfolio.db
 
 # OS
 .DS_Store
@@ -31,3 +41,43 @@ Thumbs.db
 
 # Uploaded files
 uploads/
+
+# ─────────────────────────────────────────────
+# Runtime logs
+# ─────────────────────────────────────────────
+*.log
+phase*_run.log
+
+# ─────────────────────────────────────────────
+# ML artifacts — DO NOT COMMIT MODEL FILES
+# These are regenerable from training. Keep locally only.
+# ─────────────────────────────────────────────
+ml_models/per_stock/
+ml_training_matrix/
+ml_feature_store/
+
+# ─────────────────────────────────────────────
+# Diagnostic / scratch outputs
+# ─────────────────────────────────────────────
+ml_models/diagnostics/
+reports/weekly_flagged_review_*.md
+census_raw.json
+
+# ─────────────────────────────────────────────
+# Scratch scripts
+# ─────────────────────────────────────────────
+diag_nbk*.py
+sc[0-9]_check.py
+sc[0-9]*_check.py
+test_corp.py
+test_lineage.py
+test_screen.py
+test_task1.py
+debug_gate.py
+gen_census_report.py
+run_census.py
+smoke_checks.py
+verification_script.py
+calib_analysis.py
+net_liq_verify.py
+reset_ckpt.py

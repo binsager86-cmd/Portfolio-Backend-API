@@ -61,8 +61,22 @@ services:
       retries: 3
       start_period: 15s
 
+  postgres-dev:
+    image: postgres:16-alpine
+    container_name: eagle_eye_postgres_dev
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: eagle_eye_dev
+      POSTGRES_PASSWORD: eagle_eye_dev_password
+      POSTGRES_DB: eagle_eye_dev
+    volumes:
+      - eagle_eye_pgdata:/var/lib/postgresql/data
+
 volumes:
   db-data:
     driver: local
   pg-data:
+    driver: local
+  eagle_eye_pgdata:
     driver: local

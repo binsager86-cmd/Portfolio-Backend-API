@@ -1,0 +1,17 @@
+# Eagle Eye — Development / Test dependencies
+# Install:  pip install -r requirements-dev.txt
+# (run after requirements.txt)
+
+# ── Testing ──────────────────────────────────────────────────────────
+pytest==9.0.3
+pytest-asyncio==1.3.0
+httpx>=0.27,<1.0       # async test client for FastAPI
+
+# ── Linting / formatting ─────────────────────────────────────────────
+ruff==0.15.12
+
+# ── Type checking ────────────────────────────────────────────────────
+mypy>=1.8,<2.0
+
+# ── Dependency auditing ──────────────────────────────────────────────
+pipreqs>=0.5.0

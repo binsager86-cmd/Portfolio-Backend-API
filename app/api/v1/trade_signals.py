@@ -21,7 +21,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 
 from app.api.deps import get_current_user
 from app.core.config import get_settings
-from app.core.database import query_one
+from app.core.database import query_all, query_one
 from app.core.security import TokenData
 
 logger = logging.getLogger(__name__)
@@ -31,6 +31,9 @@ router = APIRouter(prefix="/trade-signals", tags=["Trade Signals"])
 # [P2-4/B-6] TTL cache for P/E scrape results — 1 h TTL, max 256 symbol slots.
 # Falls back to last known good value when upstream is temporarily unavailable.
 _pe_cache: TTLCache = TTLCache(maxsize=256, ttl=3600)
+
+# Quarter Movement: 1 h TTL, max 256 symbol slots.
+_quarter_movement_cache: TTLCache = TTLCache(maxsize=256, ttl=3600)
 
 _HEADERS = {
     "User-Agent": (
@@ -657,3 +660,210 @@ async def technical_batch_run(
         limit=limit,
     )
     return {"status": "ok", "data": payload}
+
+
+# ── Quarter Movement ──────────────────────────────────────────────────────────
+
+_QM_START_DATE = "2023-01-01"
+
+
+def _resolve_eps_snapshots_for_stock(stock_id: int) -> List[Dict]:
+    """
+    Retrieve all available TTM EPS snapshots from stock_metrics for this stock.
+
+    Falls back to yfinance trailingEps when the DB has no EPS rows, returning
+    a single latest-only snapshot (eps_coverage = "latest_only").
+
+    Each returned dict has: period_end_date (ISO str), eps_value (float).
+    """
+    # Query all EPS line-item values from the DB ordered by period_end_date
+    db_eps_rows = query_all(
+        """
+        SELECT li.amount AS eps_value,
+               fs.period_end_date
+        FROM   financial_line_items li
+        JOIN   financial_statements fs ON fs.id = li.statement_id
+        WHERE  fs.stock_id = ?
+          AND  fs.statement_type = 'income'
+          AND  UPPER(li.line_item_code) IN ('EPS_DILUTED', 'EPS_BASIC')
+          AND  fs.period_end_date IS NOT NULL
+        ORDER  BY fs.period_end_date ASC
+        """,
+        (stock_id,),
+    )
+
+    if db_eps_rows:
+        snapshots = []
+        for row in db_eps_rows:
+            eps_val = row.get("eps_value")
+            period_end = row.get("period_end_date")
+            if eps_val is not None and period_end:
+                try:
+                    snapshots.append({
+                        "period_end_date": str(period_end)[:10],  # ISO YYYY-MM-DD
+                        "eps_value": float(eps_val),
+                    })
+                except (TypeError, ValueError):
+                    continue
+        if snapshots:
+            return snapshots
+
+    # DB has no EPS rows — attempt yfinance for a single current snapshot
+    try:
+        stock_row = query_one(
+            "SELECT symbol, exchange, currency FROM analysis_stocks WHERE id = ?",
+            (stock_id,),
+        )
+        if stock_row:
+            import yfinance as yf
+            sym = stock_row["symbol"]
+            yf_sym = sym if "." in sym else sym + ".KW"
+            ticker_info = yf.Ticker(yf_sym).info
+            trailing_eps = ticker_info.get("trailingEps") or ticker_info.get("forwardEps")
+            if trailing_eps and float(trailing_eps) > 0:
+                return [{
+                    "period_end_date": date.today().isoformat(),
+                    "eps_value": float(trailing_eps),
+                }]
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("yfinance EPS fetch failed for stock_id=%s: %s", stock_id, exc)
+
+    return []
+
+
+@router.get("/quarter-movement/{stock_id}")
+async def quarter_movement(
+    stock_id: int,
+    response: Response,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Quarterly price & P/E movement analysis + expected price forecast.
+
+    Fetches OHLCV from TickerChart from 2023-01-01, computes quarterly
+    high/low percentage changes from each quarter's baseline closing price
+    (Module 1), quarterly highest/lowest daily P/E ratios (Module 2), and
+    three-method expected price forecasts for the active quarter (Module 3).
+
+    Results are cached in memory for 1 h (TTL cache).
+    ``X-Cache-Status: HIT`` is returned when data comes from cache.
+
+    Spec §7.4: retries TickerChart up to 3× with exponential back-off;
+    serves stale cache on exhausted retries.
+    """
+    stock = query_one(
+        "SELECT id, symbol, company_name, exchange, currency FROM analysis_stocks "
+        "WHERE id = ? AND user_id = ?",
+        (stock_id, current_user.user_id),
+    )
+    if not stock:
+        raise HTTPException(status_code=404, detail="Stock not found")
+
+    symbol: str = stock["symbol"]
+    company_name: Optional[str] = stock["company_name"]
+    currency: Optional[str] = stock["currency"]
+    exchange: Optional[str] = stock["exchange"]
+
+    cache_key = f"qm:{symbol}"
+    cached = _quarter_movement_cache.get(cache_key)
+    if cached is not None:
+        response.headers["X-Cache-Status"] = "HIT"
+        return cached
+
+    response.headers["X-Cache-Status"] = "MISS"
+
+    from app.services import tickerchart_service as tc
+
+    parsed = tc.split_symbol(symbol, exchange, None)
+    if parsed is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot resolve symbol '{symbol}' to a TickerChart market",
+        )
+    base_symbol, market = parsed
+
+    from datetime import datetime as _dt
+
+    start_d = _dt.strptime(_QM_START_DATE, "%Y-%m-%d").date()
+    today = date.today()
+
+    # Spec §7.4: retry TickerChart up to 3× with 2 s back-off between attempts
+    daily_records: List[Dict] = []
+    last_exc: Optional[Exception] = None
+    for _attempt in range(3):
+        try:
+            daily_records = await tc.fetch_ohlcv(base_symbol, market, from_d=start_d, to_d=None)
+            last_exc = None
+            break
+        except (httpx.HTTPError, RuntimeError) as exc:
+            last_exc = exc
+            import asyncio
+            await asyncio.sleep(2)
+
+    if last_exc is not None or not daily_records:
+        stale = _quarter_movement_cache.get(cache_key)
+        if stale is not None:
+            response.headers["X-Cache-Status"] = "STALE"
+            return stale
+        if last_exc is not None:
+            raise HTTPException(status_code=502, detail="Failed to reach TickerChart data provider") from last_exc
+        raise HTTPException(status_code=404, detail=f"No price data returned for {symbol}")
+
+    # ── Run the three modules ─────────────────────────────────────────────
+    from app.services.quarter_movement import (
+        ExpectedPriceForecastModule,
+        QuarterlyPERatioMovementModule,
+        QuarterlyPriceMovementModule,
+    )
+    from app.services.quarter_movement.price_module import _active_quarter_for_date
+
+    eps_snapshots = _resolve_eps_snapshots_for_stock(stock_id)
+
+    module_one_result = QuarterlyPriceMovementModule().compute(daily_records, today)
+    module_two_result = QuarterlyPERatioMovementModule().compute(daily_records, eps_snapshots, today)
+    active_year, active_quarter_key = _active_quarter_for_date(today)
+    module_three_result = ExpectedPriceForecastModule().compute(
+        active_quarter_key=active_quarter_key,
+        baseline_price=module_one_result["active_quarter_baseline_price"],
+        price_movement_means=module_one_result["price_movement_means"],
+        pe_movement_means=module_two_result["pe_movement_means"],
+        trailing_twelve_months_eps=module_two_result["ttm_eps"],
+    )
+
+    _QUARTER_LABEL = {"q1": "Q1", "q2": "Q2", "q3": "Q3", "q4": "Q4"}
+
+    result = {
+        "status": "ok",
+        "data": {
+            "symbol": symbol,
+            "company_name": company_name,
+            "currency": currency,
+            # Active quarter context
+            "active_quarter": _QUARTER_LABEL[active_quarter_key],
+            "active_quarter_key": active_quarter_key,
+            "active_year": active_year,
+            "baseline_price": module_one_result["active_quarter_baseline_price"],
+            # Module 1 outputs
+            "years": module_one_result["years"],
+            "price_movement_table": module_one_result["price_movement_table"],
+            "price_movement_means": module_one_result["price_movement_means"],
+            # Module 2 outputs
+            "pe_movement_table": module_two_result["pe_movement_table"],
+            "pe_movement_means": module_two_result["pe_movement_means"],
+            "ttm_eps": module_two_result["ttm_eps"],
+            "ttm_eps_source": "db" if len(eps_snapshots) > 1 else ("yfinance" if len(eps_snapshots) == 1 else "none"),
+            "eps_coverage": module_two_result["eps_coverage"],
+            # Module 3 outputs
+            "method_one_expected_price": module_three_result["method_one_expected_price"],
+            "method_two_expected_price": module_three_result["method_two_expected_price"],
+            "consensus_expected_price": module_three_result["consensus_expected_price"],
+            "method_one_inputs": module_three_result["method_one_inputs"],
+            "method_two_inputs": module_three_result["method_two_inputs"],
+            # Metadata
+            "data_source": "tickerchart",
+            "last_updated": today.isoformat(),
+            "stale": False,
+        },
+    }
+
+    _quarter_movement_cache[cache_key] = result
+    return result
