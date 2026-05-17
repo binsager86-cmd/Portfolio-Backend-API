@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import sqlite3
 from typing import Any, Dict, Optional
 
 from app.core.config import get_settings
@@ -24,34 +23,37 @@ def _load_event_index(models_root: Optional[str] = None) -> Dict[str, Any]:
 
 
 def _load_event_count_from_db(ticker: str) -> int:
-    settings = get_settings()
-    conn = sqlite3.connect(settings.database_abs_path)
-    cur = conn.cursor()
+    from app.core.database import query_one
+    use_pg = get_settings().use_postgres
 
     candidates = ["ee_events_cache", "ee_forensic_events", "forensic_events", "eagle_eye_events"]
     table_name = None
     for table in candidates:
-        row = cur.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
-            (table,),
-        ).fetchone()
+        if use_pg:
+            row = query_one(
+                "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name=?",
+                (table,),
+            )
+        else:
+            row = query_one(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+                (table,),
+            )
         if row:
             table_name = table
             break
 
     if not table_name:
-        conn.close()
         return 0
 
     try:
-        count = cur.execute(
+        row = query_one(
             f"SELECT COUNT(*) FROM {table_name} WHERE UPPER(ticker)=?",  # nosec B608
             (ticker.upper(),),
-        ).fetchone()[0]
+        )
+        return int(row[0] or 0) if row else 0
     except Exception:
-        count = 0
-    conn.close()
-    return int(count or 0)
+        return 0
 
 
 def resolve_model_for_ticker(

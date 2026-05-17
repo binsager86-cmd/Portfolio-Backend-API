@@ -28,6 +28,7 @@ Three sequential phases, each independently re-runnable:
 from __future__ import annotations
 
 import logging
+import math
 import time
 from datetime import date, timedelta
 from typing import List, Optional
@@ -40,9 +41,13 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 def init_schema() -> None:
-    """Create Eagle Eye DB tables if they do not already exist."""
+    """Create Eagle Eye DB tables (OHLCV/DNA/ratings) and ML tables if they do not exist."""
     from app.services.eagle_eye.store import ensure_tables
+    from app.services.eagle_eye.ml.db_tables import ensure_ml_tables
+    from app.services.eagle_eye.ml.macro_features import write_data_gaps_report
     ensure_tables()
+    ensure_ml_tables()
+    write_data_gaps_report()
 
 
 # ---------------------------------------------------------------------------
@@ -271,9 +276,84 @@ def build_all_dna(verbose: bool = False) -> dict:
     return stats
 
 
-# ---------------------------------------------------------------------------
-# Phase 3 — Ratings
-# ---------------------------------------------------------------------------
+def build_dna_for_ticker(ticker: str) -> Optional[dict]:
+    """
+    Compute and persist Behavioral DNA for a single ticker on-demand.
+
+    Tries the OHLCV DB cache first; falls back to a live TickerChart fetch
+    when the cache is too sparse (< MIN_HISTORY_DAYS_REQUIRED bars).
+    Returns the raw DNA dict on success, or None if insufficient data.
+    """
+    from datetime import date, timedelta
+
+    from app.services.eagle_eye.config import CONFIG
+    from app.services.eagle_eye.dna_extractor import dna_to_dict, extract_dna
+    from app.services.eagle_eye.indicators import compute_all_indicators
+    from app.services.eagle_eye.move_detector import detect_fakeouts, detect_moves
+    from app.services.eagle_eye.recorder import record_all_events
+    from app.services.eagle_eye.store import (
+        ensure_tables,
+        load_ohlcv,
+        log_compute,
+        save_dna,
+    )
+
+    ensure_tables()
+    ticker = ticker.upper()
+
+    # 1. Try cached OHLCV
+    df = load_ohlcv(ticker)
+
+    # 2. Fall back to live fetch when cache is too sparse
+    if len(df) < CONFIG.MIN_HISTORY_DAYS_REQUIRED:
+        try:
+            from app.services.eagle_eye.adapter import TickerChartAdapter
+
+            adapter = TickerChartAdapter()
+            end_d = date.today()
+            start_d = end_d - timedelta(days=3 * 365 + 90)
+            fetched = adapter.get_ohlcv_daily(ticker, start_d, end_d)
+            if fetched is not None and len(fetched) > len(df):
+                df = fetched
+        except Exception as exc:
+            logger.warning("Live OHLCV fetch for DNA failed [%s]: %s", ticker, exc)
+
+    if len(df) < CONFIG.MIN_HISTORY_DAYS_REQUIRED:
+        log_compute(
+            "dna_build", ticker, "skip",
+            f"only {len(df)} bars (need {CONFIG.MIN_HISTORY_DAYS_REQUIRED})"
+        )
+        return None
+
+    try:
+        ind_df = compute_all_indicators(df)
+        moves = detect_moves(ticker, df)
+        fakeouts = detect_fakeouts(ticker, df)
+        all_events = moves + fakeouts
+        snapshots = record_all_events(all_events, ind_df)
+
+        dna = extract_dna(ticker, snapshots, [])
+        if dna is None:
+            log_compute("dna_build", ticker, "skip", "< 3 real events found")
+            return None
+
+        dna_dict = dna_to_dict(dna)
+        save_dna(
+            ticker=ticker,
+            dna_dict=dna_dict,
+            total_events=dna.total_events_studied,
+            dominant_pattern=dna.personality_tag,
+        )
+        log_compute(
+            "dna_build", ticker, "ok",
+            f"{dna.total_events_studied} events, pattern={dna.personality_tag}"
+        )
+        return dna_dict
+
+    except Exception as exc:
+        logger.exception("[%s] on-demand DNA build failed", ticker)
+        log_compute("dna_build", ticker, "error", str(exc)[:300])
+        return None
 
 def compute_all_ratings(verbose: bool = False) -> dict:
     """
@@ -330,6 +410,8 @@ def compute_all_ratings(verbose: bool = False) -> dict:
 
             stage = classify_stage(latest)
             confidence = compute_confidence(latest, stage, dna=None)
+            _confidence_raw = confidence  # snapshot before vol-context/dampener adjustments
+            _dampener_fired = False
 
             # ── Volume context + confidence multiplier ───────────────────
             volume_context = compute_volume_context(df, stage)
@@ -342,6 +424,25 @@ def compute_all_ratings(verbose: bool = False) -> dict:
             elif volume_context["relative_volume_percentile"] > 80:
                 confidence = min(confidence * 1.10, 100)
             confidence = round(min(confidence, 100), 2)
+
+            # ── Thin-volume-on-rise dampener (net liquidity check) ───────
+            if "dollar_volume" in ind_df.columns and len(ind_df) >= 21:
+                _dv = ind_df["dollar_volume"]
+                _median_dv = float(_dv.rolling(20).median().shift(1).iloc[-1])
+                _today_dv = float(_dv.iloc[-1])
+                _rel_liq = _today_dv / _median_dv if _median_dv > 0 else 0.0
+                _today_ret = (
+                    float((df["close"].iloc[-1] / df["close"].iloc[-2]) - 1)
+                    if len(df) >= 2 else 0.0
+                )
+                if _rel_liq < 0.5 and _today_ret > 0.02:
+                    confidence = min(confidence, 60)
+                    _dampener_fired = True
+                    log_compute(
+                        "rating_run", ticker, "dampened",
+                        f"thin_volume_on_rise: rel_liq={_rel_liq:.2f} "
+                        f"ret={_today_ret:.3f} conf_capped=60",
+                    )
 
             rating = compute_rating(confidence)
             sr = compute_support_resistance(df, latest)
@@ -370,6 +471,54 @@ def compute_all_ratings(verbose: bool = False) -> dict:
             }
 
             save_rating(ticker, name_en, sector, result)
+
+            # ── Signal logger (observation only — must not block rating) ─────
+            try:
+                from app.services.eagle_eye.ml.signal_logger import log_considered_signal as _log_sig
+                from app.services.eagle_eye.config import CONFIG as _cfg
+
+                _entered = rating in ("BUY", "STRONG_BUY")
+                # would_have_entered: True if raw signal crossed threshold,
+                # even if a gate (liquidity/dampener) brought it below.
+                _would_have_entered = _entered or (_confidence_raw >= _cfg.BUY_CONFIDENCE)
+                _skip_reason = None
+                if not _entered:
+                    if _dampener_fired or tier in ("ILLIQUID", "WATCH_ONLY"):
+                        _skip_reason = "LIQUIDITY_GATE"
+                    elif stage in ("DISTRIBUTION_TOPPING", "MARKDOWN_DECLINE"):
+                        _skip_reason = "STAGE_NOT_ALLOWED"
+                    else:
+                        _skip_reason = "BELOW_CONFIDENCE_THRESHOLD"
+
+                # Sanitize latest snapshot: coerce numpy types, replace NaN/Inf with None
+                def _jv(v):
+                    if v is None:
+                        return None
+                    try:
+                        f = float(v)
+                        return None if (f != f or abs(f) == math.inf) else f
+                    except (TypeError, ValueError):
+                        return str(v)
+
+                _feature_snapshot = {
+                    "stage": stage,
+                    "tier": tier,
+                    "confidence_pre_adj": float(_confidence_raw),
+                    "dampener_fired": bool(_dampener_fired),
+                    **{k: _jv(v) for k, v in latest.items()},
+                }
+                _log_sig(
+                    ticker=ticker,
+                    signal_date=today_str,
+                    rule_score=float(confidence),
+                    would_have_entered=_would_have_entered,
+                    skip_reason=_skip_reason,
+                    features=_feature_snapshot,
+                )
+            except Exception as _log_exc:
+                logger.warning("[%s] log_considered_signal failed: %s", ticker, _log_exc)
+            # ── End signal logger ─────────────────────────────────────────────
+
             stats["ok"] += 1
             log_compute(
                 "rating_run", ticker, "ok",

@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 import math
-import sqlite3
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
@@ -730,13 +729,9 @@ def load_forensic_events_from_db(
     """
     log = logger or LOGGER
     settings = get_settings()
-    path = db_path or settings.database_abs_path
+    use_pg = settings.use_postgres
 
-    conn = sqlite3.connect(path)
-    conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
-    cur.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
-    tables = [r[0] for r in cur.fetchall()]
+    from app.core.database import query_all, query_one
 
     preferred = [
         "ee_events_cache",
@@ -744,14 +739,43 @@ def load_forensic_events_from_db(
         "forensic_events",
         "eagle_eye_events",
     ]
-    candidates = [t for t in preferred if t in tables]
-    if not candidates:
-        candidates = [t for t in tables if "event" in t.lower() and t.startswith("ee_")]
+
+    # Discover which table exists
+    table_check_sql_pg = (
+        "SELECT table_name FROM information_schema.tables "
+        "WHERE table_schema='public' AND table_name=?"
+    )
+    table_check_sql_sq = "SELECT name FROM sqlite_master WHERE type='table' AND name=?"
+
+    tables_available: List[str] = []
+    for t in preferred:
+        row = query_one(table_check_sql_pg if use_pg else table_check_sql_sq, (t,))
+        if row:
+            tables_available.append(t)
+
+    if not tables_available and not use_pg:
+        # Fallback: find any event-like table in SQLite
+        all_rows = query_all(
+            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+        )
+        tables_available = [
+            r[0] for r in all_rows
+            if "event" in str(r[0]).lower() and str(r[0]).startswith("ee_")
+        ]
 
     selected: Optional[str] = None
     cols: List[str] = []
-    for table in candidates:
-        c = [r[1] for r in conn.execute(f"PRAGMA table_info({table})")]  # nosec B608
+    for table in tables_available:
+        if use_pg:
+            col_rows = query_all(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_schema='public' AND table_name=? ORDER BY ordinal_position",
+                (table,),
+            )
+            c = [r[0] for r in col_rows]
+        else:
+            col_rows = query_all(f"PRAGMA table_info({table})")  # nosec B608
+            c = [r[1] for r in col_rows]
         cset = {x.lower() for x in c}
         if "ticker" in cset and ("acceleration_date" in cset or "event_date" in cset):
             selected = table
@@ -759,16 +783,14 @@ def load_forensic_events_from_db(
             break
 
     if not selected:
-        conn.close()
         return []
 
     log.info("Using forensic event cache table: %s", selected)
-    records: List[Dict[str, Any]] = []
-    rows = conn.execute(f"SELECT * FROM {selected}").fetchall()  # nosec B608
-    conn.close()
+    rows = query_all(f"SELECT * FROM {selected}")  # nosec B608
 
+    records: List[Dict[str, Any]] = []
     for r in rows:
-        item = dict(r)
+        item = dict(r.items())
         for key in (
             "indicator_snapshots",
             "indicator_snapshots_json",
