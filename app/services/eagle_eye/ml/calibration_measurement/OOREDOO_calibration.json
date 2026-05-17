@@ -1,0 +1,17 @@
+{
+  "ticker": "OOREDOO",
+  "phase": "2.6_step2_inference",
+  "data_source": "oot_inference_existing_model",
+  "oot_auc": 0.7658,
+  "brier_score": 0.1914,
+  "baseline_brier": 0.2497,
+  "brier_skill_score": 0.2338,
+  "mean_calibration_error": 0.1249,
+  "max_calibration_error": 0.1671,
+  "oot_n_positives": 65,
+  "oot_n_negatives": 61,
+  "positive_rate": 0.5159,
+  "individual_verdict": "OK",
+  "reliability_diagram": "see reliability_diagram.json in bundle dir",
+  "notes": "Inference run Phase 2.6 Step 2. OOT: last 126 rows. 20/20 cell bundles loaded."
+}

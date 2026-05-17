@@ -1,0 +1,17 @@
+{
+  "ticker": "KPPC",
+  "phase": "2.6_step2_inference",
+  "data_source": "oot_inference_existing_model",
+  "oot_auc": 0.8421,
+  "brier_score": 0.1415,
+  "baseline_brier": 0.2394,
+  "brier_skill_score": 0.4086,
+  "mean_calibration_error": 0.0126,
+  "max_calibration_error": 0.0631,
+  "oot_n_positives": 50,
+  "oot_n_negatives": 76,
+  "positive_rate": 0.3968,
+  "individual_verdict": "GOOD",
+  "reliability_diagram": "see reliability_diagram.json in bundle dir",
+  "notes": "Inference run Phase 2.6 Step 2. OOT: last 126 rows. 20/20 cell bundles loaded."
+}

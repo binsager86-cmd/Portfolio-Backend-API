@@ -1,0 +1,17 @@
+{
+  "baseline_brier": 0.2248,
+  "individual_verdict": "BORDERLINE",
+  "ticker": "BOURSA",
+  "brier_score": 0.2234,
+  "oot_auc": 0.7348,
+  "brier_skill_score": 0.006,
+  "notes": "Calibration data from pre-Job-7 failure report. OOT period: last 126 rows of data.parquet.",
+  "max_calibration_error": 0.8757,
+  "mean_calibration_error": 0.2027,
+  "data_source": "failure_report_pre_job7",
+  "oot_n_negatives": 83,
+  "positive_rate": 0.3413,
+  "phase": "2.5_calibration_measurement",
+  "oot_n_positives": 43,
+  "reliability_diagram": "NOT_AVAILABLE"
+}

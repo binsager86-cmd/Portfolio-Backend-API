@@ -1,0 +1,17 @@
+{
+  "baseline_brier": 0.2377,
+  "individual_verdict": "OK",
+  "ticker": "AAYANRE",
+  "brier_score": 0.1586,
+  "oot_auc": 0.8666,
+  "brier_skill_score": 0.333,
+  "notes": "Calibration data from pre-Job-7 failure report. OOT period: last 126 rows of data.parquet.",
+  "max_calibration_error": 0.375,
+  "mean_calibration_error": 0.1051,
+  "data_source": "failure_report_pre_job7",
+  "oot_n_negatives": 77,
+  "positive_rate": 0.3889,
+  "phase": "2.5_calibration_measurement",
+  "oot_n_positives": 49,
+  "reliability_diagram": "NOT_AVAILABLE"
+}

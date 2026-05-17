@@ -1,0 +1,17 @@
+{
+  "baseline_brier": 0.2167,
+  "individual_verdict": "BORDERLINE",
+  "ticker": "ARGAN",
+  "brier_score": 0.06,
+  "oot_auc": 0.9253,
+  "brier_skill_score": 0.723,
+  "notes": "Calibration data from pre-Job-7 failure report. OOT period: last 126 rows of data.parquet.",
+  "max_calibration_error": 0.9413,
+  "mean_calibration_error": 0.2327,
+  "data_source": "failure_report_pre_job7",
+  "oot_n_negatives": 40,
+  "positive_rate": 0.6825,
+  "phase": "2.5_calibration_measurement",
+  "oot_n_positives": 86,
+  "reliability_diagram": "NOT_AVAILABLE"
+}

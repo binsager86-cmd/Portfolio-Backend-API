@@ -1,0 +1,17 @@
+{
+  "baseline_brier": 0.2339,
+  "individual_verdict": "POOR",
+  "ticker": "ALOLA",
+  "brier_score": 0.3783,
+  "oot_auc": 0.6341,
+  "brier_skill_score": -0.617,
+  "notes": "Calibration data from pre-Job-7 failure report. OOT period: last 126 rows of data.parquet.",
+  "max_calibration_error": 0.9288,
+  "mean_calibration_error": 0.3135,
+  "data_source": "failure_report_pre_job7",
+  "oot_n_negatives": 47,
+  "positive_rate": 0.627,
+  "phase": "2.5_calibration_measurement",
+  "oot_n_positives": 79,
+  "reliability_diagram": "NOT_AVAILABLE"
+}

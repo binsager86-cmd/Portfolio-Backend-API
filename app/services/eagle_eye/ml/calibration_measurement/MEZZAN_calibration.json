@@ -1,0 +1,17 @@
+{
+  "ticker": "MEZZAN",
+  "phase": "2.6_step2_inference",
+  "data_source": "oot_inference_existing_model",
+  "oot_auc": 0.6693,
+  "brier_score": 0.337,
+  "baseline_brier": 0.1728,
+  "brier_skill_score": -0.95,
+  "mean_calibration_error": 0.1667,
+  "max_calibration_error": 0.6667,
+  "oot_n_positives": 98,
+  "oot_n_negatives": 28,
+  "positive_rate": 0.7778,
+  "individual_verdict": "BORDERLINE",
+  "reliability_diagram": "see reliability_diagram.json in bundle dir",
+  "notes": "Inference run Phase 2.6 Step 2. OOT: last 126 rows. 20/20 cell bundles loaded."
+}
