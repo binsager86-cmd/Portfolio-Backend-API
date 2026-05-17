@@ -710,4 +710,12 @@ def compute_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
     out['high'] = df['high']
     out['low'] = df['low']
 
+    # Net liquidity: KWD turnover (preferred) or fallback to shares × close
+    # 'turnover_kwd' is the actual exchange-reported KWD value traded per day.
+    # 'volume' (shares count) is kept separately above for share-count signals.
+    out['dollar_volume'] = (
+        df['turnover_kwd'] if 'turnover_kwd' in df.columns
+        else df['volume'] * df['close']
+    )
+
     return out

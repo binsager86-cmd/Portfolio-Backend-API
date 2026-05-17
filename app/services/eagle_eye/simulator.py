@@ -349,6 +349,11 @@ class SimulatorEngine:
             decision = self._evaluate_entry(strategy, rating, portfolio, date_str)
             if not decision.should_enter:
                 self._log_considered(strategy.portfolio_id, date_str, rating, decision.skip_reason)
+                self._try_log_ml_signal(
+                    (rating.get("ticker") or "").upper(), date_str, rating,
+                    would_have_entered=(decision.skip_reason != "CONFIDENCE_BELOW_THRESHOLD"),
+                    skip_reason=decision.skip_reason,
+                )
                 continue
 
             # Use actual market price from OHLCV cache (not stale rating target)
@@ -356,16 +361,19 @@ class SimulatorEngine:
             ohlcv = _get_ohlcv_near(ticker, date_str)
             if ohlcv is None:
                 self._log_considered(strategy.portfolio_id, date_str, rating, "NO_PRICE_DATA")
+                self._try_log_ml_signal(ticker, date_str, rating, would_have_entered=True, skip_reason="NO_PRICE_DATA")
                 continue
             actual_price = float(ohlcv.get("close") or 0)
             if actual_price <= 0:
                 self._log_considered(strategy.portfolio_id, date_str, rating, "NO_PRICE_DATA")
+                self._try_log_ml_signal(ticker, date_str, rating, would_have_entered=True, skip_reason="NO_PRICE_DATA")
                 continue
 
             portfolio_value = float(portfolio.get("total_value_kwd") or 10000)
             position_size_kwd = self._compute_position_size(rating, portfolio_value, actual_price, date_str)
             if position_size_kwd < MIN_TRADE_SIZE_KWD:
                 self._log_considered(strategy.portfolio_id, date_str, rating, "POSITION_TOO_SMALL")
+                self._try_log_ml_signal(ticker, date_str, rating, would_have_entered=True, skip_reason="POSITION_TOO_SMALL")
                 continue
 
             cash = float(portfolio.get("cash_balance_kwd") or 0)
@@ -373,9 +381,11 @@ class SimulatorEngine:
                 position_size_kwd = cash  # use all available cash if smaller
             if position_size_kwd < MIN_TRADE_SIZE_KWD:
                 self._log_considered(strategy.portfolio_id, date_str, rating, "INSUFFICIENT_CASH")
+                self._try_log_ml_signal(ticker, date_str, rating, would_have_entered=True, skip_reason="INSUFFICIENT_CASH")
                 continue
 
             self._open_position(strategy, rating, portfolio, position_size_kwd, date_str, actual_price)
+            self._try_log_ml_signal(ticker, date_str, rating, would_have_entered=True, skip_reason=None)
             opened.append({"ticker": ticker, "size_kwd": position_size_kwd})
 
         return opened
@@ -860,6 +870,46 @@ class SimulatorEngine:
                 reason or "",
             ),
         )
+
+    # Mapping from simulator internal skip reasons to ML signal-logger vocabulary.
+    _SKIP_TO_ML: Dict[str, str] = {
+        "CONFIDENCE_BELOW_THRESHOLD": "BELOW_CONFIDENCE_THRESHOLD",
+        "STAGE_NOT_ALLOWED": "STAGE_NOT_ALLOWED",
+        "SECTOR_CAP_REACHED": "SECTOR_CAP_REACHED",
+        "ILLIQUID_STOCK": "LIQUIDITY_GATE",
+        "BREAKOUT_WITHOUT_VOLUME_CONFIRMATION": "LIQUIDITY_GATE",
+        "EXTREMELY_LOW_VOLUME_DAY": "LIQUIDITY_GATE",
+    }
+
+    def _try_log_ml_signal(
+        self,
+        ticker: str,
+        date_str: str,
+        rating: dict,
+        would_have_entered: bool,
+        skip_reason: Optional[str],
+    ) -> None:
+        """Observation-only hook — writes to ML considered_signals table.
+
+        Errors are caught and logged; they must never block entry decisions.
+        """
+        try:
+            from app.services.eagle_eye.ml import log_considered_signal as _log_sig
+            ml_reason = self._SKIP_TO_ML.get(skip_reason or "", "OTHER") if skip_reason else None
+            features = {k: v for k, v in rating.items() if k != "ticker"}
+            _log_sig(
+                ticker=ticker,
+                signal_date=date_str,
+                rule_score=float(rating.get("confidence") or 0),
+                would_have_entered=would_have_entered,
+                skip_reason=ml_reason,
+                features=features,
+            )
+        except Exception as _exc:
+            import logging as _logging
+            _logging.getLogger(__name__).warning(
+                "log_considered_signal failed for %s/%s: %s", ticker, date_str, _exc
+            )
 
     def _ensure_simulator_tables(self) -> None:
         """Ensure tables exist (idempotent — called on first run)."""
