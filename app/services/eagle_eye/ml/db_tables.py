@@ -107,7 +107,7 @@ _DDL: list[str] = [
         id              INTEGER PRIMARY KEY AUTOINCREMENT,
         logged_at       TEXT    NOT NULL DEFAULT (datetime('now')),
         action          TEXT    NOT NULL
-            CHECK(action IN ('TRAIN','SHADOW_START','PROMOTE','ROLLBACK','ARCHIVE','RETRAIN','FAILED_GATE')),
+            CHECK(action IN ('TRAIN','SHADOW_START','PROMOTE','ROLLBACK','ARCHIVE','RETRAIN','FAILED_GATE','AUTO_DISABLE')),
         stock_ticker    TEXT    NOT NULL,
         model_id        TEXT,
         reason          TEXT,
@@ -192,6 +192,36 @@ _DDL: list[str] = [
     """,
     "CREATE INDEX IF NOT EXISTS idx_corp_events_ticker ON ml_corporate_events(stock_ticker, event_type)",
     "CREATE INDEX IF NOT EXISTS idx_corp_events_date   ON ml_corporate_events(announcement_date)",
+
+    # ── Phase 3: ML display kill-switch state (single row, id=1) ─────────
+    """
+    CREATE TABLE IF NOT EXISTS ml_display_state (
+        id              INTEGER PRIMARY KEY DEFAULT 1 CHECK(id = 1),
+        auto_disabled   INTEGER NOT NULL DEFAULT 0,
+        disabled_at     TEXT,
+        disabled_reason TEXT,
+        updated_at      TEXT    DEFAULT (datetime('now'))
+    )
+    """,
+    "INSERT OR IGNORE INTO ml_display_state (id, auto_disabled) VALUES (1, 0)",
+
+    # ── Phase 3: Daily shadow vs rule comparison log ───────────────────
+    """
+    CREATE TABLE IF NOT EXISTS phase3_evaluation_log (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        log_date        TEXT    NOT NULL,
+        stock_ticker    TEXT    NOT NULL,
+        model_id        TEXT,
+        band_label      TEXT,
+        rule_rating     TEXT,
+        rule_confidence REAL,
+        agreement       INTEGER,
+        created_at      TEXT    DEFAULT (datetime('now')),
+        UNIQUE(log_date, stock_ticker)
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_p3eval_ticker_date ON phase3_evaluation_log(log_date, stock_ticker)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_shadow_model_date ON ml_shadow_log(model_id, log_date)",
 
     # ── Per-stock filter eligibility cache ────────────────────────────────
     """
@@ -301,6 +331,19 @@ _ADDENDUM_A_MIGRATIONS: list[tuple[str, str]] = [
 
     # ml_shadow_log: regime tag
     ("ml_shadow_log",     "ALTER TABLE ml_shadow_log ADD COLUMN regime TEXT"),
+
+    # Phase 3 — ml_shadow_log extended shadow runner columns
+    ("ml_shadow_log",     "ALTER TABLE ml_shadow_log ADD COLUMN raw_prob REAL"),
+    ("ml_shadow_log",     "ALTER TABLE ml_shadow_log ADD COLUMN calibrated_prob REAL"),
+    ("ml_shadow_log",     "ALTER TABLE ml_shadow_log ADD COLUMN band_label TEXT"),
+    ("ml_shadow_log",     "ALTER TABLE ml_shadow_log ADD COLUMN rule_stage TEXT"),
+    ("ml_shadow_log",     "ALTER TABLE ml_shadow_log ADD COLUMN rule_confidence REAL"),
+    ("ml_shadow_log",     "ALTER TABLE ml_shadow_log ADD COLUMN features_hash TEXT"),
+
+    # Phase 3 — ml_predictions band display columns
+    ("ml_predictions",    "ALTER TABLE ml_predictions ADD COLUMN band_label TEXT"),
+    ("ml_predictions",    "ALTER TABLE ml_predictions ADD COLUMN band_low_threshold REAL"),
+    ("ml_predictions",    "ALTER TABLE ml_predictions ADD COLUMN band_high_threshold REAL"),
 ]
 
 
@@ -322,6 +365,7 @@ def ensure_ml_tables() -> None:
             logger.warning("ML DDL warning (non-fatal): %s — %s", stmt[:60], exc)
 
     _apply_migrations()
+    _migrate_lifecycle_log_constraint()
     logger.info("ML tables verified / created (including Addendum A schema).")
 
 
@@ -343,6 +387,62 @@ def _apply_migrations() -> None:
                 pass  # column exists — expected on re-runs
             else:
                 logger.warning("Migration warning (%s): %s", _table, exc)
+
+
+def _migrate_lifecycle_log_constraint() -> None:
+    """
+    Addendum B: add AUTO_DISABLE to model_lifecycle_log action CHECK constraint.
+
+    SQLite does not support ALTER TABLE … MODIFY COLUMN, so we recreate the
+    table via the standard rename-swap pattern.  Safe to call repeatedly — it
+    checks the existing DDL first and skips if AUTO_DISABLE is already present.
+    """
+    from app.core.database import get_connection
+
+    try:
+        with get_connection() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT sql FROM sqlite_master WHERE type='table' AND name='model_lifecycle_log'"
+            )
+            row = cur.fetchone()
+            if row is None or "AUTO_DISABLE" in (row[0] or ""):
+                return  # table absent (fresh install already has it) or already migrated
+
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS model_lifecycle_log_p3 (
+                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                    logged_at       TEXT    NOT NULL DEFAULT (datetime('now')),
+                    action          TEXT    NOT NULL
+                        CHECK(action IN ('TRAIN','SHADOW_START','PROMOTE','ROLLBACK',
+                                         'ARCHIVE','RETRAIN','FAILED_GATE','AUTO_DISABLE')),
+                    stock_ticker    TEXT    NOT NULL,
+                    model_id        TEXT,
+                    reason          TEXT,
+                    human_approver  TEXT,
+                    metadata_json   TEXT
+                )
+            """)
+            cur.execute(
+                "INSERT OR IGNORE INTO model_lifecycle_log_p3 "
+                "SELECT * FROM model_lifecycle_log"
+            )
+            cur.execute("DROP TABLE model_lifecycle_log")
+            cur.execute(
+                "ALTER TABLE model_lifecycle_log_p3 RENAME TO model_lifecycle_log"
+            )
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_lifecycle_ticker "
+                "ON model_lifecycle_log(stock_ticker)"
+            )
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_lifecycle_action "
+                "ON model_lifecycle_log(action)"
+            )
+            conn.commit()
+            logger.info("Addendum B: model_lifecycle_log constraint updated to include AUTO_DISABLE.")
+    except Exception as exc:
+        logger.warning("Addendum B migration skipped (non-fatal): %s", exc)
 
 
 def log_lifecycle(

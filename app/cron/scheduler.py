@@ -389,6 +389,94 @@ def start_scheduler() -> None:
     except Exception as exc:
         logger.warning("Could not schedule Eagle Eye jobs: %s", exc)
 
+    # ── Phase 3: ML shadow runner (Sun–Thu 14:30) ─────────────────────────
+    try:
+        from app.services.eagle_eye.ml.shadow_runner import run_shadow_scoring
+        from app.services.eagle_eye.ml.auto_disable_monitor import run_auto_disable_check
+        from app.services.eagle_eye.ml.weekly_review import run_weekly_review
+
+        def _run_ml_shadow_scoring() -> None:
+            try:
+                summary = run_shadow_scoring()
+                logger.info("🤖 ML shadow scoring complete: %s", summary)
+            except Exception as _exc:
+                logger.warning("🤖 ML shadow scoring failed: %s", _exc)
+
+        def _run_ml_auto_disable() -> None:
+            try:
+                result = run_auto_disable_check()
+                if result.get("triggered"):
+                    logger.warning("🚨 ML auto-disable triggered: %s", result)
+                else:
+                    logger.info("✅ ML auto-disable check passed")
+            except Exception as _exc:
+                logger.warning("ML auto-disable check failed: %s", _exc)
+
+        def _run_ml_weekly_review() -> None:
+            try:
+                path = run_weekly_review()
+                logger.info("📋 ML weekly review report: %s", path)
+            except Exception as _exc:
+                logger.warning("ML weekly review failed: %s", _exc)
+
+        # Shadow scoring — Sun–Thu at ML_SHADOW_HOUR:ML_SHADOW_MINUTE (default 14:30)
+        _scheduler.add_job(
+            _run_ml_shadow_scoring,
+            trigger=CronTrigger(
+                day_of_week="sun,mon,tue,wed,thu",
+                hour=settings.ML_SHADOW_HOUR,
+                minute=settings.ML_SHADOW_MINUTE,
+                timezone="Asia/Kuwait",
+            ),
+            id="ml_shadow_runner",
+            name="ML shadow scoring runner",
+            replace_existing=True,
+            coalesce=True,
+            max_instances=1,
+        )
+
+        # Auto-disable monitor — Sun–Thu at 14:45 (runs after shadow scoring)
+        _scheduler.add_job(
+            _run_ml_auto_disable,
+            trigger=CronTrigger(
+                day_of_week="sun,mon,tue,wed,thu",
+                hour=14,
+                minute=45,
+                timezone="Asia/Kuwait",
+            ),
+            id="ml_auto_disable_monitor",
+            name="ML auto-disable monitor",
+            replace_existing=True,
+            coalesce=True,
+            max_instances=1,
+        )
+
+        # Weekly review — Sunday at 15:00
+        _scheduler.add_job(
+            _run_ml_weekly_review,
+            trigger=CronTrigger(
+                day_of_week=settings.ML_WEEKLY_REVIEW_DAY,
+                hour=15,
+                minute=0,
+                timezone="Asia/Kuwait",
+            ),
+            id="ml_weekly_review",
+            name="ML weekly flagged-stock review",
+            replace_existing=True,
+            coalesce=True,
+            max_instances=1,
+        )
+
+        logger.info(
+            "🤖 ML Phase 3 jobs scheduled "
+            "(shadow %02d:%02d Sun–Thu; auto-disable 14:45 Sun–Thu; weekly review %s 15:00 Asia/Kuwait)",
+            settings.ML_SHADOW_HOUR,
+            settings.ML_SHADOW_MINUTE,
+            settings.ML_WEEKLY_REVIEW_DAY,
+        )
+    except Exception as exc:
+        logger.warning("Could not schedule ML Phase 3 jobs: %s", exc)
+
     _scheduler.start()
     logger.info("🕐 Scheduler started")
 

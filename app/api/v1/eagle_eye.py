@@ -1209,3 +1209,274 @@ async def get_ml_eligibility_summary(
         f"{counts['watch_only']} are watch-only."
     )
     return {"status": "ok", **counts, "label": label}
+
+
+# ---------------------------------------------------------------------------
+# Phase 3 — ML band display endpoints
+# ---------------------------------------------------------------------------
+
+@router.get("/ml/display-state", summary="ML display kill-switch state")
+async def get_ml_display_state(
+    _user: TokenData = Depends(get_current_user),
+):
+    """
+    Return the current ML display state.
+
+    Response::
+
+        {
+            "enabled": true,          // ENABLE_ML_DISPLAY setting
+            "auto_disabled": false,   // auto-disable monitor flag
+            "disabled_reason": null   // reason if auto_disabled=true
+        }
+    """
+    from app.core.config import get_settings
+    from app.core.database import query_one
+
+    settings = get_settings()
+    state = query_one("SELECT auto_disabled, disabled_reason FROM ml_display_state WHERE id = 1", ())
+    auto_disabled = bool(state and state["auto_disabled"]) if state else False
+    disabled_reason = state["disabled_reason"] if state else None
+    return {
+        "enabled": settings.ENABLE_ML_DISPLAY and not auto_disabled,
+        "config_enabled": settings.ENABLE_ML_DISPLAY,
+        "auto_disabled": auto_disabled,
+        "disabled_reason": disabled_reason,
+    }
+
+
+@router.get("/ml/bands", summary="ML band scores for all SHADOW stocks")
+async def get_ml_bands(
+    _user: TokenData = Depends(get_current_user),
+):
+    """
+    Return ML band labels for all 14 SHADOW-roster stocks.
+
+    When ML display is disabled (kill-switch or auto-disable), all band values
+    are returned as null and *enabled* is false.
+
+    Response::
+
+        {
+            "enabled": true,
+            "disclaimer": "⚠️ ML signal in evaluation...",
+            "bands": [
+                {"ticker": "AAYANRE", "band": "HIGH", "color": "#10B981", ...},
+                ...
+            ]
+        }
+    """
+    from app.core.config import get_settings
+    from app.core.database import query_one, query_all
+    from app.services.eagle_eye.ml.band_display import band_for_display, DISCLAIMER_TEXT
+    from app.services.eagle_eye.ml.shadow_runner import SHADOW_ROSTER
+
+    settings = get_settings()
+    state = query_one("SELECT auto_disabled FROM ml_display_state WHERE id = 1", ())
+    auto_disabled = bool(state and state["auto_disabled"]) if state else False
+    ml_enabled = settings.ENABLE_ML_DISPLAY and not auto_disabled
+
+    bands = []
+    for ticker in SHADOW_ROSTER:
+        if not ml_enabled:
+            bands.append({
+                "ticker": ticker,
+                "band": None,
+                "color": None,
+                "emoji": None,
+                "short_label": None,
+            })
+            continue
+
+        row = query_one(
+            """
+            SELECT band_label, calibrated_prob, log_date
+              FROM ml_shadow_log
+             WHERE stock_ticker = ?
+               AND band_label IS NOT NULL
+             ORDER BY log_date DESC
+             LIMIT 1
+            """,
+            (ticker,),
+        )
+        if row and row["band_label"]:
+            display = band_for_display(row["band_label"])
+            bands.append({
+                "ticker": ticker,
+                "band": row["band_label"],
+                "color": display["color"],
+                "emoji": display["emoji"],
+                "short_label": display["short"],
+                "as_of": row["log_date"],
+                "calibrated_prob": row["calibrated_prob"],
+            })
+        else:
+            bands.append({
+                "ticker": ticker,
+                "band": "INSUFFICIENT_DATA",
+                "color": "#9CA3AF",
+                "emoji": "—",
+                "short_label": "N/A",
+                "as_of": None,
+                "calibrated_prob": None,
+            })
+
+    return {
+        "enabled": ml_enabled,
+        "disclaimer": DISCLAIMER_TEXT,
+        "bands": bands,
+    }
+
+
+@router.get("/ml/bands/{ticker}", summary="Full ML band card for one stock")
+async def get_ml_band_for_ticker(
+    ticker: str,
+    _user: TokenData = Depends(get_current_user),
+):
+    """
+    Return the full ML band card for a single ticker.
+
+    Includes band label, thresholds, calibrated probability, a BORDERLINE
+    verdict when the stock is within 5% of a band boundary, and the
+    mandatory disclaimer text.
+
+    Returns 404 if the ticker is not in the SHADOW roster.
+    Returns null band fields if ML display is disabled.
+    """
+    from app.core.config import get_settings
+    from app.core.database import query_one
+    from app.services.eagle_eye.ml.band_display import band_for_display, DISCLAIMER_TEXT
+    from app.services.eagle_eye.ml.shadow_runner import SHADOW_ROSTER
+
+    ticker = ticker.upper()
+    if ticker not in SHADOW_ROSTER:
+        raise HTTPException(status_code=404, detail=f"{ticker} is not in the ML SHADOW roster")
+
+    settings = get_settings()
+    state = query_one("SELECT auto_disabled, disabled_reason FROM ml_display_state WHERE id = 1", ())
+    auto_disabled = bool(state and state["auto_disabled"]) if state else False
+    ml_enabled = settings.ENABLE_ML_DISPLAY and not auto_disabled
+
+    if not ml_enabled:
+        return {
+            "ticker": ticker,
+            "enabled": False,
+            "band": None,
+            "disclaimer": DISCLAIMER_TEXT
+            if not settings.ENABLE_ML_DISPLAY
+            else "⚠️ ML signals temporarily disabled.",
+        }
+
+    row = query_one(
+        """
+        SELECT band_label, calibrated_prob, raw_prob, log_date,
+               band_low_threshold, band_high_threshold, rule_stage
+          FROM ml_shadow_log
+         WHERE stock_ticker = ?
+           AND band_label IS NOT NULL
+         ORDER BY log_date DESC
+         LIMIT 1
+        """,
+        (ticker,),
+    )
+
+    if not row:
+        return {
+            "ticker": ticker,
+            "enabled": True,
+            "band": "INSUFFICIENT_DATA",
+            "calibrated_prob": None,
+            "as_of": None,
+            "disclaimer": DISCLAIMER_TEXT,
+            "verdict": None,
+        }
+
+    band_label = row["band_label"]
+    display = band_for_display(band_label)
+    cal_prob = row["calibrated_prob"]
+    low_thr = row["band_low_threshold"]
+    high_thr = row["band_high_threshold"]
+
+    # BORDERLINE verdict: within 5 percentage points of a band boundary
+    verdict = None
+    if cal_prob is not None and low_thr is not None and high_thr is not None:
+        distance_to_boundary = min(
+            abs(float(cal_prob) - float(low_thr)),
+            abs(float(cal_prob) - float(high_thr)),
+        )
+        if distance_to_boundary < 0.05:
+            verdict = "BORDERLINE"
+
+    return {
+        "ticker": ticker,
+        "enabled": True,
+        "band": band_label,
+        "color": display["color"],
+        "emoji": display["emoji"],
+        "calibrated_prob": cal_prob,
+        "raw_prob": row["raw_prob"],
+        "band_low_threshold": low_thr,
+        "band_high_threshold": high_thr,
+        "rule_stage": row["rule_stage"],
+        "verdict": verdict,
+        "as_of": row["log_date"],
+        "disclaimer": DISCLAIMER_TEXT,
+        "methodology_link": "/eagle-eye/methodology",
+    }
+
+
+@router.get("/ml/methodology", summary="ML methodology explanation")
+async def get_ml_methodology(
+    _user: TokenData = Depends(get_current_user),
+):
+    """
+    Return human-readable methodology text for the ML band display.
+
+    Used by the Methodology screen in the mobile app.
+    """
+    return {
+        "title": "Eagle Eye ML Bands — Methodology",
+        "phase": "Phase 3: Shadow Evaluation",
+        "status": "Experimental — not for trading decisions",
+        "disclaimer": "⚠️ ML signal in evaluation — do not use for trading decisions yet.",
+        "sections": [
+            {
+                "heading": "What are ML bands?",
+                "body": (
+                    "Eagle Eye ML bands classify each SHADOW-roster stock as LOW, MEDIUM, or HIGH "
+                    "based on a LightGBM binary classifier trained on historical breakout events. "
+                    "The classifier outputs a calibrated probability of a ≥10% move within 20 trading days."
+                ),
+            },
+            {
+                "heading": "How are bands computed?",
+                "body": (
+                    "Each stock's calibrated probability is compared against the 33rd and 67th percentile "
+                    "of its own last 90 days of shadow scores.  Stocks below the 33rd percentile are LOW, "
+                    "between percentiles are MEDIUM, and above the 67th are HIGH.  "
+                    "Fewer than 30 days of history returns INSUFFICIENT_DATA."
+                ),
+            },
+            {
+                "heading": "What does BORDERLINE mean?",
+                "body": (
+                    "A BORDERLINE verdict appears when a stock's probability is within 5 percentage "
+                    "points of a band boundary.  This signals that the classification is less certain "
+                    "and should be treated with extra caution."
+                ),
+            },
+            {
+                "heading": "Phase 3 constraints",
+                "body": (
+                    "No model will be promoted to LIVE status during Phase 3.  "
+                    "Shadow scoring runs daily (Sun–Thu) after Boursa market close.  "
+                    "Models are reviewed weekly.  Automatic disabling occurs if calibration "
+                    "error exceeds 30%, multiple rollbacks occur, or scoring jobs fail repeatedly."
+                ),
+            },
+            {
+                "heading": "Covered stocks (14)",
+                "body": "AAYANRE, ALTIJARIA, ARGAN, BOURSA, FACIL, IFA, JAZEERA, JTC, KCEM, KPPC, MKHZN, OOREDOO, URC, WARBACAP",
+            },
+        ],
+    }

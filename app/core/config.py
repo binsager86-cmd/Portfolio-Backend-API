@@ -78,6 +78,13 @@ class Settings(BaseSettings):
     ML_REPORTS_ROOT: str = "./reports"
     EAGLE_EYE_LOG_LEVEL: str = "INFO"
 
+    # Eagle Eye — Phase 3: Shadow runner / band display settings
+    ENABLE_ML_DISPLAY: bool = True        # Set False to hide all ML bands site-wide
+    ML_SHADOW_HOUR: int = 14              # Hour to run daily shadow scoring (Asia/Kuwait)
+    ML_SHADOW_MINUTE: int = 30
+    ML_WEEKLY_REVIEW_DAY: str = "sun"     # Day of week for weekly review job
+    ALERT_WEBHOOK_URL: str = ""           # Optional webhook URL for auto-disable alerts
+
     # SMTP / Email (for password reset OTP)
     SMTP_HOST: str = ""                 # e.g. "smtp.gmail.com"
     SMTP_PORT: int = 587                # 587 for STARTTLS, 465 for SSL
