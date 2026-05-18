@@ -927,3 +927,121 @@ def get_feature_columns(frame: pd.DataFrame) -> List[str]:
         and not c.startswith("y_")
         and not c.startswith(NON_FEATURE_PREFIXES)
     ]
+
+
+# ---------------------------------------------------------------------------
+# Phase 3 — single-row inference helper
+# ---------------------------------------------------------------------------
+
+def build_inference_row(
+    ticker: str,
+    ohlcv: pd.DataFrame,
+    T: Optional[date] = None,
+    regime_frame: Optional[pd.DataFrame] = None,
+) -> Optional[Dict[str, Any]]:
+    """
+    Build one feature dict for inference at date T (default: last trading day).
+
+    Uses the identical feature pipeline as training so that the resulting dict
+    is directly usable with model.predict() after selecting bundle.feature_list
+    columns and filling NaN.
+
+    Returns None when there is insufficient OHLCV history (< 120 bars).
+    """
+    if ohlcv is None or ohlcv.empty or len(ohlcv) < 120:
+        return None
+
+    indicators = compute_all_indicators(ohlcv)
+    if indicators.empty:
+        return None
+
+    if T is None:
+        pred_pos = len(indicators) - 1
+    else:
+        t_ts = pd.Timestamp(T).normalize()
+        # find closest position at-or-before T
+        pred_pos = int(indicators.index.searchsorted(t_ts, side="right")) - 1
+        if pred_pos < 0:
+            return None
+
+    if pred_pos < 1:
+        return None
+
+    pred_ts = pd.Timestamp(indicators.index[pred_pos]).normalize()
+    today = pred_ts.date()
+
+    # ── Signal features ────────────────────────────────────────────────────
+    row: Dict[str, Any] = {}
+    row.update(_extract_signal_features_asof(indicators, pred_pos))
+
+    # ── Regime ────────────────────────────────────────────────────────────
+    rf = regime_frame if regime_frame is not None else pd.DataFrame()
+    regime_name, pmi_trend, brent_trend = _lookup_regime(rf, pred_ts)
+    row["pmi_50w_trend"] = pmi_trend
+    row["brent_30d_trend"] = brent_trend
+    for regime in REGIMES:
+        row[f"regime_{regime.lower()}"] = 1.0 if regime_name == regime else 0.0
+
+    # ── Calendar / seasonality ────────────────────────────────────────────
+    row["is_ramadan_period"] = float(_is_ramadan_period(today))
+    row["is_earnings_window"] = float(_is_earnings_window(today))
+    row["day_of_week"] = float(pred_ts.weekday())
+    row["month"] = float(pred_ts.month)
+
+    # ── Metadata stubs (unknown at inference) ─────────────────────────────
+    row["log_market_cap"] = float("nan")
+    row["avg_daily_turnover_log"] = _log1p_or_nan(
+        ohlcv["turnover_kwd"].iloc[max(0, pred_pos - 60):pred_pos].mean()
+        if "turnover_kwd" in ohlcv.columns
+        else None
+    )
+
+    # ── t0 indicator snapshot ─────────────────────────────────────────────
+    for col in indicators.columns:
+        if col in LEAKY_INDICATOR_COLUMNS:
+            continue
+        val = indicators.iloc[pred_pos].get(col)
+        if col == "wyckoff_phase":
+            row[f"t0_{col}_code"] = _encode_wyckoff(val)
+        else:
+            row[f"t0_{col}"] = _safe_float(val)
+
+    # ── Velocity (3-bar) ──────────────────────────────────────────────────
+    for col in CORE_VELOCITY_COLUMNS:
+        row[f"{col}_velocity"] = _velocity(indicators, pred_pos, col, 3)
+
+    # ── Trajectory slopes ─────────────────────────────────────────────────
+    row["obv_trajectory_slope"] = _trajectory_slope(indicators, pred_pos, "obv", TRAJECTORY_OFFSETS)
+    row["accumulation_trajectory_slope"] = _trajectory_slope(indicators, pred_pos, "accumulation_score", TRAJECTORY_OFFSETS)
+    row["bb_bandwidth_trajectory"] = _trajectory_slope(indicators, pred_pos, "bb_bandwidth", TRAJECTORY_OFFSETS)
+
+    # ── Context lookbacks ─────────────────────────────────────────────────
+    for lookback in CONTEXT_LOOKBACKS:
+        for col in CONTEXT_COLUMNS:
+            row[f"t{lookback}_{col}"] = _value_at_offset(indicators, pred_pos, col, lookback)
+
+    # ── One-hot dummies: stage ─────────────────────────────────────────────
+    stage_series = indicators.apply(lambda r: classify_stage(r.to_dict()), axis=1)
+    stage_now = stage_series.iloc[pred_pos]
+    stage_before = "UNKNOWN"
+    for i in range(pred_pos - 1, -1, -1):
+        if stage_series.iloc[i] != stage_now:
+            stage_before = stage_series.iloc[i]
+            break
+
+    for stage_name in STAGES:
+        sk = stage_name.lower()
+        row[f"current_stage_{sk}"] = 1.0 if stage_now == stage_name else 0.0
+        row[f"stage_before_{sk}"] = 1.0 if stage_before == stage_name else 0.0
+
+    # ── One-hot dummies: sector / tier / dow / month ───────────────────────
+    # We emit all possible one-hot columns; the model will select from feature_list.
+    # Values for unknown sector/tier are 0 (no column fires).
+    dow_float = float(pred_ts.weekday())
+    month_float = float(pred_ts.month)
+    for d in (0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0):
+        row[f"dow_{d}"] = 1.0 if dow_float == d else 0.0
+    for m in range(1, 13):
+        row[f"month_{float(m)}"] = 1.0 if month_float == float(m) else 0.0
+
+    return row
