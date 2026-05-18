@@ -203,7 +203,7 @@ _DDL: list[str] = [
         updated_at      TEXT    DEFAULT (datetime('now'))
     )
     """,
-    "INSERT OR IGNORE INTO ml_display_state (id, auto_disabled) VALUES (1, 0)",
+    "INSERT INTO ml_display_state (id, auto_disabled) VALUES (1, 0) ON CONFLICT (id) DO NOTHING",
 
     # ── Phase 3: Daily shadow vs rule comparison log ───────────────────
     """

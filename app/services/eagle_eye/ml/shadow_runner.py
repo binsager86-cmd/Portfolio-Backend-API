@@ -205,13 +205,14 @@ def _score_one(
     # ── 8. Write ml_shadow_log (idempotent) ───────────────────────────────
     exec_sql(
         """
-        INSERT OR IGNORE INTO ml_shadow_log
+        INSERT INTO ml_shadow_log
             (model_id, stock_ticker, log_date,
              ml_score, ml_bucket, rule_score, rule_bucket,
              raw_prob, calibrated_prob, band_label,
              rule_stage, rule_confidence, features_hash,
              outcome_filled, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, datetime('now'))
+        ON CONFLICT (model_id, log_date) DO NOTHING
         """,
         (
             model_id, ticker, today_str,
@@ -226,10 +227,11 @@ def _score_one(
     agreement = _compute_agreement(ml_bucket, rule_rating)
     exec_sql(
         """
-        INSERT OR IGNORE INTO phase3_evaluation_log
+        INSERT INTO phase3_evaluation_log
             (log_date, stock_ticker, model_id, band_label,
              rule_rating, rule_confidence, agreement, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        ON CONFLICT (log_date, stock_ticker) DO NOTHING
         """,
         (today_str, ticker, model_id, band_label, rule_rating, rule_confidence, agreement),
     )

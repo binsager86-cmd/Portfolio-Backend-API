@@ -211,9 +211,14 @@ def _check_trigger_d(today_str: str, query_all) -> tuple:
 def _disable_display(today_str: str, reason: Optional[str], exec_sql) -> None:
     exec_sql(
         """
-        INSERT OR REPLACE INTO ml_display_state
+        INSERT INTO ml_display_state
             (id, auto_disabled, disabled_at, disabled_reason, updated_at)
         VALUES (1, 1, ?, ?, datetime('now'))
+        ON CONFLICT (id) DO UPDATE SET
+            auto_disabled    = 1,
+            disabled_at      = EXCLUDED.disabled_at,
+            disabled_reason  = EXCLUDED.disabled_reason,
+            updated_at       = CURRENT_TIMESTAMP
         """,
         (today_str, reason),
     )
@@ -245,9 +250,14 @@ def re_enable_display() -> None:
 
     exec_sql(
         """
-        INSERT OR REPLACE INTO ml_display_state
+        INSERT INTO ml_display_state
             (id, auto_disabled, disabled_at, disabled_reason, updated_at)
         VALUES (1, 0, NULL, NULL, datetime('now'))
+        ON CONFLICT (id) DO UPDATE SET
+            auto_disabled   = 0,
+            disabled_at     = NULL,
+            disabled_reason = NULL,
+            updated_at      = CURRENT_TIMESTAMP
         """,
         (),
     )
