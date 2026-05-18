@@ -211,7 +211,7 @@ def _score_one(
              raw_prob, calibrated_prob, band_label,
              rule_stage, rule_confidence, features_hash,
              outcome_filled, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
         ON CONFLICT (model_id, log_date) DO NOTHING
         """,
         (
@@ -219,6 +219,7 @@ def _score_one(
             ml_score, ml_bucket, rule_confidence, rule_stage,
             raw_prob, calibrated_prob, band_label,
             rule_stage, rule_confidence, features_hash,
+            datetime.utcnow().isoformat(),
         ),
     )
 
@@ -230,10 +231,10 @@ def _score_one(
         INSERT INTO phase3_evaluation_log
             (log_date, stock_ticker, model_id, band_label,
              rule_rating, rule_confidence, agreement, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT (log_date, stock_ticker) DO NOTHING
         """,
-        (today_str, ticker, model_id, band_label, rule_rating, rule_confidence, agreement),
+        (today_str, ticker, model_id, band_label, rule_rating, rule_confidence, agreement, datetime.utcnow().isoformat()),
     )
 
     LOGGER.info(

@@ -49,6 +49,9 @@ def compute_band(
     INSUFFICIENT_DATA / NO_VARIANCE.
     """
     from app.core.database import query_all
+    from datetime import date, timedelta
+
+    window_start = (date.fromisoformat(signal_date) - timedelta(days=BAND_WINDOW)).isoformat()
 
     rows = query_all(
         """
@@ -56,11 +59,11 @@ def compute_band(
           FROM ml_shadow_log
          WHERE model_id = ?
            AND log_date < ?
-           AND log_date >= date(?, '-{} days')
+           AND log_date >= ?
            AND calibrated_prob IS NOT NULL
          ORDER BY log_date DESC
-        """.format(BAND_WINDOW),
-        (model_id, signal_date, signal_date),
+        """,
+        (model_id, signal_date, window_start),
     )
 
     if not rows or len(rows) < COLD_START_MIN:
