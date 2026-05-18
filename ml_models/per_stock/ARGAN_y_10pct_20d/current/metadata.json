@@ -1,0 +1,20 @@
+{
+  "ticker": "ARGAN",
+  "label": "y_10pct_20d",
+  "mean_wfv_auc": 0.7905388312673918,
+  "wfv_aucs": [
+    0.7905388312673918
+  ],
+  "best_hp": {
+    "num_leaves": 31,
+    "max_depth": 4,
+    "min_data_in_leaf": 100,
+    "learning_rate": 0.05,
+    "feature_fraction": 1.0,
+    "bagging_fraction": 1.0
+  },
+  "n_estimators": 29,
+  "tier": "per_stock",
+  "identifier": "ARGAN/y_10pct_20d",
+  "version": "v1"
+}

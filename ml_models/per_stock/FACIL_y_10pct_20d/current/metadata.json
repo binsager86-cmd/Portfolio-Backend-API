@@ -1,0 +1,21 @@
+{
+  "ticker": "FACIL",
+  "label": "y_10pct_20d",
+  "mean_wfv_auc": 0.7622549019607843,
+  "wfv_aucs": [
+    0.5245098039215687,
+    1.0
+  ],
+  "best_hp": {
+    "num_leaves": 31,
+    "max_depth": 4,
+    "min_data_in_leaf": 50,
+    "learning_rate": 0.01,
+    "feature_fraction": 1.0,
+    "bagging_fraction": 0.7
+  },
+  "n_estimators": 41,
+  "tier": "per_stock",
+  "identifier": "FACIL/y_10pct_20d",
+  "version": "v1"
+}

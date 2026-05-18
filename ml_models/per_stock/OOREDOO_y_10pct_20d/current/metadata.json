@@ -1,0 +1,21 @@
+{
+  "ticker": "OOREDOO",
+  "label": "y_10pct_20d",
+  "mean_wfv_auc": 0.6808872735870687,
+  "wfv_aucs": [
+    0.8122159090909091,
+    0.5495586380832282
+  ],
+  "best_hp": {
+    "num_leaves": 31,
+    "max_depth": 4,
+    "min_data_in_leaf": 50,
+    "learning_rate": 0.05,
+    "feature_fraction": 0.8,
+    "bagging_fraction": 1.0
+  },
+  "n_estimators": 37,
+  "tier": "per_stock",
+  "identifier": "OOREDOO/y_10pct_20d",
+  "version": "v1"
+}

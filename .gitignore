@@ -52,7 +52,49 @@ phase*_run.log
 # ML artifacts — DO NOT COMMIT MODEL FILES
 # These are regenerable from training. Keep locally only.
 # ─────────────────────────────────────────────
-ml_models/per_stock/
+ml_models/per_stock/*
+!ml_models/per_stock/AAYANRE_y_10pct_20d/
+!ml_models/per_stock/AAYANRE_y_10pct_20d/current/
+!ml_models/per_stock/AAYANRE_y_10pct_20d/current/**
+!ml_models/per_stock/ALTIJARIA_y_10pct_20d/
+!ml_models/per_stock/ALTIJARIA_y_10pct_20d/current/
+!ml_models/per_stock/ALTIJARIA_y_10pct_20d/current/**
+!ml_models/per_stock/ARGAN_y_10pct_20d/
+!ml_models/per_stock/ARGAN_y_10pct_20d/current/
+!ml_models/per_stock/ARGAN_y_10pct_20d/current/**
+!ml_models/per_stock/BOURSA_y_10pct_20d/
+!ml_models/per_stock/BOURSA_y_10pct_20d/current/
+!ml_models/per_stock/BOURSA_y_10pct_20d/current/**
+!ml_models/per_stock/FACIL_y_10pct_20d/
+!ml_models/per_stock/FACIL_y_10pct_20d/current/
+!ml_models/per_stock/FACIL_y_10pct_20d/current/**
+!ml_models/per_stock/IFA_y_10pct_20d/
+!ml_models/per_stock/IFA_y_10pct_20d/current/
+!ml_models/per_stock/IFA_y_10pct_20d/current/**
+!ml_models/per_stock/JAZEERA_y_10pct_20d/
+!ml_models/per_stock/JAZEERA_y_10pct_20d/current/
+!ml_models/per_stock/JAZEERA_y_10pct_20d/current/**
+!ml_models/per_stock/JTC_y_10pct_20d/
+!ml_models/per_stock/JTC_y_10pct_20d/current/
+!ml_models/per_stock/JTC_y_10pct_20d/current/**
+!ml_models/per_stock/KCEM_y_10pct_20d/
+!ml_models/per_stock/KCEM_y_10pct_20d/current/
+!ml_models/per_stock/KCEM_y_10pct_20d/current/**
+!ml_models/per_stock/KPPC_y_10pct_20d/
+!ml_models/per_stock/KPPC_y_10pct_20d/current/
+!ml_models/per_stock/KPPC_y_10pct_20d/current/**
+!ml_models/per_stock/MKHZN_y_10pct_20d/
+!ml_models/per_stock/MKHZN_y_10pct_20d/current/
+!ml_models/per_stock/MKHZN_y_10pct_20d/current/**
+!ml_models/per_stock/OOREDOO_y_10pct_20d/
+!ml_models/per_stock/OOREDOO_y_10pct_20d/current/
+!ml_models/per_stock/OOREDOO_y_10pct_20d/current/**
+!ml_models/per_stock/URC_y_10pct_20d/
+!ml_models/per_stock/URC_y_10pct_20d/current/
+!ml_models/per_stock/URC_y_10pct_20d/current/**
+!ml_models/per_stock/WARBACAP_y_10pct_20d/
+!ml_models/per_stock/WARBACAP_y_10pct_20d/current/
+!ml_models/per_stock/WARBACAP_y_10pct_20d/current/**
 ml_training_matrix/
 ml_feature_store/
 
