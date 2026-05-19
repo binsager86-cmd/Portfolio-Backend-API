@@ -11,11 +11,14 @@ Signature algorithm (recovered via runtime BCryptHashData hook):
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
+import os
 import random
 import time
 from datetime import date, datetime
-from typing import Optional
+from pathlib import Path
+from typing import Any, Optional
 
 import httpx
 
@@ -29,11 +32,13 @@ _SALT = "RX_06_01_15_TC"
 _USER_AGENT = "RestSharp/4.8.7.31"
 _LOGIN_HOST = "www.tickerchart.com"
 _LOGIN_PATH = "/m/v2/tickerchart/live/login"
+_DESKTOP_MARKET_INFO_PATH = "/m/v2/tickerchart/desktop/market-info"
+_FINANCIAL_FIELD_PATH = "/m/v2/tickerchart/financial-field/company/"
 
 # Per-market historical-prices host (from /m/v2/tickerchart/streamers capture).
 # Suffix is the abbreviation we pass to ondemandDataLoader.php as `<SYMBOL>.<ABB>`.
 _MARKET_HOST: dict[str, str] = {
-    "KSE": "livedata.tickerchart.net",       # Kuwait
+    "KSE": "delayed2.tickerchart.net",      # Kuwait
     "TAD": "delayedtad2.tickerchart.net",    # Tadawul (Saudi)
     "DFM": "delayed2.tickerchart.net",       # Dubai
     "ADX": "delayed2.tickerchart.net",       # Abu Dhabi
@@ -58,11 +63,18 @@ _SUFFIX_MAP: dict[str, str] = {
     "EGX": "EGY",
     "US": "USA",
     "USA": "USA",
+    # Standard exchange names → USA (stocks created via quick-scan may use these)
+    "NYSE": "USA",
+    "NASDAQ": "USA",
+    "AMEX": "USA",
+    "ARCX": "USA",   # NYSE Arca
+    "BATS": "USA",
 }
 
 
 # ── Token cache ──────────────────────────────────────────────────────
 _token_cache: dict[str, object] = {"token": None, "expires": 0.0}
+_company_id_cache: dict[str, object] = {"entries": None, "expires": 0.0}
 
 
 def _sign(path: str, query_pairs: list[tuple[str, str]]) -> tuple[str, str]:
@@ -105,6 +117,181 @@ def split_symbol(symbol: str, exchange: Optional[str], country: Optional[str]) -
     return None
 
 
+def _market_info_cache_candidates() -> list[Path]:
+    candidates: list[Path] = []
+
+    env_path = os.getenv("TICKERCHART_MARKET_INFO_PATH", "").strip()
+    if env_path:
+        candidates.append(Path(env_path))
+
+    local_appdata = os.getenv("LOCALAPPDATA", "").strip()
+    if local_appdata:
+        candidates.append(Path(local_appdata) / "UniTicker" / "TCLive" / "Cache" / "MarketInfo.json")
+
+    candidates.append(Path.home() / "AppData" / "Local" / "UniTicker" / "TCLive" / "Cache" / "MarketInfo.json")
+
+    deduped: list[Path] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        key = str(candidate)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(candidate)
+    return deduped
+
+
+def _coerce_float(value: Any) -> Optional[float]:
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        cleaned = value.replace(",", "").strip()
+        if not cleaned:
+            return None
+        try:
+            return float(cleaned)
+        except ValueError:
+            return None
+    return None
+
+
+def _parse_company_map(payload: Any) -> dict[tuple[str, str], int]:
+    companies = None
+    if isinstance(payload, dict):
+        companies = (payload.get("COMPANIES") or {}).get("VALUES")
+    if not isinstance(companies, dict):
+        return {}
+
+    mapping: dict[tuple[str, str], int] = {}
+    for company_id, row in companies.items():
+        if not isinstance(row, list) or len(row) < 2:
+            continue
+        ticker = str(row[0] or "").strip().upper()
+        market = str(row[1] or "").strip().upper()
+        if not ticker or not market:
+            continue
+        try:
+            mapping[(ticker, market)] = int(company_id)
+        except (TypeError, ValueError):
+            continue
+    return mapping
+
+
+def _load_company_map_from_disk() -> dict[tuple[str, str], int]:
+    for path in _market_info_cache_candidates():
+        if not path.is_file():
+            continue
+        try:
+            with path.open("r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+        except (OSError, ValueError) as exc:
+            logger.debug("Failed to read TickerChart market info cache %s: %s", path, exc)
+            continue
+
+        mapping = _parse_company_map(payload)
+        if mapping:
+            logger.info("Loaded TickerChart market info cache from %s", path)
+            return mapping
+
+    return {}
+
+
+async def _fetch_company_map_remote() -> dict[tuple[str, str], int]:
+    url = f"https://{_LOGIN_HOST}{_DESKTOP_MARKET_INFO_PATH}"
+    try:
+        async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
+            resp = await client.get(
+                url,
+                headers={
+                    "User-Agent": _USER_AGENT,
+                    "Accept": "application/json, text/plain, */*",
+                },
+            )
+    except httpx.HTTPError as exc:
+        logger.debug("TickerChart market info request failed: %s", exc)
+        return {}
+
+    if resp.status_code == 403:
+        logger.debug("TickerChart market info endpoint returned 403")
+        return {}
+
+    try:
+        resp.raise_for_status()
+        payload = resp.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        logger.debug("TickerChart market info parse failed: %s", exc)
+        return {}
+
+    return _parse_company_map(payload)
+
+
+async def _get_company_map() -> dict[tuple[str, str], int]:
+    now = time.time()
+    cached_entries = _company_id_cache.get("entries")
+    if isinstance(cached_entries, dict) and float(_company_id_cache.get("expires", 0)) > now:
+        return cached_entries
+
+    entries = await _fetch_company_map_remote()
+    if not entries:
+        entries = _load_company_map_from_disk()
+
+    _company_id_cache["entries"] = entries
+    _company_id_cache["expires"] = now + (12 * 3600 if entries else 300)
+    return entries
+
+
+async def resolve_company_id(base_symbol: str, market_abb: str) -> Optional[int]:
+    """Resolve a TickerChart company id from symbol + market abbreviation."""
+    base = (base_symbol or "").strip().upper()
+    market = (market_abb or "").strip().upper()
+    if not base or not market:
+        return None
+
+    mapping = await _get_company_map()
+    return mapping.get((base, market))
+
+
+def _extract_indicator_values(payload: Any) -> list[float]:
+    tracked_keys = {
+        "value",
+        "indicatorvalue",
+        "datavalue",
+        "amount",
+        "actual",
+        "actualvalue",
+        "result",
+        "y",
+    }
+    values: list[float] = []
+
+    def visit(node: Any, parent_key: Optional[str] = None) -> None:
+        if isinstance(node, dict):
+            for key, value in node.items():
+                lowered = str(key).strip().lower()
+                if lowered in tracked_keys:
+                    numeric = _coerce_float(value)
+                    if numeric is not None:
+                        values.append(numeric)
+                        continue
+                visit(value, lowered)
+            return
+
+        if isinstance(node, list):
+            for item in node:
+                visit(item, parent_key)
+            return
+
+        if parent_key in tracked_keys:
+            numeric = _coerce_float(node)
+            if numeric is not None:
+                values.append(numeric)
+
+    visit(payload)
+    return values
+
+
 # ── Auth ─────────────────────────────────────────────────────────────
 async def _login(client: httpx.AsyncClient) -> str:
     settings = get_settings()
@@ -133,6 +320,10 @@ async def _login(client: httpx.AsyncClient) -> str:
     token = (body.get("response") or {}).get("token")
     if not token:
         raise RuntimeError("TickerChart login returned no token")
+    # API returns the token with "TcToken" prefix already included.
+    # Strip it so callers can safely prepend it via f"TcToken{token}".
+    if isinstance(token, str) and token.startswith("TcToken"):
+        token = token[len("TcToken"):]
     return token
 
 
@@ -146,6 +337,359 @@ async def _get_token() -> str:
     _token_cache["token"] = token
     _token_cache["expires"] = now + 8 * 3600  # session is good ≥ several hours; refresh every 8 h
     return token
+
+
+async def fetch_ltm_eps(base_symbol: str, market_abb: str) -> Optional[float]:
+    """Fetch TickerChart's ff_eps_basic(ltm) value for a symbol."""
+    company_id = await resolve_company_id(base_symbol, market_abb)
+    if company_id is None:
+        return None
+
+    async def _do_request(token: str) -> httpx.Response:
+        qs_pairs = [
+            ("companyID", str(company_id)),
+            ("financialIndicatorId", "ff_eps_basic"),
+            ("reportRange", "ltm"),
+        ] + _common_params()
+        final_qs, _ = _sign(_FINANCIAL_FIELD_PATH, qs_pairs)
+        url = f"https://{_LOGIN_HOST}{_FINANCIAL_FIELD_PATH}?{final_qs}"
+        async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
+            return await client.get(
+                url,
+                headers={
+                    "User-Agent": _USER_AGENT,
+                    "Accept": "application/json, text/plain, */*",
+                    "Authorization": f"TcToken{token}",
+                },
+            )
+
+    token = await _get_token()
+    resp = await _do_request(token)
+    if resp.status_code in (401, 403):
+        logger.info("TickerChart token rejected for LTM EPS fetch, re-logging in")
+        _token_cache["token"] = None
+        token = await _get_token()
+        resp = await _do_request(token)
+    resp.raise_for_status()
+
+    try:
+        payload: Any = resp.json()
+    except ValueError:
+        return _coerce_float(resp.text)
+
+    if isinstance(payload, dict) and payload.get("success") is False:
+        logger.warning(
+            "TickerChart LTM EPS request failed for %s.%s: %s",
+            base_symbol,
+            market_abb,
+            payload,
+        )
+        return None
+
+    data = payload.get("response") if isinstance(payload, dict) and "response" in payload else payload
+    values = _extract_indicator_values(data)
+    for value in reversed(values):
+        if abs(value) > 1e-12:
+            return value
+    return None
+
+
+# ── FlatFiles PE reader ──────────────────────────────────────────────
+# TickerChart caches FactSet PE indicator data in local binary files.
+# Each 40-byte record: date(float64 OLE) + open(f32) + high(f32) + low(f32) + close(f32) + 16 bytes padding.
+# Multiple records per day represent different PE variants (basic/diluted/normalized).
+# The close PE of the first record per day is used as the primary LTM PE value.
+#
+# Mapping: (base_symbol, market_abb) → FactSet file ID used in the FlatFiles directory name.
+# New mappings are discovered by watching which .dat file is modified when TC loads a company chart.
+_PE_FLATFILES_MAP: dict[tuple[str, str], int] = {
+    ("NBK", "KSE"): 10315,   # confirmed: file modified when NBK chart was opened 2025-05-18
+    ("KFH", "KSE"): 13470,   # confirmed: closest match to snapshot PE=21.25 on 2024-04-08 (delta=0.33)
+}
+
+# Symbols for which auto-discovery has already been attempted and failed; avoids
+# re-scanning the flatfiles directory on every request for unknown stocks.
+_PE_FLATFILES_FAILED_SYMBOLS: set[tuple[str, str]] = set()
+
+# Top-level FlatFiles directories that may contain PE data, ordered by data recency preference.
+# aa3ba → longest history (2023-present); a22ce → shorter window; df1650 → may have older data.
+_PE_FLATFILES_PARENT_DIRS = [
+    "aa3ba405d27847645e3d",
+    "a22ce12861bfed7af141",
+    "df1650f22ae3fee9d671",
+]
+_PE_FLATFILES_SUBDIR = "320800594fe439050088"
+
+_TC_FLATFILES_BASE = Path(
+    os.environ.get(
+        "TC_FLATFILES_PATH",
+        r"C:\Users\Sager\AppData\Local\UniTicker\TCLive\FlatFiles",
+    )
+)
+
+
+def _ole_date_to_python(ole_val: float) -> Optional[date]:
+    """Convert OLE Automation date (days since 1899-12-30) to Python date."""
+    import math
+    try:
+        if math.isnan(ole_val) or math.isinf(ole_val):
+            return None
+        d = date(1899, 12, 30) + __import__("datetime").timedelta(days=int(ole_val))
+        if 1990 <= d.year <= 2040:
+            return d
+    except (OverflowError, ValueError, OSError):
+        pass
+    return None
+
+
+def _read_quotes_snapshot_entry(base_symbol: str, market_abb: str) -> Optional[dict]:
+    """Return the raw QuotesSnapShot.bin entry for a stock, or None."""
+    import json
+
+    snapshot_path = _TC_FLATFILES_BASE.parent / "Cache" / "QuotesSnapShot.bin"
+    if not snapshot_path.exists():
+        return None
+    try:
+        data = json.loads(snapshot_path.read_bytes())
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    return data.get(f"QO.{base_symbol.upper()}.{market_abb.upper()}")
+
+
+def _read_quotes_snapshot_pe(base_symbol: str, market_abb: str) -> Optional[float]:
+    """
+    Read the live P/E for a stock from TickerChart's QuotesSnapShot.bin.
+
+    The snapshot is a JSON file keyed by "QO.{SYMBOL}.{MARKET}" with a ``p_e``
+    field that stores the ratio multiplied by 1000 (e.g. 21250 → 21.25×).
+    Returns None when the file is absent, the key is missing, or PE <= 0.
+    """
+    entry = _read_quotes_snapshot_entry(base_symbol, market_abb)
+    if not entry:
+        return None
+    try:
+        pe_val = float(entry["p_e"]) / 1000.0
+    except (KeyError, TypeError, ValueError):
+        return None
+    return pe_val if pe_val > 0 else None
+
+
+def read_quotes_snapshot_ltm_eps(base_symbol: str, market_abb: str, price_divisor: float = 1000.0) -> Optional[float]:
+    """
+    Read the current LTM EPS from TickerChart's QuotesSnapShot.bin.
+
+    Tries the ``financial_ff$eps$basic_ltm_0`` field first; falls back to
+    deriving EPS from live price (``last`` in fils) ÷ P/E (``p_e`` ÷ 1000).
+
+    ``price_divisor`` converts the raw ``last`` field to the stock's reporting
+    currency unit (1000 for KSE fils→KWD, 1.0 for USD already in dollars).
+
+    Returns None when data is unavailable or EPS ≤ 0.
+    """
+    entry = _read_quotes_snapshot_entry(base_symbol, market_abb)
+    if not entry:
+        return None
+
+    # Prefer the direct FactSet LTM EPS field
+    eps_raw = entry.get("financial_ff$eps$basic_ltm_0")
+    if eps_raw is not None:
+        try:
+            eps = float(eps_raw)
+            if eps > 0:
+                return eps
+        except (TypeError, ValueError):
+            pass
+
+    # Fallback: derive from live price and P/E
+    try:
+        pe = float(entry["p_e"]) / 1000.0
+        price = float(entry["last"]) / price_divisor
+        if pe > 0 and price > 0:
+            return price / pe
+    except (KeyError, TypeError, ValueError, ZeroDivisionError):
+        pass
+
+    return None
+
+
+def auto_discover_pe_flatfile(base_symbol: str, market_abb: str) -> Optional[int]:
+    """
+    Auto-discover the FactSet flatfile ID for a stock.
+
+    Algorithm:
+    1. Read the stock's current PE from QuotesSnapShot.bin.
+    2. Scan every .dat file in the PE subdirectory.
+    3. For each file look at the last 20 records; keep those dated within 30 days.
+    4. Pick the file whose most-recent PE value is closest to the snapshot PE
+       AND within ±0.5 of it.
+    5. On success register the mapping and return the ID; otherwise return None.
+
+    The result (success or failure) is memoised so the scan runs at most once
+    per (symbol, market) pair per process lifetime.
+    """
+    import struct
+
+    live_pe = _read_quotes_snapshot_pe(base_symbol, market_abb)
+    if live_pe is None:
+        logger.debug("QuotesSnapshot: no PE for %s.%s", base_symbol, market_abb)
+        return None
+
+    today = date.today()
+    known_ids = set(_PE_FLATFILES_MAP.values())
+    best_id: Optional[int] = None
+    best_delta = float("inf")
+
+    for parent_dir in _PE_FLATFILES_PARENT_DIRS:
+        pe_dir = _TC_FLATFILES_BASE / parent_dir / _PE_FLATFILES_SUBDIR
+        if not pe_dir.exists():
+            continue
+        for dat_file in sorted(pe_dir.glob("*.dat")):
+            try:
+                factset_id = int(dat_file.stem)
+            except ValueError:
+                continue
+            if factset_id in known_ids:
+                continue  # already claimed by another symbol
+            try:
+                raw = dat_file.read_bytes()
+            except OSError:
+                continue
+            n = len(raw) // 40
+            if n == 0:
+                continue
+            # Inspect last 20 records only — avoids reading entire large files
+            recent_pe: Optional[float] = None
+            for i in range(max(0, n - 20), n):
+                try:
+                    ole_val, _, _, _, close_pe = struct.unpack_from("<dffff", raw, i * 40)
+                except struct.error:
+                    break
+                d = _ole_date_to_python(ole_val)
+                if d is None or (today - d).days > 30:
+                    continue
+                if 3.0 < close_pe < 200.0:
+                    recent_pe = close_pe
+            if recent_pe is None:
+                continue
+            delta = abs(recent_pe - live_pe)
+            if delta < best_delta:
+                best_delta = delta
+                best_id = factset_id
+
+    if best_id is not None and best_delta < 0.5:
+        register_pe_flatfiles_mapping(base_symbol, market_abb, best_id)
+        logger.info(
+            "Auto-discovered PE flatfile for %s.%s: id=%d "
+            "(snapshot_pe=%.2f, file_pe≈%.2f, delta=%.3f)",
+            base_symbol, market_abb, best_id,
+            live_pe, live_pe - best_delta, best_delta,
+        )
+        return best_id
+
+    logger.debug(
+        "PE flatfile auto-discovery failed for %s.%s "
+        "(best_delta=%.3f, threshold=0.5)",
+        base_symbol, market_abb, best_delta,
+    )
+    return None
+
+
+def fetch_pe_from_flatfiles(
+    base_symbol: str,
+    market_abb: str,
+) -> dict[date, float]:
+    """
+    Read pre-computed daily P/E LTM values from TickerChart's local FlatFiles cache.
+
+    Returns a dict mapping trading date → PE close value.
+    Returns an empty dict if no mapping is known or no cache file exists.
+
+    The cache is populated whenever the user views the PE indicator for a
+    company in TickerChart; the data reflects FactSet's "Price to Earnings
+    (Last Twelve Months)" series.
+    """
+    import struct
+
+    sym_upper = base_symbol.upper()
+    mkt_upper = market_abb.upper()
+    factset_id = _PE_FLATFILES_MAP.get((sym_upper, mkt_upper))
+    if factset_id is None:
+        # Symbol-only fallback: handle cases where the same company is stored with
+        # a different exchange label (e.g. KFH saved as exchange="US" instead of "KSE").
+        for (map_sym, map_mkt), fid in _PE_FLATFILES_MAP.items():
+            if map_sym == sym_upper:
+                factset_id = fid
+                logger.debug(
+                    "FlatFiles PE market fallback: %s.%s resolved via %s.%s (id=%d)",
+                    sym_upper, mkt_upper, map_sym, map_mkt, fid,
+                )
+                break
+    if factset_id is None:
+        # Auto-discovery: cross-reference QuotesSnapshot live PE with flatfile scan.
+        # Skip if we already attempted and failed for this (symbol, market) pair.
+        sym_mkt_key = (sym_upper, mkt_upper)
+        if sym_mkt_key not in _PE_FLATFILES_FAILED_SYMBOLS:
+            discovered = auto_discover_pe_flatfile(base_symbol, market_abb)
+            if discovered is not None:
+                factset_id = discovered
+            else:
+                _PE_FLATFILES_FAILED_SYMBOLS.add(sym_mkt_key)
+    if factset_id is None:
+        logger.debug("No FlatFiles PE mapping for %s.%s (auto-discovery failed)", base_symbol, market_abb)
+        return {}
+
+    daily_pe: dict[date, tuple[float, float]] = {}  # (high_pe, low_pe) per day
+
+    for parent_dir in _PE_FLATFILES_PARENT_DIRS:
+        dat_path = _TC_FLATFILES_BASE / parent_dir / _PE_FLATFILES_SUBDIR / f"{factset_id}.dat"
+        if not dat_path.exists():
+            continue
+        try:
+            raw = dat_path.read_bytes()
+        except OSError as exc:
+            logger.warning("Cannot read PE FlatFile %s: %s", dat_path, exc)
+            continue
+
+        n_records = len(raw) // 40
+        for i in range(n_records):
+            try:
+                ole_val, _o, _h, _l, close_pe = struct.unpack_from("<dffff", raw, i * 40)
+            except struct.error:
+                break
+
+            trading_date = _ole_date_to_python(ole_val)
+            if trading_date is None:
+                continue
+
+            # Accept only plausible PE values (3–200 avoids noise / padding zeros)
+            if not (3.0 < close_pe < 200.0):
+                continue
+
+            # Keep first record seen for each date; store as (close_pe, close_pe) tuple
+            # — the OHLC fields in the flatfile are intraday PE variants clustered
+            # within ~0.1× of each other, so close_pe is the canonical daily PE.
+            if trading_date not in daily_pe:
+                daily_pe[trading_date] = (close_pe, close_pe)
+
+    logger.info(
+        "FlatFiles PE for %s.%s: %d daily records loaded (factset_id=%d)",
+        base_symbol,
+        market_abb,
+        len(daily_pe),
+        factset_id,
+    )
+    return daily_pe
+
+
+def register_pe_flatfiles_mapping(base_symbol: str, market_abb: str, factset_id: int) -> None:
+    """
+    Register a new (symbol, market) → FactSet file ID mapping at runtime.
+    Call this when a new mapping is discovered via the file watcher.
+    """
+    _PE_FLATFILES_MAP[(base_symbol.upper(), market_abb.upper())] = factset_id
+    logger.info(
+        "Registered FlatFiles PE mapping: %s.%s → %d", base_symbol, market_abb, factset_id
+    )
 
 
 # ── OHLCV ────────────────────────────────────────────────────────────
@@ -166,7 +710,7 @@ def _pick_period(from_d: Optional[date], to_d: Optional[date]) -> str:
         return "2years"
     if days <= 366 * 5:
         return "5years"
-    return "10years"
+    return "all"
 
 
 async def fetch_ohlcv(
@@ -188,32 +732,20 @@ async def fetch_ohlcv(
     path = "/tcdata/ondemandDataLoader.php"
     user_name = (get_settings().TICKERCHART_USERNAME or "").strip()
 
-    async def _do_request(token: str) -> httpx.Response:
-        qs_pairs = [
-            ("user_name", user_name),
-            ("language", "ENGLISH"),
-            ("symbol", f"{base_symbol}.{market_abb}"),
-            ("interval", interval),
-            ("period", period),
-        ] + _common_params()
-        final_qs, _ = _sign(path, qs_pairs)
-        url = f"https://{host}{path}?{final_qs}"
-        async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
-            return await client.get(
-                url,
-                headers={
-                    "User-Agent": _USER_AGENT,
-                    "Authorization": f"TcToken{token}",
-                },
-            )
-
-    token = await _get_token()
-    resp = await _do_request(token)
-    if resp.status_code in (401, 403):
-        logger.info("TickerChart token rejected, re-logging in")
-        _token_cache["token"] = None
-        token = await _get_token()
-        resp = await _do_request(token)
+    qs_pairs = [
+        ("user_name", user_name),
+        ("language", "ENGLISH"),
+        ("symbol", f"{base_symbol}.{market_abb}"),
+        ("interval", interval),
+        ("period", period),
+    ] + _common_params()
+    final_qs, _ = _sign(path, qs_pairs)
+    url = f"https://{host}{path}?{final_qs}"
+    async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
+        resp = await client.get(
+            url,
+            headers={"User-Agent": _USER_AGENT},
+        )
     resp.raise_for_status()
 
     rows = _parse_ondemand_csv(resp.text)
@@ -495,13 +1027,11 @@ def _parse_order_book_csv(text: str, symbol: str, market: str) -> dict:
 
 # ── KSE Market Snapshot ──────────────────────────────────────────────
 
-# Candidate TickerChart symbols for KSE market indices.
+# Confirmed working TickerChart symbols for KSE market indices (verified 2026-05-18).
+# BKI = Boursa Kuwait Index (all-share); others (BKPM, BKMM, BKALL, BK50) return empty.
 # Each entry: (display_name, tc_base_symbol, tc_market_abb)
 _KSE_INDEX_CANDIDATES: list[tuple[str, str, str]] = [
-    ("Premier Market", "BKPM", "KSE"),
-    ("Main Market", "BKMM", "KSE"),
-    ("All-Share", "BKALL", "KSE"),
-    ("BK Main 50", "BK50", "KSE"),
+    ("Boursa Kuwait Index", "BKI", "KSE"),
 ]
 
 

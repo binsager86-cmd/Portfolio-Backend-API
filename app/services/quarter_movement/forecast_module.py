@@ -81,24 +81,39 @@ class ExpectedPriceForecastModule:
         historical_mean_highest_price_percentage_increase: Optional[float] = (
             price_mean_cell.get("high_pct_mean")
         )
+        historical_mean_lowest_price_percentage_change: Optional[float] = (
+            price_mean_cell.get("low_pct_mean")
+        )
         historical_arithmetic_mean_highest_price_to_earnings_ratio: Optional[float] = (
             pe_mean_cell.get("highest_pe_mean")
+        )
+        historical_arithmetic_mean_lowest_price_to_earnings_ratio: Optional[float] = (
+            pe_mean_cell.get("lowest_pe_mean")
         )
 
         # ── Method 1: Percentage-based (spec §4.2) ────────────────────────
         method_one_expected_price: Optional[float] = None
+        method_one_expected_low_price: Optional[float] = None
 
         if (
             baseline_price is not None
             and baseline_price > 0
             and historical_mean_highest_price_percentage_increase is not None
         ):
-            # Convert percentage to decimal multiplier: 1 + (pct / 100)
             decimal_multiplier = 1.0 + (historical_mean_highest_price_percentage_increase / 100.0)
             method_one_expected_price = round(baseline_price * decimal_multiplier, 3)
 
+        if (
+            baseline_price is not None
+            and baseline_price > 0
+            and historical_mean_lowest_price_percentage_change is not None
+        ):
+            decimal_multiplier_low = 1.0 + (historical_mean_lowest_price_percentage_change / 100.0)
+            method_one_expected_low_price = round(baseline_price * decimal_multiplier_low, 3)
+
         # ── Method 2: Valuation-based (spec §4.3) ────────────────────────
         method_two_expected_price: Optional[float] = None
+        method_two_expected_low_price: Optional[float] = None
 
         # §7.2: exclude zero/negative EPS from Method 2
         eps_valid = (
@@ -115,7 +130,16 @@ class ExpectedPriceForecastModule:
                 3,
             )
 
-        # ── Consensus: average of Method 1 and Method 2 (spec §4.4) ──────
+        if (
+            eps_valid
+            and historical_arithmetic_mean_lowest_price_to_earnings_ratio is not None
+        ):
+            method_two_expected_low_price = round(
+                trailing_twelve_months_eps * historical_arithmetic_mean_lowest_price_to_earnings_ratio,
+                3,
+            )
+
+        # ── Consensus High: average of Method 1 high and Method 2 high ───
         consensus_expected_price: Optional[float] = None
         if method_one_expected_price is not None and method_two_expected_price is not None:
             consensus_expected_price = round(
@@ -123,17 +147,30 @@ class ExpectedPriceForecastModule:
                 3,
             )
 
+        # ── Consensus Low: average of Method 1 low and Method 2 low ──────
+        consensus_expected_low_price: Optional[float] = None
+        if method_one_expected_low_price is not None and method_two_expected_low_price is not None:
+            consensus_expected_low_price = round(
+                (method_one_expected_low_price + method_two_expected_low_price) / 2.0,
+                3,
+            )
+
         return {
             "method_one_expected_price": method_one_expected_price,
+            "method_one_expected_low_price": method_one_expected_low_price,
             "method_two_expected_price": method_two_expected_price,
+            "method_two_expected_low_price": method_two_expected_low_price,
             "consensus_expected_price": consensus_expected_price,
+            "consensus_expected_low_price": consensus_expected_low_price,
             # Transparency fields — useful for debugging and client display
             "method_one_inputs": {
                 "baseline_price": baseline_price,
                 "historical_mean_high_pct": historical_mean_highest_price_percentage_increase,
+                "historical_mean_low_pct": historical_mean_lowest_price_percentage_change,
             },
             "method_two_inputs": {
                 "ttm_eps": trailing_twelve_months_eps,
                 "historical_mean_highest_pe": historical_arithmetic_mean_highest_price_to_earnings_ratio,
+                "historical_mean_lowest_pe": historical_arithmetic_mean_lowest_price_to_earnings_ratio,
             },
         }

@@ -67,6 +67,7 @@ class QuarterlyPERatioMovementModule:
         daily_records: List[Dict],
         eps_snapshots: List[Dict],
         today: date,
+        price_divisor: float = 1.0,
     ) -> Dict:
         """
         Build the quarterly P/E movement table and per-quarter-type means.
@@ -77,6 +78,9 @@ class QuarterlyPERatioMovementModule:
                             Each entry: {period_end_date: str, eps_value: float}.
                             May be empty — returns "none" coverage in that case.
             today:          Current system date.
+            price_divisor:  Optional price normalization divisor. Kuwait daily
+                            closes are stored in fils, so callers pass 1000.0
+                            when EPS is stored in KWD.
 
         Returns:
             Dict with keys: years, pe_movement_table, pe_movement_means,
@@ -177,7 +181,12 @@ class QuarterlyPERatioMovementModule:
                 if trailing_twelve_months_eps is None or trailing_twelve_months_eps <= 0:
                     continue
 
-                daily_price_to_earnings_ratio = closing_price / trailing_twelve_months_eps
+                normalized_closing_price = (
+                    closing_price / price_divisor
+                    if price_divisor and price_divisor > 0
+                    else closing_price
+                )
+                daily_price_to_earnings_ratio = normalized_closing_price / trailing_twelve_months_eps
                 quarterly_pe_values.append(daily_price_to_earnings_ratio)
 
             if not quarterly_pe_values:
@@ -241,4 +250,114 @@ class QuarterlyPERatioMovementModule:
             "pe_movement_means": pe_movement_means,
             "ttm_eps": most_recent_ttm_eps,
             "eps_coverage": eps_coverage,
+        }
+
+    def compute_from_pe_series(
+        self,
+        pe_series: Dict,
+        today: date,
+    ) -> Dict:
+        """
+        Build the quarterly P/E movement table directly from a pre-computed
+        daily PE series (e.g. from TickerChart's local FlatFiles cache).
+
+        Args:
+            pe_series: dict mapping datetime.date → daily PE close value (float).
+                       Typically sourced from `fetch_pe_from_flatfiles()`.
+            today:     Current system date.
+
+        Returns:
+            Same structure as `compute()`, with eps_coverage="flatfiles" and
+            ttm_eps set to the most recently available PE value.
+            Quarters beyond the last date in pe_series will be marked
+            insufficient_data=True.
+        """
+        quarters = _enumerate_quarters_since_2023(today)
+        years_in_range = sorted({y for y, _ in quarters})
+
+        pe_movement_table: Dict[str, Dict[str, Optional[Dict]]] = {
+            str(year): {q: None for q in _QUARTERS_ORDERED}
+            for year in years_in_range
+        }
+
+        last_available_date: Optional[date] = max(pe_series.keys()) if pe_series else None
+
+        for year, quarter_key in quarters:
+            quarter_start = _quarter_start_date(year, quarter_key)
+            quarter_end = _quarter_end_date(year, quarter_key)
+            is_in_progress = quarter_end > today
+
+            effective_end = min(quarter_end, today)
+
+            # Quarter entirely beyond our PE data range
+            if last_available_date is None or quarter_start > last_available_date:
+                pe_movement_table[str(year)][quarter_key] = {
+                    "highest_pe": None,
+                    "lowest_pe": None,
+                    "in_progress": is_in_progress,
+                    "insufficient_data": True,
+                }
+                continue
+
+            quarterly_high_values: List[float] = []
+            quarterly_low_values: List[float] = []
+
+            for d, pe_val in pe_series.items():
+                if not (quarter_start <= d <= effective_end):
+                    continue
+                # pe_val is (high_pe, low_pe) tuple — flatfile dates use (close, close)
+                if isinstance(pe_val, tuple):
+                    h_pe, l_pe = float(pe_val[0]), float(pe_val[1])
+                else:
+                    h_pe = l_pe = float(pe_val)
+                quarterly_high_values.append(h_pe)
+                quarterly_low_values.append(l_pe)
+
+            if not quarterly_high_values:
+                pe_movement_table[str(year)][quarter_key] = {
+                    "highest_pe": None,
+                    "lowest_pe": None,
+                    "in_progress": is_in_progress,
+                    "insufficient_data": True,
+                }
+                continue
+
+            pe_movement_table[str(year)][quarter_key] = {
+                "highest_pe": round(max(quarterly_high_values), 2),
+                "lowest_pe": round(min(quarterly_low_values), 2),
+                "in_progress": is_in_progress,
+                "insufficient_data": False,
+            }
+
+        # ── Arithmetic means per quarter type ─────────────────────────
+        pe_movement_means: Dict[str, Dict] = {}
+        for q_key in _QUARTERS_ORDERED:
+            highest_values: List[float] = []
+            lowest_values: List[float] = []
+            for year in years_in_range:
+                cell = pe_movement_table[str(year)].get(q_key)
+                if cell is None or cell.get("insufficient_data") or cell.get("in_progress"):
+                    continue
+                if cell.get("highest_pe") is not None:
+                    highest_values.append(cell["highest_pe"])
+                if cell.get("lowest_pe") is not None:
+                    lowest_values.append(cell["lowest_pe"])
+
+            pe_movement_means[q_key] = {
+                "highest_pe_mean": (
+                    round(sum(highest_values) / len(highest_values), 2) if highest_values else None
+                ),
+                "lowest_pe_mean": (
+                    round(sum(lowest_values) / len(lowest_values), 2) if lowest_values else None
+                ),
+                "reduced_sample": len(highest_values) < 2,
+                "sample_count": len(highest_values),
+            }
+
+        return {
+            "years": years_in_range,
+            "pe_movement_table": pe_movement_table,
+            "pe_movement_means": pe_movement_means,
+            "ttm_eps": None,   # EPS must be injected by caller after this call
+            "eps_coverage": "flatfiles",
         }

@@ -10,6 +10,7 @@ import hashlib
 import json
 import math
 import os
+import shutil
 import time
 import logging
 from datetime import date
@@ -1002,7 +1003,6 @@ async def delete_stock(
 
     with get_connection() as conn:
         cur = conn.cursor()
-        # Cascade deletes
         stmt_ids = [
             r[0]
             for r in cur.execute(
@@ -1010,14 +1010,34 @@ async def delete_stock(
                 (stock_id,),
             ).fetchall()
         ]
+        run_ids = [
+            r[0]
+            for r in cur.execute(
+                "SELECT id FROM cashflow_extraction_runs WHERE stock_id = ?",
+                (stock_id,),
+            ).fetchall()
+        ]
+
         for sid in stmt_ids:
             cur.execute("DELETE FROM financial_line_items WHERE statement_id = ?", (sid,))
+        for run_id in run_ids:
+            cur.execute("DELETE FROM cashflow_staged_rows WHERE run_id = ?", (run_id,))
+
+        cur.execute("DELETE FROM extraction_jobs WHERE stock_id = ?", (stock_id,))
+        cur.execute("DELETE FROM cashflow_extraction_runs WHERE stock_id = ?", (stock_id,))
+        cur.execute("DELETE FROM pdf_uploads WHERE stock_id = ?", (stock_id,))
+        cur.execute("DELETE FROM peer_companies WHERE stock_id = ?", (stock_id,))
+        cur.execute("DELETE FROM extraction_cache WHERE stock_id = ?", (stock_id,))
         cur.execute("DELETE FROM financial_statements WHERE stock_id = ?", (stock_id,))
         cur.execute("DELETE FROM stock_metrics WHERE stock_id = ?", (stock_id,))
         cur.execute("DELETE FROM valuation_models WHERE stock_id = ?", (stock_id,))
         cur.execute("DELETE FROM stock_scores WHERE stock_id = ?", (stock_id,))
         cur.execute("DELETE FROM analysis_stocks WHERE id = ?", (stock_id,))
         conn.commit()
+
+    pdf_dir = _PDF_UPLOAD_DIR / str(stock_id)
+    if pdf_dir.exists():
+        shutil.rmtree(pdf_dir, ignore_errors=True)
 
     return {"status": "ok", "data": {"message": "Stock and related data deleted."}}
 
