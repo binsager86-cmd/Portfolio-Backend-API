@@ -30,18 +30,18 @@ D. 2 or more consecutive days of shadow scoring job failure (no rows written
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta
-from typing import Optional
+from datetime import date, timedelta
 
 LOGGER = logging.getLogger(__name__)
 
 MCE_THRESHOLD = 0.30       # trigger A
+MIN_SCORED_ROWS_FOR_MCE = 14
 BSS_CONSECUTIVE_DAYS = 2   # trigger B
 CASCADE_ROLLBACK_THRESHOLD = 3  # trigger C
 FAILURE_CONSECUTIVE_DAYS = 2    # trigger D
 
 
-def run_auto_disable_check(signal_date: Optional[str] = None) -> dict:
+def run_auto_disable_check(signal_date: str | None = None) -> dict:
     """
     Evaluate all four trigger conditions and disable display if any fires.
 
@@ -53,7 +53,7 @@ def run_auto_disable_check(signal_date: Optional[str] = None) -> dict:
         "reason": str | None
       }
     """
-    from app.core.database import query_one, query_all, exec_sql
+    from app.core.database import exec_sql, query_all, query_one
 
     today_str = signal_date or date.today().isoformat()
 
@@ -85,7 +85,7 @@ def _check_all(today_str, query_one, query_all):
     if state and state["auto_disabled"]:
         return None, None  # already disabled, nothing to do
 
-    trig, reason = _check_trigger_a(today_str, query_all)
+    trig, reason = _check_trigger_a(today_str, query_one, query_all)
     if trig:
         return trig, reason
 
@@ -104,8 +104,19 @@ def _check_all(today_str, query_one, query_all):
     return None, None
 
 
-def _check_trigger_a(today_str: str, query_all) -> tuple:
+def _check_trigger_a(today_str: str, query_one, query_all) -> tuple:
     """7-day mean |calibrated_prob - rule_confidence| > MCE_THRESHOLD."""
+    scored_row_count = query_one(
+        """
+        SELECT COUNT(*) AS n
+          FROM ml_shadow_log
+         WHERE calibrated_prob IS NOT NULL
+        """,
+        (),
+    )
+    if not scored_row_count or int(scored_row_count["n"]) < MIN_SCORED_ROWS_FOR_MCE:
+        return None, None
+
     seven_days_ago = (date.fromisoformat(today_str) - timedelta(days=7)).isoformat()
     rows = query_all(
         """
@@ -178,8 +189,6 @@ def _check_trigger_c(today_str: str, query_all) -> tuple:
 
 def _check_trigger_d(today_str: str, query_all) -> tuple:
     """2+ consecutive trading days with zero shadow rows (scoring job failures)."""
-    from app.services.eagle_eye.ml.shadow_runner import SHADOW_ROSTER
-
     # Check last FAILURE_CONSECUTIVE_DAYS trading days (skip today, look at history)
     check_date = date.fromisoformat(today_str) - timedelta(days=1)
     consecutive_failures = 0
@@ -208,7 +217,7 @@ def _check_trigger_d(today_str: str, query_all) -> tuple:
 # Actions
 # ---------------------------------------------------------------------------
 
-def _disable_display(today_str: str, reason: Optional[str], exec_sql) -> None:
+def _disable_display(today_str: str, reason: str | None, exec_sql) -> None:
     exec_sql(
         """
         INSERT INTO ml_display_state
@@ -224,7 +233,7 @@ def _disable_display(today_str: str, reason: Optional[str], exec_sql) -> None:
     )
 
 
-def _log_lifecycle_for_all_shadow(today_str: str, reason: Optional[str], query_all, exec_sql) -> None:
+def _log_lifecycle_for_all_shadow(today_str: str, reason: str | None, query_all, exec_sql) -> None:
     from app.services.eagle_eye.ml.db_tables import log_lifecycle
 
     rows = query_all(
