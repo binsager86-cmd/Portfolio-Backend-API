@@ -232,7 +232,7 @@ def build_all_dna(verbose: bool = False) -> dict:
 
             snapshots = record_all_events(all_events, ind_df)
 
-            dna = extract_dna(ticker, snapshots, [])
+            dna = extract_dna(ticker, snapshots, [], indicators_df=ind_df)
             if dna is None:
                 stats["skipped"] += 1
                 log_compute("dna_build", ticker, "skip", "< 3 real events found")
@@ -332,7 +332,7 @@ def build_dna_for_ticker(ticker: str) -> Optional[dict]:
         all_events = moves + fakeouts
         snapshots = record_all_events(all_events, ind_df)
 
-        dna = extract_dna(ticker, snapshots, [])
+        dna = extract_dna(ticker, snapshots, [], indicators_df=ind_df)
         if dna is None:
             log_compute("dna_build", ticker, "skip", "< 3 real events found")
             return None

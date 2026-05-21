@@ -114,19 +114,39 @@ class StockAnalysisResponse(BaseModel):
 # Behavioral DNA
 # ---------------------------------------------------------------------------
 
+class SignalReliabilityResponse(BaseModel):
+    signal: str
+    reliability_pct: Optional[float] = None
+    presence_pct: Optional[float] = None
+    fired_count: int
+    total_events: Optional[int] = None
+    total_setups: Optional[int] = None
+    avg_lead_days: Optional[float] = None
+    false_positive_rate: Optional[float] = None
+    discriminative_power: Optional[float] = None
+
 class ThresholdProfileResponse(BaseModel):
     threshold_pct: float
     success_rate: float
     sample_count: int
+    total_count: Optional[int] = None
+    hits: Optional[int] = None
+    total_setups: Optional[int] = None
     median_bars_to_hit: Optional[float] = None
     avg_win_pct: Optional[float] = None
     avg_loss_pct: Optional[float] = None
+    avg_gain_all_pct: Optional[float] = None
+    avg_gain_on_hits_pct: Optional[float] = None
 
 
 class BehavioralDNAResponse(BaseModel):
     ticker: str
     total_events_analyzed: int
+    history_status: str = "ok"
+    setup_signals: List[str] = []
+    setup_horizon_days: Optional[int] = None
     most_reliable_signals: List[str] = []
+    signal_stats: List[SignalReliabilityResponse] = []
     threshold_profiles: List[ThresholdProfileResponse] = []
     dominant_pattern: Optional[str] = None
     computed_at: Optional[str] = None

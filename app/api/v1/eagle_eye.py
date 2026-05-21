@@ -457,7 +457,17 @@ async def get_stock_dna(
         logger.warning("load_dna failed for %s: %s", t, exc)
         stored = None
 
-    if stored is None:
+    needs_refresh = bool(
+        stored
+        and (
+            "history_status" not in stored
+            or "setup_signals" not in stored
+            or "setup_horizon_days" not in stored
+            or "signal_stats" not in stored
+        )
+    )
+
+    if stored is None or needs_refresh:
         # DNA not in DB — compute on-demand in a thread to avoid blocking the event loop
         import asyncio
 
@@ -466,10 +476,13 @@ async def get_stock_dna(
         logger.info("Building DNA on-demand for %s", t)
         loop = asyncio.get_event_loop()
         try:
-            stored = await loop.run_in_executor(None, build_dna_for_ticker, t)
+            rebuilt = await loop.run_in_executor(None, build_dna_for_ticker, t)
+            if rebuilt is not None:
+                stored = rebuilt
         except Exception as exc:
             logger.warning("On-demand DNA build failed for %s: %s", t, exc)
-            stored = None
+            if stored is None:
+                stored = None
 
     if stored is None:
         return JSONResponse(
@@ -487,23 +500,69 @@ async def get_stock_dna(
     # 3. Build response from stored DNA dict
     profiles: List[ThresholdProfileResponse] = []
     for tp in stored.get("profiles_by_threshold", []):
+        hits = tp.get("occurrences", 0)
+        total_setups = tp.get("sample_count", stored.get("total_events_studied", 0))
         profiles.append(ThresholdProfileResponse(
             threshold_pct=tp.get("threshold_pct", 0),
             success_rate=tp.get("success_rate", 0),
-            sample_count=tp.get("occurrences", tp.get("sample_count", 0)),
+            sample_count=hits,
+            total_count=total_setups,
+            hits=hits,
+            total_setups=total_setups,
             median_bars_to_hit=tp.get("median_bars_to_hit"),
-            avg_win_pct=tp.get("avg_gain_pct", tp.get("avg_win_pct")),
+            avg_win_pct=tp.get("avg_gain_on_hits_pct", tp.get("avg_gain_pct", tp.get("avg_win_pct"))),
             avg_loss_pct=tp.get("avg_loss_pct"),
+            avg_gain_all_pct=tp.get("avg_gain_all_pct"),
+            avg_gain_on_hits_pct=tp.get("avg_gain_on_hits_pct", tp.get("avg_gain_pct", tp.get("avg_win_pct"))),
         ))
 
+    signal_stats: List[SignalReliabilityResponse] = []
+    setup_signal_stats = stored.get("signal_stats", [])
+    if setup_signal_stats and isinstance(setup_signal_stats[0], dict):
+        signal_stats = [
+            SignalReliabilityResponse(
+                signal=s.get("signal", ""),
+                reliability_pct=s.get("reliability_pct"),
+                presence_pct=s.get("presence_pct", s.get("reliability_pct")),
+                fired_count=s.get("fired_count", 0),
+                total_events=s.get("total_events"),
+                total_setups=s.get("total_setups", stored.get("total_events_studied", 0)),
+                avg_lead_days=s.get("avg_lead_days"),
+                false_positive_rate=s.get("false_positive_rate"),
+                discriminative_power=s.get("discriminative_power"),
+            )
+            for s in setup_signal_stats
+            if s.get("signal")
+        ]
     most_reliable = stored.get("most_reliable_signals_overall", [])
+    if not signal_stats and most_reliable and isinstance(most_reliable[0], dict):
+        signal_stats = [
+            SignalReliabilityResponse(
+                signal=s.get("signal", ""),
+                reliability_pct=s.get("reliability_pct", 0),
+                presence_pct=s.get("reliability_pct", 0),
+                fired_count=s.get("fired_count", 0),
+                total_events=s.get("total_events", stored.get("total_events_studied", 0)),
+                total_setups=s.get("total_events", stored.get("total_events_studied", 0)),
+                avg_lead_days=s.get("avg_lead_days"),
+                false_positive_rate=s.get("false_positive_rate"),
+                discriminative_power=s.get("discriminative_power"),
+            )
+            for s in most_reliable
+            if s.get("signal")
+        ]
+
     if most_reliable and isinstance(most_reliable[0], dict):
-        most_reliable = [s.get("signal", "") for s in most_reliable if s.get("signal")]
+        most_reliable = [s.signal for s in signal_stats]
 
     dna_response = BehavioralDNAResponse(
         ticker=t,
         total_events_analyzed=stored.get("total_events_studied", 0),
+        history_status=stored.get("history_status", "ok"),
+        setup_signals=stored.get("setup_signals", []),
+        setup_horizon_days=stored.get("setup_horizon_days"),
         most_reliable_signals=most_reliable[:10],
+        signal_stats=signal_stats[:10],
         threshold_profiles=profiles,
         dominant_pattern=stored.get("dominant_pattern"),
         computed_at=stored.get("computed_at", datetime.utcnow().date().isoformat()),
