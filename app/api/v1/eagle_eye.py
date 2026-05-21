@@ -39,6 +39,7 @@ from app.schemas.eagle_eye import (
     RegimeResponse,
     ScannerResponse,
     SignalBreakdown,
+    SignalReliabilityResponse,
     StockAnalysisResponse,
     SupportResistanceLevel,
     ThresholdProfileResponse,
