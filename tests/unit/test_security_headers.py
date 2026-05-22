@@ -1,4 +1,4 @@
-def test_docs_csp_allows_swagger_assets(test_client):
+def test_docs_route_csp_allows_swagger_assets(test_client):
     response = test_client.get("/docs")
 
     assert response.status_code == 200
@@ -9,7 +9,7 @@ def test_docs_csp_allows_swagger_assets(test_client):
     assert "frame-ancestors 'none'" in csp
 
 
-def test_api_csp_remains_strict(test_client):
+def test_api_route_csp_remains_strict(test_client):
     response = test_client.get("/health")
 
     assert response.status_code == 200
