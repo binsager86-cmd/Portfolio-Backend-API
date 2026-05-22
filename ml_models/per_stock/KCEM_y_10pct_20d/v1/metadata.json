@@ -1,0 +1,21 @@
+{
+  "ticker": "KCEM",
+  "label": "y_10pct_20d",
+  "mean_wfv_auc": 0.8420717562415441,
+  "wfv_aucs": [
+    0.8780396558174336,
+    0.8061038566656544
+  ],
+  "best_hp": {
+    "num_leaves": 31,
+    "max_depth": 4,
+    "min_data_in_leaf": 50,
+    "learning_rate": 0.01,
+    "feature_fraction": 1.0,
+    "bagging_fraction": 0.7
+  },
+  "n_estimators": 3,
+  "tier": "per_stock",
+  "identifier": "KCEM/y_10pct_20d",
+  "version": "v1"
+}

@@ -1,0 +1,67 @@
+{
+  "ticker": "MKHZN",
+  "primary_label": "y_10pct_20d",
+  "n_bins": 10,
+  "binning_strategy": "equal_width",
+  "bin_edges": [
+    0.0,
+    0.1,
+    0.2,
+    0.3,
+    0.4,
+    0.5,
+    0.6,
+    0.7,
+    0.8,
+    0.9,
+    1.0
+  ],
+  "bin_n_samples": [
+    0,
+    0,
+    28,
+    0,
+    0,
+    93,
+    0,
+    0,
+    0,
+    5
+  ],
+  "prob_pred_mean": [
+    null,
+    null,
+    0.24,
+    null,
+    null,
+    0.550562,
+    null,
+    null,
+    null,
+    1.0
+  ],
+  "prob_true_observed": [
+    null,
+    null,
+    0.214286,
+    null,
+    null,
+    0.623656,
+    null,
+    null,
+    null,
+    1.0
+  ],
+  "calibration_error_per_bin": [
+    null,
+    null,
+    0.025714,
+    null,
+    null,
+    0.073094,
+    null,
+    null,
+    null,
+    0.0
+  ]
+}

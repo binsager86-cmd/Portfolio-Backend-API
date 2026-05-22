@@ -1,0 +1,67 @@
+{
+  "ticker": "OOREDOO",
+  "primary_label": "y_10pct_20d",
+  "n_bins": 10,
+  "binning_strategy": "equal_width",
+  "bin_edges": [
+    0.0,
+    0.1,
+    0.2,
+    0.3,
+    0.4,
+    0.5,
+    0.6,
+    0.7,
+    0.8,
+    0.9,
+    1.0
+  ],
+  "bin_n_samples": [
+    0,
+    0,
+    7,
+    0,
+    63,
+    0,
+    0,
+    0,
+    0,
+    56
+  ],
+  "prob_pred_mean": [
+    null,
+    null,
+    0.222222,
+    null,
+    0.421053,
+    null,
+    null,
+    null,
+    null,
+    0.983516
+  ],
+  "prob_true_observed": [
+    null,
+    null,
+    0.285714,
+    null,
+    0.253968,
+    null,
+    null,
+    null,
+    null,
+    0.839286
+  ],
+  "calibration_error_per_bin": [
+    null,
+    null,
+    0.063492,
+    null,
+    0.167084,
+    null,
+    null,
+    null,
+    null,
+    0.144231
+  ]
+}

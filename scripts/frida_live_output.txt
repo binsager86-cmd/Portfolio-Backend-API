@@ -1,0 +1,53 @@
+
+     ____
+    / _  |   Frida 17.9.10 - A world-class dynamic instrumentation toolkit
+   | (_| |
+    > _  |   Commands:
+   /_/ |_|       help      -> Displays the help system
+   . . . .       object?   -> Display information about 'object'
+   . . . .       exit/quit -> Exit
+   . . . .
+   . . . .   More info at https://frida.re/docs/home/
+   . . . .
+   . . . .   Connected to Local System (id=local)
+Attaching...
+[missing] winhttp.dll!WinHttpConnect (TypeError: not a function)
+[missing] winhttp.dll!WinHttpOpenRequest (TypeError: not a function)
+[missing] winhttp.dll!WinHttpSendRequest (TypeError: not a function)
+[missing] wininet.dll!InternetConnectW (TypeError: not a function)
+[missing] wininet.dll!HttpOpenRequestW (TypeError: not a function)
+[missing] wininet.dll!HttpSendRequestW (TypeError: not a function)
+[Local::PID::31536 ]-> Process.enumerateModules().filter(m => /http|ssl|tls|win|ws2|crypt|schan|net|clr/i.test(m.name)).map(m => m.name).join('\n')
+"bcrypt.dll\nclr.dll\nwin32u.dll\nmsvcp_win.dll\nVCRUNTIME140_CLR0400.dll\nucrtbase_clr0400.dll\nbcryptPrimitives.dll\nclrjit.dll\nSystem.Drawing.ni.dll\nSystem.Windows.Forms.ni.dll\nwindows.storage.dll\nCRYPTSP.dll\nCRYPTBASE.dll\nws2_32.dll\nwminet_utils.dll\nWindowsCodecs.dll\nwintypes.dll\nCRYPT32.dll\nwinhttp.dll\nWINNSI.DLL\nnetutils.dll\nWINTRUST.dll\ncryptnet.dll\ntwinapi.appcore.dll\nSystem.Net.Http.ni.dll\nschannel.dll\nncrypt.dll\nncryptsslp.dll\nWINMM.dll"
+[Local::PID::31536 ]-> ['WinHttpConnect','WinHttpOpenRequest','WinHttpSendRequest'].map(fn => { try { return fn + ': ' + Module.getExportByName('winhttp.dll', fn); } catch(e) { return fn + ': ' + e; } }).join('\n')
+"WinHttpConnect: TypeError: not a function\nWinHttpOpenRequest: TypeError: not a function\nWinHttpSendRequest: TypeError: not a function"
+[Local::PID::31536 ]-> var a = Module.findExportByName('winhttp.dll','WinHttpConnect'); console.log('addr:', a, 'type:', a ? Memory.readU8(a) : 'null')
+TypeError: not a function
+    at <eval> (<input>:1)
+[Local::PID::31536 ]-> Process.getModuleByName('winhttp.dll').findExportByName('WinHttpConnect')
+"0x74f67830"
+[Local::PID::31536 ]-> var addr = Process.getModuleByName('winhttp.dll').findExportByName('WinHttpConnect'); Interceptor.attach(ptr(addr), { onEnter: function(args) { console.log('[WinHttpConnect] server:', Memory.readUtf16String(args[1])); } }); console.log('hooked WinHttpConnect')
+hooked WinHttpConnect
+[Local::PID::31536 ]-> var wh = Process.getModuleByName('winhttp.dll'); var conns = {}; var reqs = {}; Interceptor.attach(ptr(wh.findExportByName('WinHttpConnect')), { onEnter: function(a) { this.h = a[0]; this.srv = Memory.readUtf16String(a[1]); this.port = a[2].toInt32(); }, onLeave: function(r) { conns[r.toString()] = {srv: this.srv, port: this.port}; } }); Interceptor.attach(ptr(wh.findExportByName('WinHttpOpenRequest')), { onEnter: function(a) { var c = conns[a[0].toString()]||{}; this.req = {srv: c.srv, port: c.port, method: Memory.readUtf16String(a[1])||'GET', path: Memory.readUtf16String(a[2])||'/'}; }, onLeave: function(r) { reqs[r.toString()] = this.req; } }); Interceptor.attach(ptr(wh.findExportByName('WinHttpSendRequest')), { onEnter: function(a) { var r = reqs[a[0].toString()]||{}; var url = 'https://' + (r.srv||'?') + (r.path||'/'); console.log('URL>> ' + r.method + ' ' + url); } }); console.log('ALL_HOOKS_OK')
+ALL_HOOKS_OK
+[Local::PID::31536 ]-> var sch = Process.getModuleByName('schannel.dll'); var dm = sch.findExportByName('DecryptMessage'); console.log('DecryptMessage addr:', dm); if(dm) { Interceptor.attach(ptr(dm), { onEnter: function(a) { this.ctx = a[0]; this.buf = a[1]; }, onLeave: function(r) { try { var b = this.buf; if(b && !b.isNull()) { var cnt = b.add(4).readU32(); var descs = b.add(8); for(var i=0;i<cnt;i++) { var btype=descs.add(i*16).readU32(); var blen=descs.add(i*16+4).readU32(); var pbuf=descs.add(i*16+8).readPointer(); if(btype===1 && blen>0 && pbuf && !pbuf.isNull()) { try { var s=pbuf.readUtf8String(blen); if(s && (s.indexOf('HTTP')>=0||s.indexOf('tickerchart')>=0||s.indexOf('GET ')>=0||s.indexOf('POST ')>=0)) { console.log('TLS>> '+s.substring(0,300)); } } catch(e) {} } } } } catch(e) {} } }); console.log('schannel_hooked'); } else { console.log('DecryptMessage_NOT_FOUND'); }
+DecryptMessage addr: null
+DecryptMessage_NOT_FOUND
+[Local::PID::31536 ]-> Process.getModuleByName('schannel.dll').enumerateExports().map(e=>e.name).join('\n')
+"SpLsaModeInitialize\nSpUserModeInitialize\nSslCrackCertificate\nSslEmptyCacheA\nSslEmptyCacheW\nSslFreeCertificate\nSslFreeCustomBuffer\nSslGenerateRandomBits\nSslGetExtensions\nSslGetMaximumKeySize\nSslGetServerIdentity\nSslLoadCertificate"
+[Local::PID::31536 ]-> var mods = ['secur32.dll','security.dll','sspicli.dll']; mods.forEach(function(m){ try { var mod = Process.getModuleByName(m); console.log(m, ':', mod.enumerateExports().filter(e=>e.name.toLowerCase().indexOf('decrypt')>=0||e.name.toLowerCase().indexOf('message')>=0).map(e=>e.name).join(',')); } catch(e){ console.log(m, 'not loaded'); } })
+secur32.dll : 
+security.dll not loaded
+sspicli.dll : DecryptMessage,EncryptMessage,SealMessage,SspiDecryptAuthIdentity,SspiDecryptAuthIdentityEx,UnsealMessage
+[Local::PID::31536 ]-> var dm = Process.getModuleByName('sspicli.dll').findExportByName('DecryptMessage'); Interceptor.attach(ptr(dm), { onEnter: function(a){ this.msg=a[1]; }, onLeave: function(r){ try{ var cnt=this.msg.add(4).readU32(); var pbufs=this.msg.add(8).readPointer(); for(var i=0;i<cnt;i++){ var btype=pbufs.add(i*16).readU32(); var blen=pbufs.add(i*16+4).readU32(); var pbuf=pbufs.add(i*16+8).readPointer(); if(btype===1&&blen>10&&pbuf&&!pbuf.isNull()){ try{ var s=pbuf.readUtf8String(Math.min(blen,512)); if(s&&(s.indexOf('HTTP')>=0||s.indexOf('tickerchart')>=0||s.indexOf('GET ')>=0||s.indexOf('POST ')>=0||s.indexOf('{')>=0)){ console.log('DEC>>'+s.substring(0,400)); } }catch(e){} } } }catch(e){} } }); console.log('sspicli_DecryptMessage_hooked')
+sspicli_DecryptMessage_hooked
+[Local::PID::31536 ]-> Process.enumerateModules()[0].path
+"C:\\Program Files (x86)\\UniTicker\\TCLive\\TickerChartLive.exe"
+[Local::PID::31536 ]-> Process terminated
+
+Thank you for using Frida!
+Fatal Python error: _enter_buffered_busy: could not acquire lock for <_io.BufferedReader name='<stdin>'> at interpreter shutdown, possibly due to daemon threads
+Python runtime state: finalizing (tstate=0x00007ffe8c624960)
+
+Current thread 0x00009b90 (most recent call first):
+  <no Python frame>

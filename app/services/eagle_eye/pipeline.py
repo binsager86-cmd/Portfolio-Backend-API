@@ -100,7 +100,7 @@ def run_phase1(
                 out_path / "events" / f"{ticker}_events.csv", index=False
             )
 
-        dna = extract_dna(ticker, real_snapshots, fake_snapshots)
+        dna = extract_dna(ticker, real_snapshots, fake_snapshots, indicators_df=indicators_df)
         if dna is None:
             if verbose:
                 print(f"  insufficient events to build DNA")

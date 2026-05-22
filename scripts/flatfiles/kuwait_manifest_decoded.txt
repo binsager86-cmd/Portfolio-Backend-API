@@ -1,0 +1,165 @@
+282|NBK|National Bank Of Kuwait|بنك الكويت الوطني|6|NO|231|
+283|GBK|Gulf Bank Of Kuwait|بنك الخليج|6|NO|231|
+284|CBK|Commercial Bank Of Kuwait|البنك التجاري الكويتي|6|NO|231|
+285|ABK|Al-ahli Bank Of Kuwait|البنك الأهلي الكويتي|6|NO|231|
+287|KIB|Kuwait International Bank|بنك الكويت الدولي|6|NO|231|
+288|BURG|Burgan Bank|بنك برقان|6|NO|231|
+289|KFH|Kuwait Finance House|بيت التمويل الكويتي|6|NO|231|
+290|KINV|Kuwait Investment Company|الشركة الكويتية للاستثمار|6|NO|234|
+291|FACIL|Commercial Facilities Company|شركة التسهيلات التجارية|6|NO|234|
+292|IFA|International Financial Advisors|شركة الاستشارات المالية الدولية|6|NO|234|
+293|NINV|National Investments Company|شركة الاستثمارات الوطنية|6|NO|234|
+294|KPROJ|Kuwait Investment Projects Company|شركة مشاريع الكويت القابضة|6|NO|234|
+296|COAST|Coast Investment and Development Company|شركة الساحل للتنمية و الاستثمار|6|NO|234|
+298|SECH|Securities House|شركة بيت الأوراق المالية|6|NO|234|
+301|ARZAN|Arzan Financial Group for Financing and Investment|مجموعة أرزان الماليه للتمويل و الاستثمار|6|NO|234|
+302|MARKAZ|Kuwait Financial Centre|المركز المالي الكويتي|6|NO|234|
+303|KMEFIC|Kuwait and Middle East Fin. Inv. Company|شركة الكويت و الشرق الأوسط للإستثمار|6|NO|234|
+308|ALOLA|First Investment Company|الشركة الأولى للاستثمار|6|NO|234|
+310|GIH|Gulf Investment House|بيت الاستثمار الخليجي|6|NO|234|
+311|AAYAN|Aayan Leasing and Investment Company|شركة أعيان للاجارة والاستثمار|6|NO|234|
+312|BAYANINV|BAYAN INVESTMENT HOLDING CO. (K.S.C.P)|شركة بيان للاستثمار القابضة ش م ك ع|6|NO|234|
+314|OSOUL|Osoul Investment Company|شركة أصول للاستثمار|6|NO|234|
+316|KFIC|KFIC Invest|كفيك للإستثمار|6|NO|234|
+317|KAMCO|KAMCO Investment|كامكو للاستثمار|6|NO|234|
+319|KINS|Kuwait Insurance Company|شركة الكويت للتأمين|6|NO|232|
+320|GINS|Gulf Insurance Company|شركة الخليج للتأمين|6|NO|232|
+321|AINS|Al-ahleia Insurance Company|الشركة الأهلية للتأمين|6|NO|232|
+322|WINSRE|Warba Insurance Company|شركة وربة للتأمين|6|NO|232|
+323|KUWAITRE|Kuwait Reinsurance Company|شركة إعادة التأمين الكويتية|6|NO|232|
+324|KRE|Kuwait Real Estate Company|شركة عقارات الكويت|6|NO|233|
+325|URC|United Real Estate Company|شركة العقارات المتحدة|6|NO|233|
+326|NRE|National Real Estate Company|الشركة الوطنية العقارية|6|NO|233|
+327|SRE|Salhiah Real Estate Company|الشركة الصالحية العقارية|6|NO|233|
+329|TAM|Tamdeen Real Estate Company|شركة التمدين العقارية|6|NO|233|
+331|AREEC|Ajial Real Estate Entertainment Company|شركة أجيال العقارية الترفيهية|6|NO|233|
+333|ARABREC|Al Arabiy Real Estate Company|الشركة العربية العقارية|6|NO|233|
+335|ERESCO|Al-enmaa Real Estate Company|شركة الإنمــاء العقارية|6|NO|233|
+336|MABANEE|Mabanee Company|شركة المباني|6|NO|233|
+337|INJAZZAT|Injazzat Real State Company|شركة انجازات العقارية|6|NO|233|
+340|NIND|National Industries Group (holding)|مجموعة الصناعات الوطنية (القابضة)|6|NO|234|
+342|KCEM|Kuwait Cement Company|شركة أسمنت الكويت|6|NO|225|
+344|CABLE|Gulf Cable And Electrical Industries Company|شركة الخليج للكابلات و الصناعات الكهربائية|6|NO|225|
+345|SHIP|Heavy Engineering And Ship Building Company|شركة الصناعات الهندسية الثقيلة وبناء السفن|6|NO|225|
+347|PCEM|Portland Cement Company|شركة أسمنت بورتلاند كويت|6|NO|225|
+348|PAPER|Shuaiba Industrial Company|شركة الشعيبة الصناعية|6|NO|225|
+349|MRC|Metal and Recycling Company|شركة المعادن والصناعات التحويلية|6|NO|225|
+350|KFOUC|Kuwait Foundry Company|شركة السكب الكويتية|6|NO|224|
+351|ACICO|ACICO Industries Company|شركة أسيكو للصناعات|6|NO|225|
+353|BPCC|Boubyan Petrochemicals Company|شركة بوبيان للبتروكيماويات|6|NO|224|
+356|ALKOUT|Alkout Industrial Projects Company|شركة الكوت للمشاريع الصناعية|6|NO|224|
+359|NICBM|National Industries Company|شركة الصناعات الوطنية|6|NO|225|
+361|KCIN|Kuwait National Cinema|شركة السينما الكويتية الوطنية|6|NO|228|
+362|KHOT|Kuwait Hotels Company|شركة الفنادق الكويتية|6|NO|228|
+363|MKHZN|Agility Public Warehousing Company|شركة أجيليتي للمخازن العمومية|6|NO|225|
+365|ZAIN|Mobile Telecommunication Company|شركة الاتصالات المتنقلة|6|NO|229|
+366|SENERGY|Senergy Holding Company|شركة سنرجي القابضة|6|NO|223|
+368|IPG|Independent Petroleum Group|شركة المجموعة البترولية المستقلة|6|NO|223|
+369|CLEANING|National Cleaning Company|الشركة الوطنية للتنظيف|6|NO|225|
+373|OOREDOO|National Mobile Telecommunications|الشركة الوطنية للإتصالات المتنقلة|6|NO|229|
+374|KGL|Kuwait and Gulf Link Transport Company|شركة رابطة الكويت والخليج للنقل|6|NO|225|
+376|ASC|Automated Systems Company|شركة الأنظمة الآلية|6|NO|236|
+377|NAPESCO|National Petroleum Services Company|الشركة الوطنية للخدمات البترولية|6|NO|223|
+378|KCPC|Kuwait Co. For Process Plant Cons.andcont|الشركة الكويتية لبناء المعامل والمقاولات|6|NO|225|
+379|CATTL|Livestock Transport and Trading Company|شركة نقل و تجارة المواشي|6|NO|226|
+387|QIC|Umm Al Qaiwain General Investments Company|شركة أم القيوين للإستثمارات العامة|6|NO|234|
+392|VALMORE|Valmore Holding|فالمور القابضة للاستثمار ش م م|6|NO|234|
+393|BKIKWT|Bahrain Kuwait Insurance Company|الشركة البحرينية الكويتية للتأمين|6|NO|232|
+394|GFH|GFH Financial Group|مجموعة جي أف اتش المالية|6|NO|234|
+395|PAPCO|Palms Agro Production Company|شركة النخيل للإنتاج الزراعي|6|NO|228|
+406|BKP|Premier Market Index|مؤشر السوق الأول|6|YES|5|
+411|EQUIPMENT|Equipment Holding Company|شركة المعدات القابضة|6|NO|225|
+417|FTI|First Takaful Insurance Company|الشركة الأولي للتأمين التكافلي|6|NO|232|
+422|WETHAQ|Wethaq Takaful Insurance Company|شركة وثاق للتأمين التكافلي|6|NO|232|
+423|ALTIJARIA|The Commercial Real Estate Company|الشركة التجارية العقارية|6|NO|233|
+426|SANAM|Sanam Real Estate Company|شركة سنام العقارية|6|NO|233|
+429|NIH|National International Company (holding)|الشركة الوطنية الدولية القابضة|6|NO|234|
+433|HUMANSOFT|HumanSoft Holding Company|شركة هيومن سوفت القابضة|6|NO|225|
+434|KPPC|Kuwait Privatization Holding Company|شركة التخصيص القابضة|6|NO|234|KPPC
+574|AAYANRE|Aayan Real Estate Company|شركة أعيان العقارية|6|NO|233|
+581|AQAR|Aqar Real Estate Investements|عقار للاستثمارات العقارية|6|NO|233|
+583|ALAQARIA|Kuwait National Real Estate Investment and Service|الشركة الكويتية العقارية القابضة|6|NO|233|
+725|MAZAYA|Al Mazaya Holding Company|شركة المزايا القابضة|6|NO|233|
+730|UNICAP|UniCap Investment and Finance|يونيكاب للاستثماروالتمويل‏|6|NO|234|
+731|ENERGYH|The Energy House Company|شركة بيت الطاقة القابضة|6|NO|223|
+738|MADAR|Al-Madar Finance and Investment Company|شركة المدار للتمويل و الاستثمار|6|NO|234|
+742|GFC|Gulf Franchising Holding Company|شركة الامتيازات الخليجية القابضة|6|NO|234|
+743|TAHSSILAT|Credit Rating and Collection|شركة تصنيف وتحصيل الأموال|6|NO|234|
+754|ALDEERA|AL-Deera Holding Company|شركة الديرة القابضة|6|NO|234|
+763|INOVEST|Inovest Company|إنوفست|6|NO|234|
+864|TIJARA|Tijara and Realestate Investment Company|شركة التجارة و الاستثمار العقاري|6|NO|233|
+879|ALSAFAT|ALSAFAT INVESTMENT COMPANY|شركة الصفاة للاستثمار|6|NO|234|
+888|ABAR|Burgan Company for Well Drilling|شركة برقان لحفر الابار|6|NO|223|
+892|EKTTITAB|Ektitab Holding Company|شركة اكتتاب القابضة|6|NO|234|
+896|SOKOUK|Sokouk Holding Company|شركة صكوك القابضة|6|NO|233|
+898|IFAHR|IFA Hotels and Restores Company|شركة ايفا للفنادق و المنتجعات|6|NO|228|
+902|CGC|Combined Group Contracting Company|شركة المجموعة المشتركة للمقاولات|6|NO|225|
+1186|OSOS|Osos Holding Group Company|شركة مجموعة أسس القابضة|6|NO|233|
+1180|NOOR|Noor Financial Investment|شركة نور للاستثمار المالي |6|NO|234|
+1196|BOUBYAN|Boubyan Bank|بنك بوبيان|6|NO|231|
+1207|TAMINV|Al Tamdeen Investment Company|شركة التمدين الاستثمارية  	|6|NO|234|
+1215|UPAC|United Projects Group|شركة المشاريع المتحدة للخدمات الجوية|6|NO|225|
+1225|NCCI|National Consumer Holding|الشركة الوطنية الاستهلاكية القابضة|6|NO|234|
+1320|MASHAER|Mashaer Holding|مشاعر القابضة|6|NO|233|
+1359|ARKAN|Arkan Al-Kuwait Real Estate Company|شركة أركان الكويت العقارية|6|NO|233|
+1369|OULAFUEL|Oula Fuel Marketing Company|الأولى للتسويق المحلي للوقود|6|NO|228|
+1425|DIGITUS|Digitus Group for Digital Infrastructure, Data Centers & Communications|مجموعة ديجتس ديجيتال انفراستراكتشر لمراكز المعلومات والاتصالات|6|NO|229|
+1612|MUBARRAD|Mubarrad Transport Company|شركة مبرد للنقل|6|NO|225|
+1622|MUNTAZAHAT|Kuwait Resorts Company|الشركة الكويتية للمنتزهات|6|NO|228|
+1624|ARGAN|Alargan International Real Estate Company|شركة الأرجان العالمية العقارية|6|NO|233|
+1647|ATC|Advanced Technology Company|شركة التقدم التكنولوجي|6|NO|227|
+1689|MUNSHAAT|Munshaat Real Estate Projects Company|شركة منشأت للمشاريع العقارية|6|NO|233|
+1751|JAZEERA|Jazeera Airways Company|شركة طيران الجزيرة|6|NO|228|
+1874|EMIRATES|Kuwait Emirates Holding Company|الشركة الكويتية الإماراتيه القابضة|6|NO|234|
+1877|MENA|MENA Real Estate Company|شركة مينا العقارية|6|NO|233|
+1906|SPEC|Specialities Group Holding Company|شركة مجموعة الخصوصية القابضة|6|NO|225|
+1925|SOOR|SOOR Fuel Marketing Company|شركة السور لتسويق الوقود|6|NO|228|
+1994|MASAKEN|Al Masaken International Realestate Development Company|المساكن الدولية للتطوير العقاري|6|NO|233|
+1996|DALQANRE|Dulaqan Real Estate Co|شركة دلقان العقارية|6|NO|233|
+2003|ALEID|Al Eid Food Company|شركة العيد للأغذية|6|NO|228|
+2006|MIDAN|Al-Maidan Dental Clinic Company|شركة عيادة الميدان لخدمات طب الأسنان|6|NO|227|
+2015|KBT|Kuwait Business Town Real Estate Company|شركة مدينة الأعمال الكويتية العقارية|6|NO|233|
+2017|FUTUREKID|Future Kid Entertainment and Realestate Company|شركة طفل المستقبل الترفيهية العقارية|6|NO|228|
+2039|MANAZEL|Manazel Holding Company|شركة منازل القابضة|6|NO|234|
+2071|THURAYA|Dar Al Thuraya Real Estate Company|شركة دار الثريا العقارية|6|NO|233|
+2084|ASIYA|Asiya Capital Investment Company|شركة آسيا كابيتال الإستثمارية|6|NO|234|
+2087|AMAR|Amar for Finance and Lesing Company|شركة عمار للتمويل والاجارة|6|NO|234|
+2108|RASIYAT|Rasiyat Holding Company|شركة راسيات القابضة|6|NO|234|
+2290|WARBACAP|WARBACAP|وربة كبيتل|6|NO|234|
+2291|MARAKEZ|Real Estate Trade Centers|شركة مراكز التجارة العقارية|6|NO|233|
+2302|ALIMTIAZ|Alimtiaz Investment Company|شركة الامتياز للاستثمار|6|NO|234|
+2462|WARBABANK|Warba Bank|بنك وربة|6|NO|231|
+9854|STC|Kuwait Telecommunication Company|شركة الإتصالات الكويتية|6|NO|229|
+10226|MEZZAN|Mezzan Holding|شركة ميزان القابضة|6|NO|226|
+12411|ALMANAR|AlManar Financing and Leasing|شركة المنار للتمويل والإجارة|6|NO|234|
+12360|BKM|Main Market Index|مؤشر السوق الرئيسي|6|YES|306|
+12361|BKA|All-Share Index|مؤشر السوق العام|6|YES|307|
+12362|BKE|Energy Sector Index|مؤشر الطاقة|6|YES|223|
+12363|BKBM|Basic Materials Sector Index|المواد الأساسية|6|YES|224|
+12364|BKI|Industrials Sector Index|مؤشر الصناعة|6|YES|225|
+12365|BKCS|Consumer Staples Sector Index|مؤشر السلع الاستهلاكية|6|YES|226|
+12366|BKHC|Health Care Sector Index|مؤشر الرعاية الصحية|6|YES|227|
+12367|BKCD|Consumer Discretionary Sector Index|مؤشر الخدمات الاستهلاكية|6|YES|228|
+12368|BKTEL|Telecommunications Sector Index|مؤشر الاتصالات|6|YES|229|
+12369|BKU|Utilities Sector Index|مؤشر المنافع|6|YES|230|
+12370|BKB|Banks Sector Index|مؤشر البنوك|6|YES|231|
+12371|BKINS|Insurance Sector Index|مؤشر التأمين|6|YES|232|
+12372|BKRE|Real Estate Sector Index|مؤشر العقار|6|YES|233|
+12373|BKFS|Financial Services Sector Index|مؤشر الخدمات المالية|6|YES|234|
+12374|BKTECH|Technology Sector Index|مؤشر التكنولوجيا|6|YES|236|
+12377|BKPT|Premier Market Index (TR)|مؤشر السوق الأول - ع.ك|6|YES|308|
+12378|BKMT|Main Market Index (TR)|مؤشر السوق الرئيسي - ع.ك|6|YES|309|
+12379|BKAT|All-Share Index  (TR)|مؤشر السوق العام - ع.ك|6|YES|310|
+12392|INTEGRATED|Integrated Holding Company|الشركة المتكاملة القابضة|6|NO|225|
+12461|BKM50|BK Main 50|الرئيسي 50|6|YES|337|
+12512|BAITAKREIT|KFH Capital REIT|صندوق بيتك كابيتال ريت|6|NO|339|
+12552|AZNOULA|SHAMAL AZ-ZOUR AL-OULA POWER AND WATER COMPANY|شمال الزور الاولى للطاقة والمياه|6|NO|230|
+12563|BOURSA|BOURSA KUWAIT SECURITIES COMPANY (K.P.S.C.)|شركة بورصة الكويت للأوراق المالية (ش.م.ك) عامة|6|NO|234|
+30013|JTC|JTC Logistics Transportation & Stevedoring Company|جي تي سي لوجستيك للنقليات والمناولة|6|NO|225|
+31856|ALG|Ali Alghanim Sons Automotive Company K.S.C|شركة اولاد علي الغانم للسيارات ش.م.ك|6|NO|228|
+34814|BEYOUT|Beyout Investment Groub Holding Company K.S.C.|شركة مجموعة البيوت الاستثمارية القابضة ش.م.ك.|6|NO|234|
+42258|ALFTAQA|Action Energy Company K.S.C.C|الشركة العملية للطاقة ش.م.ك.م|6|NO|223|
+42837|EQUIPMENT126|EQUIPMENT HOLDING CO. (K.S.C.P)(Rights Issue 126)|شركة المعدات القابضة (ش .م.ك.ع)‏(حقوق اولوية 126)|6|NO|225|
+42861|DIGITUS126|Digitus Group for Digital Infrastructure, Data Centers & Communications. (K.S.C.P)(Rights Issue 126)|شركة مجموعة ديجتس ديجيتال انفراستراكتشر لمراكز المعلومات و الاتصالات (ش.م.ك.ع)‏(حقوق اولوية 126)|6|NO|229|
+43233|TROLLEY|TROLLEY GENERAL TRADING COMPANY W.L.L.|.شركة ترولي للتجارة العامة ش.م.ك.م|6|NO|228|
+
