@@ -8,8 +8,8 @@ Includes:
   4. Request timing (X-Response-Time-Ms) with structured per-request latency logs
 """
 
-import logging
 import hashlib
+import logging
 import time
 import uuid
 
