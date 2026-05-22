@@ -8,8 +8,8 @@ Includes:
   4. Request timing (X-Response-Time-Ms) with structured per-request latency logs
 """
 
-import logging
 import hashlib
+import logging
 import time
 import uuid
 
@@ -37,6 +37,22 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
       - Strict-Transport-Security (production only, after HTTPS termination)
     """
 
+    _DOCS_PATHS = frozenset({"/docs", "/redoc"})
+
+    @classmethod
+    def _build_csp(cls, path: str) -> str:
+        if path in cls._DOCS_PATHS:
+            return (
+                "default-src 'self'; "
+                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+                "img-src 'self' data: https://fastapi.tiangolo.com; "
+                "font-src 'self' https://cdn.jsdelivr.net; "
+                "connect-src 'self'; "
+                "frame-ancestors 'none'"
+            )
+        return "default-src 'self'; frame-ancestors 'none'"
+
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
@@ -49,7 +65,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "interest-cohort=()"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'"
+        response.headers["Content-Security-Policy"] = self._build_csp(request.url.path)
 
         # HSTS only in production (assumes TLS termination by reverse proxy)
         if settings.is_production:
