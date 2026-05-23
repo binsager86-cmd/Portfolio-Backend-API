@@ -295,32 +295,19 @@ def start_scheduler() -> None:
     # ── Eagle Eye nightly recompute (Sun–Thu, after Boursa close) ────
     try:
         from app.services.eagle_eye.ingest import run_nightly_recompute
-        from app.services.eagle_eye.store import snapshot_ratings_history
-
-        def _run_eagle_eye_recompute_with_history(*, dna_refresh: bool) -> None:
-            result = run_nightly_recompute(dna_refresh=dna_refresh, verbose=False)
-            try:
-                captured = snapshot_ratings_history()
-                logger.info(
-                    "📊 Eagle Eye ratings history snapshot captured: %d row(s) for today",
-                    captured,
-                )
-            except Exception as exc:
-                logger.warning("📊 Eagle Eye ratings history snapshot failed: %s", exc)
-            return result
 
         def _run_eagle_eye_intraday_refresh() -> None:
             """Intraday ratings refresh — runs near market close (13:15) to
             capture late-session signals before the post-close recompute."""
-            _run_eagle_eye_recompute_with_history(dna_refresh=False)
+            run_nightly_recompute(dna_refresh=False, verbose=False)
 
         def _run_eagle_eye_daily() -> None:
-            """Nightly incremental OHLCV fetch + ratings refresh."""
-            _run_eagle_eye_recompute_with_history(dna_refresh=False)
+            """Nightly incremental OHLCV fetch + ratings + DNA refresh."""
+            run_nightly_recompute(dna_refresh=True, verbose=False)
 
         def _run_eagle_eye_dna() -> None:
             """Weekly full recompute including DNA profiles (Sundays)."""
-            _run_eagle_eye_recompute_with_history(dna_refresh=True)
+            run_nightly_recompute(dna_refresh=True, verbose=False)
 
         # Sun–Thu at 13:15 Asia/Kuwait — intraday refresh near Boursa close
         _scheduler.add_job(

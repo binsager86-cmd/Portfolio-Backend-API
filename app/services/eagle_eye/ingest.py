@@ -186,7 +186,13 @@ def build_all_dna(verbose: bool = False) -> dict:
     Returns a summary dict: {ok, skipped, errors, insufficient}.
     """
     from app.services.eagle_eye.config import CONFIG
-    from app.services.eagle_eye.dna_extractor import dna_to_dict, extract_dna
+    from app.services.eagle_eye.dna_extractor import (
+        DNA_CONFIDENCE_FLOOR,
+        DNA_DEFAULT_WINDOW_DAYS,
+        DNA_WINDOW_OPTIONS,
+        dna_to_dict,
+        extract_dna,
+    )
     from app.services.eagle_eye.indicators import compute_all_indicators
     from app.services.eagle_eye.move_detector import detect_fakeouts, detect_moves
     from app.services.eagle_eye.recorder import record_all_events
@@ -232,7 +238,15 @@ def build_all_dna(verbose: bool = False) -> dict:
 
             snapshots = record_all_events(all_events, ind_df)
 
-            dna = extract_dna(ticker, snapshots, [], indicators_df=ind_df)
+            dna = extract_dna(
+                ticker,
+                snapshots,
+                [],
+                indicators_df=ind_df,
+                horizon_days=DNA_DEFAULT_WINDOW_DAYS,
+                min_setup_occurrences=DNA_CONFIDENCE_FLOOR,
+                window_days=DNA_WINDOW_OPTIONS,
+            )
             if dna is None:
                 stats["skipped"] += 1
                 log_compute("dna_build", ticker, "skip", "< 3 real events found")
@@ -287,7 +301,13 @@ def build_dna_for_ticker(ticker: str) -> Optional[dict]:
     from datetime import date, timedelta
 
     from app.services.eagle_eye.config import CONFIG
-    from app.services.eagle_eye.dna_extractor import dna_to_dict, extract_dna
+    from app.services.eagle_eye.dna_extractor import (
+        DNA_CONFIDENCE_FLOOR,
+        DNA_DEFAULT_WINDOW_DAYS,
+        DNA_WINDOW_OPTIONS,
+        dna_to_dict,
+        extract_dna,
+    )
     from app.services.eagle_eye.indicators import compute_all_indicators
     from app.services.eagle_eye.move_detector import detect_fakeouts, detect_moves
     from app.services.eagle_eye.recorder import record_all_events
@@ -332,7 +352,15 @@ def build_dna_for_ticker(ticker: str) -> Optional[dict]:
         all_events = moves + fakeouts
         snapshots = record_all_events(all_events, ind_df)
 
-        dna = extract_dna(ticker, snapshots, [], indicators_df=ind_df)
+        dna = extract_dna(
+            ticker,
+            snapshots,
+            [],
+            indicators_df=ind_df,
+            horizon_days=DNA_DEFAULT_WINDOW_DAYS,
+            min_setup_occurrences=DNA_CONFIDENCE_FLOOR,
+            window_days=DNA_WINDOW_OPTIONS,
+        )
         if dna is None:
             log_compute("dna_build", ticker, "skip", "< 3 real events found")
             return None
@@ -553,7 +581,8 @@ def run_nightly_recompute(dna_refresh: bool = False, verbose: bool = False) -> d
     Nightly pipeline orchestrator called by the background scheduler.
 
     Phase 1 (OHLCV) and Phase 3 (ratings) run every trading day.
-    Phase 2 (DNA) is optional — set *dna_refresh=True* on Sundays.
+    Phase 2 (DNA) is optional — set *dna_refresh=True* when a full DNA refresh
+    should be included in the nightly run.
 
     Never raises; exceptions are logged and captured in the return dict.
     """

@@ -729,15 +729,16 @@ def compute_confidence(
     Weighted composite confidence score 0-100.
 
     Weights:
-      0.25 confluence_score
-      0.20 historical_base_rate
+      0.20 volume_flow_score   (extracted separately — highest single weight)
+      0.18 confluence_score    (excl. volume_flow: trend, momentum, volatility, structure, institutional, statistical, regime)
+      0.18 historical_base_rate
       0.15 accumulation_score
-      0.15 risk_reward_score
-      0.10 regime_alignment
-      0.10 stage_score
-      0.05 dna_pattern_match
+      0.13 risk_reward_score
+      0.08 regime_alignment
+      0.06 stage_score
+      0.02 dna_pattern_match
     """
-    # --- 1. Confluence score: how many of 8 categories have bullish signals ---
+    # --- 1. Category scores: how many indicators in each category have bullish signals ---
     from app.services.eagle_eye.config import INDICATOR_CATEGORIES
     category_bullish = {}
     for cat, ind_list in INDICATOR_CATEGORIES.items():
@@ -757,6 +758,13 @@ def compute_confidence(
                     bullish_count += 1
         if checked > 0:
             category_bullish[cat] = bullish_count / checked
+
+    # Volume flow is extracted first and scored independently so it carries
+    # its own explicit weight in the final formula rather than being diluted
+    # as 1-of-8 inside a flat average.
+    volume_flow_score = category_bullish.pop("volume_flow", 0.5) * 100
+
+    # Confluence: average of all remaining (non-volume) categories
     confluence_score = (sum(category_bullish.values()) / max(len(category_bullish), 1)) * 100
 
     # --- 2. Historical base rate from DNA ---
@@ -816,13 +824,14 @@ def compute_confidence(
             pass
 
     score = (
-        0.25 * confluence_score
-        + 0.20 * historical_base_rate * 100
+        0.20 * volume_flow_score                  # volume gets highest single weight
+        + 0.18 * confluence_score                 # trend/momentum/structure/etc (excl. volume)
+        + 0.18 * historical_base_rate * 100
         + 0.15 * acc_norm * 100
-        + 0.15 * rr_norm * 100
-        + 0.10 * regime_align * 100
-        + 0.10 * stage_sc * 100
-        + 0.05 * dna_match * 100
+        + 0.13 * rr_norm * 100
+        + 0.08 * regime_align * 100
+        + 0.06 * stage_sc * 100
+        + 0.02 * dna_match * 100
     )
     raw_confidence = float(np.clip(score, 0.0, 100.0))
 

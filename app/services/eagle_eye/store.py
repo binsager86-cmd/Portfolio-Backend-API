@@ -465,9 +465,13 @@ def save_rating(
     )
 
 
-def load_all_ratings() -> List[dict]:
+def load_all_ratings(min_confidence: float = 0.0, limit: int = 500) -> List[dict]:
     """
-    Load all rows from ee_ratings_cache, ordered by confidence descending.
+    Load rows from ee_ratings_cache ordered by confidence descending.
+
+    min_confidence and limit are pushed to SQL so the DB does the work
+    instead of loading every row and filtering in Python.
+
     Fast path for the scanner endpoint.
     """
     from app.core.database import query_all
@@ -478,9 +482,11 @@ def load_all_ratings() -> List[dict]:
                entry_primary, stop_loss, tp1, last_price, computed_at,
                volume_context_json
         FROM   ee_ratings_cache
+        WHERE  confidence >= ?
         ORDER  BY confidence DESC
+        LIMIT  ?
         """,
-        (),
+        (float(min_confidence), int(limit)),
     )
     if not rows:
         return []

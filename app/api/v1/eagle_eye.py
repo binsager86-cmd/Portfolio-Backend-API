@@ -30,6 +30,11 @@ from app.core.security import TokenData
 from app.schemas.eagle_eye import (
     BehavioralDNAResponse,
     DNAResponse,
+    DNASetupBarResponse,
+    DNASetupExampleResponse,
+    DNASetupForwardOutcomeResponse,
+    DNASetupObservationResponse,
+    DNAWindowProfileResponse,
     EventsListResponse,
     FullStockAnalysis,
     MoveEventResponse,
@@ -63,10 +68,107 @@ _RECOMPUTE_LAST_ATTEMPT_AT = 0.0
 _LOOKBACK_YEARS = 5
 _RECOMPUTE_COOLDOWN_SEC = 300
 
+# ---------------------------------------------------------------------------
+# Performance caches
+# ---------------------------------------------------------------------------
+# Stock meta map: ticker → StockMeta.  Rebuilt at most once every 10 minutes.
+# Avoids hitting the analysis_stocks DB table on every /scanner request.
+_META_MAP_CACHE: Optional[Dict[str, object]] = None
+_META_MAP_CACHE_AT: float = 0.0
+_META_MAP_TTL_SEC: float = 600.0  # 10 minutes
+
+# Scanner response cache: assembled List[RatedStock] held for 30 s so
+# rapid re-fetches (focus events, filter clicks) return instantly.
+_SCANNER_RESP_CACHE: Optional[list] = None
+_SCANNER_RESP_CACHE_AT: float = 0.0
+_SCANNER_RESP_TTL_SEC: float = 30.0  # 30 seconds
+
+
+def _get_meta_map() -> Dict[str, object]:
+    """Return a cached ticker → StockMeta lookup, rebuilt at most every 10 min."""
+    global _META_MAP_CACHE, _META_MAP_CACHE_AT
+    now = time.time()
+    if _META_MAP_CACHE is not None and (now - _META_MAP_CACHE_AT) < _META_MAP_TTL_SEC:
+        return _META_MAP_CACHE
+    try:
+        from app.services.eagle_eye.adapter import TickerChartAdapter
+        adapter = TickerChartAdapter()
+        meta_map = {s.ticker: s for s in adapter.list_stocks()}
+        _META_MAP_CACHE = meta_map
+        _META_MAP_CACHE_AT = now
+        return meta_map
+    except Exception:
+        logger.warning("Could not refresh meta map; using stale cache or empty dict")
+        return _META_MAP_CACHE or {}
+
 
 def _cache_key(ticker: str, as_of: Optional[date] = None) -> str:
     d = (as_of or date.today()).isoformat()
     return f"{ticker.upper()}:{d}"
+
+
+def _build_threshold_profile_response(
+    threshold_profile: dict,
+    fallback_total_setups: int,
+) -> ThresholdProfileResponse:
+    hits = threshold_profile.get("occurrences", threshold_profile.get("hits", 0))
+    sample_count = threshold_profile.get("sample_count", hits)
+    total_setups = threshold_profile.get("sample_count", threshold_profile.get("total_count", fallback_total_setups))
+    return ThresholdProfileResponse(
+        threshold_pct=threshold_profile.get("threshold_pct", 0),
+        success_rate=threshold_profile.get("success_rate", 0),
+        sample_count=sample_count,
+        total_count=total_setups,
+        hits=hits,
+        total_setups=total_setups,
+        median_bars_to_hit=threshold_profile.get("median_bars_to_hit"),
+        avg_win_pct=threshold_profile.get("avg_gain_on_hits_pct", threshold_profile.get("avg_gain_pct", threshold_profile.get("avg_win_pct"))),
+        avg_loss_pct=threshold_profile.get("avg_loss_pct"),
+        avg_gain_all_pct=threshold_profile.get("avg_gain_all_pct"),
+        avg_gain_on_hits_pct=threshold_profile.get("avg_gain_on_hits_pct", threshold_profile.get("avg_gain_pct", threshold_profile.get("avg_win_pct"))),
+    )
+
+
+def _build_window_profile_response(window_profile: dict) -> DNAWindowProfileResponse:
+    setup_count = window_profile.get("setup_count", 0)
+    threshold_profiles = [
+        _build_threshold_profile_response(threshold_profile, setup_count)
+        for threshold_profile in window_profile.get("threshold_profiles", [])
+    ]
+    return DNAWindowProfileResponse(
+        horizon_days=window_profile.get("horizon_days", 0),
+        setup_count=setup_count,
+        history_status=window_profile.get("history_status", "ok"),
+        confidence_floor=window_profile.get("confidence_floor", 5),
+        confidence_tier=window_profile.get("confidence_tier", "TOO_THIN"),
+        confidence_label=window_profile.get("confidence_label", "Too thin"),
+        percentages_visible=window_profile.get("percentages_visible", False),
+        threshold_profiles=threshold_profiles,
+    )
+
+
+def _build_setup_example_response(setup_example: dict) -> DNASetupExampleResponse:
+    bars = [DNASetupBarResponse(**bar) for bar in setup_example.get("bars", [])]
+    observations = [
+        DNASetupObservationResponse(**observation)
+        for observation in setup_example.get("observations", [])
+    ]
+    forward_outcomes = {
+        key: DNASetupForwardOutcomeResponse(**outcome)
+        for key, outcome in setup_example.get("forward_outcomes", {}).items()
+    }
+    return DNASetupExampleResponse(
+        setup_date=setup_example.get("setup_date", ""),
+        setup_window_start_date=setup_example.get("setup_window_start_date", ""),
+        setup_window_end_date=setup_example.get("setup_window_end_date", ""),
+        setup_bar_index=setup_example.get("setup_bar_index", 0),
+        setup_window_start_index=setup_example.get("setup_window_start_index", 0),
+        setup_window_end_index=setup_example.get("setup_window_end_index", 0),
+        available_forward_bars=setup_example.get("available_forward_bars", 0),
+        bars=bars,
+        observations=observations,
+        forward_outcomes=forward_outcomes,
+    )
 
 
 def _trigger_eagle_eye_recompute(reason: str, *, force: bool = False) -> bool:
@@ -272,20 +374,38 @@ async def get_scanner(
     sector: Optional[str] = Query(None, description="Filter by sector"),
     tier: Optional[str] = Query(None, description="Filter by market tier"),
     min_confidence: float = Query(0.0, ge=0, le=100, description="Minimum confidence score"),
-    limit: int = Query(50, ge=1, le=200, description="Maximum number of stocks to return"),
+    limit: int = Query(200, ge=1, le=500, description="Maximum number of stocks to return"),
     _user: TokenData = Depends(get_current_user),
 ):
     """
     Return a rated list of Kuwait stocks, optionally filtered by sector, tier, and
     minimum confidence. Reads from ee_ratings_cache (pre-computed nightly) for
     instant response; falls back to live per-stock computation when the cache is empty.
-    """
-    try:
-        from app.services.eagle_eye.adapter import TickerChartAdapter
-    except ImportError as exc:
-        raise HTTPException(status_code=500, detail=f"Eagle Eye service unavailable: {exc}")
 
-    # ── DB fast path: read pre-computed ratings ──────────────────────
+    Performance notes:
+    - StockMeta lookup is cached for 10 minutes (_get_meta_map).
+    - The assembled response list is cached for 30 seconds for rapid re-fetches.
+    - min_confidence filtering is pushed to SQL in load_all_ratings().
+    - limit defaults to 200 so the frontend always receives the full universe
+      and can do all secondary filtering client-side without extra round trips.
+    """
+    global _SCANNER_RESP_CACHE, _SCANNER_RESP_CACHE_AT
+
+    # ── 30-second response cache for identical unfiltered requests ───────────
+    # Sector/tier filters bypass the cache so they remain correct.
+    now = time.time()
+    use_resp_cache = (
+        not sector
+        and not tier
+        and min_confidence == 0.0
+        and _SCANNER_RESP_CACHE is not None
+        and (now - _SCANNER_RESP_CACHE_AT) < _SCANNER_RESP_TTL_SEC
+    )
+    if use_resp_cache:
+        cached = _SCANNER_RESP_CACHE
+        return ScannerResponse(status="ok", count=len(cached), stocks=cached)
+
+    # ── DB fast path: read pre-computed ratings ──────────────────────────────
     # NOTE: Live compute fallback removed — it fetched OHLCV for 100+ stocks
     # synchronously in an async handler, blocking the event loop for minutes.
     # The background warmup (started at app startup) populates ee_ratings_cache.
@@ -293,16 +413,15 @@ async def get_scanner(
     try:
         from app.services.eagle_eye.store import load_all_ratings
 
-        db_rows = load_all_ratings()
+        db_rows = load_all_ratings(min_confidence=min_confidence, limit=limit)
         if not db_rows:
             # Cache is cold — retrigger a best-effort background warmup and respond immediately.
             _trigger_eagle_eye_recompute("scanner_cache_cold")
             logger.info("Eagle Eye scanner: cache cold, returning warming_up status")
             return ScannerResponse(status="warming_up", count=0, stocks=[])
 
-        # Build StockMeta map for names/sectors (quick, from adapter)
-        adapter = TickerChartAdapter()
-        meta_map = {s.ticker: s for s in adapter.list_stocks()}
+        # ── Use cached meta map (rebuilt at most every 10 min) ───────────────
+        meta_map = _get_meta_map()
 
         results: List[RatedStock] = []
         for row in db_rows:
@@ -316,9 +435,8 @@ async def get_scanner(
                 continue
             if tier and row_tier.lower() != tier.lower():
                 continue
+
             conf = float(row.get("confidence") or 0.0)
-            if conf < min_confidence:
-                continue
 
             vc_raw = row.get("volume_context") or {}
             vc_summary = VolumeContextSummary(
@@ -344,8 +462,11 @@ async def get_scanner(
                 computed_at=row.get("computed_at"),
                 volume_context=vc_summary,
             ))
-            if len(results) >= limit:
-                break
+
+        # Cache the unfiltered response for 30 s
+        if not sector and not tier and min_confidence == 0.0:
+            _SCANNER_RESP_CACHE = results
+            _SCANNER_RESP_CACHE_AT = now
 
         return ScannerResponse(status="ok", count=len(results), stocks=results)
 
@@ -495,6 +616,9 @@ async def get_stock_dna(
             or "setup_signals" not in stored
             or "setup_horizon_days" not in stored
             or "signal_stats" not in stored
+            or "window_profiles" not in stored
+            or "setup_examples" not in stored
+            or "default_window_days" not in stored
         )
     )
 
@@ -529,23 +653,10 @@ async def get_stock_dna(
         )
 
     # 3. Build response from stored DNA dict
-    profiles: List[ThresholdProfileResponse] = []
-    for tp in stored.get("profiles_by_threshold", []):
-        hits = tp.get("occurrences", 0)
-        total_setups = tp.get("sample_count", stored.get("total_events_studied", 0))
-        profiles.append(ThresholdProfileResponse(
-            threshold_pct=tp.get("threshold_pct", 0),
-            success_rate=tp.get("success_rate", 0),
-            sample_count=hits,
-            total_count=total_setups,
-            hits=hits,
-            total_setups=total_setups,
-            median_bars_to_hit=tp.get("median_bars_to_hit"),
-            avg_win_pct=tp.get("avg_gain_on_hits_pct", tp.get("avg_gain_pct", tp.get("avg_win_pct"))),
-            avg_loss_pct=tp.get("avg_loss_pct"),
-            avg_gain_all_pct=tp.get("avg_gain_all_pct"),
-            avg_gain_on_hits_pct=tp.get("avg_gain_on_hits_pct", tp.get("avg_gain_pct", tp.get("avg_win_pct"))),
-        ))
+    profiles: List[ThresholdProfileResponse] = [
+        _build_threshold_profile_response(tp, stored.get("total_events_studied", 0))
+        for tp in stored.get("profiles_by_threshold", [])
+    ]
 
     signal_stats: List[SignalReliabilityResponse] = []
     setup_signal_stats = stored.get("signal_stats", [])
@@ -586,15 +697,43 @@ async def get_stock_dna(
     if most_reliable and isinstance(most_reliable[0], dict):
         most_reliable = [s.signal for s in signal_stats]
 
+    window_profiles = [
+        _build_window_profile_response(window_profile)
+        for window_profile in stored.get("window_profiles", [])
+    ]
+    if not window_profiles and stored.get("setup_horizon_days"):
+        window_profiles = [
+            DNAWindowProfileResponse(
+                horizon_days=stored.get("setup_horizon_days", 0),
+                setup_count=stored.get("total_events_studied", 0),
+                history_status=stored.get("history_status", "ok"),
+                confidence_floor=stored.get("confidence_floor", 20),
+                confidence_tier="ESTABLISHED" if stored.get("history_status") != "INSUFFICIENT_HISTORY" else "TOO_THIN",
+                confidence_label="Established" if stored.get("history_status") != "INSUFFICIENT_HISTORY" else "Too thin",
+                percentages_visible=stored.get("history_status") != "INSUFFICIENT_HISTORY",
+                threshold_profiles=profiles,
+            )
+        ]
+
+    setup_examples = [
+        _build_setup_example_response(setup_example)
+        for setup_example in stored.get("setup_examples", [])
+    ]
+
     dna_response = BehavioralDNAResponse(
         ticker=t,
         total_events_analyzed=stored.get("total_events_studied", 0),
         history_status=stored.get("history_status", "ok"),
         setup_signals=stored.get("setup_signals", []),
         setup_horizon_days=stored.get("setup_horizon_days"),
+        default_window_days=stored.get("default_window_days", stored.get("setup_horizon_days")),
+        available_window_days=stored.get("available_window_days", [stored.get("setup_horizon_days")] if stored.get("setup_horizon_days") else []),
+        confidence_floor=stored.get("confidence_floor", 5),
         most_reliable_signals=most_reliable[:10],
         signal_stats=signal_stats[:10],
         threshold_profiles=profiles,
+        window_profiles=window_profiles,
+        setup_examples=setup_examples,
         dominant_pattern=stored.get("dominant_pattern"),
         computed_at=stored.get("computed_at", datetime.utcnow().date().isoformat()),
     )

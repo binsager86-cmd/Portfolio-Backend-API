@@ -144,15 +144,77 @@ class ThresholdProfileResponse(BaseModel):
     avg_gain_on_hits_pct: Optional[float] = None
 
 
+class DNAWindowProfileResponse(BaseModel):
+    horizon_days: int
+    setup_count: int
+    history_status: str = "ok"
+    confidence_floor: int = 5
+    confidence_tier: str = "TOO_THIN"
+    confidence_label: str = "Too thin"
+    percentages_visible: bool = False
+    threshold_profiles: List[ThresholdProfileResponse] = []
+
+
+class DNASetupObservationResponse(BaseModel):
+    date: str
+    signal: str
+    label: str
+    detail: str
+    value: Optional[float] = None
+
+
+class DNASetupForwardOutcomeResponse(BaseModel):
+    horizon_days: int
+    completed: bool = False
+    max_gain_pct: Optional[float] = None
+    max_gain_date: Optional[str] = None
+    threshold_hits: List[float] = []
+
+
+class DNASetupBarResponse(BaseModel):
+    date: str
+    open: Optional[float] = None
+    high: Optional[float] = None
+    low: Optional[float] = None
+    close: Optional[float] = None
+    volume: Optional[float] = None
+    rel_volume: Optional[float] = None
+    rsi: Optional[float] = None
+    macd_line: Optional[float] = None
+    macd_signal: Optional[float] = None
+    macd_histogram: Optional[float] = None
+    adx: Optional[float] = None
+    plus_di: Optional[float] = None
+    minus_di: Optional[float] = None
+
+
+class DNASetupExampleResponse(BaseModel):
+    setup_date: str
+    setup_window_start_date: str
+    setup_window_end_date: str
+    setup_bar_index: int
+    setup_window_start_index: int
+    setup_window_end_index: int
+    available_forward_bars: int
+    bars: List[DNASetupBarResponse] = []
+    observations: List[DNASetupObservationResponse] = []
+    forward_outcomes: Dict[str, DNASetupForwardOutcomeResponse] = {}
+
+
 class BehavioralDNAResponse(BaseModel):
     ticker: str
     total_events_analyzed: int
     history_status: str = "ok"
     setup_signals: List[str] = []
     setup_horizon_days: Optional[int] = None
+    default_window_days: Optional[int] = None
+    available_window_days: List[int] = []
+    confidence_floor: int = 5
     most_reliable_signals: List[str] = []
     signal_stats: List[SignalReliabilityResponse] = []
     threshold_profiles: List[ThresholdProfileResponse] = []
+    window_profiles: List[DNAWindowProfileResponse] = []
+    setup_examples: List[DNASetupExampleResponse] = []
     dominant_pattern: Optional[str] = None
     computed_at: Optional[str] = None
 
