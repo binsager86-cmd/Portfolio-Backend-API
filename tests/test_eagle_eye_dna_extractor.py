@@ -208,3 +208,87 @@ def test_extract_dna_marks_insufficient_history_when_setup_count_is_too_small():
     assert dna.history_status == "INSUFFICIENT_HISTORY"
     assert dna.total_events_studied == 3
     assert dna.profiles_by_threshold == []
+
+
+def test_extract_dna_builds_multi_window_profiles_and_examples():
+    snapshots = [
+        _snapshot(
+            "e1",
+            threshold_pct=10.0,
+            gain_pct=12.0,
+            signals=[
+                "obv_60d_slope_strongly_positive",
+                "accumulation_above_75",
+                "supertrend_bullish",
+            ],
+        ),
+        _snapshot(
+            "e2",
+            threshold_pct=25.0,
+            gain_pct=30.0,
+            signals=[
+                "obv_60d_slope_strongly_positive",
+                "accumulation_above_75",
+                "supertrend_bullish",
+            ],
+        ),
+        _snapshot(
+            "e3",
+            threshold_pct=50.0,
+            gain_pct=60.0,
+            signals=[
+                "obv_60d_slope_strongly_positive",
+                "accumulation_above_75",
+                "supertrend_bullish",
+            ],
+        ),
+    ]
+
+    indicators_df = pd.DataFrame(
+        [
+            _indicator_row(close=100.0, setup_active=True),
+            _indicator_row(close=105.0, setup_active=False),
+            _indicator_row(close=110.0, setup_active=False),
+            _indicator_row(close=130.0, setup_active=False),
+            _indicator_row(close=100.0, setup_active=True),
+            _indicator_row(close=108.0, setup_active=False),
+            _indicator_row(close=112.0, setup_active=False),
+            _indicator_row(close=118.0, setup_active=False),
+            _indicator_row(close=100.0, setup_active=True),
+            _indicator_row(close=120.0, setup_active=False),
+            _indicator_row(close=140.0, setup_active=False),
+            _indicator_row(close=160.0, setup_active=False),
+            _indicator_row(close=150.0, setup_active=True),
+            _indicator_row(close=148.0, setup_active=False),
+            _indicator_row(close=152.0, setup_active=False),
+            _indicator_row(close=154.0, setup_active=False),
+        ],
+        index=pd.date_range("2024-01-01", periods=16, freq="D"),
+    )
+
+    dna = extract_dna(
+        "TEST",
+        snapshots,
+        [],
+        indicators_df=indicators_df,
+        horizon_days=2,
+        window_days=(2, 4),
+        min_setup_occurrences=4,
+    )
+
+    assert dna is not None
+    assert dna.default_window_days == 2
+    assert dna.available_window_days == [2, 4]
+
+    window_profiles = {profile.horizon_days: profile for profile in dna.window_profiles}
+    assert window_profiles[2].setup_count == 4
+    assert window_profiles[2].percentages_visible is True
+    assert window_profiles[4].setup_count == 4
+    assert window_profiles[4].history_status == "ok"
+
+    assert len(dna.setup_examples) == 3
+    first_example = dna.setup_examples[0]
+    assert first_example.bars
+    assert first_example.forward_outcomes["2"].completed is True
+    assert first_example.forward_outcomes["4"].horizon_days == 4
+    assert first_example.observations

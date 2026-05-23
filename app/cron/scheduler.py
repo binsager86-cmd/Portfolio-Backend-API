@@ -302,8 +302,8 @@ def start_scheduler() -> None:
             run_nightly_recompute(dna_refresh=False, verbose=False)
 
         def _run_eagle_eye_daily() -> None:
-            """Nightly incremental OHLCV fetch + ratings + DNA refresh."""
-            run_nightly_recompute(dna_refresh=True, verbose=False)
+            """Nightly incremental OHLCV fetch + ratings (no DNA — that runs weekly on Sundays)."""
+            run_nightly_recompute(dna_refresh=False, verbose=False)
 
         def _run_eagle_eye_dna() -> None:
             """Weekly full recompute including DNA profiles (Sundays)."""
