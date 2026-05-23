@@ -139,26 +139,51 @@ def _run_analysis(ticker: str) -> Optional[dict]:
             if isinstance(indicators, str):
                 import json
                 indicators = json.loads(indicators)
+            supports = cached_row.get("supports_json") or []
+            resistances = cached_row.get("resistances_json") or []
+            entry = {
+                "entry_primary": cached_row.get("entry_primary"),
+                "entry_aggressive": cached_row.get("entry_aggressive"),
+                "entry_conservative": cached_row.get("entry_conservative"),
+                "plan_state": "ACTIVE",
+                "plan_reason": None,
+                "conditional_entry": None,
+                "stop_loss": cached_row.get("stop_loss"),
+                "tp1": cached_row.get("tp1"),
+                "tp1_probability": cached_row.get("tp1_probability"),
+                "tp2": cached_row.get("tp2"),
+                "tp2_probability": cached_row.get("tp2_probability"),
+                "tp3": cached_row.get("tp3"),
+                "tp3_probability": cached_row.get("tp3_probability"),
+                "risk_reward_ratio": None,
+                "gain_pct_to_tp1": None,
+            }
+            try:
+                from app.services.eagle_eye.adapter import TickerChartAdapter
+                from app.services.eagle_eye.rating_engine import compute_entry_stop_targets
+
+                adapter = TickerChartAdapter()
+                end_d = date.today()
+                start_d = end_d - timedelta(days=_LOOKBACK_YEARS * 365 + 60)
+                df = adapter.get_ohlcv_daily(ticker, start_d, end_d)
+                if df is not None and len(df) >= 30 and isinstance(indicators, dict):
+                    entry = compute_entry_stop_targets(
+                        df,
+                        indicators,
+                        {"supports": supports, "resistances": resistances},
+                        stage=cached_row.get("stage"),
+                    )
+            except Exception as exc:
+                logger.debug("Live trade-plan refresh miss for %s: %s", ticker, exc)
             result = {
                 "ticker": ticker.upper(),
                 "stage": cached_row.get("stage"),
                 "rating": cached_row.get("rating"),
                 "confidence": cached_row.get("confidence"),
                 "thesis": cached_row.get("thesis"),
-                "supports": cached_row.get("supports_json") or [],
-                "resistances": cached_row.get("resistances_json") or [],
-                "entry": {
-                    "entry_primary": cached_row.get("entry_primary"),
-                    "entry_aggressive": cached_row.get("entry_aggressive"),
-                    "entry_conservative": cached_row.get("entry_conservative"),
-                    "stop_loss": cached_row.get("stop_loss"),
-                    "tp1": cached_row.get("tp1"),
-                    "tp1_probability": cached_row.get("tp1_probability"),
-                    "tp2": cached_row.get("tp2"),
-                    "tp2_probability": cached_row.get("tp2_probability"),
-                    "tp3": cached_row.get("tp3"),
-                    "tp3_probability": cached_row.get("tp3_probability"),
-                },
+                "supports": supports,
+                "resistances": resistances,
+                "entry": entry,
                 "indicators": indicators,
                 "days_of_history": cached_row.get("days_of_history"),
                 "computed_at": cached_row.get("computed_at"),
@@ -377,7 +402,7 @@ async def get_stock_analysis(
 
     # Position sizing (optional — only if portfolio_kwd provided)
     pos_size_pct = pos_size_kwd = liq_capped = req_confirm = None
-    if portfolio_kwd > 0:
+    if portfolio_kwd > 0 and et.get("plan_state") == "ACTIVE":
         from app.services.eagle_eye.rating_engine import compute_position_size
         entry_p = et.get("entry_primary", 0.0)
         stop_p = et.get("stop_loss", entry_p * 0.95)
@@ -406,6 +431,9 @@ async def get_stock_analysis(
         entry_primary=et.get("entry_primary"),
         entry_aggressive=et.get("entry_aggressive"),
         entry_conservative=et.get("entry_conservative"),
+        plan_state=et.get("plan_state", "ACTIVE"),
+        plan_reason=et.get("plan_reason"),
+        conditional_entry=et.get("conditional_entry"),
         stop_loss=et.get("stop_loss"),
         tp1=et.get("tp1"),
         tp1_probability=et.get("tp1_probability"),
@@ -413,6 +441,8 @@ async def get_stock_analysis(
         tp2_probability=et.get("tp2_probability"),
         tp3=et.get("tp3"),
         tp3_probability=et.get("tp3_probability"),
+        risk_reward_ratio=et.get("risk_reward_ratio"),
+        gain_pct_to_tp1=et.get("gain_pct_to_tp1"),
         position_size_pct=pos_size_pct,
         position_size_kwd=pos_size_kwd,
         liquidity_capped=liq_capped,

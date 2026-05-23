@@ -83,6 +83,9 @@ class FullStockAnalysis(BaseModel):
     entry_primary: Optional[float] = None
     entry_aggressive: Optional[float] = None
     entry_conservative: Optional[float] = None
+    plan_state: str = "ACTIVE"
+    plan_reason: Optional[str] = None
+    conditional_entry: Optional[float] = None
     stop_loss: Optional[float] = None
     tp1: Optional[float] = None
     tp1_probability: Optional[float] = None
@@ -90,6 +93,8 @@ class FullStockAnalysis(BaseModel):
     tp2_probability: Optional[float] = None
     tp3: Optional[float] = None
     tp3_probability: Optional[float] = None
+    risk_reward_ratio: Optional[float] = None
+    gain_pct_to_tp1: Optional[float] = None
 
     # Position sizing
     position_size_pct: Optional[float] = None

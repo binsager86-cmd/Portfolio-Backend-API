@@ -324,30 +324,209 @@ def compute_entry_stop_targets(
     atr_v = _safe(indicators.get("atr"), current_close * 0.02)
     supports = support_resistance.get("supports", [])
     resistances = support_resistance.get("resistances", [])
+    min_favorable_rr = 1.8
+    max_conditional_pullback = max(2.5 * atr_v, current_close * 0.12)
+
+    bullish_stages = {
+        "STEALTH_ACCUMULATION",
+        "EARLY_BREAKOUT",
+        "MARKUP_TRENDING",
+        "ACCELERATION_CLIMAX",
+        "CAPITULATION_EXHAUSTION",
+    }
+
+    stale_support_gap = max(1.5 * atr_v, current_close * 0.08)
+
+    def _nearest_support_below(price: float) -> Optional[float]:
+        candidates = [float(item["price"]) for item in supports if float(item["price"]) < price]
+        return max(candidates) if candidates else None
+
+    def _nearest_resistance_above(price: float, floor: float, cap: float) -> Optional[float]:
+        for res in resistances:
+            res_price = float(res["price"])
+            if price + floor <= res_price <= price + cap:
+                return res_price
+        return None
+
+    def _sanitize_tp1(entry_price: float, stop_price: float, candidate_tp1: float) -> Tuple[Optional[float], List[str]]:
+        if entry_price <= 0 or stop_price <= 0 or stop_price >= entry_price:
+            return None, ["invalid_risk"]
+        risk = entry_price - stop_price
+        rr_cap_price = entry_price + risk * 10.0
+        gain_cap_price = entry_price * 1.60
+        capped_tp1 = min(candidate_tp1, rr_cap_price, gain_cap_price)
+        reasons: List[str] = []
+        if candidate_tp1 > rr_cap_price + 1e-9:
+            reasons.append("rr_cap")
+        if candidate_tp1 > gain_cap_price + 1e-9:
+            reasons.append("gain_cap")
+        if capped_tp1 <= entry_price:
+            reasons.append("non_positive_reward")
+            return None, reasons
+        return capped_tp1, reasons
+
+    def _compute_stop(entry_price: float) -> Optional[float]:
+        stop_from_atr = entry_price - 1.75 * atr_v
+        nearest_support_below_entry = _nearest_support_below(entry_price)
+        stop_candidates = [stop_from_atr]
+        if nearest_support_below_entry is not None:
+            stop_candidates.append(nearest_support_below_entry * 0.99)
+        valid_candidates = [candidate for candidate in stop_candidates if candidate < entry_price]
+        if not valid_candidates:
+            return None
+        stop_price = max(valid_candidates)
+        min_stop_gap = max(0.75 * atr_v, entry_price * 0.02)
+        if entry_price - stop_price < min_stop_gap:
+            stop_price = entry_price - min_stop_gap
+        return stop_price
+
+    def _build_plan(
+        entry_price: float,
+        *,
+        tp1_override: Optional[float] = None,
+        plan_state: str = "ACTIVE",
+    ) -> Optional[Dict[str, Any]]:
+        stop_price = _compute_stop(entry_price)
+        if stop_price is None or stop_price >= entry_price:
+            return None
+
+        tp1_floor_mult = STAGE_TP1_ATR_FLOORS.get(stage, 1.5)
+        tp1_cap_mult = STAGE_TP1_ATR_CAPS.get(stage, 3.0)
+        min_tp1 = entry_price + tp1_floor_mult * atr_v
+        max_tp1 = entry_price + tp1_cap_mult * atr_v
+
+        raw_tp1_source = "override"
+        if tp1_override is not None and tp1_override > entry_price:
+            raw_tp1 = tp1_override
+        else:
+            raw_tp1 = _nearest_resistance_above(entry_price, tp1_floor_mult * atr_v, tp1_cap_mult * atr_v)
+            if raw_tp1 is None:
+                raw_tp1 = min_tp1
+                raw_tp1_source = "atr_floor"
+            else:
+                raw_tp1_source = "resistance"
+
+        tp1_price, sanitize_reasons = _sanitize_tp1(entry_price, stop_price, float(raw_tp1))
+        if tp1_price is None:
+            return None
+
+        risk = entry_price - stop_price
+        reward = tp1_price - entry_price
+        if risk <= 0 or reward <= 0:
+            return None
+
+        rr_value = reward / risk
+        gain_pct = (reward / entry_price) * 100.0 if entry_price > 0 else None
+
+        tp2_price = None
+        for res in resistances:
+            res_price = float(res["price"])
+            if res_price > tp1_price * 1.005:
+                tp2_price = res_price
+                break
+        if tp2_price is None:
+            tp2_price = tp1_price + atr_v
+        tp2_price = max(tp2_price, tp1_price + 0.75 * atr_v)
+
+        if len(df) >= 60:
+            recent_range = df["high"].tail(60).max() - df["low"].tail(60).min()
+            breakout_base = df["high"].tail(60).max()
+            tp3_price = breakout_base + recent_range
+        else:
+            tp3_price = entry_price * 1.20
+        tp3_price = max(float(tp3_price), tp2_price + atr_v)
+
+        if "rr_cap" in sanitize_reasons or "gain_cap" in sanitize_reasons:
+            tp2_price = min(tp2_price, entry_price * 2.00)
+            tp3_price = min(tp3_price, entry_price * 2.50)
+
+        entry_aggressive_price = current_close if plan_state == "ACTIVE" and momentum_firing else None
+        conservative_support = _nearest_support_below(entry_price)
+        conservative_pullback = entry_price - 0.75 * atr_v
+        if conservative_support is not None:
+            entry_conservative_price = max(conservative_support * 1.002, conservative_pullback)
+        else:
+            entry_conservative_price = conservative_pullback
+        entry_conservative_price = min(entry_price, max(entry_conservative_price, entry_price - 1.5 * atr_v))
+
+        return {
+            "entry_primary": round(entry_price, 4),
+            "entry_aggressive": round(entry_aggressive_price, 4) if entry_aggressive_price is not None else None,
+            "entry_conservative": round(entry_conservative_price, 4),
+            "stop_loss": round(stop_price, 4),
+            "tp1": round(tp1_price, 4),
+            "tp2": round(tp2_price, 4),
+            "tp3": round(tp3_price, 4),
+            "risk_reward_ratio": round(rr_value, 4),
+            "gain_pct_to_tp1": round(gain_pct, 4) if gain_pct is not None else None,
+            "tp1_sanitize_reasons": sanitize_reasons,
+            "raw_tp1": round(float(raw_tp1), 4),
+            "raw_tp1_source": raw_tp1_source,
+        }
+
+    def _declined_plan(reason: str) -> Dict[str, Any]:
+        return {
+            "plan_state": "DECLINED",
+            "plan_reason": reason,
+            "conditional_entry": None,
+            "tp1_sanitize_reasons": [],
+            "entry_primary": None,
+            "entry_aggressive": None,
+            "entry_conservative": None,
+            "stop_loss": None,
+            "tp1": None,
+            "tp1_probability": None,
+            "tp2": None,
+            "tp2_probability": None,
+            "tp3": None,
+            "tp3_probability": None,
+            "risk_reward_ratio": None,
+            "gain_pct_to_tp1": None,
+        }
+
+    def _finalize_plan(
+        *,
+        state: str,
+        reason: Optional[str],
+        plan: Dict[str, Any],
+        conditional_entry: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        tp1_prob = _dna_tp_prob(0, 0.55)
+        tp2_prob = _dna_tp_prob(1, 0.35)
+        tp3_prob = _dna_tp_prob(2, 0.15)
+        return {
+            "plan_state": state,
+            "plan_reason": reason,
+            "conditional_entry": round(conditional_entry, 4) if conditional_entry is not None else None,
+            "tp1_sanitize_reasons": plan.get("tp1_sanitize_reasons", []),
+            "entry_primary": plan["entry_primary"],
+            "entry_aggressive": plan["entry_aggressive"],
+            "entry_conservative": plan["entry_conservative"],
+            "stop_loss": plan["stop_loss"],
+            "tp1": plan["tp1"],
+            "tp1_probability": tp1_prob,
+            "tp2": plan["tp2"],
+            "tp2_probability": tp2_prob,
+            "tp3": plan["tp3"],
+            "tp3_probability": tp3_prob,
+            "risk_reward_ratio": plan["risk_reward_ratio"],
+            "gain_pct_to_tp1": plan["gain_pct_to_tp1"],
+        }
 
     # Entry zones
-    if supports:
-        primary_support = supports[0]["price"]
+    primary_support = float(supports[0]["price"]) if supports else None
+    support_gap = (current_close - primary_support) if primary_support is not None else 0.0
+    if primary_support is not None and not (
+        stage in bullish_stages and support_gap > stale_support_gap
+    ):
         entry_primary = primary_support * 1.005  # slightly above nearest support
     else:
-        entry_primary = current_close
+        entry_primary = max(current_close - 0.35 * atr_v, current_close * 0.985)
 
     # Check if momentum signals are firing
     rsi_v = _safe(indicators.get("rsi"), 50.0)
     macd_h = _safe(indicators.get("macd_histogram"), 0.0)
     momentum_firing = (rsi_v > 50 and macd_h > 0)
-
-    entry_aggressive = current_close if momentum_firing else entry_primary
-    entry_conservative = (supports[1]["price"] if len(supports) > 1
-                          else entry_primary * 0.97)
-
-    # Stop loss: max(entry - 2 * ATR, below nearest strong support)
-    stop_from_atr = entry_primary - 2.0 * atr_v
-    if supports:
-        stop_from_support = supports[0]["price"] * 0.99
-        stop_loss = max(stop_from_atr, stop_from_support)
-    else:
-        stop_loss = stop_from_atr
 
     # TP levels — stage-aware minimum ATR multiple to avoid noise triggering TP1
     # on random days. Without this, nearest resistance is often within 0.3-0.5%
@@ -382,38 +561,6 @@ def compute_entry_stop_targets(
         "MARKDOWN_DECLINE":        20.0,
         "CAPITULATION_EXHAUSTION": 8.0,
     }
-    tp1_floor_mult = STAGE_TP1_ATR_FLOORS.get(stage, 1.5)
-    tp1_cap_mult   = STAGE_TP1_ATR_CAPS.get(stage, 3.0)
-    min_tp1 = current_close + tp1_floor_mult * atr_v
-    max_tp1 = current_close + tp1_cap_mult   * atr_v
-
-    # Use nearest resistance within [floor, cap]; fall back to floor if none found.
-    tp1 = None
-    for res in resistances:
-        if min_tp1 <= res["price"] <= max_tp1:
-            tp1 = res["price"]
-            break
-    if tp1 is None:
-        tp1 = min_tp1  # ATR-floor fallback
-
-    # TP2: next resistance beyond TP1, or TP1 + 1×ATR
-    tp2 = None
-    for res in resistances:
-        if res["price"] > tp1 * 1.005:  # at least 0.5% beyond TP1
-            tp2 = res["price"]
-            break
-    if tp2 is None:
-        tp2 = tp1 + atr_v
-
-    # TP3: measured-move target — range projected from breakout
-    if len(df) >= 60:
-        recent_range = df["high"].tail(60).max() - df["low"].tail(60).min()
-        breakout_base = df["high"].tail(60).max()
-        tp3 = breakout_base + recent_range
-    else:
-        tp3 = entry_primary * 1.20
-
-    # Probabilities — from DNA if available, else conservative defaults
     def _dna_tp_prob(threshold_index: int, default: float) -> float:
         if dna is None:
             return default
@@ -428,22 +575,58 @@ def compute_entry_stop_targets(
             pass
         return default
 
-    tp1_prob = _dna_tp_prob(0, 0.55)
-    tp2_prob = _dna_tp_prob(1, 0.35)
-    tp3_prob = _dna_tp_prob(2, 0.15)
+    current_plan = _build_plan(entry_primary)
+    if current_plan is None:
+        return _declined_plan("No favorable entry at current price — reward does not justify risk here.")
 
-    return {
-        "entry_primary":    round(entry_primary, 4),
-        "entry_aggressive": round(entry_aggressive, 4),
-        "entry_conservative": round(entry_conservative, 4),
-        "stop_loss":        round(stop_loss, 4),
-        "tp1":              round(tp1, 4),
-        "tp1_probability":  tp1_prob,
-        "tp2":              round(tp2, 4),
-        "tp2_probability":  tp2_prob,
-        "tp3":              round(tp3, 4),
-        "tp3_probability":  tp3_prob,
-    }
+    if current_plan["risk_reward_ratio"] >= min_favorable_rr:
+        return _finalize_plan(
+            state="ACTIVE",
+            reason=None,
+            plan=current_plan,
+        )
+
+    candidate_entries: List[float] = []
+    conservative_candidate = min(entry_primary, max(current_close - 0.75 * atr_v, current_close * 0.97))
+    if conservative_candidate < current_close:
+        candidate_entries.append(conservative_candidate)
+    for support in supports:
+        support_price = float(support["price"]) * 1.005
+        if support_price < current_close:
+            candidate_entries.append(support_price)
+
+    conditional_plan = None
+    seen_candidates = set()
+    for candidate_entry in sorted(candidate_entries, reverse=True):
+        if current_close - candidate_entry > max_conditional_pullback:
+            continue
+        key = round(candidate_entry, 4)
+        if key in seen_candidates:
+            continue
+        seen_candidates.add(key)
+        candidate_plan = _build_plan(
+            candidate_entry,
+            tp1_override=current_plan["raw_tp1"],
+            plan_state="CONDITIONAL",
+        )
+        if candidate_plan is None:
+            continue
+        if candidate_plan["risk_reward_ratio"] >= min_favorable_rr:
+            conditional_plan = candidate_plan
+            break
+
+    if conditional_plan is not None:
+        conditional_plan["entry_aggressive"] = None
+        return _finalize_plan(
+            state="CONDITIONAL",
+            reason="Setup forms on a pullback — current price is extended relative to the first target.",
+            plan=conditional_plan,
+            conditional_entry=conditional_plan["entry_primary"],
+        )
+
+    return _declined_plan(
+        "No favorable entry at current price — reward does not justify risk here. Waiting for a better setup.",
+    )
 
 
 # ---------------------------------------------------------------------------
