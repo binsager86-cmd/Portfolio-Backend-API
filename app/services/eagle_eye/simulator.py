@@ -27,6 +27,10 @@ MAX_OPEN_POSITIONS = 10         # per strategy
 SECTOR_CAP_PCT = 35.0           # max sector exposure %
 TIME_STOP_TRADING_DAYS = 30     # close after 30 trading days if no exit hit
 SCALE_OUT_FRACTION = 0.33       # fraction of remaining shares to close at TP1/TP2
+ADTV_LOOKBACK_DAYS = 20         # rolling lookback for liquidity cap
+MAX_PARTICIPATION_RATE = 0.10   # max 10% of average daily traded value
+
+KUWAIT_TRADING_WEEKDAYS = {6, 0, 1, 2, 3}  # Sun-Thu using Python weekday()
 
 # Stage sets
 BEARISH_STAGES = {"DISTRIBUTION_TOPPING", "MARKDOWN_DECLINE"}
@@ -114,6 +118,37 @@ def _query_val(sql: str, params: tuple = ()):
 
 def _now_ts() -> str:
     return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+
+
+_MARKET_TIER_CACHE: Optional[dict[str, str]] = None
+
+
+def _normalize_market_tier(market_tier: Optional[str]) -> str:
+    tier = (market_tier or "PREMIER").strip().upper()
+    if tier not in {"PREMIER", "MAIN", "AUCTION"}:
+        return "PREMIER"
+    return tier
+
+
+def _load_market_tier_cache() -> dict[str, str]:
+    global _MARKET_TIER_CACHE
+    if _MARKET_TIER_CACHE is None:
+        from app.services.eagle_eye.adapter import TickerChartAdapter
+
+        adapter = TickerChartAdapter()
+        _MARKET_TIER_CACHE = {
+            stock.ticker.upper(): _normalize_market_tier(stock.market_tier)
+            for stock in adapter.list_stocks()
+        }
+    return _MARKET_TIER_CACHE
+
+
+def _next_trading_day(date_str: str) -> str:
+    current = date.fromisoformat(date_str)
+    while True:
+        current += timedelta(days=1)
+        if current.weekday() in KUWAIT_TRADING_WEEKDAYS:
+            return current.isoformat()
 
 
 # ── Portfolio state helpers ──────────────────────────────────────────────────
@@ -225,6 +260,21 @@ def _sector_exposure_pct(portfolio_id: int, sector: str, portfolio_value: float)
 class SimulatorEngine:
     """Runs daily after the Eagle Eye rating recompute."""
 
+    def _assert_live_forward_date(self, as_of_date: Optional[date | str]) -> str:
+        if isinstance(as_of_date, date):
+            target_date = as_of_date
+        elif isinstance(as_of_date, str) and as_of_date:
+            target_date = date.fromisoformat(as_of_date)
+        else:
+            target_date = date.today()
+
+        today = date.today()
+        if target_date != today:
+            raise ValueError(
+                "historical replay disabled: no point-in-time ratings available — look-ahead unsafe"
+            )
+        return target_date.isoformat()
+
     def run_daily(self, run_date: Optional[date] = None) -> Dict[str, Any]:
         """
         Called once per trading day after market close.
@@ -237,7 +287,7 @@ class SimulatorEngine:
         if run_date is None:
             run_date = date.today()
 
-        date_str = run_date.isoformat()
+        date_str = self._assert_live_forward_date(run_date)
         results: Dict[str, Any] = {}
 
         for strategy in STRATEGIES:
@@ -246,17 +296,33 @@ class SimulatorEngine:
                 logger.warning("Simulator: portfolio %d not found, skipping", strategy.portfolio_id)
                 continue
             try:
+                filled_exits = self._execute_pending_exit_orders(strategy, date_str)
+                portfolio = _get_portfolio(strategy.portfolio_id) or portfolio
+                filled_entries = self._execute_pending_entry_orders(strategy, date_str)
+                portfolio = _get_portfolio(strategy.portfolio_id) or portfolio
                 exits = self._process_exits(strategy, portfolio, date_str)
-                entries = self._process_entries(strategy, portfolio, date_str)
-                self._snapshot_portfolio(strategy, portfolio, date_str)
+                portfolio = _get_portfolio(strategy.portfolio_id) or portfolio
+                entries, liquidity_summary = self._process_entries(strategy, portfolio, date_str)
+                snapshot = self._snapshot_portfolio(strategy, portfolio, date_str)
                 results[strategy.name] = {
+                    "filled_exits": filled_exits,
+                    "filled_entries": filled_entries,
                     "exits": exits,
                     "entries": entries,
                     "date": date_str,
+                    "liquidity_shrink_count": liquidity_summary["liquidity_shrink_count"],
+                    "liquidity_skip_count": liquidity_summary["liquidity_skip_count"],
+                    "max_drawdown_pct": snapshot["drawdown_from_peak_pct"],
+                    "total_value_kwd": snapshot["total_value_kwd"],
                 }
                 logger.info(
-                    "Simulator %s [%s]: %d exits, %d entries",
-                    strategy.name, date_str, len(exits), len(entries),
+                    "Simulator %s [%s]: %d filled exits, %d filled entries, %d exit signals, %d entry signals",
+                    strategy.name,
+                    date_str,
+                    len(filled_exits),
+                    len(filled_entries),
+                    len(exits),
+                    len(entries),
                 )
             except Exception as exc:
                 logger.exception("Simulator %s failed for %s: %s", strategy.name, date_str, exc)
@@ -271,9 +337,12 @@ class SimulatorEngine:
         closed = []
 
         for pos in open_positions:
-            ohlcv = _get_ohlcv_near(pos["ticker"], date_str)
+            if self._has_pending_exit(pos["id"]):
+                continue
+
+            ohlcv = _get_ohlcv(pos["ticker"], date_str)
             if ohlcv is None:
-                # No price data — skip exit check
+                # No same-day bar — do not infer from nearby dates.
                 continue
 
             h = float(ohlcv["high"] or 0)
@@ -293,53 +362,63 @@ class SimulatorEngine:
 
             exit_triggered = False
 
-            # 1. Stop loss — triggered only when close price is at/below stop
-            #    (avoids false stops from intraday noise that recovers by close)
-            if stop > 0 and c <= stop:
-                self._close_position(pos, portfolio, c, "STOP_HIT", date_str, days_held)
+            # 1. Stop loss
+            #    Exception to next-day-open fills: if the bar traded through the stop,
+            #    we fill at the stop price on the same bar.
+            if stop > 0 and l <= stop:
+                self._close_position(pos, portfolio, stop, "STOP_HIT", date_str, days_held)
                 closed.append({"ticker": pos["ticker"], "reason": "STOP_HIT"})
                 exit_triggered = True
 
-            # 2. TP3 (full close)
+            # 2. TP3 (full close next day open)
             elif tp3 > 0 and h >= tp3:
-                self._close_position(pos, portfolio, tp3, "TP3_HIT", date_str, days_held)
-                closed.append({"ticker": pos["ticker"], "reason": "TP3_HIT"})
+                scheduled_date = _next_trading_day(date_str)
+                self._queue_exit_order(pos, 1.0, "TP3_HIT", date_str, scheduled_date)
+                closed.append({"ticker": pos["ticker"], "reason": "TP3_HIT", "scheduled_date": scheduled_date})
                 exit_triggered = True
 
-            # 3. TP2 (scale out 33%)
+            # 3. TP2 (scale out 33% next day open)
             elif tp2 > 0 and h >= tp2 and not tp2_hit:
-                self._partial_close(pos, portfolio, tp2, SCALE_OUT_FRACTION, "TP2_HIT", date_str)
-                closed.append({"ticker": pos["ticker"], "reason": "TP2_HIT_PARTIAL"})
+                scheduled_date = _next_trading_day(date_str)
+                self._queue_exit_order(pos, SCALE_OUT_FRACTION, "TP2_HIT", date_str, scheduled_date)
+                closed.append({"ticker": pos["ticker"], "reason": "TP2_HIT_PARTIAL", "scheduled_date": scheduled_date})
+                exit_triggered = True
 
-            # 4. TP1 (scale out 33%)
+            # 4. TP1 (scale out 33% next day open)
             elif tp1 > 0 and h >= tp1 and not tp1_hit:
-                self._partial_close(pos, portfolio, tp1, SCALE_OUT_FRACTION, "TP1_HIT", date_str)
-                closed.append({"ticker": pos["ticker"], "reason": "TP1_HIT_PARTIAL"})
+                scheduled_date = _next_trading_day(date_str)
+                self._queue_exit_order(pos, SCALE_OUT_FRACTION, "TP1_HIT", date_str, scheduled_date)
+                closed.append({"ticker": pos["ticker"], "reason": "TP1_HIT_PARTIAL", "scheduled_date": scheduled_date})
+                exit_triggered = True
 
             if exit_triggered:
                 continue
 
             # 5. Stage transition to bearish
             if not exit_triggered:
-                current_rating = self._get_current_rating(pos["ticker"])
+                current_rating = self._get_current_rating(pos["ticker"], date_str)
                 if (current_rating
                         and current_rating.get("stage") in BEARISH_STAGES
                         and pos.get("entry_stage") in {"EARLY_BREAKOUT", "MARKUP_TRENDING"}):
-                    self._close_position(pos, portfolio, c, "STAGE_TRANSITION", date_str, days_held)
-                    closed.append({"ticker": pos["ticker"], "reason": "STAGE_TRANSITION"})
+                    scheduled_date = _next_trading_day(date_str)
+                    self._queue_exit_order(pos, 1.0, "STAGE_TRANSITION", date_str, scheduled_date)
+                    closed.append({"ticker": pos["ticker"], "reason": "STAGE_TRANSITION", "scheduled_date": scheduled_date})
                     exit_triggered = True
 
             # 6. Time stop
             if not exit_triggered and days_held >= TIME_STOP_TRADING_DAYS:
-                self._close_position(pos, portfolio, c, "TIME_STOP", date_str, days_held)
-                closed.append({"ticker": pos["ticker"], "reason": "TIME_STOP"})
+                scheduled_date = _next_trading_day(date_str)
+                self._queue_exit_order(pos, 1.0, "TIME_STOP", date_str, scheduled_date)
+                closed.append({"ticker": pos["ticker"], "reason": "TIME_STOP", "scheduled_date": scheduled_date})
 
         return closed
 
     # ── Entries ──────────────────────────────────────────────────────────
 
-    def _process_entries(self, strategy: StrategyConfig, portfolio: dict, date_str: str) -> list:
+    def _process_entries(self, strategy: StrategyConfig, portfolio: dict, date_str: str) -> tuple[list, dict[str, int]]:
         opened = []
+        liquidity_shrink_count = 0
+        liquidity_skip_count = 0
         # Re-read portfolio after exits may have freed cash
         portfolio = _get_portfolio(strategy.portfolio_id) or portfolio
         todays_ratings = self._get_todays_ratings(date_str)
@@ -358,7 +437,7 @@ class SimulatorEngine:
 
             # Use actual market price from OHLCV cache (not stale rating target)
             ticker = (rating.get("ticker") or "").upper()
-            ohlcv = _get_ohlcv_near(ticker, date_str)
+            ohlcv = _get_ohlcv(ticker, date_str)
             if ohlcv is None:
                 self._log_considered(strategy.portfolio_id, date_str, rating, "NO_PRICE_DATA")
                 self._try_log_ml_signal(ticker, date_str, rating, would_have_entered=True, skip_reason="NO_PRICE_DATA")
@@ -370,25 +449,86 @@ class SimulatorEngine:
                 continue
 
             portfolio_value = float(portfolio.get("total_value_kwd") or 10000)
-            position_size_kwd = self._compute_position_size(rating, portfolio_value, actual_price, date_str)
-            if position_size_kwd < MIN_TRADE_SIZE_KWD:
+            requested_size_kwd = self._compute_position_size(rating, portfolio_value, actual_price, date_str)
+            if requested_size_kwd < MIN_TRADE_SIZE_KWD:
                 self._log_considered(strategy.portfolio_id, date_str, rating, "POSITION_TOO_SMALL")
                 self._try_log_ml_signal(ticker, date_str, rating, would_have_entered=True, skip_reason="POSITION_TOO_SMALL")
                 continue
 
             cash = float(portfolio.get("cash_balance_kwd") or 0)
-            if position_size_kwd > cash:
-                position_size_kwd = cash  # use all available cash if smaller
-            if position_size_kwd < MIN_TRADE_SIZE_KWD:
+            reserved_cash = self._pending_entry_reserved_cash(strategy.portfolio_id)
+            available_cash = max(0.0, cash - reserved_cash)
+            if requested_size_kwd > available_cash:
+                requested_size_kwd = available_cash
+            if requested_size_kwd < MIN_TRADE_SIZE_KWD:
                 self._log_considered(strategy.portfolio_id, date_str, rating, "INSUFFICIENT_CASH")
                 self._try_log_ml_signal(ticker, date_str, rating, would_have_entered=True, skip_reason="INSUFFICIENT_CASH")
                 continue
 
-            self._open_position(strategy, rating, portfolio, position_size_kwd, date_str, actual_price)
-            self._try_log_ml_signal(ticker, date_str, rating, would_have_entered=True, skip_reason=None)
-            opened.append({"ticker": ticker, "size_kwd": position_size_kwd})
+            adtv_kwd = self._average_daily_traded_value_kwd(ticker, date_str)
+            liquidity_cap_kwd = round(adtv_kwd * MAX_PARTICIPATION_RATE, 4) if adtv_kwd > 0 else 0.0
+            approved_size_kwd = requested_size_kwd
+            if liquidity_cap_kwd < MIN_TRADE_SIZE_KWD:
+                liquidity_skip_count += 1
+                logger.info(
+                    "Simulator %s [%s] skip %s liquidity: requested=%.4f allowed=%.4f adtv=%.4f",
+                    strategy.name,
+                    date_str,
+                    ticker,
+                    requested_size_kwd,
+                    liquidity_cap_kwd,
+                    adtv_kwd,
+                )
+                self._log_considered(strategy.portfolio_id, date_str, rating, "LIQUIDITY_CAP_TOO_SMALL")
+                self._try_log_ml_signal(
+                    ticker,
+                    date_str,
+                    rating,
+                    would_have_entered=True,
+                    skip_reason="LIQUIDITY_CAP_TOO_SMALL",
+                )
+                continue
+            if approved_size_kwd > liquidity_cap_kwd:
+                approved_size_kwd = liquidity_cap_kwd
+                liquidity_shrink_count += 1
+                logger.info(
+                    "Simulator %s [%s] shrink %s liquidity: requested=%.4f allowed=%.4f adtv=%.4f",
+                    strategy.name,
+                    date_str,
+                    ticker,
+                    requested_size_kwd,
+                    approved_size_kwd,
+                    adtv_kwd,
+                )
 
-        return opened
+            scheduled_date = _next_trading_day(date_str)
+            self._queue_entry_order(
+                strategy,
+                rating,
+                requested_size_kwd=requested_size_kwd,
+                approved_size_kwd=approved_size_kwd,
+                signal_date=date_str,
+                scheduled_date=scheduled_date,
+                signal_price=actual_price,
+                avg_daily_traded_value_kwd=adtv_kwd,
+                liquidity_cap_kwd=liquidity_cap_kwd,
+            )
+            self._try_log_ml_signal(ticker, date_str, rating, would_have_entered=True, skip_reason=None)
+            opened.append(
+                {
+                    "ticker": ticker,
+                    "requested_size_kwd": round(requested_size_kwd, 4),
+                    "approved_size_kwd": round(approved_size_kwd, 4),
+                    "signal_date": date_str,
+                    "scheduled_entry_date": scheduled_date,
+                    "signal_close": round(actual_price, 6),
+                }
+            )
+
+        return opened, {
+            "liquidity_shrink_count": liquidity_shrink_count,
+            "liquidity_skip_count": liquidity_skip_count,
+        }
 
     # ── Evaluation ───────────────────────────────────────────────────────
 
@@ -406,15 +546,18 @@ class SimulatorEngine:
             return _skip("STAGE_NOT_ALLOWED")
         if self._already_holding(strategy.portfolio_id, ticker):
             return _skip("ALREADY_HOLDING")
+        if self._has_pending_entry(strategy.portfolio_id, ticker):
+            return _skip("ALREADY_PENDING_ENTRY")
         if self._recently_stopped_out(strategy.portfolio_id, ticker, date_str):
             return _skip("RECENTLY_STOPPED_OUT")
 
         cash = float(portfolio.get("cash_balance_kwd") or 0)
-        if cash < MIN_TRADE_SIZE_KWD:
+        available_cash = max(0.0, cash - self._pending_entry_reserved_cash(strategy.portfolio_id))
+        if available_cash < MIN_TRADE_SIZE_KWD:
             return _skip("INSUFFICIENT_CASH")
 
         open_positions = _get_open_positions(strategy.portfolio_id)
-        if len(open_positions) >= MAX_OPEN_POSITIONS:
+        if len(open_positions) + self._pending_entry_count(strategy.portfolio_id) >= MAX_OPEN_POSITIONS:
             return _skip("MAX_POSITIONS_REACHED")
 
         portfolio_value = float(portfolio.get("total_value_kwd") or 10000)
@@ -490,9 +633,11 @@ class SimulatorEngine:
         rating: dict,
         portfolio: dict,
         size_kwd: float,
-        date_str: str,
+        entry_date: str,
         actual_price: float = 0,
-    ) -> None:
+        signal_date: Optional[str] = None,
+        market_tier: Optional[str] = None,
+    ) -> dict:
         entry_primary = float(rating.get("entry_primary") or rating.get("last_price") or 0)
         stop_from_rating = float(rating.get("stop_loss") or 0)
         tp1_from_rating = float(rating.get("tp1") or 0)
@@ -513,7 +658,7 @@ class SimulatorEngine:
 
         # ATR-based stop (2.5× ATR) — wider than rating %, absorbs noise
         ticker_for_atr = (rating.get("ticker") or "").upper()
-        atr = _compute_atr(ticker_for_atr, date_str) if (ticker_for_atr and date_str) else None
+        atr = _compute_atr(ticker_for_atr, entry_date) if (ticker_for_atr and entry_date) else None
         if atr and atr > 0:
             planned_stop = entry_price - (2.5 * atr)
             if planned_stop <= 0:
@@ -525,8 +670,11 @@ class SimulatorEngine:
         planned_tp3 = _rescale_level(tp3_from_rating, is_stop=False) if tp3_from_rating > 0 else 0
 
         shares = round(size_kwd / entry_price, 4)
+        actual_notional = round(shares * entry_price, 4)
+        tier = self._market_tier_for_ticker(ticker_for_atr, rating, market_tier)
+        entry_costs = self._leg_cost_breakdown(actual_notional, tier)
         portfolio_value = float(portfolio.get("total_value_kwd") or 10000)
-        size_pct = (size_kwd / portfolio_value * 100) if portfolio_value > 0 else 0
+        size_pct = (actual_notional / portfolio_value * 100) if portfolio_value > 0 else 0
 
         indicators = rating.get("indicators_json") or {}
         if isinstance(indicators, str):
@@ -547,7 +695,7 @@ class SimulatorEngine:
         _exec(
             """
             INSERT INTO simulator_positions (
-                portfolio_id, ticker, status, entry_date, entry_price,
+                portfolio_id, ticker, status, signal_date, entry_date, entry_price,
                 shares, shares_remaining, size_kwd, size_pct_of_portfolio,
                 entry_confidence, entry_stage, entry_rating, entry_thesis,
                 entry_signal_breakdown, entry_accumulation_score, entry_indicators_snapshot,
@@ -555,9 +703,11 @@ class SimulatorEngine:
                 tp1_hit, tp2_hit,
                 max_unrealized_gain_pct, max_unrealized_loss_pct,
                 entry_relative_volume,
+                entry_market_tier, entry_cost_kwd, exit_cost_kwd, total_cost_kwd,
+                realized_pnl_kwd, commission_paid_kwd, slippage_paid_kwd,
                 created_at, updated_at
             ) VALUES (
-                ?, ?, 'OPEN', ?, ?,
+                ?, ?, 'OPEN', ?, ?, ?,
                 ?, ?, ?, ?,
                 ?, ?, ?, ?,
                 ?, ?, ?,
@@ -565,17 +715,19 @@ class SimulatorEngine:
                 0, 0,
                 0.0, 0.0,
                 ?,
+                ?, ?, 0.0, ?, ?, ?, ?,
                 ?, ?
             )
             """,
             (
                 strategy.portfolio_id,
                 rating.get("ticker", "").upper(),
-                date_str,
+                signal_date or entry_date,
+                entry_date,
                 round(entry_price, 6),
                 shares,
                 shares,  # shares_remaining starts equal to shares
-                round(size_kwd, 4),
+                actual_notional,
                 round(size_pct, 4),
                 float(rating.get("confidence") or 0),
                 rating.get("stage") or "",
@@ -589,17 +741,35 @@ class SimulatorEngine:
                 round(planned_tp2, 6),
                 round(planned_tp3, 6),
                 float((rating.get("volume_context") or {}).get("relative_volume") or 1.0),
+                tier,
+                round(entry_costs["total_cost_kwd"], 4),
+                round(entry_costs["total_cost_kwd"], 4),
+                round(-entry_costs["total_cost_kwd"], 4),
+                round(entry_costs["commission_kwd"], 4),
+                round(entry_costs["slippage_kwd"], 4),
                 _now_ts(),
                 _now_ts(),
             ),
         )
 
-        # Deduct cash
-        new_cash = float(portfolio.get("cash_balance_kwd") or 0) - size_kwd
+        # Deduct cash including entry-leg costs.
+        new_cash = float(portfolio.get("cash_balance_kwd") or 0) - actual_notional - entry_costs["total_cost_kwd"]
         _exec(
             "UPDATE simulator_portfolios SET cash_balance_kwd = ?, updated_at = ? WHERE id = ?",
             (round(new_cash, 4), _now_ts(), strategy.portfolio_id),
         )
+
+        return {
+            "ticker": ticker_for_atr,
+            "signal_date": signal_date or entry_date,
+            "entry_date": entry_date,
+            "entry_price": round(entry_price, 6),
+            "size_kwd": actual_notional,
+            "entry_cost_kwd": round(entry_costs["total_cost_kwd"], 4),
+            "commission_kwd": round(entry_costs["commission_kwd"], 4),
+            "slippage_kwd": round(entry_costs["slippage_kwd"], 4),
+            "market_tier": tier,
+        }
 
     # ── Close position (full) ────────────────────────────────────────────
 
@@ -614,33 +784,47 @@ class SimulatorEngine:
     ) -> None:
         shares_remaining = float(pos.get("shares_remaining") or pos.get("shares") or 0)
         entry_price = float(pos.get("entry_price") or 0)
-        size_kwd = float(pos.get("size_kwd") or 0)
+        prior_realized_pnl = float(pos.get("realized_pnl_kwd") or pos.get("pnl_kwd") or 0)
+        prior_exit_cost = float(pos.get("exit_cost_kwd") or 0)
+        prior_commission = float(pos.get("commission_paid_kwd") or 0)
+        prior_slippage = float(pos.get("slippage_paid_kwd") or 0)
+        tier = self._market_tier_for_ticker(pos.get("ticker"), pos, pos.get("entry_market_tier"))
 
         if entry_price <= 0:
             return
 
-        proceeds = shares_remaining * exit_price
+        gross_proceeds = shares_remaining * exit_price
+        exit_costs = self._leg_cost_breakdown(gross_proceeds, tier)
+        proceeds = gross_proceeds - exit_costs["total_cost_kwd"]
         cost_basis = shares_remaining * entry_price
-        pnl_kwd = proceeds - cost_basis
+        leg_pnl_kwd = proceeds - cost_basis
+        pnl_kwd = prior_realized_pnl + leg_pnl_kwd
         pnl_pct = (pnl_kwd / cost_basis * 100) if cost_basis > 0 else 0
+        exit_cost_total = prior_exit_cost + exit_costs["total_cost_kwd"]
+        total_cost = float(pos.get("entry_cost_kwd") or 0) + exit_cost_total
 
         _exec(
             """
             UPDATE simulator_positions SET
                 status = 'CLOSED', exit_date = ?, exit_price = ?,
                 exit_reason = ?, pnl_kwd = ?, pnl_pct = ?,
+                realized_pnl_kwd = ?, exit_cost_kwd = ?, total_cost_kwd = ?,
+                commission_paid_kwd = ?, slippage_paid_kwd = ?,
                 days_held = ?, updated_at = ?
             WHERE id = ?
             """,
             (
                 date_str, round(exit_price, 6),
                 reason, round(pnl_kwd, 4), round(pnl_pct, 4),
+                round(pnl_kwd, 4), round(exit_cost_total, 4), round(total_cost, 4),
+                round(prior_commission + exit_costs["commission_kwd"], 4),
+                round(prior_slippage + exit_costs["slippage_kwd"], 4),
                 days_held, _now_ts(),
                 pos["id"],
             ),
         )
 
-        # Return cash to portfolio
+        # Return net cash to portfolio after exit-leg costs.
         portfolio_id = pos["portfolio_id"]
         new_cash = float(portfolio.get("cash_balance_kwd") or 0) + proceeds
         _exec(
@@ -662,13 +846,23 @@ class SimulatorEngine:
         shares_remaining = float(pos.get("shares_remaining") or pos.get("shares") or 0)
         entry_price = float(pos.get("entry_price") or 0)
         shares_to_close = round(shares_remaining * fraction, 4)
+        prior_realized_pnl = float(pos.get("realized_pnl_kwd") or pos.get("pnl_kwd") or 0)
+        prior_exit_cost = float(pos.get("exit_cost_kwd") or 0)
+        prior_commission = float(pos.get("commission_paid_kwd") or 0)
+        prior_slippage = float(pos.get("slippage_paid_kwd") or 0)
+        tier = self._market_tier_for_ticker(pos.get("ticker"), pos, pos.get("entry_market_tier"))
 
         if shares_to_close <= 0 or entry_price <= 0:
             return
 
-        proceeds = shares_to_close * exit_price
+        gross_proceeds = shares_to_close * exit_price
+        exit_costs = self._leg_cost_breakdown(gross_proceeds, tier)
+        proceeds = gross_proceeds - exit_costs["total_cost_kwd"]
         cost_basis = shares_to_close * entry_price
         partial_pnl = proceeds - cost_basis
+        total_realized_pnl = prior_realized_pnl + partial_pnl
+        total_exit_cost = prior_exit_cost + exit_costs["total_cost_kwd"]
+        total_cost = float(pos.get("entry_cost_kwd") or 0) + total_exit_cost
 
         new_remaining = shares_remaining - shares_to_close
 
@@ -679,13 +873,27 @@ class SimulatorEngine:
             UPDATE simulator_positions SET
                 shares_remaining = ?,
                 {tp_flag_col} = 1,
+                pnl_kwd = ?, pnl_pct = ?, realized_pnl_kwd = ?,
+                exit_cost_kwd = ?, total_cost_kwd = ?,
+                commission_paid_kwd = ?, slippage_paid_kwd = ?,
                 updated_at = ?
             WHERE id = ?
             """,
-            (round(new_remaining, 4), _now_ts(), pos["id"]),
+            (
+                round(new_remaining, 4),
+                round(total_realized_pnl, 4),
+                round((total_realized_pnl / float(pos.get("size_kwd") or 1)) * 100, 4),
+                round(total_realized_pnl, 4),
+                round(total_exit_cost, 4),
+                round(total_cost, 4),
+                round(prior_commission + exit_costs["commission_kwd"], 4),
+                round(prior_slippage + exit_costs["slippage_kwd"], 4),
+                _now_ts(),
+                pos["id"],
+            ),
         )
 
-        # Return partial proceeds to cash
+        # Return net partial proceeds to cash.
         portfolio_id = pos["portfolio_id"]
         new_cash = float(portfolio.get("cash_balance_kwd") or 0) + proceeds
         _exec(
@@ -714,7 +922,7 @@ class SimulatorEngine:
 
     def _snapshot_portfolio(
         self, strategy: StrategyConfig, portfolio: dict, date_str: str
-    ) -> None:
+    ) -> dict:
         # Re-read fresh portfolio state
         portfolio = _get_portfolio(strategy.portfolio_id) or portfolio
         open_positions = _get_open_positions(strategy.portfolio_id)
@@ -797,6 +1005,16 @@ class SimulatorEngine:
                 ),
             )
 
+        return {
+            "cash_balance_kwd": round(cash, 4),
+            "open_positions_value_kwd": round(open_value, 4),
+            "total_value_kwd": round(total_value, 4),
+            "daily_pnl_kwd": round(daily_pnl, 4),
+            "cumulative_return_pct": round(cumulative_return_pct, 4),
+            "drawdown_from_peak_pct": round(drawdown_pct, 4),
+            "open_position_count": len(open_positions),
+        }
+
     # ── Helpers ──────────────────────────────────────────────────────────
 
     def _already_holding(self, portfolio_id: int, ticker: str) -> bool:
@@ -805,6 +1023,315 @@ class SimulatorEngine:
             (portfolio_id, ticker.upper()),
         )
         return bool(count and int(count) > 0)
+
+    def _has_pending_entry(self, portfolio_id: int, ticker: str) -> bool:
+        count = _query_val(
+            """SELECT COUNT(*) FROM simulator_pending_orders
+               WHERE portfolio_id = ? AND ticker = ? AND order_kind = 'ENTRY' AND status = 'PENDING'""",
+            (portfolio_id, ticker.upper()),
+        )
+        return bool(count and int(count) > 0)
+
+    def _has_pending_exit(self, position_id: int) -> bool:
+        count = _query_val(
+            """SELECT COUNT(*) FROM simulator_pending_orders
+               WHERE position_id = ? AND order_kind = 'EXIT' AND status = 'PENDING'""",
+            (position_id,),
+        )
+        return bool(count and int(count) > 0)
+
+    def _pending_entry_count(self, portfolio_id: int) -> int:
+        count = _query_val(
+            """SELECT COUNT(*) FROM simulator_pending_orders
+               WHERE portfolio_id = ? AND order_kind = 'ENTRY' AND status = 'PENDING'""",
+            (portfolio_id,),
+        )
+        return int(count or 0)
+
+    def _pending_entry_reserved_cash(self, portfolio_id: int) -> float:
+        rows = _query_all(
+            """SELECT approved_size_kwd, market_tier FROM simulator_pending_orders
+               WHERE portfolio_id = ? AND order_kind = 'ENTRY' AND status = 'PENDING'""",
+            (portfolio_id,),
+        )
+        reserved = 0.0
+        for row in rows:
+            approved_size_kwd = float(row.get("approved_size_kwd") or 0.0)
+            if approved_size_kwd <= 0:
+                continue
+            entry_cost = self._leg_cost_breakdown(approved_size_kwd, row.get("market_tier"))["total_cost_kwd"]
+            reserved += approved_size_kwd + entry_cost
+        return reserved
+
+    def _average_daily_traded_value_kwd(self, ticker: str, date_str: str) -> float:
+        rows = _query_all(
+            """SELECT close, volume FROM ee_ohlcv_cache
+               WHERE ticker = ? AND bar_date <= ?
+               ORDER BY bar_date DESC LIMIT ?""",
+            (ticker.upper(), date_str, ADTV_LOOKBACK_DAYS),
+        )
+        if not rows:
+            return 0.0
+        traded_values = [float(r.get("close") or 0) * float(r.get("volume") or 0) for r in rows]
+        traded_values = [value for value in traded_values if value > 0]
+        if not traded_values:
+            return 0.0
+        return sum(traded_values) / len(traded_values)
+
+    def _market_tier_for_ticker(
+        self,
+        ticker: Optional[str],
+        rating: Optional[dict] = None,
+        explicit_tier: Optional[str] = None,
+    ) -> str:
+        if explicit_tier:
+            return _normalize_market_tier(explicit_tier)
+        if rating and rating.get("market_tier"):
+            return _normalize_market_tier(str(rating.get("market_tier")))
+        cache = _load_market_tier_cache()
+        if ticker:
+            return cache.get(str(ticker).upper(), "PREMIER")
+        return "PREMIER"
+
+    def _leg_cost_breakdown(self, notional_kwd: float, market_tier: Optional[str]) -> dict[str, float]:
+        if notional_kwd <= 0:
+            return {
+                "commission_kwd": 0.0,
+                "slippage_kwd": 0.0,
+                "total_cost_kwd": 0.0,
+            }
+
+        from app.services.signal_engine.config.risk_config import TC_COMMISSION
+        from app.services.signal_engine.engine.backtester import _total_cost_factor
+
+        tier = _normalize_market_tier(market_tier)
+        leg_cost_factor = _total_cost_factor(tier) / 2.0
+        slippage_factor = max(0.0, leg_cost_factor - TC_COMMISSION)
+        commission_kwd = notional_kwd * TC_COMMISSION
+        slippage_kwd = notional_kwd * slippage_factor
+        return {
+            "commission_kwd": commission_kwd,
+            "slippage_kwd": slippage_kwd,
+            "total_cost_kwd": commission_kwd + slippage_kwd,
+        }
+
+    def _queue_entry_order(
+        self,
+        strategy: StrategyConfig,
+        rating: dict,
+        requested_size_kwd: float,
+        approved_size_kwd: float,
+        signal_date: str,
+        scheduled_date: str,
+        signal_price: float,
+        avg_daily_traded_value_kwd: float,
+        liquidity_cap_kwd: float,
+    ) -> None:
+        ticker = (rating.get("ticker") or "").upper()
+        notes = {
+            "requested_size_kwd": round(requested_size_kwd, 4),
+            "approved_size_kwd": round(approved_size_kwd, 4),
+            "signal_price": round(signal_price, 6),
+            "liquidity_shrunk": approved_size_kwd < requested_size_kwd,
+        }
+        _exec(
+            """
+            INSERT INTO simulator_pending_orders (
+                portfolio_id, ticker, order_kind, status,
+                signal_date, scheduled_date,
+                requested_size_kwd, approved_size_kwd,
+                reason, signal_price, market_tier,
+                avg_daily_traded_value_kwd, liquidity_cap_kwd,
+                rating_snapshot_json, notes_json,
+                created_at, updated_at
+            ) VALUES (
+                ?, ?, 'ENTRY', 'PENDING',
+                ?, ?,
+                ?, ?,
+                'ENTRY_SIGNAL', ?, ?,
+                ?, ?,
+                ?, ?,
+                ?, ?
+            )
+            """,
+            (
+                strategy.portfolio_id,
+                ticker,
+                signal_date,
+                scheduled_date,
+                round(requested_size_kwd, 4),
+                round(approved_size_kwd, 4),
+                round(signal_price, 6),
+                self._market_tier_for_ticker(ticker, rating),
+                round(avg_daily_traded_value_kwd, 4),
+                round(liquidity_cap_kwd, 4),
+                json.dumps(rating),
+                json.dumps(notes),
+                _now_ts(),
+                _now_ts(),
+            ),
+        )
+
+    def _queue_exit_order(
+        self,
+        pos: dict,
+        fraction: float,
+        reason: str,
+        signal_date: str,
+        scheduled_date: str,
+    ) -> None:
+        _exec(
+            """
+            INSERT INTO simulator_pending_orders (
+                portfolio_id, position_id, ticker, order_kind, status,
+                signal_date, scheduled_date, fraction,
+                reason, market_tier, created_at, updated_at
+            ) VALUES (
+                ?, ?, ?, 'EXIT', 'PENDING',
+                ?, ?, ?,
+                ?, ?, ?, ?
+            )
+            """,
+            (
+                pos["portfolio_id"],
+                pos["id"],
+                pos["ticker"],
+                signal_date,
+                scheduled_date,
+                round(fraction, 6),
+                reason,
+                self._market_tier_for_ticker(pos.get("ticker"), pos, pos.get("entry_market_tier")),
+                _now_ts(),
+                _now_ts(),
+            ),
+        )
+
+    def _execute_pending_entry_orders(self, strategy: StrategyConfig, date_str: str) -> list:
+        rows = _query_all(
+            """SELECT * FROM simulator_pending_orders
+               WHERE portfolio_id = ? AND order_kind = 'ENTRY'
+                 AND status = 'PENDING' AND scheduled_date = ?
+               ORDER BY id ASC""",
+            (strategy.portfolio_id, date_str),
+        )
+        filled = []
+        for order in rows:
+            bar = _get_ohlcv(order["ticker"], date_str)
+            if bar is None or float(bar.get("open") or 0) <= 0:
+                logger.info(
+                    "Simulator %s [%s] pending entry left unfilled for %s: no exact open bar",
+                    strategy.name,
+                    date_str,
+                    order["ticker"],
+                )
+                continue
+
+            portfolio = _get_portfolio(strategy.portfolio_id)
+            if portfolio is None:
+                break
+
+            fill_price = float(bar.get("open") or 0)
+            available_cash = float(portfolio.get("cash_balance_kwd") or 0)
+            tier = self._market_tier_for_ticker(order.get("ticker"), None, order.get("market_tier"))
+            target_notional = float(order.get("approved_size_kwd") or 0)
+            leg_cost_factor = 0.0
+            if target_notional > 0:
+                leg_cost_factor = self._leg_cost_breakdown(target_notional, tier)["total_cost_kwd"] / target_notional
+            affordable_notional = available_cash / (1.0 + leg_cost_factor) if (1.0 + leg_cost_factor) > 0 else 0.0
+            fill_notional = min(target_notional, affordable_notional)
+            if fill_notional < MIN_TRADE_SIZE_KWD:
+                _exec(
+                    "UPDATE simulator_pending_orders SET status = 'SKIPPED', updated_at = ?, notes_json = ? WHERE id = ?",
+                    (
+                        _now_ts(),
+                        json.dumps({"skip_reason": "INSUFFICIENT_CASH_AT_FILL", "available_cash": round(available_cash, 4)}),
+                        order["id"],
+                    ),
+                )
+                continue
+
+            rating = json.loads(order.get("rating_snapshot_json") or "{}")
+            fill_result = self._open_position(
+                strategy,
+                rating,
+                portfolio,
+                fill_notional,
+                entry_date=date_str,
+                actual_price=fill_price,
+                signal_date=order.get("signal_date"),
+                market_tier=tier,
+            )
+            _exec(
+                """UPDATE simulator_pending_orders SET
+                       status = 'FILLED', fill_date = ?, fill_price = ?, approved_size_kwd = ?, updated_at = ?
+                   WHERE id = ?""",
+                (date_str, round(fill_price, 6), round(fill_result["size_kwd"], 4), _now_ts(), order["id"]),
+            )
+            filled.append(fill_result)
+        return filled
+
+    def _execute_pending_exit_orders(self, strategy: StrategyConfig, date_str: str) -> list:
+        rows = _query_all(
+            """SELECT * FROM simulator_pending_orders
+               WHERE portfolio_id = ? AND order_kind = 'EXIT'
+                 AND status = 'PENDING' AND scheduled_date = ?
+               ORDER BY id ASC""",
+            (strategy.portfolio_id, date_str),
+        )
+        executed = []
+        for order in rows:
+            row = _query_one("SELECT * FROM simulator_positions WHERE id = ?", (order.get("position_id"),))
+            if row is None:
+                _exec("UPDATE simulator_pending_orders SET status = 'CANCELLED', updated_at = ? WHERE id = ?", (_now_ts(), order["id"]))
+                continue
+            pos = dict(row.items())
+            if pos.get("status") != "OPEN":
+                _exec("UPDATE simulator_pending_orders SET status = 'CANCELLED', updated_at = ? WHERE id = ?", (_now_ts(), order["id"]))
+                continue
+
+            bar = _get_ohlcv(pos["ticker"], date_str)
+            if bar is None or float(bar.get("open") or 0) <= 0:
+                logger.info(
+                    "Simulator %s [%s] pending exit left unfilled for %s: no exact open bar",
+                    strategy.name,
+                    date_str,
+                    pos["ticker"],
+                )
+                continue
+
+            portfolio = _get_portfolio(strategy.portfolio_id)
+            if portfolio is None:
+                break
+
+            fill_price = float(bar.get("open") or 0)
+            days_held = _trading_days_between(pos.get("entry_date") or date_str, date_str)
+            fraction = float(order.get("fraction") or 1.0)
+            if fraction >= 0.999999:
+                self._close_position(pos, portfolio, fill_price, order.get("reason") or "NEXT_OPEN_EXIT", date_str, days_held)
+                executed.append({
+                    "ticker": pos["ticker"],
+                    "fill_date": date_str,
+                    "fill_price": round(fill_price, 6),
+                    "reason": order.get("reason") or "NEXT_OPEN_EXIT",
+                    "signal_date": order.get("signal_date"),
+                })
+            else:
+                self._partial_close(pos, portfolio, fill_price, fraction, order.get("reason") or "NEXT_OPEN_PARTIAL", date_str)
+                executed.append({
+                    "ticker": pos["ticker"],
+                    "fill_date": date_str,
+                    "fill_price": round(fill_price, 6),
+                    "reason": order.get("reason") or "NEXT_OPEN_PARTIAL",
+                    "fraction": round(fraction, 4),
+                    "signal_date": order.get("signal_date"),
+                })
+
+            _exec(
+                "UPDATE simulator_pending_orders SET status = 'FILLED', fill_date = ?, fill_price = ?, updated_at = ? WHERE id = ?",
+                (date_str, round(fill_price, 6), _now_ts(), order["id"]),
+            )
+
+        return executed
 
     def _recently_stopped_out(self, portfolio_id: int, ticker: str, date_str: str, lookback_days: int = 15) -> bool:
         """Return True if this ticker had a STOP_HIT exit within the last ~3 weeks."""
@@ -822,18 +1349,21 @@ class SimulatorEngine:
         )
         return bool(count and int(count) > 0)
 
-    def _get_current_rating(self, ticker: str) -> Optional[dict]:
+    def _get_current_rating(self, ticker: str, date_str: Optional[str] = None) -> Optional[dict]:
+        self._assert_live_forward_date(date_str)
         row = _query_one(
-            "SELECT stage, rating, confidence FROM ee_ratings_cache WHERE ticker = ?",
+            "SELECT stage, rating, confidence, market_tier FROM ee_ratings_cache WHERE ticker = ?",
             (ticker.upper(),),
         )
         return dict(row.items()) if row else None
 
     def _get_todays_ratings(self, date_str: str) -> List[dict]:
-        """Load all rated stocks.  For backfill, we accept any recent rating."""
+        """Load all rated stocks for live-forward trading on the current date only."""
+        self._assert_live_forward_date(date_str)
         rows = _query_all(
             """SELECT ticker, name_en, sector, stage, rating, confidence, thesis,
                       entry_primary, stop_loss, tp1, tp2, tp3, last_price,
+                      market_tier,
                       signals_json, indicators_json, volume_context_json, computed_at
                FROM   ee_ratings_cache
                ORDER  BY confidence DESC""",
@@ -929,6 +1459,7 @@ class SimulatorEngine:
                portfolio_id INTEGER NOT NULL,
                ticker TEXT NOT NULL,
                status TEXT NOT NULL DEFAULT 'OPEN',
+               signal_date TEXT,
                entry_date TEXT, entry_price REAL,
                shares REAL, shares_remaining REAL,
                size_kwd REAL, size_pct_of_portfolio REAL,
@@ -942,12 +1473,53 @@ class SimulatorEngine:
                pnl_kwd REAL, pnl_pct REAL, days_held INTEGER,
                max_unrealized_gain_pct REAL, max_unrealized_loss_pct REAL,
                entry_relative_volume NUMERIC(8,2),
+               entry_market_tier TEXT,
+               entry_cost_kwd REAL DEFAULT 0,
+               exit_cost_kwd REAL DEFAULT 0,
+               total_cost_kwd REAL DEFAULT 0,
+               realized_pnl_kwd REAL DEFAULT 0,
+               commission_paid_kwd REAL DEFAULT 0,
+               slippage_paid_kwd REAL DEFAULT 0,
                created_at TEXT, updated_at TEXT
             )""",
         )
         # Additive migration for tables created before entry_relative_volume was added
         from app.core.database import add_column_if_missing as _acim
+        _acim("simulator_positions", "signal_date", "TEXT")
         _acim("simulator_positions", "entry_relative_volume", "NUMERIC(8,2)")
+        _acim("simulator_positions", "entry_market_tier", "TEXT")
+        _acim("simulator_positions", "entry_cost_kwd", "REAL DEFAULT 0")
+        _acim("simulator_positions", "exit_cost_kwd", "REAL DEFAULT 0")
+        _acim("simulator_positions", "total_cost_kwd", "REAL DEFAULT 0")
+        _acim("simulator_positions", "realized_pnl_kwd", "REAL DEFAULT 0")
+        _acim("simulator_positions", "commission_paid_kwd", "REAL DEFAULT 0")
+        _acim("simulator_positions", "slippage_paid_kwd", "REAL DEFAULT 0")
+        _exec(
+            """CREATE TABLE IF NOT EXISTS simulator_pending_orders (
+               id INTEGER PRIMARY KEY AUTOINCREMENT,
+               portfolio_id INTEGER NOT NULL,
+               position_id INTEGER,
+               ticker TEXT NOT NULL,
+               order_kind TEXT NOT NULL,
+               status TEXT NOT NULL DEFAULT 'PENDING',
+               signal_date TEXT NOT NULL,
+               scheduled_date TEXT NOT NULL,
+               fill_date TEXT,
+               requested_size_kwd REAL,
+               approved_size_kwd REAL,
+               fraction REAL,
+               reason TEXT,
+               signal_price REAL,
+               fill_price REAL,
+               market_tier TEXT,
+               avg_daily_traded_value_kwd REAL,
+               liquidity_cap_kwd REAL,
+               rating_snapshot_json TEXT,
+               notes_json TEXT,
+               created_at TEXT,
+               updated_at TEXT
+            )""",
+        )
         _exec(
             """CREATE TABLE IF NOT EXISTS simulator_daily_snapshots (
                id INTEGER PRIMARY KEY AUTOINCREMENT,

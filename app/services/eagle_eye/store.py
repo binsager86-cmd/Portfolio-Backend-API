@@ -1,10 +1,11 @@
 """
 Eagle Eye — Persistent DB store.
 
-Creates and manages 4 tables in the shared SQLite/PostgreSQL database:
+Creates and manages 5 tables in the shared SQLite/PostgreSQL database:
   - ee_ohlcv_cache      : daily OHLCV bars per ticker
   - ee_dna_profiles     : behavioral DNA JSON blobs
   - ee_ratings_cache    : current scanner ratings (one row per ticker)
+    - ratings_history     : daily point-in-time ratings snapshots
   - ee_compute_log      : audit trail for pipeline runs
 
 All DDL uses CREATE TABLE/INDEX IF NOT EXISTS — fully idempotent.
@@ -79,6 +80,7 @@ def ensure_tables() -> None:
             ticker               TEXT PRIMARY KEY,
             name_en              TEXT,
             sector               TEXT,
+            market_tier          TEXT,
             stage                TEXT,
             rating               TEXT,
             confidence           REAL,
@@ -108,7 +110,37 @@ def ensure_tables() -> None:
 
     # Additive migration: volume_context_json (added Phase 2)
     from app.core.database import add_column_if_missing as _acim
+    _acim("ee_ratings_cache", "market_tier", "TEXT")
     _acim("ee_ratings_cache", "volume_context_json", "TEXT")
+
+    exec_sql(
+        """
+        CREATE TABLE IF NOT EXISTS ratings_history (
+            ticker               TEXT NOT NULL,
+            computed_date        TEXT NOT NULL,
+            name_en              TEXT,
+            sector               TEXT,
+            market_tier          TEXT,
+            stage                TEXT,
+            rating               TEXT,
+            confidence           REAL,
+            thesis               TEXT,
+            entry_primary        REAL,
+            stop_loss            REAL,
+            tp1                  REAL,
+            tp2                  REAL,
+            tp3                  REAL,
+            last_price           REAL,
+            signals_json         TEXT,
+            indicators_json      TEXT,
+            volume_context_json  TEXT,
+            computed_at          TEXT,
+            updated_at           INTEGER,
+            PRIMARY KEY (ticker, computed_date)
+        )
+        """,
+        (),
+    )
 
     exec_sql(
         """
@@ -367,15 +399,16 @@ def save_rating(
     exec_sql(
         """
         INSERT INTO ee_ratings_cache (
-            ticker, name_en, sector, stage, rating, confidence, thesis,
+            ticker, name_en, sector, market_tier, stage, rating, confidence, thesis,
             entry_primary, entry_aggressive, entry_conservative,
             stop_loss, tp1, tp1_probability, tp2, tp2_probability, tp3, tp3_probability,
             last_price, supports_json, resistances_json, signals_json, indicators_json,
             days_of_history, computed_at, updated_at, volume_context_json
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT (ticker) DO UPDATE SET
             name_en = excluded.name_en,
             sector = excluded.sector,
+            market_tier = excluded.market_tier,
             stage = excluded.stage,
             rating = excluded.rating,
             confidence = excluded.confidence,
@@ -404,6 +437,7 @@ def save_rating(
             ticker.upper(),
             name_en,
             sector,
+            result.get("market_tier"),
             result.get("stage"),
             result.get("rating"),
             result.get("confidence"),
@@ -440,7 +474,7 @@ def load_all_ratings() -> List[dict]:
 
     rows = query_all(
         """
-        SELECT ticker, name_en, sector, stage, rating, confidence, thesis,
+        SELECT ticker, name_en, sector, market_tier, stage, rating, confidence, thesis,
                entry_primary, stop_loss, tp1, last_price, computed_at,
                volume_context_json
         FROM   ee_ratings_cache
@@ -468,7 +502,7 @@ def load_rating(ticker: str) -> Optional[dict]:
 
     row = query_one(
         """
-        SELECT ticker, name_en, sector, stage, rating, confidence, thesis,
+                SELECT ticker, name_en, sector, market_tier, stage, rating, confidence, thesis,
                entry_primary, entry_aggressive, entry_conservative,
                stop_loss, tp1, tp1_probability, tp2, tp2_probability,
                tp3, tp3_probability, last_price,
@@ -489,6 +523,83 @@ def load_rating(ticker: str) -> Optional[dict]:
             except Exception:
                 d[key] = []
     return d
+
+
+def snapshot_ratings_history(computed_date: Optional[str] = None) -> int:
+    """Upsert today's current ratings cache into the append-only ratings history table."""
+    from app.core.database import exec_sql, query_all
+
+    ensure_tables()
+    snapshot_date = computed_date or date.today().isoformat()
+    rows = query_all(
+        """
+        SELECT ticker, name_en, sector, market_tier, stage, rating, confidence, thesis,
+               entry_primary, stop_loss, tp1, tp2, tp3, last_price,
+               signals_json, indicators_json, volume_context_json, computed_at
+        FROM ee_ratings_cache
+        """,
+        (),
+    )
+    if not rows:
+        return 0
+
+    written = 0
+    updated_at = int(time.time())
+    for row in rows:
+        exec_sql(
+            """
+            INSERT INTO ratings_history (
+                ticker, computed_date, name_en, sector, market_tier,
+                stage, rating, confidence, thesis,
+                entry_primary, stop_loss, tp1, tp2, tp3, last_price,
+                signals_json, indicators_json, volume_context_json,
+                computed_at, updated_at
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            ON CONFLICT (ticker, computed_date) DO UPDATE SET
+                name_en = excluded.name_en,
+                sector = excluded.sector,
+                market_tier = excluded.market_tier,
+                stage = excluded.stage,
+                rating = excluded.rating,
+                confidence = excluded.confidence,
+                thesis = excluded.thesis,
+                entry_primary = excluded.entry_primary,
+                stop_loss = excluded.stop_loss,
+                tp1 = excluded.tp1,
+                tp2 = excluded.tp2,
+                tp3 = excluded.tp3,
+                last_price = excluded.last_price,
+                signals_json = excluded.signals_json,
+                indicators_json = excluded.indicators_json,
+                volume_context_json = excluded.volume_context_json,
+                computed_at = excluded.computed_at,
+                updated_at = excluded.updated_at
+            """,
+            (
+                row["ticker"],
+                snapshot_date,
+                row.get("name_en"),
+                row.get("sector"),
+                row.get("market_tier"),
+                row.get("stage"),
+                row.get("rating"),
+                row.get("confidence"),
+                row.get("thesis"),
+                row.get("entry_primary"),
+                row.get("stop_loss"),
+                row.get("tp1"),
+                row.get("tp2"),
+                row.get("tp3"),
+                row.get("last_price"),
+                row.get("signals_json"),
+                row.get("indicators_json"),
+                row.get("volume_context_json"),
+                row.get("computed_at") or snapshot_date,
+                updated_at,
+            ),
+        )
+        written += 1
+    return written
 
 
 # ---------------------------------------------------------------------------

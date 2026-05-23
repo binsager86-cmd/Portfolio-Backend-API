@@ -71,10 +71,12 @@ def already_processed(d: date) -> bool:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    print("WARNING: Backfill uses current ratings for historical dates.")
-    print("This creates lookahead bias and produces invalid results.")
-    print("Backfill is disabled. The simulator runs in live-forward mode only.")
-    sys.exit(0)
+    print(
+        "historical replay disabled: no point-in-time ratings available — look-ahead unsafe",
+        file=sys.stderr,
+    )
+    print("simulator remains enabled in live-forward mode only.", file=sys.stderr)
+    sys.exit(1)
 
     parser = argparse.ArgumentParser(description="Backfill Eagle Eye simulator")
     parser.add_argument(

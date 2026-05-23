@@ -454,9 +454,11 @@ def compute_all_ratings(verbose: bool = False) -> dict:
             meta = stock_meta.get(ticker)
             name_en = meta.name_en if meta else ticker
             sector = meta.sector if meta else "Kuwait"
+            market_tier = (meta.market_tier if meta and meta.market_tier else "premier").upper()
 
             result = {
                 "ticker": ticker.upper(),
+                "market_tier": market_tier,
                 "stage": stage,
                 "rating": rating,
                 "confidence": confidence,
