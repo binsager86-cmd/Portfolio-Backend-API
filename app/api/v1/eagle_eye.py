@@ -107,6 +107,18 @@ def _cache_key(ticker: str, as_of: Optional[date] = None) -> str:
     return f"{ticker.upper()}:{d}"
 
 
+def _safe_float(v) -> Optional[float]:
+    """Coerce to float; return None for NaN, Inf, or anything non-numeric."""
+    if v is None:
+        return None
+    try:
+        import math
+        f = float(v)
+        return None if (math.isnan(f) or math.isinf(f)) else f
+    except (TypeError, ValueError):
+        return None
+
+
 def _build_threshold_profile_response(
     threshold_profile: dict,
     fallback_total_setups: int,
@@ -147,8 +159,21 @@ def _build_window_profile_response(window_profile: dict) -> DNAWindowProfileResp
     )
 
 
+_BAR_FLOAT_FIELDS = (
+    "open", "high", "low", "close", "volume", "rel_volume",
+    "rsi", "macd_line", "macd_signal", "macd_histogram",
+    "adx", "plus_di", "minus_di",
+)
+
+
 def _build_setup_example_response(setup_example: dict) -> DNASetupExampleResponse:
-    bars = [DNASetupBarResponse(**bar) for bar in setup_example.get("bars", [])]
+    bars: list[DNASetupBarResponse] = []
+    for raw_bar in setup_example.get("bars", []):
+        sanitized = {"date": str(raw_bar.get("date", ""))}
+        for field in _BAR_FLOAT_FIELDS:
+            sanitized[field] = _safe_float(raw_bar.get(field))
+        bars.append(DNASetupBarResponse(**sanitized))
+
     observations = [
         DNASetupObservationResponse(**observation)
         for observation in setup_example.get("observations", [])
@@ -597,10 +622,33 @@ async def get_stock_dna(
     t = ticker.upper().strip()
     cache_key = f"dna:{t}"
 
+    try:
+        return await _get_stock_dna_inner(t, cache_key, load_dna)
+    except Exception as exc:
+        logger.exception("DNA endpoint crashed for %s — evicting cache and returning error", t)
+        # Evict potentially corrupt in-memory entry so the next request retries cleanly
+        _DNA_CACHE.pop(cache_key, None)
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "error",
+                "message": f"Failed to build DNA response for {t}: {exc}",
+                "ticker": t,
+            },
+        )
+
+
+async def _get_stock_dna_inner(t: str, cache_key: str, load_dna):
+    """Inner implementation of get_stock_dna — separated so the outer function can catch all exceptions."""
     # 1. Fast path — in-memory cache
     if cache_key in _DNA_CACHE:
         dna_dict = _DNA_CACHE[cache_key]
-        return DNAResponse(status="ok", data=BehavioralDNAResponse(**dna_dict))
+        try:
+            return DNAResponse(status="ok", data=BehavioralDNAResponse(**dna_dict))
+        except Exception:
+            # Cached entry is stale/broken — fall through to rebuild
+            logger.warning("Corrupt DNA cache entry for %s; rebuilding", t)
+            _DNA_CACHE.pop(cache_key, None)
 
     # 2. Check the DB store (written by the nightly Phase-2 pipeline)
     try:
@@ -715,10 +763,12 @@ async def get_stock_dna(
             )
         ]
 
-    setup_examples = [
-        _build_setup_example_response(setup_example)
-        for setup_example in stored.get("setup_examples", [])
-    ]
+    setup_examples = []
+    for raw_ex in stored.get("setup_examples", []):
+        try:
+            setup_examples.append(_build_setup_example_response(raw_ex))
+        except Exception as ex_err:
+            logger.warning("Skipping malformed setup example (%s): %s", t, ex_err)
 
     dna_response = BehavioralDNAResponse(
         ticker=t,
