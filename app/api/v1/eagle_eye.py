@@ -83,6 +83,12 @@ _SCANNER_RESP_CACHE: Optional[list] = None
 _SCANNER_RESP_CACHE_AT: float = 0.0
 _SCANNER_RESP_TTL_SEC: float = 30.0  # 30 seconds
 
+# Market regime response cache: breadth changes slowly intraday and the
+# endpoint is hit on every Eagle Eye screen load.
+_REGIME_RESP_CACHE: Optional[dict] = None
+_REGIME_RESP_CACHE_AT: float = 0.0
+_REGIME_RESP_TTL_SEC: float = 600.0  # 10 minutes
+
 
 def _get_meta_map() -> Dict[str, object]:
     """Return a cached ticker → StockMeta lookup, rebuilt at most every 10 min."""
@@ -172,6 +178,10 @@ def _build_setup_example_response(setup_example: dict) -> DNASetupExampleRespons
         sanitized = {"date": str(raw_bar.get("date", ""))}
         for field in _BAR_FLOAT_FIELDS:
             sanitized[field] = _safe_float(raw_bar.get(field))
+        # Fix bars where open was stored as 0 (API didn't report it).
+        # Use close as a neutral fallback so the chart never shows 0.
+        if not sanitized.get("open") and sanitized.get("close"):
+            sanitized["open"] = sanitized["close"]
         bars.append(DNASetupBarResponse(**sanitized))
 
     observations = [
@@ -669,6 +679,20 @@ async def _get_stock_dna_inner(t: str, cache_key: str, load_dna):
             or "default_window_days" not in stored
         )
     )
+
+    # Also force a rebuild when stored setup-example bars have null open values —
+    # this indicates the DNA was persisted before OHLC data was sourced from
+    # TickerChart (the authoritative price feed).
+    if stored and not needs_refresh:
+        examples = stored.get("setup_examples") or []
+        for ex in examples:
+            bars = ex.get("bars") or []
+            if bars and any(b.get("open") is None for b in bars):
+                logger.info(
+                    "DNA for %s has null open values in setup bars — forcing rebuild from TickerChart", t
+                )
+                needs_refresh = True
+                break
 
     if stored is None or needs_refresh:
         # DNA not in DB — compute on-demand in a thread to avoid blocking the event loop
@@ -1392,8 +1416,21 @@ async def get_market_regime(
 
     Falls back to NEUTRAL when data is unavailable.
     """
+    global _REGIME_RESP_CACHE, _REGIME_RESP_CACHE_AT
+
+    now = time.time()
+    if (
+        _REGIME_RESP_CACHE is not None
+        and (now - _REGIME_RESP_CACHE_AT) < _REGIME_RESP_TTL_SEC
+    ):
+        return RegimeResponse(**_REGIME_RESP_CACHE)
+
     try:
+        import json
+
+        from app.core.database import query_all
         from app.services.eagle_eye.adapter import TickerChartAdapter
+        from app.services.eagle_eye.store import load_ohlcv
 
         adapter = TickerChartAdapter()
         end_d = date.today()
@@ -1406,20 +1443,42 @@ async def get_market_regime(
                 regime="NEUTRAL",
                 last_updated=datetime.utcnow().date().isoformat(),
             )
-
-        from app.services.eagle_eye.indicators import compute_all_indicators
+        sample_tickers = [meta.ticker.upper() for meta in stocks_meta[:30]]
+        indicators_map: dict[str, dict] = {}
+        if sample_tickers:
+            placeholders = ",".join("?" for _ in sample_tickers)
+            rows = query_all(
+                f"SELECT ticker, indicators_json FROM ee_ratings_cache WHERE ticker IN ({placeholders})",
+                tuple(sample_tickers),
+            )
+            for row in rows:
+                raw = row.get("indicators_json")
+                if not raw:
+                    continue
+                try:
+                    indicators_map[str(row.get("ticker") or "").upper()] = json.loads(raw)
+                except Exception:
+                    continue
 
         above_50ma_count = 0
         checked = 0
         for meta in stocks_meta[:30]:  # sample 30 stocks for breadth
             try:
-                df = adapter.get_ohlcv_daily(meta.ticker, start_d, end_d)
-                if df is None or len(df) < 52:
-                    continue
-                ind_df = compute_all_indicators(df)
-                latest = ind_df.iloc[-1]
-                ema50 = latest.get("ema50") if isinstance(latest, dict) else getattr(latest, "ema50", None)
-                close = latest.get("close") if isinstance(latest, dict) else getattr(latest, "close", None)
+                latest = indicators_map.get(meta.ticker.upper()) or {}
+                ema50 = latest.get("ema50") if isinstance(latest, dict) else None
+                close = latest.get("close") if isinstance(latest, dict) else None
+
+                if ema50 is None or close is None:
+                    from app.services.eagle_eye.indicators import compute_all_indicators
+
+                    df = load_ohlcv(meta.ticker, start=start_d, end=end_d)
+                    if df is None or len(df) < 52:
+                        continue
+                    ind_df = compute_all_indicators(df)
+                    latest = ind_df.iloc[-1]
+                    ema50 = latest.get("ema50") if isinstance(latest, dict) else getattr(latest, "ema50", None)
+                    close = latest.get("close") if isinstance(latest, dict) else getattr(latest, "close", None)
+
                 if ema50 and close and close > ema50:
                     above_50ma_count += 1
                 checked += 1
@@ -1435,7 +1494,7 @@ async def get_market_regime(
         else:
             regime = "NEUTRAL"
 
-        return RegimeResponse(
+        response = RegimeResponse(
             status="ok",
             regime=regime,
             breadth_pct_above_50ma=breadth_pct,
@@ -1443,14 +1502,20 @@ async def get_market_regime(
             pmi_trend="neutral",
             last_updated=datetime.utcnow().date().isoformat(),
         )
+        _REGIME_RESP_CACHE = response.model_dump()
+        _REGIME_RESP_CACHE_AT = now
+        return response
 
     except Exception as exc:
         logger.warning("Regime calculation failed: %s", exc)
-        return RegimeResponse(
+        response = RegimeResponse(
             status="ok",
             regime="NEUTRAL",
             last_updated=datetime.utcnow().date().isoformat(),
         )
+        _REGIME_RESP_CACHE = response.model_dump()
+        _REGIME_RESP_CACHE_AT = now
+        return response
 
 
 # ---------------------------------------------------------------------------

@@ -704,7 +704,10 @@ def compute_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
     out['accumulation_score'] = accumulation_score(df)
     out['wyckoff_phase'] = wyckoff_phase(df)
 
-    # Price context for downstream (kept for joins)
+    # Price context for downstream (kept for joins and DNA chart examples)
+    open_series = df['open'] if 'open' in df.columns else df['close']
+    open_series = pd.to_numeric(open_series, errors='coerce')
+    out['open'] = open_series.where(open_series.notna() & (open_series != 0), df['close'])
     out['close'] = df['close']
     out['volume'] = df['volume']
     out['high'] = df['high']

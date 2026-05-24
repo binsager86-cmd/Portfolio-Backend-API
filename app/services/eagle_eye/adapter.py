@@ -210,6 +210,13 @@ class TickerChartAdapter(DataAdapter):
         phantom = (df["open"] == 0) & (df["high"] == 0) & (df["low"] == 0)
         df = df[~phantom]
 
+        # Fix bars where open was not reported (stored as 0) but close is valid.
+        # This happens when the exchange or feed omits the opening price.
+        # Substitute close as a neutral fallback so the chart never shows 0.
+        zero_open = (df["open"] == 0) & (df["close"] != 0)
+        if zero_open.any():
+            df.loc[zero_open, "open"] = df.loc[zero_open, "close"]
+
         # Deduplicate by date (keep last)
         df = df[~df.index.duplicated(keep="last")]
 

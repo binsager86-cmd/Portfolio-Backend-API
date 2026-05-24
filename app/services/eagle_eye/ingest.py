@@ -294,8 +294,9 @@ def build_dna_for_ticker(ticker: str) -> Optional[dict]:
     """
     Compute and persist Behavioral DNA for a single ticker on-demand.
 
-    Tries the OHLCV DB cache first; falls back to a live TickerChart fetch
-    when the cache is too sparse (< MIN_HISTORY_DAYS_REQUIRED bars).
+    Always attempts a live TickerChart fetch first so the DNA chart bars
+    contain accurate, up-to-date OHLC values.  Falls back to the OHLCV DB
+    cache only when TickerChart is unavailable or returns insufficient data.
     Returns the raw DNA dict on success, or None if insufficient data.
     """
     from datetime import date, timedelta
@@ -316,27 +317,39 @@ def build_dna_for_ticker(ticker: str) -> Optional[dict]:
         load_ohlcv,
         log_compute,
         save_dna,
+        save_ohlcv,
     )
 
     ensure_tables()
     ticker = ticker.upper()
 
-    # 1. Try cached OHLCV
-    df = load_ohlcv(ticker)
+    # 1. Always try a live TickerChart fetch first — this guarantees the DNA
+    #    chart bars contain accurate OHLC data from the authoritative source.
+    df = None
+    try:
+        from app.services.eagle_eye.adapter import TickerChartAdapter
 
-    # 2. Fall back to live fetch when cache is too sparse
-    if len(df) < CONFIG.MIN_HISTORY_DAYS_REQUIRED:
-        try:
-            from app.services.eagle_eye.adapter import TickerChartAdapter
+        adapter = TickerChartAdapter()
+        end_d = date.today()
+        start_d = end_d - timedelta(days=3 * 365 + 90)
+        fetched = adapter.get_ohlcv_daily(ticker, start_d, end_d)
+        if fetched is not None and len(fetched) >= CONFIG.MIN_HISTORY_DAYS_REQUIRED:
+            df = fetched
+            # Persist fresh data back to the OHLCV cache so other pipelines benefit
+            try:
+                save_ohlcv(ticker, df)
+            except Exception as save_exc:
+                logger.warning("Could not persist fresh OHLCV for %s: %s", ticker, save_exc)
+            logger.info("DNA build [%s]: using live TickerChart data (%d bars)", ticker, len(df))
+    except Exception as exc:
+        logger.warning("Live TickerChart OHLCV fetch for DNA failed [%s]: %s", ticker, exc)
 
-            adapter = TickerChartAdapter()
-            end_d = date.today()
-            start_d = end_d - timedelta(days=3 * 365 + 90)
-            fetched = adapter.get_ohlcv_daily(ticker, start_d, end_d)
-            if fetched is not None and len(fetched) > len(df):
-                df = fetched
-        except Exception as exc:
-            logger.warning("Live OHLCV fetch for DNA failed [%s]: %s", ticker, exc)
+    # 2. Fall back to the DB cache when live fetch is unavailable or too sparse
+    if df is None or len(df) < CONFIG.MIN_HISTORY_DAYS_REQUIRED:
+        cached = load_ohlcv(ticker)
+        if len(cached) > (len(df) if df is not None else 0):
+            df = cached
+            logger.info("DNA build [%s]: using OHLCV cache (%d bars)", ticker, len(df))
 
     if len(df) < CONFIG.MIN_HISTORY_DAYS_REQUIRED:
         log_compute(
