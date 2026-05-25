@@ -20,7 +20,8 @@ def _market_payload_is_incomplete(payload: dict) -> bool:
     """Return True when a cached market snapshot predates the Premier/Main fix."""
     indices = payload.get("indices") or []
     index_names = {str(item.get("name") or "") for item in indices if isinstance(item, dict)}
-    if "Premier Market" not in index_names or "Main Market" not in index_names:
+    expected_indices = {"Premier Market", "BK Main 50", "Main Market", "All-Share"}
+    if not expected_indices.issubset(index_names):
         return True
 
     for key in ("premier_summary", "main_summary"):

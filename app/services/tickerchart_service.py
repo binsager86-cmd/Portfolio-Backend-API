@@ -1068,13 +1068,14 @@ def _parse_order_book_csv(text: str, symbol: str, market: str) -> dict:
 
 # ── KSE Market Snapshot ──────────────────────────────────────────────
 
-# Confirmed working TickerChart symbols for KSE market indices.
-# BKI = all-share, BKP = Premier Market, BKM = Main Market.
+# Confirmed working TickerChart symbols for the Kuwait market indices shown on
+# the Boursa Kuwait market page.
 # Each entry: (display_name, tc_base_symbol, tc_market_abb)
 _KSE_INDEX_CANDIDATES: list[tuple[str, str, str]] = [
     ("Premier Market", "BKP", "KSE"),
+    ("BK Main 50", "BKM50", "KSE"),
     ("Main Market", "BKM", "KSE"),
-    ("Boursa Kuwait Index", "BKI", "KSE"),
+    ("All-Share", "BKA", "KSE"),
 ]
 
 
@@ -1169,7 +1170,9 @@ async def fetch_kse_market_snapshot(symbols: list[str], stock_name_map: dict[str
 
         last = float(today_row.get("close") or 0)
         volume = float(today_row.get("volume") or 0)
-        value = float(today_row.get("value") or (last * volume))
+        # TickerChart reports KSE turnover in fils. Convert to KWD before
+        # exposing it as `value_traded` in the market payload.
+        value = float(today_row.get("value") or (last * volume)) / 1000.0
         trades = int(today_row.get("trades") or 0)
 
         if last == 0:
