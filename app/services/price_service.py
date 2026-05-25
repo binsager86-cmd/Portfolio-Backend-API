@@ -157,19 +157,83 @@ def _fetch_price_snapshot_sync(symbol: str, currency: str) -> dict:
     }
 
 
+async def _fetch_snapshot_from_tickerchart(symbol: str, currency: str) -> dict:
+    """Fetch a live price snapshot from TickerChart's OHLCV endpoint.
+
+    Returns the same shape as _fetch_price_snapshot_sync.
+    KSE prices are in fils → divided by 1000 to get KWD.
+    """
+    from datetime import date, timedelta
+    from app.services.tickerchart_service import fetch_ohlcv
+
+    sym_upper = symbol.strip().upper()
+
+    # Map currency to TickerChart market abbreviation
+    if currency == "KWD":
+        market_abb = "KSE"
+    elif currency == "USD":
+        market_abb = "USA"
+    else:
+        raise ValueError(f"Unsupported currency for TickerChart snapshot: {currency}")
+
+    # Request the last 7 calendar days to guarantee at least 2 trading-day closes
+    to_d = date.today()
+    from_d = to_d - timedelta(days=7)
+
+    rows = await fetch_ohlcv(sym_upper, market_abb, from_d=from_d, to_d=to_d, interval="day")
+    if not rows:
+        raise ValueError(f"No TickerChart data for {sym_upper}.{market_abb}")
+
+    # TickerChart returns rows in DESC order (newest first)
+    latest = rows[0]
+    raw_price = float(latest["close"])
+    price = _normalise_kwd_price(raw_price, currency)
+
+    previous_close: Optional[float] = None
+    if len(rows) >= 2:
+        raw_prev = float(rows[1]["close"])
+        previous_close = _normalise_kwd_price(raw_prev, currency)
+
+    return {
+        "symbol": symbol,
+        "price": round(price, 6),
+        "previous_close": round(previous_close, 6) if previous_close is not None else None,
+        "pe_ratio": None,
+        "currency": currency,
+        "fetched_at": datetime.now(timezone.utc).isoformat(),
+        "source": "tickerchart",
+    }
+
+
 async def get_price_snapshot(symbol: str, currency: str = "KWD") -> dict:
-    """Return a cached live quote, degrading gracefully on upstream failures."""
+    """Return a cached live quote, degrading gracefully on upstream failures.
+
+    Tries TickerChart first (accurate KSE / US exchange data), then falls
+    back to Yahoo Finance if TickerChart is unavailable or returns no data.
+    """
     key = cache_key("price", symbol.strip().upper(), currency.upper())
     cached = price_cache.get(key)
     if cached is not None:
         return cached
 
+    # --- Primary: TickerChart ---
+    try:
+        result = await _fetch_snapshot_from_tickerchart(symbol, currency)
+        price_cache[key] = result
+        return result
+    except Exception as tc_exc:
+        logger.debug(
+            "TickerChart snapshot failed for %s (%s): %s — falling back to Yahoo Finance",
+            symbol, currency, tc_exc,
+        )
+
+    # --- Fallback: Yahoo Finance ---
     try:
         result = await asyncio.to_thread(_fetch_price_snapshot_sync, symbol, currency)
         price_cache[key] = result
         return result
     except Exception as exc:
-        fallback = cached if cached is not None else {
+        return {
             "symbol": symbol,
             "price": None,
             "previous_close": None,
@@ -177,7 +241,6 @@ async def get_price_snapshot(symbol: str, currency: str = "KWD") -> dict:
             "currency": currency,
             "error": str(exc),
         }
-        return fallback
 
 
 # ── Result container ─────────────────────────────────────────────────
