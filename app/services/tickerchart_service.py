@@ -75,6 +75,19 @@ _SUFFIX_MAP: dict[str, str] = {
 # ── Token cache ──────────────────────────────────────────────────────
 _token_cache: dict[str, object] = {"token": None, "expires": 0.0}
 _company_id_cache: dict[str, object] = {"entries": None, "expires": 0.0}
+_kse_market_tier_cache: Optional[dict[str, str]] = None
+
+# L3 signal cache stores the Kuwait market tier classification per symbol.
+_KSE_MARKET_TIER_CACHE_DIR = Path(__file__).resolve().parents[2] / "cache" / "l3_signals"
+
+# Some symbols never got a tier persisted in the cache because the signal run
+# stopped early on insufficient history. These fallback labels come from the
+# backend's generated eligibility reports for the same Kuwait universe.
+_KSE_MARKET_TIER_FALLBACKS: dict[str, str] = {
+    "ALFTAQA": "PREMIER",
+    "BKIKWT": "MAIN",
+    "TROLLEY": "PREMIER",
+}
 
 
 def _sign(path: str, query_pairs: list[tuple[str, str]]) -> tuple[str, str]:
@@ -155,6 +168,34 @@ def _coerce_float(value: Any) -> Optional[float]:
         except ValueError:
             return None
     return None
+
+
+def _load_kse_market_tiers() -> dict[str, str]:
+    global _kse_market_tier_cache
+
+    if _kse_market_tier_cache is not None:
+        return _kse_market_tier_cache
+
+    tiers: dict[str, str] = {}
+    if _KSE_MARKET_TIER_CACHE_DIR.is_dir():
+        for cache_file in _KSE_MARKET_TIER_CACHE_DIR.glob("*.json"):
+            try:
+                with cache_file.open("r", encoding="utf-8") as handle:
+                    payload = json.load(handle)
+            except (OSError, ValueError) as exc:
+                logger.debug("Failed to read market tier cache %s: %s", cache_file, exc)
+                continue
+
+            symbol = str(payload.get("ticker") or cache_file.stem).strip().upper()
+            market_tier = str(payload.get("market_tier") or "").strip().upper()
+            if symbol and market_tier in {"PREMIER", "MAIN"}:
+                tiers[symbol] = market_tier
+
+    for symbol, market_tier in _KSE_MARKET_TIER_FALLBACKS.items():
+        tiers.setdefault(symbol, market_tier)
+
+    _kse_market_tier_cache = tiers
+    return tiers
 
 
 def _parse_company_map(payload: Any) -> dict[tuple[str, str], int]:
@@ -1027,10 +1068,12 @@ def _parse_order_book_csv(text: str, symbol: str, market: str) -> dict:
 
 # ── KSE Market Snapshot ──────────────────────────────────────────────
 
-# Confirmed working TickerChart symbols for KSE market indices (verified 2026-05-18).
-# BKI = Boursa Kuwait Index (all-share); others (BKPM, BKMM, BKALL, BK50) return empty.
+# Confirmed working TickerChart symbols for KSE market indices.
+# BKI = all-share, BKP = Premier Market, BKM = Main Market.
 # Each entry: (display_name, tc_base_symbol, tc_market_abb)
 _KSE_INDEX_CANDIDATES: list[tuple[str, str, str]] = [
+    ("Premier Market", "BKP", "KSE"),
+    ("Main Market", "BKM", "KSE"),
     ("Boursa Kuwait Index", "BKI", "KSE"),
 ]
 
@@ -1086,6 +1129,7 @@ async def fetch_kse_market_snapshot(symbols: list[str], stock_name_map: dict[str
 
     today_d = date.today()
     from_d = today_d - timedelta(days=7)
+    market_tiers = _load_kse_market_tiers()
 
     # ── Fetch all stocks concurrently ────────────────────────────────
     async def _safe_fetch(symbol: str) -> tuple[str, list[dict]]:
@@ -1111,6 +1155,10 @@ async def fetch_kse_market_snapshot(symbols: list[str], stock_name_map: dict[str
     total_volume = 0.0
     total_value = 0.0
     total_trades = 0
+    per_market_totals: dict[str, dict[str, float | int]] = {
+        "PREMIER": {"volume": 0.0, "value_traded": 0.0, "trades": 0, "count": 0},
+        "MAIN": {"volume": 0.0, "value_traded": 0.0, "trades": 0, "count": 0},
+    }
 
     for symbol, rows in stock_results:
         if not rows:
@@ -1139,6 +1187,13 @@ async def fetch_kse_market_snapshot(symbols: list[str], stock_name_map: dict[str
         total_value += value
         total_trades += trades
 
+        market_tier = market_tiers.get(symbol.strip().upper())
+        if market_tier in per_market_totals:
+            per_market_totals[market_tier]["volume"] += volume
+            per_market_totals[market_tier]["value_traded"] += value
+            per_market_totals[market_tier]["trades"] += trades
+            per_market_totals[market_tier]["count"] += 1
+
         stocks.append({
             "symbol": symbol,
             "name": stock_name_map.get(symbol, symbol),
@@ -1157,7 +1212,7 @@ async def fetch_kse_market_snapshot(symbols: list[str], stock_name_map: dict[str
 
     top_gainers = sorted(gainers, key=lambda s: s["changePercent"], reverse=True)[:5]
     top_losers = sorted(losers, key=lambda s: s["changePercent"])[:5]
-    top_value_list = sorted(stocks, key=lambda s: s["value"], reverse=True)[:5]
+    top_value_list = sorted(stocks, key=lambda s: s["value"], reverse=True)[:10]
 
     def _to_mover(s: dict) -> dict:
         return {
@@ -1166,6 +1221,17 @@ async def fetch_kse_market_snapshot(symbols: list[str], stock_name_map: dict[str
             "change": s["change"],
             "changePercent": s["changePercent"],
             "volume": s["volume"],
+        }
+
+    def _to_per_market_summary(market_tier: str) -> dict:
+        totals = per_market_totals[market_tier]
+        if not totals["count"]:
+            return {"volume": None, "value_traded": None, "trades": None, "market_cap": None}
+        return {
+            "volume": float(totals["volume"]),
+            "value_traded": float(totals["value_traded"]),
+            "trades": int(totals["trades"]) or None,
+            "market_cap": None,
         }
 
     return {
@@ -1181,8 +1247,8 @@ async def fetch_kse_market_snapshot(symbols: list[str], stock_name_map: dict[str
             "stock_gainers": len(gainers),
             "stock_losers": len(losers),
         },
-        "premier_summary": {"volume": None, "value_traded": None, "trades": None},
-        "main_summary": {"volume": None, "value_traded": None, "trades": None},
+        "premier_summary": _to_per_market_summary("PREMIER"),
+        "main_summary": _to_per_market_summary("MAIN"),
         "top_gainers": [_to_mover(s) for s in top_gainers],
         "top_losers": [_to_mover(s) for s in top_losers],
         "top_value": [_to_mover(s) for s in top_value_list],
