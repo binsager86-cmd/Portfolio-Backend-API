@@ -1109,6 +1109,9 @@ async def _fetch_index_row(
             "value": last,
             "change": change,
             "changePercent": change_pct,
+            "volume": float(last_row.get("volume") or 0) or None,
+            "value_traded": float(last_row.get("value") or 0) or None,
+            "trades": int(last_row.get("trades") or 0) or None,
         }
     except Exception as exc:
         logger.debug("Index fetch failed for %s.%s: %s", tc_symbol, market_abb, exc)
@@ -1150,6 +1153,7 @@ async def fetch_kse_market_snapshot(symbols: list[str], stock_name_map: dict[str
     ]
     index_results = await _asyncio.gather(*index_tasks)
     indices = [r for r in index_results if r is not None]
+    index_by_name = {str(item.get("name") or ""): item for item in indices}
 
     # ── Compute per-stock stats ──────────────────────────────────────
     stocks: list[dict] = []
@@ -1237,21 +1241,42 @@ async def fetch_kse_market_snapshot(symbols: list[str], stock_name_map: dict[str
             "market_cap": None,
         }
 
-    return {
-        "indices": indices,
-        "market_summary": {
+    def _to_index_summary(index_name: str, fallback: dict) -> dict:
+        index_row = index_by_name.get(index_name) or {}
+        if index_row.get("volume") is None and index_row.get("value_traded") is None and index_row.get("trades") is None:
+            return fallback
+        return {
+            "volume": index_row.get("volume"),
+            "value_traded": index_row.get("value_traded"),
+            "trades": index_row.get("trades"),
+            "market_cap": None,
+        }
+
+    all_share_summary = _to_index_summary(
+        "All-Share",
+        {
             "volume": total_volume,
             "value_traded": total_value,
             "trades": total_trades or None,
             "market_cap": None,
+        },
+    )
+
+    return {
+        "indices": indices,
+        "market_summary": {
+            "volume": all_share_summary["volume"],
+            "value_traded": all_share_summary["value_traded"],
+            "trades": all_share_summary["trades"],
+            "market_cap": all_share_summary["market_cap"],
             "gainers": len(gainers),
             "losers": len(losers),
             "neutral": neutral_count,
             "stock_gainers": len(gainers),
             "stock_losers": len(losers),
         },
-        "premier_summary": _to_per_market_summary("PREMIER"),
-        "main_summary": _to_per_market_summary("MAIN"),
+        "premier_summary": _to_index_summary("Premier Market", _to_per_market_summary("PREMIER")),
+        "main_summary": _to_index_summary("Main Market", _to_per_market_summary("MAIN")),
         "top_gainers": [_to_mover(s) for s in top_gainers],
         "top_losers": [_to_mover(s) for s in top_losers],
         "top_value": [_to_mover(s) for s in top_value_list],
