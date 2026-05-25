@@ -171,7 +171,12 @@ async def portfolio_holdings(
         pnl_pct = (total_pnl / total_cost) if total_cost > 0 else 0.0
 
         holding["market_price"] = live_price
-        holding["previous_close"] = snapshot.get("previous_close")
+        # Keep the DB-stored previous_close as the authoritative value so the
+        # Holdings table stays in sync with the daily-movement card (which also
+        # reads from the stocks.previous_close column).  Do NOT overwrite with
+        # the live-snapshot value — the daily-movement card intentionally
+        # excludes stocks whose previous_close has never been persisted to the DB.
+        # (DB previous_close is managed by the price-update service.)
         if snapshot.get("pe_ratio") is not None:
             holding["pe_ratio"] = snapshot.get("pe_ratio")
         holding["market_value"] = market_value
