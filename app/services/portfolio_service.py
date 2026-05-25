@@ -1120,6 +1120,11 @@ class PortfolioService:
         cash_balance = unified["cash_kwd"]
         total_value = unified["total_value_kwd"]
 
+        # Daily change accumulators: sum of qty*(market_price - prev_close) in KWD
+        # (same baseline as the per-holding totalValueChange shown in the UI)
+        daily_change_kwd = 0.0
+        daily_prev_value_kwd = 0.0
+
         # Enrich by_portfolio with P&L from build_portfolio_table
         for pname in list(overview["by_portfolio"].keys()):
             ccy = PORTFOLIO_CCY.get(pname, "KWD")
@@ -1130,6 +1135,23 @@ class PortfolioService:
                 dividends = float(df["cash_dividends"].sum()) if "cash_dividends" in df.columns else 0.0
                 total_cost = float(df["total_cost"].sum()) if "total_cost" in df.columns else 0.0
                 holding_count = int((df["shares_qty"] > 0.001).sum())
+
+                # Accumulate daily movement from prev_close vs market_price
+                if "previous_close" in df.columns and "market_price" in df.columns:
+                    active = df[df["shares_qty"] > 0.001]
+                    mask = (
+                        active["previous_close"].notna()
+                        & (active["previous_close"] > 0)
+                        & (active["market_price"] > 0)
+                    )
+                    if mask.any():
+                        sub = active[mask]
+                        daily_change_kwd += convert_to_kwd(
+                            float(((sub["market_price"] - sub["previous_close"]) * sub["shares_qty"]).sum()), ccy
+                        )
+                        daily_prev_value_kwd += convert_to_kwd(
+                            float((sub["previous_close"] * sub["shares_qty"]).sum()), ccy
+                        )
             else:
                 unrealized = realized = dividends = total_cost = 0.0
                 holding_count = 0
@@ -1160,6 +1182,15 @@ class PortfolioService:
                 "dividends_kwd": bp_data.get("dividends_kwd", 0.0),
             }
 
+        # Compute daily movement from accumulated prev_close data; fall back to snapshot if unavailable
+        if daily_prev_value_kwd > 0:
+            daily_movement = round(daily_change_kwd, 3)
+            daily_movement_pct = round((daily_change_kwd / daily_prev_value_kwd) * 100, 3)
+        else:
+            _dm = self._calc_daily_movement(total_value)
+            daily_movement = _dm["daily_movement"]
+            daily_movement_pct = _dm["daily_movement_pct"]
+
         return {
             "total_deposits": overview["total_deposits"],
             "total_withdrawals": overview["total_withdrawals"],
@@ -1182,8 +1213,9 @@ class PortfolioService:
             "portfolio_values": enriched_portfolio_values,
             "accounts": unified["accounts"],
             "usd_kwd_rate": get_usd_kwd_rate(),
-            # Daily movement: live total value (stocks+cash) vs previous snapshot (matches Streamlit)
-            **self._calc_daily_movement(total_value),
+            # Daily movement: sum(qty * (market_price - prev_close)) in KWD — matches holdings table
+            "daily_movement": daily_movement,
+            "daily_movement_pct": daily_movement_pct,
             # CAGR inputs: first deposit amount and date
             **self._calc_cagr_inputs(total_value),
             # MWRR (IRR) — calculated inline so the overview always has it
