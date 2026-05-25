@@ -250,11 +250,6 @@ async def lifespan(app: FastAPI):
         tracemalloc.start()
         logger.info("🔍  tracemalloc enabled (development mode)")
 
-    # ── Observability (Prometheus) ────────────────────────────────────
-    # Instrumented here (inside lifespan, before yield) instead of via
-    # @app.on_event("startup") to avoid Starlette's _merge_lifespan_context
-    # wrapping, which ran the entire startup sequence twice.
-    Instrumentator().instrument(app).expose(app, endpoint="/metrics")
     import app.core.ai_metrics  # noqa: F401 — side-effect import registers counters
 
     yield  # app is running
@@ -300,6 +295,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+# ── Observability (Prometheus) ─────────────────────────────────────
+# Must be called at module level — add_middleware() cannot be called
+# after the application has started (i.e. inside lifespan).
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 # ── Exception handlers ──────────────────────────────────────────────
 app.state.limiter = limiter
