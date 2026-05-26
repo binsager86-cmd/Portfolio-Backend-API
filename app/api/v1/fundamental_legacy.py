@@ -6870,26 +6870,26 @@ def _score_liquidity_detailed(m: Dict[str, float]):
 
     current_ratio = m.get("Current Ratio")
     if current_ratio is not None:
-        if 1.5 <= current_ratio <= 3.0: _add("Current Ratio", round(current_ratio, 2), 12, "1.5-3.0x (healthy)")
-        elif current_ratio >= 1.2:      _add("Current Ratio", round(current_ratio, 2), 8, ">= 1.2x (adequate)")
-        elif current_ratio >= 1.0:      _add("Current Ratio", round(current_ratio, 2), 3, ">= 1.0x (tight but manageable)")
-        else:                           _add("Current Ratio", round(current_ratio, 2), -10, "< 1.0x (working-capital stress)")
+        if current_ratio >= 1.5:   _add("Current Ratio", round(current_ratio, 2), 12, ">= 1.5x (healthy)")
+        elif current_ratio >= 1.2: _add("Current Ratio", round(current_ratio, 2), 8, ">= 1.2x (adequate)")
+        elif current_ratio >= 1.0: _add("Current Ratio", round(current_ratio, 2), 3, ">= 1.0x (tight but manageable)")
+        else:                      _add("Current Ratio", round(current_ratio, 2), -10, "< 1.0x (working-capital stress)")
     else:
         _add("Current Ratio", None, 0, "N/A")
 
     quick_ratio = m.get("Quick Ratio")
     if quick_ratio is not None:
-        if 1.0 <= quick_ratio <= 2.0: _add("Quick Ratio", round(quick_ratio, 2), 10, "1.0-2.0x (liquid)")
-        elif quick_ratio >= 0.7:      _add("Quick Ratio", round(quick_ratio, 2), 4, ">= 0.7x (acceptable)")
-        else:                         _add("Quick Ratio", round(quick_ratio, 2), -8, "< 0.7x (inventory-dependent)")
+        if quick_ratio >= 1.0:  _add("Quick Ratio", round(quick_ratio, 2), 10, ">= 1.0x (liquid)")
+        elif quick_ratio >= 0.7: _add("Quick Ratio", round(quick_ratio, 2), 4, ">= 0.7x (acceptable)")
+        else:                    _add("Quick Ratio", round(quick_ratio, 2), -8, "< 0.7x (inventory-dependent)")
     else:
         _add("Quick Ratio", None, 0, "N/A")
 
     cash_ratio = m.get("Cash Ratio")
     if cash_ratio is not None:
-        if 0.20 <= cash_ratio <= 1.0: _add("Cash Ratio", round(cash_ratio, 2), 8, "0.2-1.0x (good cash cover)")
-        elif cash_ratio >= 0.10:      _add("Cash Ratio", round(cash_ratio, 2), 3, ">= 0.1x (basic liquidity cushion)")
-        else:                         _add("Cash Ratio", round(cash_ratio, 2), -4, "< 0.1x (thin cash buffer)")
+        if cash_ratio >= 0.20:   _add("Cash Ratio", round(cash_ratio, 2), 8, ">= 0.2x (good cash cover)")
+        elif cash_ratio >= 0.10: _add("Cash Ratio", round(cash_ratio, 2), 3, ">= 0.1x (basic liquidity cushion)")
+        else:                    _add("Cash Ratio", round(cash_ratio, 2), -4, "< 0.1x (thin cash buffer)")
     else:
         _add("Cash Ratio", None, 0, "N/A")
 
