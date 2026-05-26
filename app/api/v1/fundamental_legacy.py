@@ -905,7 +905,7 @@ async def get_stock(
         """SELECT overall_score, fundamental_score, valuation_score,
                   growth_score, quality_score, scoring_date
            FROM stock_scores WHERE stock_id = ?
-           ORDER BY scoring_date DESC LIMIT 1""",
+           ORDER BY scoring_date DESC, created_at DESC, id DESC LIMIT 1""",
         (stock_id,),
     )
     stock["latest_score"] = dict(score_row) if score_row else None
@@ -1887,6 +1887,10 @@ _SA_FIELD_MAP_BALANCE = {
     "accountsPayable": ("accounts_payable", "Accounts Payable"),
     "balance_sheet_accounts_payable": ("accounts_payable", "Accounts Payable"),
     "shortTermDebt": ("short_term_debt", "Short-Term Debt"),
+    "shortTermBorrowings": ("short_term_debt", "Short-Term Borrowings"),
+    "currentBorrowings": ("short_term_debt", "Current Borrowings"),
+    "bankOverdraft": ("short_term_debt", "Bank Overdraft"),
+    "currentPortDebt": ("short_term_debt", "Current Portion of Debt"),
     "balance_sheet_current_portion_of_long_term_debt": ("short_term_debt", "Current Portion of Long-Term Debt"),
     "balance_sheet_accrued_expenses": ("accrued_expenses", "Accrued Expenses"),
     "balance_sheet_unearned_revenue": ("unearned_revenue", "Unearned Revenue"),
@@ -1895,6 +1899,9 @@ _SA_FIELD_MAP_BALANCE = {
     "totalCurrentLiabilities": ("total_current_liabilities", "Total Current Liabilities"),
     # Long-term liabilities
     "longTermDebt": ("long_term_debt", "Long-Term Debt"),
+    "longTermBorrowings": ("long_term_debt", "Long-Term Borrowings"),
+    "nonCurrentBorrowings": ("long_term_debt", "Non-Current Borrowings"),
+    "debtnc": ("long_term_debt", "Long-Term Debt"),
     "balance_sheet_long_term_debt": ("long_term_debt", "Long-Term Debt"),
     "longTermLeases": ("long_term_leases", "Long-Term Leases"),
     "balance_sheet_other_long_term_liabilities": ("other_non_current_liabilities", "Other Non-Current Liabilities"),
@@ -2521,10 +2528,24 @@ _CANONICAL_CODES: Dict[str, str] = {
     "trade_and_other_payables": "accounts_payable",
     "short_term_debt": "short_term_debt", "current_portion_of_debt": "short_term_debt",
     "current_portion_of_long_term_debt": "short_term_debt",
+    "currentportdebt": "short_term_debt",
     "short_term_borrowings": "short_term_debt",
+    "short_term_loans": "short_term_debt", "short_term_loan": "short_term_debt",
+    "current_borrowings": "short_term_debt",
+    "current_bank_borrowings": "short_term_debt", "bank_borrowings_current": "short_term_debt",
+    "bank_borrowing_current": "short_term_debt",
+    "bank_overdraft": "short_term_debt", "bank_overdrafts": "short_term_debt",
+    "overdraft": "short_term_debt", "overdrafts": "short_term_debt",
     "total_current_liabilities": "total_current_liabilities",
     "long_term_debt": "long_term_debt", "long_term_borrowings": "long_term_debt",
+    "debtnc": "long_term_debt",
     "non_current_borrowings": "long_term_debt",
+    "long_term_loans": "long_term_debt", "long_term_loan": "long_term_debt",
+    "term_loan": "long_term_debt", "term_loans": "long_term_debt",
+    "non_current_bank_borrowings": "long_term_debt", "bank_borrowings_non_current": "long_term_debt",
+    "bank_borrowing_non_current": "long_term_debt",
+    "long_term_bank_borrowings": "long_term_debt",
+    "non_current_murabaha_payable": "long_term_debt",
     "total_non_current_liabilities": "total_non_current_liabilities",
     "total_liabilities": "total_liabilities",
     "common_stock": "share_capital", "share_capital": "share_capital",
@@ -4408,10 +4429,21 @@ async def get_score_history(
     _verify_stock_owner(stock_id, current_user.user_id)
 
     df = query_df(
-        "SELECT * FROM stock_scores WHERE stock_id = ? ORDER BY scoring_date DESC",
+        """SELECT * FROM stock_scores
+           WHERE stock_id = ?
+           ORDER BY scoring_date DESC, created_at DESC, id DESC""",
         (stock_id,),
     )
     scores = df.to_dict(orient="records") if not df.empty else []
+    deduped_scores: List[Dict[str, Any]] = []
+    seen_dates: set[str] = set()
+    for score in scores:
+        scoring_date = score.get("scoring_date")
+        if scoring_date in seen_dates:
+            continue
+        seen_dates.add(scoring_date)
+        deduped_scores.append(score)
+    scores = deduped_scores
     # Parse JSON details
     for s in scores:
         if isinstance(s.get("details"), str):
@@ -4421,6 +4453,83 @@ async def get_score_history(
                 pass
 
     return {"status": "ok", "data": {"scores": scores, "count": len(scores)}}
+
+
+def _persist_daily_stock_score(stock_id: int, user_id: int, result: Dict[str, Any], latest: Dict[str, float]) -> None:
+    scoring_date = date.today().isoformat()
+    now = int(time.time())
+    details_json = json.dumps(latest)
+    existing_rows = query_all(
+        """SELECT id FROM stock_scores
+           WHERE stock_id = ? AND scoring_date = ?
+           ORDER BY created_at DESC, id DESC""",
+        (stock_id, scoring_date),
+    )
+
+    if existing_rows:
+        keep_row = existing_rows[0]
+        keep_id = keep_row[0] if isinstance(keep_row, (tuple, list)) else keep_row["id"]
+        if len(existing_rows) > 1:
+            exec_sql(
+                "DELETE FROM stock_scores WHERE stock_id = ? AND scoring_date = ? AND id <> ?",
+                (stock_id, scoring_date, keep_id),
+            )
+        try:
+            exec_sql(
+                """UPDATE stock_scores
+                   SET overall_score = ?, fundamental_score = ?, valuation_score = ?,
+                       growth_score = ?, quality_score = ?, risk_score = ?, details = ?,
+                       created_by_user_id = ?, created_at = ?
+                   WHERE id = ?""",
+                (
+                    result["overall_score"], result["fundamental_score"], result["valuation_score"],
+                    result["growth_score"], result["quality_score"], result["risk_score"],
+                    details_json, user_id, now, keep_id,
+                ),
+            )
+        except Exception:
+            exec_sql(
+                """UPDATE stock_scores
+                   SET overall_score = ?, fundamental_score = ?, valuation_score = ?,
+                       growth_score = ?, quality_score = ?, details = ?,
+                       created_by_user_id = ?, created_at = ?
+                   WHERE id = ?""",
+                (
+                    result["overall_score"], result["fundamental_score"], result["valuation_score"],
+                    result["growth_score"], result["quality_score"], details_json,
+                    user_id, now, keep_id,
+                ),
+            )
+        return
+
+    try:
+        exec_sql(
+            """INSERT INTO stock_scores
+               (stock_id, scoring_date, overall_score, fundamental_score,
+                valuation_score, growth_score, quality_score, risk_score, details,
+                created_by_user_id, created_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                stock_id, scoring_date, result["overall_score"],
+                result["fundamental_score"], result["valuation_score"],
+                result["growth_score"], result["quality_score"],
+                result["risk_score"], details_json, user_id, now,
+            ),
+        )
+    except Exception:
+        exec_sql(
+            """INSERT INTO stock_scores
+               (stock_id, scoring_date, overall_score, fundamental_score,
+                valuation_score, growth_score, quality_score, details,
+                created_by_user_id, created_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            (
+                stock_id, scoring_date, result["overall_score"],
+                result["fundamental_score"], result["valuation_score"],
+                result["growth_score"], result["quality_score"],
+                details_json, user_id, now,
+            ),
+        )
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -5680,6 +5789,28 @@ def _calculate_all_metrics(
     def _get(code: str) -> Optional[float]:
         return items.get(code)
 
+    def _sum_matching_items(
+        exact_codes: set[str],
+        include_keywords: tuple[str, ...] = (),
+        exclude_keywords: tuple[str, ...] = (),
+    ) -> Optional[float]:
+        total = 0.0
+        found = False
+        for code, amount in items.items():
+            if amount is None:
+                continue
+            code_upper = code.upper()
+            code_lower = code.lower()
+            is_exact = code_upper in exact_codes
+            is_keyword = bool(include_keywords) and any(keyword in code_lower for keyword in include_keywords)
+            if not is_exact and not is_keyword:
+                continue
+            if any(keyword in code_lower for keyword in exclude_keywords):
+                continue
+            total += abs(amount)
+            found = True
+        return total if found else None
+
     results: Dict[str, Dict[str, Optional[float]]] = {}
 
     # ── profitability
@@ -5775,9 +5906,84 @@ def _calculate_all_metrics(
     interest_expense = _get("INTEREST_EXPENSE")
     has_debt_data = lt_debt is not None or st_debt is not None
     total_debt = (lt_debt or 0) + (st_debt or 0)
+    current_bank_borrowings = _sum_matching_items(
+        {
+            "SHORT_TERM_DEBT",
+            "SHORT_TERM_BORROWINGS",
+            "CURRENT_PORTION_OF_DEBT",
+            "CURRENT_PORTION_OF_LONG_TERM_DEBT",
+            "CURRENT_PORTION_LT_DEBT",
+            "CURRENT_PORTION_OF_LONG_TERM_DEBTS",
+            "CURRENTPORTDEBT",
+            "CURRENT_BORROWINGS",
+            "CURRENT_BANK_BORROWINGS",
+            "BANK_BORROWINGS_CURRENT",
+            "BANK_BORROWING_CURRENT",
+            "BANK_OVERDRAFT",
+            "BANK_OVERDRAFTS",
+            "OVERDRAFT",
+            "OVERDRAFTS",
+            "SHORT_TERM_LOAN",
+            "SHORT_TERM_LOANS",
+        },
+        include_keywords=(
+            "bank_borrow",
+            "bank_overdraft",
+            "overdraft",
+            "short_term_loan",
+            "current_borrow",
+            "current_loan",
+            "currentportdebt",
+        ),
+        exclude_keywords=("non_current", "long_term"),
+    )
+    non_current_bank_borrowings = _sum_matching_items(
+        {
+            "LONG_TERM_DEBT",
+            "DEBTNC",
+            "LONG_TERM_BORROWINGS",
+            "NON_CURRENT_BORROWINGS",
+            "NON_CURRENT_BANK_BORROWINGS",
+            "BANK_BORROWINGS_NON_CURRENT",
+            "BANK_BORROWING_NON_CURRENT",
+            "LONG_TERM_BANK_BORROWINGS",
+            "LONG_TERM_LOAN",
+            "LONG_TERM_LOANS",
+            "TERM_LOAN",
+            "TERM_LOANS",
+            "NON_CURRENT_MURABAHA_PAYABLE",
+        },
+        include_keywords=(
+            "debtnc",
+            "non_current_borrow",
+            "long_term_borrow",
+            "term_loan",
+            "long_term_loan",
+            "non_current_murabaha",
+        ),
+        exclude_keywords=("current_portion", "short_term", "current_"),
+    )
+    other_bank_borrowings = _sum_matching_items(
+        set(),
+        include_keywords=(
+            "due_to_bank",
+            "bank_facilit",
+            "murabaha",
+            "islamic_payable",
+        ),
+        exclude_keywords=("current_portion",),
+    )
+    bank_borrowings_components = [
+        value for value in (current_bank_borrowings, non_current_bank_borrowings, other_bank_borrowings)
+        if value is not None
+    ]
+    bank_borrowings_total = sum(bank_borrowings_components) if bank_borrowings_components else None
     # CFA: Debt-to-Equity = Total Debt / Total Equity
     if has_debt_data and total_equity and total_equity != 0:
         lev["Debt-to-Equity"] = total_debt / total_equity
+    # Bank-borrowings leverage = current + non-current bank borrowings / total equity
+    if bank_borrowings_total is not None and total_equity and total_equity != 0:
+        lev["Debt / Equity"] = bank_borrowings_total / total_equity
     # CFA: Debt-to-Assets = Total Debt / Total Assets
     if has_debt_data and total_assets and total_assets != 0:
         lev["Debt-to-Assets"] = total_debt / total_assets
@@ -6333,14 +6539,18 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
             return row[0] if isinstance(row, (tuple, list)) else row.get("amount")
         return None
 
-    # Alias bridge: frontend stores "Debt/Equity Ratio", backend scores "Debt-to-Equity"
+    # Alias bridge: metrics tab now stores Debt / Equity, while score breakdown
+    # still renders the legacy Debt-to-Equity label.
     if "Debt-to-Equity" not in latest and "Debt/Equity Ratio" in latest:
         latest["Debt-to-Equity"] = latest["Debt/Equity Ratio"]
+    if "Debt-to-Equity" not in latest and "Debt / Equity" in latest:
+        latest["Debt-to-Equity"] = latest["Debt / Equity"]
 
     if "Debt-to-Equity" not in latest:
         _st_debt = _li("SHORT_TERM_DEBT", "SHORT_TERM_BORROWINGS",
-                       "CURRENT_PORTION_OF_LONG_TERM_DEBT", "NOTES_PAYABLE")
-        _lt_debt = _li("LONG_TERM_DEBT", "LONG_TERM_BORROWINGS", "BONDS_PAYABLE")
+                       "CURRENT_PORTION_OF_LONG_TERM_DEBT", "CURRENT_PORTION_OF_DEBT",
+                       "CURRENTPORTDEBT", "NOTES_PAYABLE")
+        _lt_debt = _li("LONG_TERM_DEBT", "LONG_TERM_BORROWINGS", "DEBTNC", "BONDS_PAYABLE")
         _equity  = _li("TOTAL_EQUITY", "SHAREHOLDERS_EQUITY",
                        "TOTAL_SHAREHOLDERS_EQUITY", "STOCKHOLDERS_EQUITY")
         _td = (_st_debt or 0) + (_lt_debt or 0)
@@ -6349,7 +6559,7 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
 
     if "Interest Coverage" not in latest:
         _ebit   = _li("OPERATING_INCOME", "OPERATING_PROFIT", "EBIT", "INCOME_FROM_OPERATIONS")
-        _intexp = _li("INTEREST_EXPENSE", "FINANCE_COSTS", "FINANCE_EXPENSE",
+        _intexp = _li("INTEREST_EXPENSE", "INTERESTEXPENSE", "FINANCE_COSTS", "FINANCE_EXPENSE",
                       "INTEREST_AND_FINANCE_COSTS")
         if _ebit is not None and _intexp and _intexp != 0:
             latest["Interest Coverage"] = round(_ebit / abs(_intexp), 4)
@@ -6357,8 +6567,9 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
     if "ROIC" not in latest:
         _op_inc = _li("OPERATING_INCOME", "OPERATING_PROFIT", "EBIT", "INCOME_FROM_OPERATIONS")
         _st_d   = _li("SHORT_TERM_DEBT", "SHORT_TERM_BORROWINGS",
-                      "CURRENT_PORTION_OF_LONG_TERM_DEBT", "NOTES_PAYABLE")
-        _lt_d   = _li("LONG_TERM_DEBT", "LONG_TERM_BORROWINGS", "BONDS_PAYABLE")
+                  "CURRENT_PORTION_OF_LONG_TERM_DEBT", "CURRENT_PORTION_OF_DEBT",
+                  "CURRENTPORTDEBT", "NOTES_PAYABLE")
+        _lt_d   = _li("LONG_TERM_DEBT", "LONG_TERM_BORROWINGS", "DEBTNC", "BONDS_PAYABLE")
         _eq     = _li("TOTAL_EQUITY", "SHAREHOLDERS_EQUITY",
                       "TOTAL_SHAREHOLDERS_EQUITY", "STOCKHOLDERS_EQUITY")
         _cash   = _li("CASH_AND_EQUIVALENTS", "CASH_AND_CASH_EQUIVALENTS", "CASH")
@@ -6380,13 +6591,11 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
     growth, growth_breakdown = _score_growth_detailed(latest)
     quality, quality_breakdown = _score_quality_detailed(latest)
     risk, risk_breakdown = _score_risk_detailed(latest)
+    metric_category_scores, metric_category_breakdown, overall = _score_metric_categories(latest)
 
-    # Positive pillars sum to 100%: Fund 30%, Quality 25%, Growth 25%, Valuation 20%
-    base_score = fund * 0.30 + quality * 0.25 + growth * 0.25 + val * 0.20
-    # Risk is a deduction only (up to -15%): higher risk_score = safer = less penalty
-    # risk=100 → 0% penalty, risk=50 → 7.5% penalty, risk=0 → 15% penalty
+    # Legacy risk score remains available for existing consumers, but the
+    # displayed overall score now follows the metrics taxonomy shown on the UI.
     risk_penalty = (1.0 - risk / 100.0) * 0.15
-    overall = base_score * (1.0 - risk_penalty)
 
     result = {
         "overall_score": round(overall, 1),
@@ -6397,6 +6606,8 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
         "risk_score": round(risk, 1),
         "risk_penalty_pct": round(risk_penalty * 100, 1),
         "details": latest,
+        "metric_category_scores": {key: round(value, 1) for key, value in metric_category_scores.items()},
+        "metric_category_breakdown": metric_category_breakdown,
         "score_breakdown": {
             "fundamental": fund_breakdown,
             "valuation": val_breakdown,
@@ -6406,38 +6617,7 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
         },
     }
 
-    # Persist (risk_score goes into details JSON since column may not exist yet)
-    now = int(time.time())
-    # Try inserting with risk_score column, fall back to without
-    try:
-        exec_sql(
-            """INSERT INTO stock_scores
-               (stock_id, scoring_date, overall_score, fundamental_score,
-                valuation_score, growth_score, quality_score, risk_score, details,
-                created_by_user_id, created_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-            (
-                stock_id, date.today().isoformat(), result["overall_score"],
-                result["fundamental_score"], result["valuation_score"],
-                result["growth_score"], result["quality_score"],
-                result["risk_score"],
-                json.dumps(latest), user_id, now,
-            ),
-        )
-    except Exception:
-        exec_sql(
-            """INSERT INTO stock_scores
-               (stock_id, scoring_date, overall_score, fundamental_score,
-                valuation_score, growth_score, quality_score, details,
-                created_by_user_id, created_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?)""",
-            (
-                stock_id, date.today().isoformat(), result["overall_score"],
-                result["fundamental_score"], result["valuation_score"],
-                result["growth_score"], result["quality_score"],
-                json.dumps(latest), user_id, now,
-            ),
-        )
+    _persist_daily_stock_score(stock_id, user_id, result, latest)
     return result
 
 
@@ -6577,6 +6757,288 @@ def _score_fundamentals_detailed(m: Dict[str, float]):
         else:            _add("Interest Coverage", round(ic, 2), 0, "1.5–3× (tight)")
     else:
         _add("Interest Coverage", None, 0, "N/A")
+
+    return max(0.0, min(100.0, score)), {"base": 50, "metrics": breakdown}
+
+
+METRIC_CATEGORY_SCORE_WEIGHTS = {
+    "profitability": 0.20,
+    "liquidity": 0.08,
+    "capital_structure": 0.12,
+    "efficiency": 0.10,
+    "valuation": 0.15,
+    "cashflow": 0.20,
+    "growth": 0.15,
+}
+
+
+def _score_profitability_detailed(m: Dict[str, float]):
+    """Score profitability using the same ratio family shown on the Metrics tab."""
+    score = 50.0
+    breakdown = []
+
+    def _add(metric, value, pts, reason):
+        nonlocal score
+        score += pts
+        breakdown.append({"metric": metric, "value": value, "points": pts, "reason": reason})
+
+    roic = m.get("ROIC")
+    if roic is not None:
+        if roic > 0.18:   _add("ROIC", round(roic, 4), 15, "> 18% (elite capital returns)")
+        elif roic > 0.12: _add("ROIC", round(roic, 4), 10, "> 12% (strong)")
+        elif roic > 0.06: _add("ROIC", round(roic, 4), 4, "> 6% (acceptable)")
+        elif roic < 0:    _add("ROIC", round(roic, 4), -12, "< 0% (destroying value)")
+        else:             _add("ROIC", round(roic, 4), 0, "0-6% (weak)")
+    else:
+        _add("ROIC", None, 0, "N/A")
+
+    roe = m.get("ROE")
+    if roe is not None:
+        if roe > 0.20:   _add("ROE", round(roe, 4), 10, "> 20% (excellent)")
+        elif roe > 0.12: _add("ROE", round(roe, 4), 6, "> 12% (good)")
+        elif roe > 0.05: _add("ROE", round(roe, 4), 2, "> 5% (fair)")
+        elif roe < 0:    _add("ROE", round(roe, 4), -8, "< 0% (negative)")
+        else:            _add("ROE", round(roe, 4), 0, "0-5% (weak)")
+    else:
+        _add("ROE", None, 0, "N/A")
+
+    roa = m.get("ROA")
+    if roa is not None:
+        if roa > 0.10:   _add("ROA", round(roa, 4), 8, "> 10% (asset-light or high quality)")
+        elif roa > 0.05: _add("ROA", round(roa, 4), 4, "> 5% (solid)")
+        elif roa > 0.02: _add("ROA", round(roa, 4), 1, "> 2% (acceptable)")
+        elif roa < 0:    _add("ROA", round(roa, 4), -6, "< 0% (loss-making)")
+        else:            _add("ROA", round(roa, 4), 0, "0-2% (thin)")
+    else:
+        _add("ROA", None, 0, "N/A")
+
+    net_margin = m.get("Net Margin")
+    if net_margin is not None:
+        if net_margin > 0.20:   _add("Net Margin", round(net_margin, 4), 8, "> 20% (wide margin)")
+        elif net_margin > 0.10: _add("Net Margin", round(net_margin, 4), 5, "> 10% (healthy)")
+        elif net_margin > 0.03: _add("Net Margin", round(net_margin, 4), 2, "> 3% (serviceable)")
+        elif net_margin < 0:    _add("Net Margin", round(net_margin, 4), -8, "< 0% (loss-making)")
+        else:                   _add("Net Margin", round(net_margin, 4), 0, "0-3% (thin)")
+    else:
+        _add("Net Margin", None, 0, "N/A")
+
+    operating_margin = m.get("Operating Margin")
+    if operating_margin is not None:
+        if operating_margin > 0.20:   _add("Operating Margin", round(operating_margin, 4), 6, "> 20% (strong core profitability)")
+        elif operating_margin > 0.10: _add("Operating Margin", round(operating_margin, 4), 3, "> 10% (healthy)")
+        elif operating_margin > 0.05: _add("Operating Margin", round(operating_margin, 4), 1, "> 5% (adequate)")
+        elif operating_margin < 0:    _add("Operating Margin", round(operating_margin, 4), -6, "< 0% (operations under pressure)")
+        else:                         _add("Operating Margin", round(operating_margin, 4), 0, "0-5% (low)")
+    else:
+        _add("Operating Margin", None, 0, "N/A")
+
+    trend = m.get("Operating Margin Trend 3Y")
+    trend_label = "Operating Margin Trend 3Y"
+    if trend is None:
+        trend = m.get("Net Margin Trend 3Y")
+        trend_label = "Net Margin Trend 3Y"
+    if trend is not None:
+        if trend > 0.02:    _add(trend_label, round(trend, 4), 5, "> 2pp expansion")
+        elif trend > 0:     _add(trend_label, round(trend, 4), 2, "slight improvement")
+        elif trend < -0.02: _add(trend_label, round(trend, 4), -5, "> 2pp contraction")
+        elif trend < 0:     _add(trend_label, round(trend, 4), -2, "slight deterioration")
+        else:               _add(trend_label, round(trend, 4), 0, "stable")
+    else:
+        _add("Margin Trend 3Y", None, 0, "N/A")
+
+    ebitda_margin = m.get("EBITDA Margin")
+    if ebitda_margin is not None:
+        if ebitda_margin > 0.25:   _add("EBITDA Margin", round(ebitda_margin, 4), 4, "> 25% (strong operating buffer)")
+        elif ebitda_margin > 0.15: _add("EBITDA Margin", round(ebitda_margin, 4), 2, "> 15% (healthy)")
+        elif ebitda_margin < 0.05: _add("EBITDA Margin", round(ebitda_margin, 4), -3, "< 5% (thin cash earnings)")
+        else:                      _add("EBITDA Margin", round(ebitda_margin, 4), 0, "5-15% (mixed)")
+    else:
+        _add("EBITDA Margin", None, 0, "N/A")
+
+    return max(0.0, min(100.0, score)), {"base": 50, "metrics": breakdown}
+
+
+def _score_liquidity_detailed(m: Dict[str, float]):
+    """Score near-term balance-sheet flexibility."""
+    score = 50.0
+    breakdown = []
+
+    def _add(metric, value, pts, reason):
+        nonlocal score
+        score += pts
+        breakdown.append({"metric": metric, "value": value, "points": pts, "reason": reason})
+
+    current_ratio = m.get("Current Ratio")
+    if current_ratio is not None:
+        if 1.5 <= current_ratio <= 3.0: _add("Current Ratio", round(current_ratio, 2), 12, "1.5-3.0x (healthy)")
+        elif current_ratio >= 1.2:      _add("Current Ratio", round(current_ratio, 2), 8, ">= 1.2x (adequate)")
+        elif current_ratio >= 1.0:      _add("Current Ratio", round(current_ratio, 2), 3, ">= 1.0x (tight but manageable)")
+        else:                           _add("Current Ratio", round(current_ratio, 2), -10, "< 1.0x (working-capital stress)")
+    else:
+        _add("Current Ratio", None, 0, "N/A")
+
+    quick_ratio = m.get("Quick Ratio")
+    if quick_ratio is not None:
+        if 1.0 <= quick_ratio <= 2.0: _add("Quick Ratio", round(quick_ratio, 2), 10, "1.0-2.0x (liquid)")
+        elif quick_ratio >= 0.7:      _add("Quick Ratio", round(quick_ratio, 2), 4, ">= 0.7x (acceptable)")
+        else:                         _add("Quick Ratio", round(quick_ratio, 2), -8, "< 0.7x (inventory-dependent)")
+    else:
+        _add("Quick Ratio", None, 0, "N/A")
+
+    cash_ratio = m.get("Cash Ratio")
+    if cash_ratio is not None:
+        if 0.20 <= cash_ratio <= 1.0: _add("Cash Ratio", round(cash_ratio, 2), 8, "0.2-1.0x (good cash cover)")
+        elif cash_ratio >= 0.10:      _add("Cash Ratio", round(cash_ratio, 2), 3, ">= 0.1x (basic liquidity cushion)")
+        else:                         _add("Cash Ratio", round(cash_ratio, 2), -4, "< 0.1x (thin cash buffer)")
+    else:
+        _add("Cash Ratio", None, 0, "N/A")
+
+    return max(0.0, min(100.0, score)), {"base": 50, "metrics": breakdown}
+
+
+def _score_capital_structure_detailed(m: Dict[str, float]):
+    """Score leverage sustainability and debt service capacity."""
+    score = 50.0
+    breakdown = []
+
+    def _add(metric, value, pts, reason):
+        nonlocal score
+        score += pts
+        breakdown.append({"metric": metric, "value": value, "points": pts, "reason": reason})
+
+    debt_to_equity = m.get("Debt-to-Equity") or m.get("Debt / Equity")
+    debt_to_equity_label = "Debt-to-Equity" if m.get("Debt-to-Equity") is not None else "Debt / Equity"
+    if debt_to_equity is not None:
+        if debt_to_equity < 0.3:     _add(debt_to_equity_label, round(debt_to_equity, 2), 12, "< 0.3x (conservative)")
+        elif debt_to_equity < 0.7:   _add(debt_to_equity_label, round(debt_to_equity, 2), 7, "< 0.7x (prudent)")
+        elif debt_to_equity < 1.5:   _add(debt_to_equity_label, round(debt_to_equity, 2), 2, "0.7-1.5x (manageable)")
+        elif debt_to_equity > 2.5:   _add(debt_to_equity_label, round(debt_to_equity, 2), -12, "> 2.5x (high leverage)")
+        else:                        _add(debt_to_equity_label, round(debt_to_equity, 2), -5, "1.5-2.5x (elevated)")
+    else:
+        _add("Debt-to-Equity", None, 0, "N/A")
+
+    debt_to_assets = m.get("Debt-to-Assets")
+    if debt_to_assets is not None:
+        if debt_to_assets < 0.25:   _add("Debt-to-Assets", round(debt_to_assets, 4), 8, "< 25% (light leverage)")
+        elif debt_to_assets < 0.50: _add("Debt-to-Assets", round(debt_to_assets, 4), 4, "< 50% (acceptable)")
+        elif debt_to_assets < 0.70: _add("Debt-to-Assets", round(debt_to_assets, 4), 0, "50-70% (full balance sheet)")
+        else:                       _add("Debt-to-Assets", round(debt_to_assets, 4), -8, ">= 70% (balance-sheet risk)")
+    else:
+        _add("Debt-to-Assets", None, 0, "N/A")
+
+    debt_to_capital = m.get("Debt-to-Capital")
+    if debt_to_capital is not None:
+        if debt_to_capital < 0.30:   _add("Debt-to-Capital", round(debt_to_capital, 4), 8, "< 30% (equity-funded)")
+        elif debt_to_capital < 0.50: _add("Debt-to-Capital", round(debt_to_capital, 4), 3, "< 50% (balanced)")
+        elif debt_to_capital > 0.70: _add("Debt-to-Capital", round(debt_to_capital, 4), -8, "> 70% (debt-heavy)")
+        else:                        _add("Debt-to-Capital", round(debt_to_capital, 4), -3, "50-70% (levered)")
+    else:
+        _add("Debt-to-Capital", None, 0, "N/A")
+
+    interest_coverage = m.get("Interest Coverage")
+    if interest_coverage is not None:
+        if interest_coverage > 8:     _add("Interest Coverage", round(interest_coverage, 2), 10, "> 8x (very safe)")
+        elif interest_coverage > 4:   _add("Interest Coverage", round(interest_coverage, 2), 6, "> 4x (comfortable)")
+        elif interest_coverage > 2:   _add("Interest Coverage", round(interest_coverage, 2), 2, "> 2x (serviceable)")
+        elif interest_coverage < 1.5: _add("Interest Coverage", round(interest_coverage, 2), -12, "< 1.5x (distress risk)")
+        else:                         _add("Interest Coverage", round(interest_coverage, 2), -4, "1.5-2.0x (tight)")
+    else:
+        _add("Interest Coverage", None, 0, "N/A")
+
+    debt_ebitda = m.get("Net Debt / EBITDA")
+    debt_ebitda_label = "Net Debt / EBITDA"
+    if debt_ebitda is None:
+        debt_ebitda = m.get("Debt / EBITDA")
+        debt_ebitda_label = "Debt / EBITDA"
+    if debt_ebitda is not None:
+        if debt_ebitda < 1.5:   _add(debt_ebitda_label, round(debt_ebitda, 2), 8, "< 1.5x (low leverage)")
+        elif debt_ebitda < 3.0: _add(debt_ebitda_label, round(debt_ebitda, 2), 3, "< 3.0x (manageable)")
+        elif debt_ebitda > 5.0: _add(debt_ebitda_label, round(debt_ebitda, 2), -8, "> 5.0x (stretched)")
+        else:                   _add(debt_ebitda_label, round(debt_ebitda, 2), -3, "3.0-5.0x (elevated)")
+    else:
+        _add("Debt / EBITDA", None, 0, "N/A")
+
+    financial_leverage = m.get("Financial Leverage") or m.get("Equity Multiplier")
+    leverage_label = "Financial Leverage" if m.get("Financial Leverage") is not None else "Equity Multiplier"
+    if financial_leverage is not None:
+        if financial_leverage < 2.0:     _add(leverage_label, round(financial_leverage, 2), 4, "< 2.0x (conservative)")
+        elif financial_leverage > 3.5:   _add(leverage_label, round(financial_leverage, 2), -5, "> 3.5x (aggressive)")
+        else:                            _add(leverage_label, round(financial_leverage, 2), 0, "2.0-3.5x (normal)")
+    else:
+        _add("Financial Leverage", None, 0, "N/A")
+
+    return max(0.0, min(100.0, score)), {"base": 50, "metrics": breakdown}
+
+
+def _score_efficiency_detailed(m: Dict[str, float]):
+    """Score how efficiently the company converts assets and working capital into sales and cash."""
+    score = 50.0
+    breakdown = []
+
+    def _add(metric, value, pts, reason):
+        nonlocal score
+        score += pts
+        breakdown.append({"metric": metric, "value": value, "points": pts, "reason": reason})
+
+    asset_turnover = m.get("Asset Turnover")
+    if asset_turnover is not None:
+        if asset_turnover > 1.5:   _add("Asset Turnover", round(asset_turnover, 2), 10, "> 1.5x (very efficient)")
+        elif asset_turnover > 1.0: _add("Asset Turnover", round(asset_turnover, 2), 6, "> 1.0x (strong)")
+        elif asset_turnover > 0.5: _add("Asset Turnover", round(asset_turnover, 2), 2, "> 0.5x (acceptable)")
+        elif asset_turnover < 0.3: _add("Asset Turnover", round(asset_turnover, 2), -6, "< 0.3x (asset-heavy)")
+        else:                      _add("Asset Turnover", round(asset_turnover, 2), 0, "0.3-0.5x (mixed)")
+    else:
+        _add("Asset Turnover", None, 0, "N/A")
+
+    fixed_asset_turnover = m.get("Fixed Asset Turnover")
+    if fixed_asset_turnover is not None:
+        if fixed_asset_turnover > 3.0:   _add("Fixed Asset Turnover", round(fixed_asset_turnover, 2), 6, "> 3.0x (excellent utilization)")
+        elif fixed_asset_turnover > 1.5: _add("Fixed Asset Turnover", round(fixed_asset_turnover, 2), 3, "> 1.5x (good)")
+        elif fixed_asset_turnover < 1.0: _add("Fixed Asset Turnover", round(fixed_asset_turnover, 2), -3, "< 1.0x (underutilized)")
+        else:                            _add("Fixed Asset Turnover", round(fixed_asset_turnover, 2), 0, "1.0-1.5x (neutral)")
+    else:
+        _add("Fixed Asset Turnover", None, 0, "N/A")
+
+    working_capital_turnover = m.get("Working Capital Turnover")
+    if working_capital_turnover is not None:
+        if 2.0 <= working_capital_turnover <= 8.0:
+            _add("Working Capital Turnover", round(working_capital_turnover, 2), 5, "2.0-8.0x (efficient)")
+        elif working_capital_turnover > 1.0:
+            _add("Working Capital Turnover", round(working_capital_turnover, 2), 2, "> 1.0x (acceptable)")
+        elif working_capital_turnover < 0:
+            _add("Working Capital Turnover", round(working_capital_turnover, 2), -5, "negative working capital strain")
+        else:
+            _add("Working Capital Turnover", round(working_capital_turnover, 2), 0, "0-1.0x (slow)")
+    else:
+        _add("Working Capital Turnover", None, 0, "N/A")
+
+    receivables_turnover = m.get("Receivables Turnover")
+    if receivables_turnover is not None:
+        if receivables_turnover > 8.0:   _add("Receivables Turnover", round(receivables_turnover, 2), 6, "> 8.0x (fast collection)")
+        elif receivables_turnover > 5.0: _add("Receivables Turnover", round(receivables_turnover, 2), 3, "> 5.0x (healthy)")
+        elif receivables_turnover < 3.0: _add("Receivables Turnover", round(receivables_turnover, 2), -4, "< 3.0x (slow collection)")
+        else:                            _add("Receivables Turnover", round(receivables_turnover, 2), 0, "3.0-5.0x (neutral)")
+    else:
+        _add("Receivables Turnover", None, 0, "N/A")
+
+    inventory_turnover = m.get("Inventory Turnover")
+    if inventory_turnover is not None:
+        if inventory_turnover > 6.0:   _add("Inventory Turnover", round(inventory_turnover, 2), 5, "> 6.0x (strong sell-through)")
+        elif inventory_turnover > 3.0: _add("Inventory Turnover", round(inventory_turnover, 2), 2, "> 3.0x (healthy)")
+        elif inventory_turnover < 2.0: _add("Inventory Turnover", round(inventory_turnover, 2), -4, "< 2.0x (inventory drag)")
+        else:                          _add("Inventory Turnover", round(inventory_turnover, 2), 0, "2.0-3.0x (mixed)")
+    else:
+        _add("Inventory Turnover", None, 0, "N/A")
+
+    cash_conversion_cycle = m.get("Cash Conversion Cycle")
+    if cash_conversion_cycle is not None:
+        if cash_conversion_cycle < 30:    _add("Cash Conversion Cycle", round(cash_conversion_cycle, 1), 10, "< 30 days (excellent cash discipline)")
+        elif cash_conversion_cycle < 60:  _add("Cash Conversion Cycle", round(cash_conversion_cycle, 1), 6, "< 60 days (healthy)")
+        elif cash_conversion_cycle < 90:  _add("Cash Conversion Cycle", round(cash_conversion_cycle, 1), 2, "< 90 days (acceptable)")
+        elif cash_conversion_cycle > 150: _add("Cash Conversion Cycle", round(cash_conversion_cycle, 1), -8, "> 150 days (cash tied up)")
+        else:                             _add("Cash Conversion Cycle", round(cash_conversion_cycle, 1), -3, "90-150 days (slow cycle)")
+    else:
+        _add("Cash Conversion Cycle", None, 0, "N/A")
 
     return max(0.0, min(100.0, score)), {"base": 50, "metrics": breakdown}
 
@@ -6809,6 +7271,100 @@ def _score_quality_detailed(m: Dict[str, float]):
         _add("Op Margin Trend 3Y", None, 0, "N/A")
 
     return max(0.0, min(100.0, score)), {"base": 50, "metrics": breakdown}
+
+
+def _score_cashflow_detailed(m: Dict[str, float]):
+    """Score cash generation quality using the cash-flow metric family."""
+    score = 50.0
+    breakdown = []
+
+    def _add(metric, value, pts, reason):
+        nonlocal score
+        score += pts
+        breakdown.append({"metric": metric, "value": value, "points": pts, "reason": reason})
+
+    cfoni = m.get("CFO / Net Income")
+    if cfoni is not None:
+        if cfoni > 1.2:     _add("CFO / Net Income", round(cfoni, 2), 12, "> 1.2x (excellent cash conversion)")
+        elif cfoni > 0.8:   _add("CFO / Net Income", round(cfoni, 2), 6, "> 0.8x (solid)")
+        elif cfoni > 0.5:   _add("CFO / Net Income", round(cfoni, 2), 0, "0.5-0.8x (moderate)")
+        else:               _add("CFO / Net Income", round(cfoni, 2), -10, "< 0.5x (poor conversion)")
+    else:
+        _add("CFO / Net Income", None, 0, "N/A")
+
+    fcf_margin = m.get("FCF Margin")
+    if fcf_margin is not None:
+        if fcf_margin > 0.15:    _add("FCF Margin", round(fcf_margin, 4), 10, "> 15% (exceptional)")
+        elif fcf_margin > 0.08:  _add("FCF Margin", round(fcf_margin, 4), 5, "> 8% (healthy)")
+        elif fcf_margin > 0:     _add("FCF Margin", round(fcf_margin, 4), 2, "> 0% (positive)")
+        else:                    _add("FCF Margin", round(fcf_margin, 4), -8, "<= 0% (cash burn)")
+    else:
+        _add("FCF Margin", None, 0, "N/A")
+
+    accruals_ratio = m.get("Accruals Ratio")
+    if accruals_ratio is not None:
+        if accruals_ratio < -0.05:    _add("Accruals Ratio", round(accruals_ratio, 4), 10, "< -5% (high-quality earnings)")
+        elif accruals_ratio < 0.03:   _add("Accruals Ratio", round(accruals_ratio, 4), 4, "< 3% (clean)")
+        elif accruals_ratio < 0.10:   _add("Accruals Ratio", round(accruals_ratio, 4), 0, "3-10% (moderate)")
+        else:                         _add("Accruals Ratio", round(accruals_ratio, 4), -10, "> 10% (aggressive accruals)")
+    else:
+        _add("Accruals Ratio", None, 0, "N/A")
+
+    cash_from_operations = m.get("Cash from Operations")
+    if cash_from_operations is not None:
+        if cash_from_operations > 0: _add("Cash from Operations", round(cash_from_operations, 2), 4, "positive operating cash flow")
+        else:                        _add("Cash from Operations", round(cash_from_operations, 2), -8, "negative operating cash flow")
+    else:
+        _add("Cash from Operations", None, 0, "N/A")
+
+    free_cash_flow = m.get("Free Cash Flow")
+    if free_cash_flow is not None:
+        if free_cash_flow > 0: _add("Free Cash Flow", round(free_cash_flow, 2), 6, "positive free cash flow")
+        else:                  _add("Free Cash Flow", round(free_cash_flow, 2), -6, "negative free cash flow")
+    else:
+        _add("Free Cash Flow", None, 0, "N/A")
+
+    levered_free_cash_flow = m.get("Levered Free Cash Flow")
+    if levered_free_cash_flow is not None:
+        if levered_free_cash_flow > 0:
+            _add("Levered Free Cash Flow", round(levered_free_cash_flow, 2), 4, "positive after financing obligations")
+        else:
+            _add("Levered Free Cash Flow", round(levered_free_cash_flow, 2), -4, "negative after financing obligations")
+    else:
+        _add("Levered Free Cash Flow", None, 0, "N/A")
+
+    return max(0.0, min(100.0, score)), {"base": 50, "metrics": breakdown}
+
+
+def _score_metric_categories(m: Dict[str, float]):
+    profitability, profitability_breakdown = _score_profitability_detailed(m)
+    liquidity, liquidity_breakdown = _score_liquidity_detailed(m)
+    capital_structure, capital_structure_breakdown = _score_capital_structure_detailed(m)
+    efficiency, efficiency_breakdown = _score_efficiency_detailed(m)
+    valuation, valuation_breakdown = _score_valuation_detailed(m)
+    cashflow, cashflow_breakdown = _score_cashflow_detailed(m)
+    growth, growth_breakdown = _score_growth_detailed(m)
+
+    category_scores = {
+        "profitability": profitability,
+        "liquidity": liquidity,
+        "capital_structure": capital_structure,
+        "efficiency": efficiency,
+        "valuation": valuation,
+        "cashflow": cashflow,
+        "growth": growth,
+    }
+    category_breakdown = {
+        "profitability": profitability_breakdown,
+        "liquidity": liquidity_breakdown,
+        "capital_structure": capital_structure_breakdown,
+        "efficiency": efficiency_breakdown,
+        "valuation": valuation_breakdown,
+        "cashflow": cashflow_breakdown,
+        "growth": growth_breakdown,
+    }
+    overall = sum(category_scores[key] * weight for key, weight in METRIC_CATEGORY_SCORE_WEIGHTS.items())
+    return category_scores, category_breakdown, overall
 
 
 def _resolve_yf_ticker(symbol: str, user_id: int = None) -> str:
