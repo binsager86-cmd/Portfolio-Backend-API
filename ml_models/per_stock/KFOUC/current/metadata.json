@@ -1,46 +1,57 @@
 {
-  "auc": 1.0,
-  "log_loss": 0.6097041341049731,
-  "calibration_error": 0.368984956408922,
-  "n_train_events": 242,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.1615016614403323,
+  "mae": 5.911638072935462,
+  "rmse": 6.544392904605016,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 509,
   "train_date_range": {
-    "start": "2023-05-14",
-    "end": "2025-12-09"
+    "start": "2023-05-11",
+    "end": "2026-04-26"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.1615",
   "fold_metrics": [
     {
-      "auc": 1.0,
-      "log_loss": 0.6812309133206318,
-      "calibration_max_error": 0.7265888925601409,
-      "calibration_mean_error": 0.3950806598458794,
+      "spearman": -0.06797979554749446,
+      "mae": 8.669864255289115,
+      "rmse": 8.832683168187433,
       "fold": 1,
-      "train_size": 145,
-      "test_size": 24,
-      "best_iteration": 21
+      "train_size": 345,
+      "test_size": 66,
+      "best_iteration": 24
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.5372606307027968,
-      "calibration_max_error": 0.09485288332854858,
-      "calibration_mean_error": 0.09485288332854858,
+      "spearman": 0.3975702485178524,
+      "mae": 8.083965497302326,
+      "rmse": 8.684713259869657,
+      "fold": 2,
+      "train_size": 411,
+      "test_size": 40,
+      "best_iteration": 29
+    },
+    {
+      "spearman": -0.274737226882296,
+      "mae": 5.686506987700149,
+      "rmse": 6.813409650209457,
+      "fold": 3,
+      "train_size": 451,
+      "test_size": 28,
+      "best_iteration": 130
+    },
+    {
+      "spearman": 0.5911534196732672,
+      "mae": 1.2062155514502573,
+      "rmse": 1.8467655401535146,
       "fold": 4,
-      "train_size": 217,
-      "test_size": 12,
-      "best_iteration": 28
-    },
-    {
-      "auc": 1.0,
-      "log_loss": 0.6106208582914908,
-      "calibration_max_error": 0.2855130933380764,
-      "calibration_mean_error": 0.2855130933380764,
-      "fold": 5,
-      "train_size": 229,
-      "test_size": 13,
-      "best_iteration": 1
+      "train_size": 479,
+      "test_size": 15,
+      "best_iteration": 69
     }
   ],
   "tier": "per_stock",
   "identifier": "KFOUC",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

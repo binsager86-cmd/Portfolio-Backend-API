@@ -1,46 +1,48 @@
 {
-  "auc": 0.5,
-  "log_loss": 0.43830592235630755,
-  "calibration_error": 0.21546500916357036,
-  "n_train_events": 394,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.5547415565616771,
+  "mae": 13.744005172472908,
+  "rmse": 18.628915502244933,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 479,
   "train_date_range": {
-    "start": "2023-05-25",
-    "end": "2026-04-19"
+    "start": "2023-05-24",
+    "end": "2026-05-07"
   },
-  "rejected_reason": "auc_below_threshold_0.5000",
+  "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 0.5,
-      "log_loss": 0.5356639494407515,
-      "calibration_max_error": 0.2516899816882803,
-      "calibration_mean_error": 0.2516899816882803,
+      "spearman": 0.8416960121976149,
+      "mae": 28.55822010436795,
+      "rmse": 29.27578294362793,
+      "fold": 1,
+      "train_size": 333,
+      "test_size": 43,
+      "best_iteration": 25
+    },
+    {
+      "spearman": 0.8086423746383082,
+      "mae": 10.274735994705063,
+      "rmse": 16.931932550157388,
       "fold": 2,
-      "train_size": 275,
-      "test_size": 40,
-      "best_iteration": 4
+      "train_size": 376,
+      "test_size": 13,
+      "best_iteration": 76
     },
     {
-      "auc": 0.0,
-      "log_loss": 0.6110339250828273,
-      "calibration_max_error": 0.39469492790743343,
-      "calibration_mean_error": 0.39469492790743343,
-      "fold": 3,
-      "train_size": 315,
-      "test_size": 39,
-      "best_iteration": 1
-    },
-    {
-      "auc": 1.0,
-      "log_loss": 0.16821989254534406,
-      "calibration_max_error": 1.011789499738569e-05,
-      "calibration_mean_error": 1.011789499738569e-05,
+      "spearman": 0.013886282849108205,
+      "mae": 2.3990594183457055,
+      "rmse": 9.679031012949476,
       "fold": 5,
-      "train_size": 374,
-      "test_size": 20,
-      "best_iteration": 40
+      "train_size": 404,
+      "test_size": 75,
+      "best_iteration": 14
     }
   ],
   "tier": "per_stock",
   "identifier": "SENERGY",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

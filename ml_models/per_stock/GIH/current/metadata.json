@@ -1,46 +1,48 @@
 {
-  "auc": 0.8072916666666666,
-  "log_loss": 0.3638826008996614,
-  "calibration_error": 0.7134962578823673,
-  "n_train_events": 332,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.00046772625686105257,
+  "mae": 5.141210817453945,
+  "rmse": 6.322054391794602,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 446,
   "train_date_range": {
-    "start": "2023-05-10",
-    "end": "2026-05-12"
+    "start": "2023-05-08",
+    "end": "2026-05-11"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.0005",
   "fold_metrics": [
     {
-      "auc": 0.421875,
-      "log_loss": 0.40873824613163584,
-      "calibration_max_error": 0.82369646788321,
-      "calibration_mean_error": 0.47127676740487473,
-      "fold": 1,
-      "train_size": 199,
-      "test_size": 33,
-      "best_iteration": 22
-    },
-    {
-      "auc": 1.0,
-      "log_loss": 0.2934266946367293,
-      "calibration_max_error": 0.5671797747994812,
-      "calibration_mean_error": 0.3263611883139818,
+      "spearman": -0.9793762543370321,
+      "mae": 10.115900949551293,
+      "rmse": 10.92261537229363,
       "fold": 2,
-      "train_size": 232,
-      "test_size": 33,
-      "best_iteration": 65
+      "train_size": 309,
+      "test_size": 40,
+      "best_iteration": 23
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.38948286193061904,
-      "calibration_max_error": 0.7496125309644105,
-      "calibration_mean_error": 0.45558626565036087,
+      "spearman": 0.24710307120275524,
+      "mae": 0.9464396478336112,
+      "rmse": 1.5791236747592063,
+      "fold": 4,
+      "train_size": 362,
+      "test_size": 26,
+      "best_iteration": 95
+    },
+    {
+      "spearman": 0.7336763619048601,
+      "mae": 4.3612918549769315,
+      "rmse": 6.46442412833097,
       "fold": 5,
-      "train_size": 315,
-      "test_size": 17,
-      "best_iteration": 23
+      "train_size": 388,
+      "test_size": 58,
+      "best_iteration": 17
     }
   ],
   "tier": "per_stock",
   "identifier": "GIH",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

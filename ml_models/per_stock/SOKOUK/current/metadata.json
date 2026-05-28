@@ -1,36 +1,48 @@
 {
-  "auc": 1.0,
-  "log_loss": 0.0007627197617796274,
-  "calibration_error": 0.0010039767256584953,
-  "n_train_events": 278,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.8978875593460031,
+  "mae": 13.739552520383304,
+  "rmse": 14.987058363756676,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 513,
   "train_date_range": {
-    "start": "2023-05-14",
-    "end": "2026-04-14"
+    "start": "2023-05-11",
+    "end": "2026-05-07"
   },
   "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 1.0,
-      "log_loss": 0.0014733760120635793,
-      "calibration_max_error": 0.001955792217821495,
-      "calibration_mean_error": 0.001089160944247226,
-      "fold": 2,
-      "train_size": 194,
-      "test_size": 28,
-      "best_iteration": 200
+      "spearman": 0.9483716648555721,
+      "mae": 28.99701637526083,
+      "rmse": 29.786683964372905,
+      "fold": 1,
+      "train_size": 301,
+      "test_size": 74,
+      "best_iteration": 7
     },
     {
-      "auc": 1.0,
-      "log_loss": 5.2063511495675506e-05,
-      "calibration_max_error": 5.216123349549573e-05,
-      "calibration_mean_error": 5.075470684700212e-05,
-      "fold": 3,
-      "train_size": 222,
-      "test_size": 28,
-      "best_iteration": 200
+      "spearman": 0.8871655103642435,
+      "mae": 4.0822904826614685,
+      "rmse": 5.5895841676456826,
+      "fold": 2,
+      "train_size": 375,
+      "test_size": 37,
+      "best_iteration": 72
+    },
+    {
+      "spearman": 0.8581255028181937,
+      "mae": 8.139350703227612,
+      "rmse": 9.584906959251443,
+      "fold": 5,
+      "train_size": 450,
+      "test_size": 63,
+      "best_iteration": 6
     }
   ],
   "tier": "per_stock",
   "identifier": "SOKOUK",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

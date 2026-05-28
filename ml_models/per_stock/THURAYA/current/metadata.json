@@ -1,26 +1,57 @@
 {
-  "auc": 0.9615384615384616,
-  "log_loss": 0.16277256992262876,
-  "calibration_error": 0.11959981382256113,
-  "n_train_events": 283,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 1.0,
+  "mae": 21.126658229733966,
+  "rmse": 23.072664981045936,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 315,
   "train_date_range": {
-    "start": "2024-12-08",
-    "end": "2026-04-06"
+    "start": "2024-08-22",
+    "end": "2026-04-05"
   },
   "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 0.9615384615384616,
-      "log_loss": 0.16277256992262876,
-      "calibration_max_error": 0.11959981382256113,
-      "calibration_mean_error": 0.07690240936761568,
+      "spearman": NaN,
+      "mae": 29.452075421315307,
+      "rmse": 30.780093690169565,
+      "fold": 1,
+      "train_size": 94,
+      "test_size": 53,
+      "best_iteration": 1
+    },
+    {
+      "spearman": NaN,
+      "mae": 24.014475008413758,
+      "rmse": 27.225032793945257,
+      "fold": 2,
+      "train_size": 147,
+      "test_size": 39,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 1.0,
+      "mae": 9.183825191764132,
+      "rmse": 11.597258499867117,
+      "fold": 4,
+      "train_size": 190,
+      "test_size": 122,
+      "best_iteration": 20
+    },
+    {
+      "spearman": 1.0,
+      "mae": 21.85625729744267,
+      "rmse": 22.68827494020179,
       "fold": 5,
-      "train_size": 268,
-      "test_size": 15,
-      "best_iteration": 35
+      "train_size": 312,
+      "test_size": 3,
+      "best_iteration": 295
     }
   ],
   "tier": "per_stock",
   "identifier": "THURAYA",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

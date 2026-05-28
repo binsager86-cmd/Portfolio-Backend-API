@@ -1,26 +1,66 @@
 {
-  "auc": 0.5,
-  "log_loss": 1.5469524763168672,
-  "calibration_error": 0.6166666666666667,
-  "n_train_events": 43,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.6170315225665093,
+  "mae": 22.696374281230714,
+  "rmse": 29.14148198210778,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 12447,
   "train_date_range": {
-    "start": "2023-05-03",
-    "end": "2026-04-01"
+    "start": "2023-04-20",
+    "end": "2026-05-20"
   },
-  "rejected_reason": "auc_below_threshold_0.5000",
+  "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 0.5,
-      "log_loss": 1.5469524763168672,
-      "calibration_max_error": 0.6166666666666667,
-      "calibration_mean_error": 0.6166666666666667,
+      "spearman": 0.504500724636468,
+      "mae": 34.514996165192855,
+      "rmse": 40.72692686896451,
+      "fold": 1,
+      "train_size": 7521,
+      "test_size": 1504,
+      "best_iteration": 9
+    },
+    {
+      "spearman": 0.6741785963764217,
+      "mae": 20.631408029559843,
+      "rmse": 27.332028578559548,
       "fold": 2,
-      "train_size": 30,
-      "test_size": 4,
-      "best_iteration": 1
+      "train_size": 9025,
+      "test_size": 1307,
+      "best_iteration": 28
+    },
+    {
+      "spearman": 0.6160226825578864,
+      "mae": 8.232723601416343,
+      "rmse": 12.096506101822687,
+      "fold": 3,
+      "train_size": 10332,
+      "test_size": 873,
+      "best_iteration": 78
+    },
+    {
+      "spearman": 0.8826286922069579,
+      "mae": 24.24650824016371,
+      "rmse": 35.85943330837655,
+      "fold": 4,
+      "train_size": 11205,
+      "test_size": 456,
+      "best_iteration": 45
+    },
+    {
+      "spearman": 0.40782691705481244,
+      "mae": 25.856235369820826,
+      "rmse": 29.692515052815608,
+      "fold": 5,
+      "train_size": 11661,
+      "test_size": 786,
+      "best_iteration": 7
     }
   ],
   "tier": "per_sector",
   "identifier": "real_estate",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

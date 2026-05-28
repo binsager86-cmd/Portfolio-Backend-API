@@ -1,26 +1,57 @@
 {
-  "auc": 1.0,
-  "log_loss": 0.5675776603749809,
-  "calibration_error": 0.017972187328079925,
-  "n_train_events": 268,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.028358402907935676,
+  "mae": 10.364502662423584,
+  "rmse": 11.607061481943571,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 664,
   "train_date_range": {
-    "start": "2023-12-13",
-    "end": "2026-04-01"
+    "start": "2023-08-31",
+    "end": "2026-04-26"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.0284",
   "fold_metrics": [
     {
-      "auc": 1.0,
-      "log_loss": 0.5675776603749809,
-      "calibration_max_error": 0.017972187328079925,
-      "calibration_mean_error": 0.017972187328079925,
-      "fold": 5,
-      "train_size": 254,
-      "test_size": 14,
+      "spearman": -0.23006954995089143,
+      "mae": 10.970046752812113,
+      "rmse": 12.672105426811216,
+      "fold": 1,
+      "train_size": 357,
+      "test_size": 87,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.10094546628268912,
+      "mae": 9.139364405337131,
+      "rmse": 10.68100323270281,
+      "fold": 2,
+      "train_size": 444,
+      "test_size": 49,
+      "best_iteration": 11
+    },
+    {
+      "spearman": 0.5130432961284723,
+      "mae": 10.30103846836038,
+      "rmse": 11.587357261412137,
+      "fold": 3,
+      "train_size": 493,
+      "test_size": 83,
       "best_iteration": 15
+    },
+    {
+      "spearman": -0.2704856008285273,
+      "mae": 11.047561023184715,
+      "rmse": 11.487780006848123,
+      "fold": 5,
+      "train_size": 596,
+      "test_size": 68,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "JTC",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

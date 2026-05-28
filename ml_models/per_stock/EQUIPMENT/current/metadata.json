@@ -1,46 +1,57 @@
 {
-  "auc": 1.0,
-  "log_loss": 0.07736696191586284,
-  "calibration_error": 0.5006185677425118,
-  "n_train_events": 387,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": -0.21414141414141416,
+  "mae": 31.977151151037965,
+  "rmse": 34.82549139625981,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 438,
   "train_date_range": {
-    "start": "2023-08-27",
-    "end": "2026-04-21"
+    "start": "2023-08-24",
+    "end": "2026-04-20"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_-0.2141",
   "fold_metrics": [
     {
-      "auc": 1.0,
-      "log_loss": 0.09216547218216266,
-      "calibration_max_error": 0.004605130974969063,
-      "calibration_mean_error": 0.004605130974969063,
+      "spearman": NaN,
+      "mae": 28.614170829030627,
+      "rmse": 30.57975720633619,
+      "fold": 1,
+      "train_size": 214,
+      "test_size": 112,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.0,
+      "mae": 16.8192766041559,
+      "rmse": 24.67387928625552,
       "fold": 2,
-      "train_size": 270,
-      "test_size": 39,
-      "best_iteration": 68
+      "train_size": 326,
+      "test_size": 46,
+      "best_iteration": 20
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.050620489445865065,
-      "calibration_max_error": 0.6931090861638899,
-      "calibration_mean_error": 0.3567270119423948,
-      "fold": 3,
-      "train_size": 309,
-      "test_size": 39,
-      "best_iteration": 155
+      "spearman": -1.0,
+      "mae": 64.91679489601671,
+      "rmse": 65.80326111172579,
+      "fold": 4,
+      "train_size": 379,
+      "test_size": 3,
+      "best_iteration": 11
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.08931492411956078,
-      "calibration_max_error": 0.8041414860886762,
-      "calibration_mean_error": 0.40615752166653096,
+      "spearman": 0.35757575757575755,
+      "mae": 17.558362274948625,
+      "rmse": 18.245067980721725,
       "fold": 5,
-      "train_size": 367,
-      "test_size": 20,
-      "best_iteration": 76
+      "train_size": 382,
+      "test_size": 56,
+      "best_iteration": 68
     }
   ],
   "tier": "per_stock",
   "identifier": "EQUIPMENT",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

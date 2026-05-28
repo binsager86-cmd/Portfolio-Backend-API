@@ -1,66 +1,66 @@
 {
-  "auc": 0.839529803045106,
-  "log_loss": 0.45893641122459855,
-  "calibration_error": 0.69791546910196,
-  "n_train_events": 1893,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.460993669294904,
+  "mae": 19.318478217849297,
+  "rmse": 23.236396532176144,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 3477,
   "train_date_range": {
-    "start": "2023-05-07",
-    "end": "2026-04-23"
+    "start": "2023-04-26",
+    "end": "2026-05-24"
   },
   "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 1.0,
-      "log_loss": 0.20249332332780065,
-      "calibration_max_error": 0.6077099633284966,
-      "calibration_mean_error": 0.23755437536056687,
+      "spearman": 0.30845887001146555,
+      "mae": 48.53283053541218,
+      "rmse": 56.06102017096448,
       "fold": 1,
-      "train_size": 1135,
-      "test_size": 190,
-      "best_iteration": 87
+      "train_size": 2013,
+      "test_size": 479,
+      "best_iteration": 1
     },
     {
-      "auc": 0.8802500000000001,
-      "log_loss": 0.4595139897845836,
-      "calibration_max_error": 0.8026422822801582,
-      "calibration_mean_error": 0.3295862330024566,
+      "spearman": 0.3080549210406282,
+      "mae": 26.337837009284243,
+      "rmse": 34.08853458803604,
       "fold": 2,
-      "train_size": 1325,
-      "test_size": 189,
-      "best_iteration": 50
+      "train_size": 2492,
+      "test_size": 371,
+      "best_iteration": 7
     },
     {
-      "auc": 0.8548387096774194,
-      "log_loss": 0.4336795045099154,
-      "calibration_max_error": 0.8499384548026607,
-      "calibration_mean_error": 0.44015151477599146,
+      "spearman": 0.36385547796982654,
+      "mae": 10.956388678352692,
+      "rmse": 13.504409419762904,
       "fold": 3,
-      "train_size": 1514,
-      "test_size": 189,
-      "best_iteration": 72
+      "train_size": 2863,
+      "test_size": 301,
+      "best_iteration": 30
     },
     {
-      "auc": 0.48695054945054944,
-      "log_loss": 0.6653936755785738,
-      "calibration_max_error": 0.46863197659153316,
-      "calibration_mean_error": 0.23204943036796521,
+      "spearman": 0.7377996670303455,
+      "mae": 6.190523878988331,
+      "rmse": 6.943467533579987,
       "fold": 4,
-      "train_size": 1703,
-      "test_size": 95,
-      "best_iteration": 3
+      "train_size": 3164,
+      "test_size": 108,
+      "best_iteration": 39
     },
     {
-      "auc": 0.9756097560975611,
-      "log_loss": 0.5336015629221196,
-      "calibration_max_error": 0.7606546685069515,
-      "calibration_mean_error": 0.4438872299275532,
+      "spearman": 0.5867994104222543,
+      "mae": 4.574810987209027,
+      "rmse": 5.584550948537299,
       "fold": 5,
-      "train_size": 1798,
-      "test_size": 95,
-      "best_iteration": 41
+      "train_size": 3272,
+      "test_size": 205,
+      "best_iteration": 56
     }
   ],
   "tier": "per_sector",
   "identifier": "industrial",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

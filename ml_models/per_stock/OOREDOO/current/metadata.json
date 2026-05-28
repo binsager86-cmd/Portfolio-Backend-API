@@ -1,46 +1,66 @@
 {
-  "auc": 0.8333333333333334,
-  "log_loss": 0.5933266319579583,
-  "calibration_error": 0.44976517040795,
-  "n_train_events": 290,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.43552947059073877,
+  "mae": 13.011819503767725,
+  "rmse": 15.640033260511359,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 687,
   "train_date_range": {
-    "start": "2023-06-26",
-    "end": "2026-04-26"
+    "start": "2023-06-25",
+    "end": "2026-04-23"
   },
   "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 0.5,
-      "log_loss": 1.239146129757595,
-      "calibration_max_error": 0.6605592057459022,
-      "calibration_mean_error": 0.6605592057459022,
-      "fold": 3,
-      "train_size": 232,
-      "test_size": 29,
+      "spearman": 0.6482958670321648,
+      "mae": 12.431546103790224,
+      "rmse": 14.00436242432327,
+      "fold": 1,
+      "train_size": 405,
+      "test_size": 59,
+      "best_iteration": 4
+    },
+    {
+      "spearman": -0.6848964561525485,
+      "mae": 24.075729126713956,
+      "rmse": 27.63136773256332,
+      "fold": 2,
+      "train_size": 464,
+      "test_size": 88,
       "best_iteration": 1
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.539991761946341,
-      "calibration_max_error": 0.6877960819796778,
-      "calibration_mean_error": 0.4197137367540255,
-      "fold": 4,
-      "train_size": 261,
-      "test_size": 14,
-      "best_iteration": 20
+      "spearman": 0.7982202425117743,
+      "mae": 11.981980256559345,
+      "rmse": 19.763585175990507,
+      "fold": 3,
+      "train_size": 552,
+      "test_size": 56,
+      "best_iteration": 98
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.0008420041699391575,
-      "calibration_max_error": 0.0009402234982700541,
-      "calibration_mean_error": 0.0005704535132678988,
+      "spearman": 0.847970229826026,
+      "mae": 11.00663059121196,
+      "rmse": 11.028927318700802,
+      "fold": 4,
+      "train_size": 608,
+      "test_size": 41,
+      "best_iteration": 2
+    },
+    {
+      "spearman": 0.5680574697362771,
+      "mae": 5.56321144056314,
+      "rmse": 5.771923650978898,
       "fold": 5,
-      "train_size": 275,
-      "test_size": 15,
-      "best_iteration": 200
+      "train_size": 649,
+      "test_size": 38,
+      "best_iteration": 19
     }
   ],
   "tier": "per_stock",
   "identifier": "OOREDOO",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

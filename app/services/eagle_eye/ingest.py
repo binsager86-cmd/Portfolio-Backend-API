@@ -36,6 +36,108 @@ from typing import List, Optional
 logger = logging.getLogger(__name__)
 
 
+def _safe_float(v) -> Optional[float]:
+    if v is None:
+        return None
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    if math.isnan(f) or math.isinf(f):
+        return None
+    return f
+
+
+def _build_live_feature_vector(feature_row: dict, feature_names: List[str]) -> List[float]:
+    vec: List[float] = []
+    for name in feature_names:
+        fv = _safe_float(feature_row.get(name))
+        vec.append(float("nan") if fv is None else float(fv))
+    return vec
+
+
+def _predict_ml_signal(ticker: str, ohlcv_df, as_of: date):
+    """Resolve best model and return BUY/HOLD/SELL probabilities."""
+    try:
+        import numpy as np
+        import pandas as pd
+
+        from app.services.eagle_eye.ml.feature_builder import build_inference_row
+        from app.services.eagle_eye.ml.model_store import load_feature_names
+        from app.services.eagle_eye.ml.tier_resolver import resolve_model_for_ticker
+
+        bundle = resolve_model_for_ticker(ticker)
+        if bundle is None or bundle.model is None:
+            return None
+
+        feature_row = build_inference_row(ticker=ticker, ohlcv=ohlcv_df, T=as_of)
+        if feature_row is None:
+            return None
+
+        try:
+            feature_names = load_feature_names(tier=bundle.tier, identifier=bundle.identifier)
+        except Exception:
+            feature_names = list(bundle.feature_list or [])
+
+        if not feature_names:
+            return None
+
+        vector = _build_live_feature_vector(feature_row, feature_names)
+        X_live = pd.DataFrame([vector], columns=feature_names)
+        raw_pred = bundle.model.predict(X_live)
+        pred_arr = np.asarray(raw_pred, dtype=float)
+
+        if pred_arr.ndim == 2 and pred_arr.shape[1] >= 3:
+            proba = pred_arr[0]
+            sell = float(max(0.0, min(1.0, proba[0])))
+            hold = float(max(0.0, min(1.0, proba[1])))
+            buy = float(max(0.0, min(1.0, proba[2])))
+        elif pred_arr.ndim == 1 and pred_arr.size >= 3 and pred_arr.size % 3 == 0:
+            proba = pred_arr.reshape(-1, 3)[0]
+            sell = float(max(0.0, min(1.0, proba[0])))
+            hold = float(max(0.0, min(1.0, proba[1])))
+            buy = float(max(0.0, min(1.0, proba[2])))
+        else:
+            scalar = float(pred_arr.ravel()[0])
+            if bundle.calibrator is not None and 0.0 <= scalar <= 1.0:
+                try:
+                    scalar = float(bundle.calibrator.predict(np.asarray([scalar], dtype=float))[0])
+                except Exception:
+                    pass
+            buy = float(np.clip(scalar if 0.0 <= scalar <= 1.0 else scalar / 100.0, 0.0, 1.0))
+            hold = float(max(0.0, 1.0 - buy))
+            sell = 0.0
+
+        total = buy + hold + sell
+        if total > 0:
+            buy /= total
+            hold /= total
+            sell /= total
+
+        signal_idx = int(np.argmax([sell, hold, buy]))
+        signal = ["SELL", "HOLD", "BUY"][signal_idx]
+        confidence = [sell, hold, buy][signal_idx] * 100.0
+
+        return {
+            "buy": float(round(buy, 6)),
+            "hold": float(round(hold, 6)),
+            "sell": float(round(sell, 6)),
+            "signal": signal,
+            "confidence": float(round(confidence, 2)),
+        }
+    except Exception as exc:
+        logger.debug("ML inference failed for %s: %s", ticker, exc)
+        return None
+
+
+def _predict_ml_opportunity_score(ticker: str, ohlcv_df, as_of: date):
+    """Compatibility wrapper: expose BUY probability as 0-100 score."""
+    proba = _predict_ml_signal(ticker, ohlcv_df, as_of)
+    if proba is None:
+        return None
+    return round(float(np.clip(float(proba.get("buy", 0.0)) * 100.0, 0.0, 100.0)), 2)
+
+
 # ---------------------------------------------------------------------------
 # Schema initializer — safe to call at every startup
 # ---------------------------------------------------------------------------
@@ -412,9 +514,12 @@ def compute_all_ratings(verbose: bool = False) -> dict:
         compute_confidence,
         compute_entry_stop_targets,
         compute_rating,
+        compute_rating_from_proba,
         compute_support_resistance,
         compute_volume_context,
         generate_thesis,
+        is_stock_active,
+        validate_and_adjust_ml_score,
     )
     from app.services.eagle_eye.store import (
         ensure_tables, list_tickers_with_ohlcv, load_ohlcv,
@@ -431,6 +536,75 @@ def compute_all_ratings(verbose: bool = False) -> dict:
 
     stats: dict = {"ok": 0, "skipped": 0, "errors": 0}
 
+    def _save_placeholder_rating(symbol: str, reason: str, df=None) -> None:
+        meta = stock_meta.get(symbol)
+        name_en = meta.name_en if meta else symbol
+        sector = meta.sector if meta else "Kuwait"
+        market_tier = (meta.market_tier if meta and meta.market_tier else "premier").upper()
+
+        stage_map = {
+            "insufficient_history": "INSUFFICIENT_HISTORY",
+            "inactive_or_delisted": "INACTIVE_OR_DELISTED",
+            "indicator_unavailable": "INDICATOR_UNAVAILABLE",
+        }
+        thesis_map = {
+            "insufficient_history": "Insufficient price history for full Eagle Eye scoring."
+                                   " Kept in scanner as watchlist-only.",
+            "inactive_or_delisted": "Stock appears inactive or delisted based on recent market activity."
+                                     " Kept in scanner as watchlist-only.",
+            "indicator_unavailable": "Indicators are currently unavailable for this symbol."
+                                    " Kept in scanner as watchlist-only.",
+        }
+
+        days_of_history = 0
+        last_close = None
+        if df is not None and len(df) > 0:
+            days_of_history = int(len(df))
+            try:
+                last_close = _safe_float(df["close"].iloc[-1])
+            except Exception:
+                last_close = None
+
+        indicators = {"close": last_close} if last_close is not None else {}
+
+        result = {
+            "ticker": symbol.upper(),
+            "market_tier": market_tier,
+            "stage": stage_map.get(reason, "DATA_ISSUE"),
+            "rating": "INSUFFICIENT_DATA",
+            "confidence": 0.0,
+            "ml_score": None,
+            "thesis": thesis_map.get(reason, "Data unavailable; kept in scanner as watchlist-only."),
+            "supports": [],
+            "resistances": [],
+            "entry": {
+                "entry_primary": None,
+                "entry_aggressive": None,
+                "entry_conservative": None,
+                "stop_loss": None,
+                "tp1": None,
+                "tp1_probability": None,
+                "tp2": None,
+                "tp2_probability": None,
+                "tp3": None,
+                "tp3_probability": None,
+            },
+            "indicators": indicators,
+            "volume_context": {
+                "relative_volume": 0.0,
+                "relative_volume_percentile": 0.0,
+                "liquidity_tier": "WATCH_ONLY",
+                "is_volume_confirmed": False,
+                "volume_character": "STALE",
+                "volume_trend_5d": "NEUTRAL",
+            },
+            "days_of_history": days_of_history,
+            "computed_at": today_str,
+        }
+
+        save_rating(symbol, name_en, sector, result)
+        log_compute("rating_run", symbol, "skip", reason)
+
     if verbose:
         print(f"[EagleEye] Computing ratings for {len(tickers)} tickers")
         print("=" * 70)
@@ -438,30 +612,67 @@ def compute_all_ratings(verbose: bool = False) -> dict:
     for ticker in tickers:
         try:
             df = load_ohlcv(ticker)
-            if len(df) < 30:
+            # Keep this in sync with compute_all_indicators minimum history requirement.
+            if df is None or len(df) < 50:
                 stats["skipped"] += 1
+                _save_placeholder_rating(ticker, "insufficient_history", df)
                 continue
 
-            ind_df = compute_all_indicators(df)
+            if not is_stock_active(ticker, df):
+                stats["skipped"] += 1
+                _save_placeholder_rating(ticker, "inactive_or_delisted", df)
+                continue
+
+            try:
+                ind_df = compute_all_indicators(df)
+            except ValueError as exc:
+                if "Need at least 50 bars" in str(exc):
+                    stats["skipped"] += 1
+                    _save_placeholder_rating(ticker, "insufficient_history", df)
+                    continue
+                raise
+
             if ind_df is None or len(ind_df) == 0:
                 stats["skipped"] += 1
+                _save_placeholder_rating(ticker, "indicator_unavailable", df)
                 continue
 
             latest = ind_df.iloc[-1].to_dict()
 
             stage = classify_stage(latest)
-            confidence = compute_confidence(latest, stage, dna=None)
+            ml_proba = _predict_ml_signal(ticker, df, date.today())
+            ml_score = None
+            if ml_proba is not None:
+                raw_buy_conf = float(ml_proba.get("buy", 0.0)) * 100.0
+                adjusted_buy_conf = validate_and_adjust_ml_score(raw_buy_conf, latest, df, ticker)
+                ml_proba["buy"] = max(0.0, min(1.0, adjusted_buy_conf / 100.0))
+
+                total = float(ml_proba.get("buy", 0.0) + ml_proba.get("hold", 0.0) + ml_proba.get("sell", 0.0))
+                if total > 0:
+                    ml_proba["buy"] = float(ml_proba.get("buy", 0.0) / total)
+                    ml_proba["hold"] = float(ml_proba.get("hold", 0.0) / total)
+                    ml_proba["sell"] = float(ml_proba.get("sell", 0.0) / total)
+
+                ml_score = round(float(ml_proba["buy"] * 100.0), 2)
+
+            confidence = compute_confidence(
+                latest,
+                stage,
+                dna=None,
+                ml_score=ml_score,
+                ml_proba=ml_proba,
+            )
             _confidence_raw = confidence  # snapshot before vol-context/dampener adjustments
             _dampener_fired = False
 
             # ── Volume context + confidence multiplier ───────────────────
             volume_context = compute_volume_context(df, stage)
             tier = volume_context["liquidity_tier"]
-            _LIQUIDITY_MULTIPLIERS = {"ILLIQUID": 0.50, "WATCH_ONLY": 0.70}
+            _LIQUIDITY_MULTIPLIERS = {"ILLIQUID": 0.75, "WATCH_ONLY": 0.85}
             if tier in _LIQUIDITY_MULTIPLIERS:
                 confidence = confidence * _LIQUIDITY_MULTIPLIERS[tier]
             elif not volume_context["is_volume_confirmed"]:
-                confidence = confidence * 0.85
+                confidence = confidence * 0.95
             elif volume_context["relative_volume_percentile"] > 80:
                 confidence = min(confidence * 1.10, 100)
             confidence = round(min(confidence, 100), 2)
@@ -477,15 +688,16 @@ def compute_all_ratings(verbose: bool = False) -> dict:
                     if len(df) >= 2 else 0.0
                 )
                 if _rel_liq < 0.5 and _today_ret > 0.02:
-                    confidence = min(confidence, 60)
+                    _cap = 60 + 30 * _rel_liq
+                    confidence = min(confidence, _cap)
                     _dampener_fired = True
                     log_compute(
                         "rating_run", ticker, "dampened",
                         f"thin_volume_on_rise: rel_liq={_rel_liq:.2f} "
-                        f"ret={_today_ret:.3f} conf_capped=60",
+                        f"ret={_today_ret:.3f} conf_capped={_cap:.2f}",
                     )
 
-            rating = compute_rating(confidence)
+            rating = compute_rating_from_proba(ml_proba, confidence)
             sr = compute_support_resistance(df, latest)
             et = compute_entry_stop_targets(df, latest, sr, stage=stage)
             thesis = generate_thesis(
@@ -503,6 +715,7 @@ def compute_all_ratings(verbose: bool = False) -> dict:
                 "stage": stage,
                 "rating": rating,
                 "confidence": confidence,
+                "ml_score": ml_score,
                 "thesis": thesis,
                 "supports": sr.get("supports", []),
                 "resistances": sr.get("resistances", []),

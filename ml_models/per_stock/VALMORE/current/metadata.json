@@ -1,26 +1,48 @@
 {
-  "auc": 0.7142857142857143,
-  "log_loss": 0.5558512643018297,
-  "calibration_error": 0.3043626515322267,
-  "n_train_events": 185,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.6530758439822518,
+  "mae": 4.949061437628621,
+  "rmse": 5.595557444186199,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 495,
   "train_date_range": {
-    "start": "2024-01-30",
-    "end": "2026-04-13"
+    "start": "2023-08-02",
+    "end": "2026-04-26"
   },
   "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 0.7142857142857143,
-      "log_loss": 0.5558512643018297,
-      "calibration_max_error": 0.3043626515322267,
-      "calibration_mean_error": 0.18738529919176458,
+      "spearman": 0.8923966042372543,
+      "mae": 8.318197485368216,
+      "rmse": 9.051431627374596,
+      "fold": 2,
+      "train_size": 326,
+      "test_size": 83,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.5242592200329815,
+      "mae": 4.361337956429556,
+      "rmse": 4.408097641562293,
       "fold": 3,
-      "train_size": 148,
-      "test_size": 18,
-      "best_iteration": 15
+      "train_size": 409,
+      "test_size": 44,
+      "best_iteration": 2
+    },
+    {
+      "spearman": 0.5425717076765194,
+      "mae": 2.1676488710880917,
+      "rmse": 3.327143063621711,
+      "fold": 5,
+      "train_size": 469,
+      "test_size": 26,
+      "best_iteration": 19
     }
   ],
   "tier": "per_stock",
   "identifier": "VALMORE",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

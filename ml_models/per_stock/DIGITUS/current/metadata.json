@@ -1,46 +1,48 @@
 {
-  "auc": 0.6666666666666666,
-  "log_loss": 1.4693335090678585,
-  "calibration_error": 0.5160464709773495,
-  "n_train_events": 290,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.5259785882952265,
+  "mae": 24.080592514198273,
+  "rmse": 25.82234244223334,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 348,
   "train_date_range": {
-    "start": "2023-06-15",
-    "end": "2026-04-09"
+    "start": "2023-05-17",
+    "end": "2026-04-08"
   },
   "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 0.5,
-      "log_loss": 3.700224583034006,
-      "calibration_max_error": 0.6849693417012364,
-      "calibration_mean_error": 0.6849693417012364,
+      "spearman": 0.39279220242478635,
+      "mae": 53.26042055708533,
+      "rmse": 54.02263244361189,
+      "fold": 1,
+      "train_size": 276,
+      "test_size": 6,
+      "best_iteration": 115
+    },
+    {
+      "spearman": 0.800725264911801,
+      "mae": 14.438999241490817,
+      "rmse": 15.716487569918593,
       "fold": 2,
-      "train_size": 203,
-      "test_size": 29,
-      "best_iteration": 1
+      "train_size": 282,
+      "test_size": 30,
+      "best_iteration": 285
     },
     {
-      "auc": 0.5,
-      "log_loss": 0.5109414433846026,
-      "calibration_max_error": 0.018773092382412537,
-      "calibration_mean_error": 0.018773092382412537,
-      "fold": 3,
-      "train_size": 232,
-      "test_size": 29,
-      "best_iteration": 2
-    },
-    {
-      "auc": 1.0,
-      "log_loss": 0.19683450078496745,
-      "calibration_max_error": 0.8443969788483997,
-      "calibration_mean_error": 0.31939876872969025,
-      "fold": 4,
-      "train_size": 261,
-      "test_size": 14,
-      "best_iteration": 112
+      "spearman": 0.384418297549092,
+      "mae": 4.542357744018667,
+      "rmse": 7.727907313169539,
+      "fold": 5,
+      "train_size": 321,
+      "test_size": 27,
+      "best_iteration": 39
     }
   ],
   "tier": "per_stock",
   "identifier": "DIGITUS",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

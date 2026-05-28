@@ -1,26 +1,39 @@
 {
-  "auc": 0.8,
-  "log_loss": 0.5719955100246337,
-  "calibration_error": 0.30862610904000565,
-  "n_train_events": 169,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.0975512207825989,
+  "mae": 0.2904188466408242,
+  "rmse": 0.42041394131428556,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 514,
   "train_date_range": {
-    "start": "2023-09-21",
-    "end": "2025-08-17"
+    "start": "2023-08-02",
+    "end": "2025-09-15"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.0976",
   "fold_metrics": [
     {
-      "auc": 0.8,
-      "log_loss": 0.5719955100246337,
-      "calibration_max_error": 0.30862610904000565,
-      "calibration_mean_error": 0.21326706515925015,
+      "spearman": 0.4065633043686422,
+      "mae": 0.10693760564056337,
+      "rmse": 0.16822540868370167,
+      "fold": 3,
+      "train_size": 442,
+      "test_size": 36,
+      "best_iteration": 156
+    },
+    {
+      "spearman": -0.2114608628034444,
+      "mae": 0.47390008764108493,
+      "rmse": 0.6726024739448695,
       "fold": 5,
-      "train_size": 160,
-      "test_size": 9,
-      "best_iteration": 14
+      "train_size": 496,
+      "test_size": 18,
+      "best_iteration": 306
     }
   ],
   "tier": "per_stock",
   "identifier": "ALEID",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

@@ -50,6 +50,8 @@ class RatedStock(BaseModel):
     stop_loss: Optional[float] = None
     tp1: Optional[float] = None
     last_price: Optional[float] = None
+    book_value_per_share: Optional[float] = None
+    pe_ratio: Optional[float] = None
     computed_at: Optional[str] = None   # ISO date string
     volume_context: Optional[VolumeContextSummary] = None
 

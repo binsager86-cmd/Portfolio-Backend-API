@@ -1,46 +1,57 @@
 {
-  "auc": 0.40972222222222227,
-  "log_loss": 1.0586348274047253,
-  "calibration_error": 0.5955644373084173,
-  "n_train_events": 206,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.15358288441278417,
+  "mae": 28.94976571365365,
+  "rmse": 30.326360266621915,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 274,
   "train_date_range": {
-    "start": "2024-07-17",
-    "end": "2026-04-08"
+    "start": "2024-07-16",
+    "end": "2026-05-24"
   },
-  "rejected_reason": "auc_below_threshold_0.4097",
+  "rejected_reason": "spearman_below_threshold_0.1536",
   "fold_metrics": [
     {
-      "auc": 0.5,
-      "log_loss": 1.8177112664267998,
-      "calibration_max_error": 0.6330925337234771,
-      "calibration_mean_error": 0.6330925337234771,
-      "fold": 3,
-      "train_size": 164,
-      "test_size": 21,
+      "spearman": 0.8302316029952278,
+      "mae": 43.65240266026909,
+      "rmse": 44.003525695270575,
+      "fold": 1,
+      "train_size": 201,
+      "test_size": 19,
+      "best_iteration": 6
+    },
+    {
+      "spearman": -0.6075790051927725,
+      "mae": 40.415406924047765,
+      "rmse": 42.74854314867362,
+      "fold": 2,
+      "train_size": 220,
+      "test_size": 23,
       "best_iteration": 1
     },
     {
-      "auc": 0.0625,
-      "log_loss": 0.7825165736205248,
-      "calibration_max_error": 0.549599565909467,
-      "calibration_mean_error": 0.39284350080746655,
-      "fold": 4,
-      "train_size": 185,
-      "test_size": 10,
-      "best_iteration": 14
+      "spearman": 0.3916789398486814,
+      "mae": 24.938865076809236,
+      "rmse": 26.48100833928807,
+      "fold": 3,
+      "train_size": 243,
+      "test_size": 20,
+      "best_iteration": 17
     },
     {
-      "auc": 0.6666666666666667,
-      "log_loss": 0.5756766421668513,
-      "calibration_max_error": 0.604001212292308,
-      "calibration_mean_error": 0.288212872737572,
-      "fold": 5,
-      "train_size": 195,
-      "test_size": 11,
-      "best_iteration": 16
+      "spearman": 0.0,
+      "mae": 6.792388193488521,
+      "rmse": 8.072363883255408,
+      "fold": 4,
+      "train_size": 263,
+      "test_size": 6,
+      "best_iteration": 74
     }
   ],
   "tier": "per_stock",
   "identifier": "ACICO",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

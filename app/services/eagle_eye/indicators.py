@@ -721,4 +721,74 @@ def compute_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
         else df['volume'] * df['close']
     )
 
+    # ── Pattern features (chart structure and activity) ────────────────────
+    out['higher_lows_20d'] = (df['low'] > df['low'].shift(1)).rolling(20).sum()
+    out['higher_highs_20d'] = (df['high'] > df['high'].shift(1)).rolling(20).sum()
+
+    _daily_range_pct = ((df['high'] - df['low']) / df['low'].replace(0, np.nan)) * 100.0
+    _range_recent_5 = _daily_range_pct.rolling(5).mean()
+    _range_older_10 = _daily_range_pct.shift(10).rolling(10).mean()
+    out['range_contraction_ratio'] = _range_recent_5 / _range_older_10.replace(0, np.nan)
+
+    out['volume_trend_20d'] = ((df['volume'] / df['volume'].shift(20).replace(0, np.nan)) - 1.0) * 100.0
+
+    # ── Entry quality features ────────────────────────────────────────────────
+    # These two features measure HOW EARLY and HOW CLEAN the entry is.
+    # Both are available at prediction time (no forward-looking data).
+    # The rating engine uses price_extension_from_20d_low_pct to penalise
+    # entries that are already extended well above the setup base.
+
+    # price_extension_from_20d_low_pct:
+    #   How far has price risen above the 20-day rolling low?
+    #   0% = price IS the 20d low (ideal entry at the base).
+    #   >5% = starting to extend; >10% = moderately extended; >20% = chase zone.
+    low_20d = df['low'].rolling(20).min()
+    out['price_extension_from_20d_low_pct'] = (
+        (df['close'] / low_20d.replace(0, np.nan) - 1.0) * 100.0
+    )
+
+    # Medium/long extension context for anti-chasing safeguards.
+    low_60d = df['low'].rolling(60).min()
+    out['price_extension_from_60d_low_pct'] = (
+        (df['close'] / low_60d.replace(0, np.nan) - 1.0) * 100.0
+    )
+
+    low_120d = df['low'].rolling(120).min()
+    out['price_extension_from_120d_low_pct'] = (
+        (df['close'] / low_120d.replace(0, np.nan) - 1.0) * 100.0
+    )
+
+    high_60d = df['high'].rolling(60).max()
+    _range_60d = high_60d - low_60d
+    out['position_in_60d_range_pct'] = (
+        (df['close'] - low_60d) / _range_60d.replace(0, np.nan)
+    ) * 100.0
+
+    if len(df) >= 252:
+        high_252d = df['high'].rolling(252).max()
+        out['distance_from_52w_high_pct'] = (
+            (1.0 - (df['close'] / high_252d.replace(0, np.nan))) * 100.0
+        )
+    else:
+        high_all = df['high'].expanding().max()
+        out['distance_from_52w_high_pct'] = (
+            (1.0 - (df['close'] / high_all.replace(0, np.nan))) * 100.0
+        )
+
+    # accumulation_compression_days:
+    #   Consecutive days (ending at each bar) where the 5-bar coefficient of
+    #   variation (std/mean) of close prices is < 2.5% — indicating a tight,
+    #   low-volatility accumulation range.
+    #   Longer compression = smart-money quiet build-up = higher signal quality.
+    _cv5 = (
+        df['close'].rolling(5).std()
+        / df['close'].rolling(5).mean().replace(0, np.nan)
+    )
+    _is_compressed = (_cv5 < 0.025).fillna(False)
+    # Streak: resets to 0 whenever compression breaks, counts up while it holds.
+    _groups = (~_is_compressed).cumsum()
+    out['accumulation_compression_days'] = (
+        _is_compressed.groupby(_groups).cumsum().astype(float)
+    )
+
     return out

@@ -1,36 +1,48 @@
 {
-  "auc": 0.6166666666666667,
-  "log_loss": 0.39946135875947386,
-  "calibration_error": 0.19205768738290602,
-  "n_train_events": 272,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.17959062466782816,
+  "mae": 18.82376418167193,
+  "rmse": 21.71198232444279,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 457,
   "train_date_range": {
-    "start": "2023-07-10",
-    "end": "2026-04-19"
+    "start": "2023-07-09",
+    "end": "2026-04-16"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.1796",
   "fold_metrics": [
     {
-      "auc": 0.23333333333333334,
-      "log_loss": 0.7972440028488622,
-      "calibration_max_error": 0.3818268829155943,
-      "calibration_mean_error": 0.3414943331994382,
+      "spearman": 0.9953677016016352,
+      "mae": 43.426123488921405,
+      "rmse": 49.16962070289422,
       "fold": 3,
-      "train_size": 217,
-      "test_size": 27,
-      "best_iteration": 1
+      "train_size": 289,
+      "test_size": 103,
+      "best_iteration": 23
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.001678714670085481,
-      "calibration_max_error": 0.002288491850217733,
-      "calibration_mean_error": 0.001432360416677185,
+      "spearman": 0.3169833889962083,
+      "mae": 8.976682892271485,
+      "rmse": 9.096515702864766,
+      "fold": 4,
+      "train_size": 392,
+      "test_size": 21,
+      "best_iteration": 22
+    },
+    {
+      "spearman": -0.773579216594359,
+      "mae": 4.068486163822899,
+      "rmse": 6.86981056756939,
       "fold": 5,
-      "train_size": 258,
-      "test_size": 14,
-      "best_iteration": 125
+      "train_size": 413,
+      "test_size": 44,
+      "best_iteration": 28
     }
   ],
   "tier": "per_stock",
   "identifier": "ALMANAR",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

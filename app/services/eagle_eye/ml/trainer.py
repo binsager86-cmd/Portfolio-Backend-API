@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 import json
 import logging
 import time
@@ -12,19 +13,17 @@ import lightgbm as lgb
 import numpy as np
 import pandas as pd
 
-from .calibrator import apply_calibrator, fit_isotonic_calibrator
 from .evaluator import (
     build_model_report,
-    compute_binary_metrics,
+    compute_classification_metrics,
     failure_cases,
     top_feature_importance,
 )
 from .feature_builder import (
-    build_events_from_ohlcv_cache,
+    build_labeled_rows_from_ohlcv_cache,
     build_feature_matrix,
     get_feature_columns,
 )
-from .labelers import build_labels
 from .model_store import (
     get_cache_root,
     get_models_root,
@@ -47,14 +46,20 @@ SECTOR_UNIVERSE = [
     "holding_misc",
 ]
 
+# Multiclass label mapping used by LightGBM.
+# Raw labels: -1 (SELL), 0 (HOLD), 1 (BUY)
+# Mapped labels: 0 (SELL), 1 (HOLD), 2 (BUY)
+LABEL_MAP = {-1: 0, 0: 1, 1: 2}
+LABEL_NAMES = {0: "SELL", 1: "HOLD", 2: "BUY"}
+
 
 @dataclass
 class TrainingConfig:
     random_state: int = 42
     min_per_stock_events: int = 100
     min_per_sector_events: int = 30
-    auc_reject_threshold: float = 0.55
-    target_col: str = "y_tp1_20d"
+    mean_auc_reject_threshold: float = 0.60
+    target_col: str = "label"
 
 
 @dataclass
@@ -104,21 +109,25 @@ class EagleEyeMLTrainer:
 
     def build_dataset(self, force_rebuild: bool = False) -> pd.DataFrame:
         if self._cache_file.exists() and not force_rebuild:
-            self.logger.info("Loading cached event features: %s", self._cache_file)
+            self.logger.info("Loading cached labeled features: %s", self._cache_file)
             return pd.read_pickle(self._cache_file)
 
         t0 = time.time()
-        self.logger.info("Building forensic event feature rows from cached OHLCV...")
-        raw_rows = build_events_from_ohlcv_cache(logger=self.logger)
-        self.logger.info("Generated %d raw event rows", len(raw_rows))
+        self.logger.info("Building labeled-bar feature rows from cached OHLCV...")
+        raw_rows = build_labeled_rows_from_ohlcv_cache(logger=self.logger)
+        self.logger.info("Generated %d raw labeled rows", len(raw_rows))
 
         features = build_feature_matrix(raw_rows, logger=self.logger)
         if features.frame.empty:
             raise RuntimeError("No feature rows available for training")
 
-        labels = build_labels(features.frame)
-        dataset = pd.concat([features.frame.reset_index(drop=True), labels.reset_index(drop=True)], axis=1)
-        dataset = dataset.sort_values(["ticker", "event_date"]).reset_index(drop=True)
+        dataset = features.frame.sort_values(["ticker", "event_date"]).reset_index(drop=True)
+
+        # Keep only supported label classes {-1, 0, 1} for multiclass training.
+        dataset[self.config.target_col] = pd.to_numeric(dataset[self.config.target_col], errors="coerce")
+        dataset = dataset.loc[dataset[self.config.target_col].isin([-1, 0, 1])].copy()
+        if dataset.empty:
+            raise RuntimeError("No valid labeled rows available after class filtering")
 
         dataset.to_pickle(self._cache_file)
 
@@ -179,8 +188,9 @@ class EagleEyeMLTrainer:
     def _lgb_params(self) -> Dict[str, Any]:
         seed = self.config.random_state
         return {
-            "objective": "binary",
-            "metric": "binary_logloss",
+            "objective": "multiclass",
+            "metric": "multi_logloss",
+            "num_class": 3,
             "num_leaves": 31,
             "learning_rate": 0.05,
             "feature_fraction": 0.8,
@@ -202,55 +212,89 @@ class EagleEyeMLTrainer:
     ) -> Dict[str, Any]:
         frame = frame.sort_values("event_date").reset_index(drop=True)
         X = frame[feature_cols].astype(float)
-        y = frame[self.config.target_col].astype(int).to_numpy()
+        y_raw = pd.to_numeric(frame[self.config.target_col], errors="coerce")
+        y_mapped = y_raw.map(LABEL_MAP)
+
+        valid_mask = y_mapped.notna()
+        if not bool(valid_mask.all()):
+            frame = frame.loc[valid_mask].reset_index(drop=True)
+            X = X.loc[valid_mask].reset_index(drop=True)
+            y_mapped = y_mapped.loc[valid_mask].reset_index(drop=True)
+
+        y = y_mapped.to_numpy(dtype=int)
 
         splits = self._walk_forward_splits(frame["event_date"])
         if not splits:
             return {
                 "fold_metrics": [],
                 "mean_metrics": {
-                    "auc": float("nan"),
-                    "log_loss": float("nan"),
-                    "calibration_max_error": float("nan"),
-                    "calibration_mean_error": float("nan"),
+                    "auc_buy": float("nan"),
+                    "auc_sell": float("nan"),
+                    "mean_auc": float("nan"),
+                    "precision_buy": float("nan"),
+                    "recall_buy": float("nan"),
+                    "f1_buy": float("nan"),
                 },
                 "std_auc": float("nan"),
-                "oof_pred": np.full(len(frame), np.nan),
+                "oof_proba": np.full((len(frame), 3), np.nan),
+                "oof_pred_class": np.full(len(frame), -1, dtype=int),
                 "oof_mask": np.zeros(len(frame), dtype=bool),
-                "best_iteration": 200,
+                "best_iteration": 500,
             }
 
         params = self._lgb_params()
         fold_metrics: List[Dict[str, Any]] = []
-        oof = np.full(len(frame), np.nan, dtype=float)
+        oof_proba = np.full((len(frame), 3), np.nan, dtype=float)
+        oof_pred_class = np.full(len(frame), -1, dtype=int)
         best_iters: List[int] = []
 
         for fold_no, (train_idx, test_idx) in enumerate(splits, start=1):
             y_train = y[train_idx]
             y_test = y[test_idx]
-            if len(np.unique(y_train)) < 2 or len(np.unique(y_test)) < 2:
-                self.logger.info("Skipping fold %d due to single-class split", fold_no)
+            if np.unique(y_train).size < 2 or np.unique(y_test).size < 2:
+                self.logger.info("Skipping fold %d due to insufficient class diversity", fold_no)
                 continue
 
-            train_data = lgb.Dataset(X.iloc[train_idx], label=y_train, feature_name=list(feature_cols))
+            counts = Counter(y_train.tolist())
+            n_samples = len(y_train)
+            n_classes = max(len(counts), 1)
+            class_weights = {
+                cls: n_samples / (n_classes * count)
+                for cls, count in counts.items()
+                if count > 0
+            }
+            sample_weights = np.asarray([class_weights.get(int(cls), 1.0) for cls in y_train], dtype=float)
+
+            train_data = lgb.Dataset(
+                X.iloc[train_idx],
+                label=y_train,
+                weight=sample_weights,
+                feature_name=list(feature_cols),
+            )
             valid_data = lgb.Dataset(X.iloc[test_idx], label=y_test, reference=train_data)
 
             model = lgb.train(
                 params,
                 train_data,
-                num_boost_round=200,
+                num_boost_round=500,
                 valid_sets=[valid_data],
                 valid_names=["valid"],
-                callbacks=[lgb.early_stopping(20, verbose=False)],
+                callbacks=[lgb.early_stopping(50, verbose=False)],
             )
-            best_iter = int(model.best_iteration or 200)
+            best_iter = int(model.best_iteration or 500)
             best_iters.append(best_iter)
 
-            pred = model.predict(X.iloc[test_idx], num_iteration=best_iter)
-            pred = np.clip(pred, 0.0, 1.0)
-            oof[test_idx] = pred
+            pred_proba = model.predict(X.iloc[test_idx], num_iteration=best_iter)
+            pred_proba = np.asarray(pred_proba, dtype=float)
+            if pred_proba.ndim == 1:
+                # Defensive fallback for malformed output.
+                pred_proba = np.column_stack([1.0 - pred_proba, np.zeros_like(pred_proba), pred_proba])
+            pred_class = pred_proba.argmax(axis=1).astype(int)
 
-            metrics = compute_binary_metrics(y_test, pred)
+            oof_proba[test_idx] = pred_proba
+            oof_pred_class[test_idx] = pred_class
+
+            metrics = compute_classification_metrics(y_test, pred_proba, pred_class)
             metrics.update(
                 {
                     "fold": fold_no,
@@ -265,31 +309,37 @@ class EagleEyeMLTrainer:
             return {
                 "fold_metrics": [],
                 "mean_metrics": {
-                    "auc": float("nan"),
-                    "log_loss": float("nan"),
-                    "calibration_max_error": float("nan"),
-                    "calibration_mean_error": float("nan"),
+                    "auc_buy": float("nan"),
+                    "auc_sell": float("nan"),
+                    "mean_auc": float("nan"),
+                    "precision_buy": float("nan"),
+                    "recall_buy": float("nan"),
+                    "f1_buy": float("nan"),
                 },
                 "std_auc": float("nan"),
-                "oof_pred": oof,
-                "oof_mask": np.isfinite(oof),
-                "best_iteration": 200,
+                "oof_proba": oof_proba,
+                "oof_pred_class": oof_pred_class,
+                "oof_mask": np.isfinite(oof_proba).all(axis=1),
+                "best_iteration": 500,
             }
 
         mean_metrics = {
-            "auc": float(np.nanmean([m["auc"] for m in fold_metrics])),
-            "log_loss": float(np.nanmean([m["log_loss"] for m in fold_metrics])),
-            "calibration_max_error": float(np.nanmean([m["calibration_max_error"] for m in fold_metrics])),
-            "calibration_mean_error": float(np.nanmean([m["calibration_mean_error"] for m in fold_metrics])),
+            "auc_buy": float(np.nanmean([m.get("auc_buy", float("nan")) for m in fold_metrics])),
+            "auc_sell": float(np.nanmean([m.get("auc_sell", float("nan")) for m in fold_metrics])),
+            "mean_auc": float(np.nanmean([m.get("mean_auc", float("nan")) for m in fold_metrics])),
+            "precision_buy": float(np.nanmean([m.get("precision_buy", float("nan")) for m in fold_metrics])),
+            "recall_buy": float(np.nanmean([m.get("recall_buy", float("nan")) for m in fold_metrics])),
+            "f1_buy": float(np.nanmean([m.get("f1_buy", float("nan")) for m in fold_metrics])),
         }
 
         return {
             "fold_metrics": fold_metrics,
             "mean_metrics": mean_metrics,
-            "std_auc": float(np.nanstd([m["auc"] for m in fold_metrics])),
-            "oof_pred": oof,
-            "oof_mask": np.isfinite(oof),
-            "best_iteration": int(np.median(best_iters) if best_iters else 200),
+            "std_auc": float(np.nanstd([m.get("mean_auc", float("nan")) for m in fold_metrics])),
+            "oof_proba": oof_proba,
+            "oof_pred_class": oof_pred_class,
+            "oof_mask": np.isfinite(oof_proba).all(axis=1),
+            "best_iteration": int(np.median(best_iters) if best_iters else 500),
         }
 
     def _train_final_model(
@@ -299,15 +349,29 @@ class EagleEyeMLTrainer:
         boost_rounds: int,
     ) -> Optional[lgb.Booster]:
         X = frame[feature_cols].astype(float)
-        y = frame[self.config.target_col].astype(int).to_numpy()
-        if len(np.unique(y)) < 2:
+        y_raw = pd.to_numeric(frame[self.config.target_col], errors="coerce")
+        y_mapped = y_raw.map(LABEL_MAP).dropna().astype(int)
+        if y_mapped.nunique() < 2:
             return None
 
-        train_data = lgb.Dataset(X, label=y, feature_name=list(feature_cols))
+        X = X.loc[y_mapped.index]
+        y = y_mapped.to_numpy(dtype=int)
+
+        counts = Counter(y.tolist())
+        n_samples = len(y)
+        n_classes = max(len(counts), 1)
+        class_weights = {
+            cls: n_samples / (n_classes * count)
+            for cls, count in counts.items()
+            if count > 0
+        }
+        sample_weights = np.asarray([class_weights.get(int(cls), 1.0) for cls in y], dtype=float)
+
+        train_data = lgb.Dataset(X, label=y, weight=sample_weights, feature_name=list(feature_cols))
         model = lgb.train(
             self._lgb_params(),
             train_data,
-            num_boost_round=max(50, int(boost_rounds)),
+            num_boost_round=max(100, int(boost_rounds)),
         )
         return model
 
@@ -326,8 +390,10 @@ class EagleEyeMLTrainer:
         if n_events < min_events:
             reject_reason = f"insufficient_events_{n_events}"
 
-        if not reject_reason and frame[self.config.target_col].nunique() < 2:
-            reject_reason = "single_class_target"
+        if not reject_reason:
+            target_unique = pd.to_numeric(frame[self.config.target_col], errors="coerce").nunique(dropna=True)
+            if target_unique < 2:
+                reject_reason = "constant_target"
 
         feature_cols = get_feature_columns(frame)
         if not feature_cols:
@@ -336,34 +402,28 @@ class EagleEyeMLTrainer:
         cv = self._train_cv(frame, feature_cols) if not reject_reason else {
             "fold_metrics": [],
             "mean_metrics": {
-                "auc": float("nan"),
-                "log_loss": float("nan"),
-                "calibration_max_error": float("nan"),
-                "calibration_mean_error": float("nan"),
+                "auc_buy": float("nan"),
+                "auc_sell": float("nan"),
+                "mean_auc": float("nan"),
+                "precision_buy": float("nan"),
+                "recall_buy": float("nan"),
+                "f1_buy": float("nan"),
             },
             "std_auc": float("nan"),
-            "oof_pred": np.full(len(frame), np.nan),
+            "oof_proba": np.full((len(frame), 3), np.nan),
+            "oof_pred_class": np.full(len(frame), -1, dtype=int),
             "oof_mask": np.zeros(len(frame), dtype=bool),
-            "best_iteration": 200,
+            "best_iteration": 500,
         }
 
-        mean_auc = cv["mean_metrics"]["auc"]
-        if not reject_reason and (np.isnan(mean_auc) or mean_auc < self.config.auc_reject_threshold):
-            reject_reason = f"auc_below_threshold_{mean_auc:.4f}"
+        mean_auc = cv["mean_metrics"]["mean_auc"]
+        if not reject_reason and (np.isnan(mean_auc) or mean_auc < self.config.mean_auc_reject_threshold):
+            reject_reason = f"mean_auc_below_threshold_{mean_auc:.4f}"
 
         oof_mask = cv["oof_mask"]
-        y_all = frame[self.config.target_col].to_numpy()
-        p_oof = cv["oof_pred"]
-
-        cal_result = fit_isotonic_calibrator(y_all[oof_mask], p_oof[oof_mask]) if oof_mask.any() else fit_isotonic_calibrator(np.array([]), np.array([]))
-
-        if cal_result.summary.get("warning"):
-            self.logger.warning(
-                "Calibration warning for %s/%s: max_error=%.4f",
-                tier,
-                identifier,
-                cal_result.summary.get("max_error", float("nan")),
-            )
+        y_all_raw = pd.to_numeric(frame[self.config.target_col], errors="coerce")
+        y_all = y_all_raw.map(LABEL_MAP).to_numpy(dtype=float)
+        p_oof_buy = cv["oof_proba"][:, 2] if cv["oof_proba"].size else np.full(len(frame), np.nan)
 
         accepted = not reject_reason
         model: Optional[lgb.Booster] = None
@@ -378,11 +438,10 @@ class EagleEyeMLTrainer:
         if model is not None:
             feature_rank = top_feature_importance(model, feature_cols, top_n=15)
 
-        calibrated_oof = apply_calibrator(cal_result.calibrator, p_oof[oof_mask]) if oof_mask.any() else np.array([])
         failure = failure_cases(
-            frame.loc[oof_mask, ["ticker", "event_id", "event_date", "y_outcome_category"]],
+            frame.loc[oof_mask, ["ticker", "event_id", "event_date"]],
             y_all[oof_mask],
-            calibrated_oof,
+            p_oof_buy[oof_mask],
             n_cases=10,
         ) if oof_mask.any() else []
 
@@ -394,11 +453,16 @@ class EagleEyeMLTrainer:
             mean_metrics=cv["mean_metrics"],
             std_auc=cv["std_auc"],
             calibration_summary={
-                **cal_result.summary,
-                "reliability": cal_result.reliability,
+                "fitted": False,
+                "warning": False,
+                "max_error": float("nan"),
+                "mean_error": float("nan"),
+                "reliability": [],
             },
             feature_importances=feature_rank,
             failures=failure,
+            task="classification",
+            target_col=self.config.target_col,
         )
 
         date_range = {
@@ -406,9 +470,21 @@ class EagleEyeMLTrainer:
             "end": pd.to_datetime(frame["event_date"], errors="coerce").max().date().isoformat() if n_events else None,
         }
         metadata = {
-            "auc": cv["mean_metrics"]["auc"],
-            "log_loss": cv["mean_metrics"]["log_loss"],
-            "calibration_error": cv["mean_metrics"]["calibration_max_error"],
+            "task": "multiclass",
+            "target_col": self.config.target_col,
+            "auc_buy": cv["mean_metrics"].get("auc_buy"),
+            "auc_sell": cv["mean_metrics"].get("auc_sell"),
+            "mean_auc": cv["mean_metrics"].get("mean_auc"),
+            "precision_buy": cv["mean_metrics"].get("precision_buy"),
+            "recall_buy": cv["mean_metrics"].get("recall_buy"),
+            "f1_buy": cv["mean_metrics"].get("f1_buy"),
+            # Legacy aliases retained for downstream compatibility.
+            "spearman": cv["mean_metrics"].get("mean_auc"),
+            "mae": float("nan"),
+            "rmse": float("nan"),
+            "auc": cv["mean_metrics"].get("mean_auc"),
+            "log_loss": float("nan"),
+            "calibration_error": float("nan"),
             "n_train_events": n_events,
             "train_date_range": date_range,
             "rejected_reason": reject_reason if not accepted else "",
@@ -419,7 +495,7 @@ class EagleEyeMLTrainer:
             tier=tier,
             identifier=identifier,
             model=model if accepted else None,
-            calibrator=cal_result.calibrator if accepted else None,
+            calibrator=None,
             feature_list=list(feature_cols),
             metadata=metadata,
             version=date.today().isoformat(),
@@ -499,23 +575,42 @@ class EagleEyeMLTrainer:
                 "trained": 0,
                 "accepted": 0,
                 "rejected": 0,
+                "mean_auc_buy": float("nan"),
+                "mean_auc_sell": float("nan"),
                 "mean_auc": float("nan"),
+                "mean_precision_buy": float("nan"),
+                "mean_recall_buy": float("nan"),
+                "mean_f1_buy": float("nan"),
+                "mean_spearman": float("nan"),
+                "mean_mae": float("nan"),
+                "mean_rmse": float("nan"),
                 "mean_log_loss": float("nan"),
                 "mean_calibration_error": float("nan"),
             }
 
         accepted = [r for r in results if r.accepted]
+        mean_auc_buy = float(np.nanmean([r.mean_metrics.get("auc_buy", float("nan")) for r in accepted])) if accepted else float("nan")
+        mean_auc_sell = float(np.nanmean([r.mean_metrics.get("auc_sell", float("nan")) for r in accepted])) if accepted else float("nan")
+        mean_auc = float(np.nanmean([r.mean_metrics.get("mean_auc", float("nan")) for r in accepted])) if accepted else float("nan")
+        mean_precision_buy = float(np.nanmean([r.mean_metrics.get("precision_buy", float("nan")) for r in accepted])) if accepted else float("nan")
+        mean_recall_buy = float(np.nanmean([r.mean_metrics.get("recall_buy", float("nan")) for r in accepted])) if accepted else float("nan")
+        mean_f1_buy = float(np.nanmean([r.mean_metrics.get("f1_buy", float("nan")) for r in accepted])) if accepted else float("nan")
         return {
             "trained": len(results),
             "accepted": len(accepted),
             "rejected": len(results) - len(accepted),
-            "mean_auc": float(np.nanmean([r.mean_metrics["auc"] for r in accepted])) if accepted else float("nan"),
-            "mean_log_loss": float(np.nanmean([r.mean_metrics["log_loss"] for r in accepted])) if accepted else float("nan"),
-            "mean_calibration_error": (
-                float(np.nanmean([float(r.report.get("calibration", {}).get("max_error", float("nan"))) for r in accepted]))
-                if accepted
-                else float("nan")
-            ),
+            "mean_auc_buy": mean_auc_buy,
+            "mean_auc_sell": mean_auc_sell,
+            "mean_auc": mean_auc,
+            "mean_precision_buy": mean_precision_buy,
+            "mean_recall_buy": mean_recall_buy,
+            "mean_f1_buy": mean_f1_buy,
+            # Legacy aliases for older dashboards.
+            "mean_spearman": mean_auc,
+            "mean_mae": float("nan"),
+            "mean_rmse": float("nan"),
+            "mean_log_loss": float("nan"),
+            "mean_calibration_error": float("nan"),
         }
 
     def _save_reports(
@@ -578,10 +673,10 @@ class EagleEyeMLTrainer:
         )
 
         all_accepted = [r for r in (per_stock_results + per_sector_results + global_results) if r.accepted]
-        cal_pass = [
+        auc_pass = [
             r
             for r in all_accepted
-            if float(r.report.get("calibration", {}).get("max_error", 999.0)) <= 0.15
+            if float(r.mean_metrics.get("mean_auc", float("nan"))) >= self.config.mean_auc_reject_threshold
         ]
 
         report_date = date.today().isoformat()
@@ -596,20 +691,29 @@ class EagleEyeMLTrainer:
             "per_stock": self._tier_summary(per_stock_results),
             "per_sector": self._tier_summary(per_sector_results),
             "global": self._tier_summary(global_results),
-            "calibration_pass_rate": float(len(cal_pass) / len(all_accepted)) if all_accepted else float("nan"),
+            "mean_auc_pass_rate": float(len(auc_pass) / len(all_accepted)) if all_accepted else float("nan"),
+            "spearman_pass_rate": float(len(auc_pass) / len(all_accepted)) if all_accepted else float("nan"),
+            "calibration_pass_rate": float("nan"),
             "event_counts_by_ticker": event_counts,
             "ticker_sector_map": sector_map,
         }
 
         if per_stock_results:
             accepted = [r for r in per_stock_results if r.accepted]
-            accepted_sorted = sorted(accepted, key=lambda x: x.mean_metrics["auc"], reverse=True)
+            accepted_sorted = sorted(
+                accepted,
+                key=lambda x: x.mean_metrics.get("mean_auc", float("-inf")),
+                reverse=True,
+            )
             summary["per_stock_top5_auc"] = [
-                {"ticker": r.identifier, "auc": r.mean_metrics["auc"]} for r in accepted_sorted[:5]
+                {"ticker": r.identifier, "mean_auc": r.mean_metrics.get("mean_auc")} for r in accepted_sorted[:5]
             ]
             summary["per_stock_bottom5_auc"] = [
-                {"ticker": r.identifier, "auc": r.mean_metrics["auc"]} for r in accepted_sorted[-5:]
+                {"ticker": r.identifier, "mean_auc": r.mean_metrics.get("mean_auc")} for r in accepted_sorted[-5:]
             ]
+            # Legacy aliases.
+            summary["per_stock_top5_spearman"] = summary["per_stock_top5_auc"]
+            summary["per_stock_bottom5_spearman"] = summary["per_stock_bottom5_auc"]
 
         self._save_reports(
             report_date=report_date,

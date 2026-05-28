@@ -1,36 +1,30 @@
 {
-  "auc": 0.7142857142857143,
-  "log_loss": 1.7167592712976552,
-  "calibration_error": 0.4588559773584962,
-  "n_train_events": 288,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": -0.40766908894348125,
+  "mae": 12.018016014125354,
+  "rmse": 12.74588875415519,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 557,
   "train_date_range": {
-    "start": "2023-08-09",
-    "end": "2025-10-12"
+    "start": "2023-08-08",
+    "end": "2026-04-14"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_-0.4077",
   "fold_metrics": [
     {
-      "auc": 0.9285714285714286,
-      "log_loss": 0.13357498901839737,
-      "calibration_max_error": 0.015626814966526147,
-      "calibration_mean_error": 0.015626814966526147,
-      "fold": 2,
-      "train_size": 201,
-      "test_size": 29,
-      "best_iteration": 15
-    },
-    {
-      "auc": 0.5,
-      "log_loss": 3.299943553576913,
-      "calibration_max_error": 0.9020851397504662,
-      "calibration_mean_error": 0.9020851397504662,
-      "fold": 3,
-      "train_size": 230,
-      "test_size": 29,
-      "best_iteration": 1
+      "spearman": -0.40766908894348125,
+      "mae": 12.018016014125354,
+      "rmse": 12.74588875415519,
+      "fold": 1,
+      "train_size": 391,
+      "test_size": 81,
+      "best_iteration": 10
     }
   ],
   "tier": "per_stock",
   "identifier": "CBK",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

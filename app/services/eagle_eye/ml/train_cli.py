@@ -42,7 +42,7 @@ def _print_summary(summary: dict) -> None:
     print(
         "Per-stock tier: "
         f"{per_stock.get('trained', 0)} models trained, "
-        f"{per_stock.get('rejected', 0)} rejected (AUC < 0.55)"
+        f"{per_stock.get('rejected', 0)} rejected (Spearman < 0.30)"
     )
     print(
         "Per-sector tier: "
@@ -52,9 +52,12 @@ def _print_summary(summary: dict) -> None:
         "Global tier: "
         f"{global_tier.get('trained', 0)} model trained"
     )
-    print(f"Mean AUC per-stock (accepted): {per_stock.get('mean_auc')}")
-    print(f"Mean AUC per-sector (accepted): {per_sector.get('mean_auc')}")
-    print(f"Mean AUC global: {global_tier.get('mean_auc')}")
+    print(f"Mean Spearman per-stock (accepted): {per_stock.get('mean_spearman')}")
+    print(f"Mean Spearman per-sector (accepted): {per_sector.get('mean_spearman')}")
+    print(f"Mean Spearman global: {global_tier.get('mean_spearman')}")
+    print(f"Mean MAE per-stock (accepted): {per_stock.get('mean_mae')}")
+    print(f"Mean MAE per-sector (accepted): {per_sector.get('mean_mae')}")
+    print(f"Mean MAE global: {global_tier.get('mean_mae')}")
     print(f"Runtime (sec): {summary.get('runtime_sec')}")
 
 
@@ -76,13 +79,18 @@ def main() -> None:
         action="store_true",
         help="Force rebuild of event feature cache",
     )
+    parser.add_argument(
+        "--full-rebuild",
+        action="store_true",
+        help="Alias for --force-rebuild",
+    )
     args = parser.parse_args()
 
     log_file = _configure_logging(args.models_root)
     logging.getLogger(__name__).info("Starting Eagle Eye ML train_cli (tier=%s)", args.tier)
 
     trainer = EagleEyeMLTrainer(models_root=args.models_root)
-    summary = trainer.run(tier=args.tier, force_rebuild=args.force_rebuild)
+    summary = trainer.run(tier=args.tier, force_rebuild=(args.force_rebuild or args.full_rebuild))
 
     reports_root = get_reports_root(args.models_root)
     report_path = reports_root / date.today().isoformat() / "summary.json"

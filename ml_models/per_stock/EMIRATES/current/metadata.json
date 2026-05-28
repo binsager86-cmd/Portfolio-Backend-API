@@ -1,36 +1,66 @@
 {
-  "auc": 0.75,
-  "log_loss": 0.3991878466296272,
-  "calibration_error": 0.11121477427832491,
-  "n_train_events": 318,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": -0.056903015238340404,
+  "mae": 36.36781099970867,
+  "rmse": 38.26445302537986,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 375,
   "train_date_range": {
-    "start": "2023-07-12",
-    "end": "2026-04-27"
+    "start": "2023-07-11",
+    "end": "2026-04-26"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_-0.0569",
   "fold_metrics": [
     {
-      "auc": 1.0,
-      "log_loss": 0.0817359059796428,
-      "calibration_max_error": 0.11530987875443732,
-      "calibration_mean_error": 0.05959092414081335,
+      "spearman": NaN,
+      "mae": 47.477332820914725,
+      "rmse": 47.58176895949061,
       "fold": 1,
-      "train_size": 190,
-      "test_size": 32,
-      "best_iteration": 85
-    },
-    {
-      "auc": 0.5,
-      "log_loss": 0.7166397872796116,
-      "calibration_max_error": 0.10711966980221249,
-      "calibration_mean_error": 0.10711966980221249,
-      "fold": 3,
-      "train_size": 254,
+      "train_size": 213,
       "test_size": 32,
       "best_iteration": 1
+    },
+    {
+      "spearman": -0.5475596175766744,
+      "mae": 45.18326052099438,
+      "rmse": 45.52408514242562,
+      "fold": 2,
+      "train_size": 245,
+      "test_size": 42,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.1419939982047725,
+      "mae": 37.231766425604306,
+      "rmse": 41.8281127974713,
+      "fold": 3,
+      "train_size": 287,
+      "test_size": 26,
+      "best_iteration": 306
+    },
+    {
+      "spearman": -0.8192692799745684,
+      "mae": 18.044529211243297,
+      "rmse": 21.958327472169433,
+      "fold": 4,
+      "train_size": 313,
+      "test_size": 21,
+      "best_iteration": 126
+    },
+    {
+      "spearman": 0.9972228383931088,
+      "mae": 33.90216601978663,
+      "rmse": 34.42997075534232,
+      "fold": 5,
+      "train_size": 334,
+      "test_size": 41,
+      "best_iteration": 135
     }
   ],
   "tier": "per_stock",
   "identifier": "EMIRATES",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

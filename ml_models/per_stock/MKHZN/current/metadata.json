@@ -1,26 +1,57 @@
 {
-  "auc": 0.8901098901098902,
-  "log_loss": 0.6824860276240959,
-  "calibration_error": 0.18557224342116552,
-  "n_train_events": 202,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.09285764853793757,
+  "mae": 6.116799784371935,
+  "rmse": 6.549648213501838,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 556,
   "train_date_range": {
-    "start": "2023-06-14",
-    "end": "2026-04-14"
+    "start": "2023-06-13",
+    "end": "2026-04-26"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.0929",
   "fold_metrics": [
     {
-      "auc": 0.8901098901098902,
-      "log_loss": 0.6824860276240959,
-      "calibration_max_error": 0.18557224342116552,
-      "calibration_mean_error": 0.18557224342116552,
+      "spearman": 0.1814194355104693,
+      "mae": 6.924853676393368,
+      "rmse": 7.123422297996048,
       "fold": 1,
-      "train_size": 121,
-      "test_size": 20,
+      "train_size": 340,
+      "test_size": 50,
+      "best_iteration": 2
+    },
+    {
+      "spearman": 0.2809923983302458,
+      "mae": 1.9570105676474947,
+      "rmse": 2.3071710760087485,
+      "fold": 2,
+      "train_size": 390,
+      "test_size": 37,
+      "best_iteration": 79
+    },
+    {
+      "spearman": -0.2611511199871587,
+      "mae": 9.65359667794168,
+      "rmse": 10.502478395111435,
+      "fold": 3,
+      "train_size": 427,
+      "test_size": 81,
       "best_iteration": 1
+    },
+    {
+      "spearman": 0.17016988029819383,
+      "mae": 5.931738215505197,
+      "rmse": 6.265521084891121,
+      "fold": 5,
+      "train_size": 527,
+      "test_size": 29,
+      "best_iteration": 5
     }
   ],
   "tier": "per_stock",
   "identifier": "MKHZN",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

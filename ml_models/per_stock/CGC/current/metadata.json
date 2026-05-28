@@ -1,56 +1,48 @@
 {
-  "auc": 0.7980769230769231,
-  "log_loss": 0.6644075055998624,
-  "calibration_error": 0.48758199704809513,
-  "n_train_events": 293,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.1331273873371221,
+  "mae": 23.190641096880757,
+  "rmse": 24.38807403330883,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 631,
   "train_date_range": {
-    "start": "2023-12-28",
-    "end": "2026-05-04"
+    "start": "2023-08-02",
+    "end": "2026-05-03"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.1331",
   "fold_metrics": [
     {
-      "auc": 0.5,
-      "log_loss": 1.0811730357034137,
-      "calibration_max_error": 0.635315211199716,
-      "calibration_mean_error": 0.635315211199716,
+      "spearman": -0.07612588452469962,
+      "mae": 30.841938837264557,
+      "rmse": 31.050695524999604,
       "fold": 1,
-      "train_size": 175,
-      "test_size": 30,
+      "train_size": 381,
+      "test_size": 83,
       "best_iteration": 1
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.4635530923709822,
-      "calibration_max_error": 0.7887533609681137,
-      "calibration_mean_error": 0.34364763101303614,
+      "spearman": 0.3753441242145795,
+      "mae": 32.69960418668484,
+      "rmse": 32.95731219208075,
       "fold": 2,
-      "train_size": 205,
-      "test_size": 29,
-      "best_iteration": 35
+      "train_size": 464,
+      "test_size": 79,
+      "best_iteration": 1
     },
     {
-      "auc": 0.6923076923076923,
-      "log_loss": 0.422677265571421,
-      "calibration_max_error": 0.0017721101657722782,
-      "calibration_mean_error": 0.0017721101657722782,
-      "fold": 4,
-      "train_size": 263,
-      "test_size": 15,
-      "best_iteration": 28
-    },
-    {
-      "auc": 1.0,
-      "log_loss": 0.6902266287536326,
-      "calibration_max_error": 0.5244873058587786,
-      "calibration_mean_error": 0.4521353011000417,
-      "fold": 5,
-      "train_size": 278,
-      "test_size": 15,
-      "best_iteration": 3
+      "spearman": 0.10016392232148637,
+      "mae": 6.030380266692876,
+      "rmse": 9.156214382846143,
+      "fold": 3,
+      "train_size": 543,
+      "test_size": 42,
+      "best_iteration": 165
     }
   ],
   "tier": "per_stock",
   "identifier": "CGC",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

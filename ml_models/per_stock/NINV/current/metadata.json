@@ -1,46 +1,48 @@
 {
-  "auc": 0.8333333333333334,
-  "log_loss": 0.758566679471898,
-  "calibration_error": 0.48592165712390595,
-  "n_train_events": 251,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.008977463898478588,
+  "mae": 13.948976941198511,
+  "rmse": 14.26019648753153,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 605,
   "train_date_range": {
-    "start": "2023-07-06",
-    "end": "2025-12-10"
+    "start": "2023-07-05",
+    "end": "2026-04-26"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.0090",
   "fold_metrics": [
     {
-      "auc": 0.5,
-      "log_loss": 1.2835433629314374,
-      "calibration_max_error": 0.5151628742751331,
-      "calibration_mean_error": 0.5151628742751331,
+      "spearman": NaN,
+      "mae": 13.799304910404349,
+      "rmse": 13.82914245237946,
       "fold": 1,
-      "train_size": 150,
-      "test_size": 25,
+      "train_size": 370,
+      "test_size": 67,
       "best_iteration": 1
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.5999295228584391,
-      "calibration_max_error": 0.05695504902924514,
-      "calibration_mean_error": 0.05695504902924514,
+      "spearman": 0.28468756705205295,
+      "mae": 17.160501416565417,
+      "rmse": 17.405011087263247,
       "fold": 2,
-      "train_size": 175,
-      "test_size": 25,
-      "best_iteration": 17
+      "train_size": 437,
+      "test_size": 94,
+      "best_iteration": 1
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.39222715262581764,
-      "calibration_max_error": 0.8856470480673396,
-      "calibration_mean_error": 0.4034053664846673,
-      "fold": 5,
-      "train_size": 238,
-      "test_size": 13,
-      "best_iteration": 35
+      "spearman": -0.26673263925509577,
+      "mae": 10.887124496625772,
+      "rmse": 11.546435922951888,
+      "fold": 3,
+      "train_size": 531,
+      "test_size": 37,
+      "best_iteration": 135
     }
   ],
   "tier": "per_stock",
   "identifier": "NINV",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

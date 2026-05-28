@@ -1,26 +1,39 @@
 {
-  "auc": 0.5,
-  "log_loss": 0.12974315355877675,
-  "calibration_error": 0.0003679020537653774,
-  "n_train_events": 346,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.8467354108318537,
+  "mae": 17.841638875974997,
+  "rmse": 18.25275225784383,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 417,
   "train_date_range": {
-    "start": "2024-09-22",
-    "end": "2026-04-26"
+    "start": "2024-05-29",
+    "end": "2026-05-06"
   },
-  "rejected_reason": "auc_below_threshold_0.5000",
+  "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 0.5,
-      "log_loss": 0.12974315355877675,
-      "calibration_max_error": 0.0003679020537653774,
-      "calibration_mean_error": 0.0003679020537653774,
-      "fold": 3,
-      "train_size": 276,
-      "test_size": 35,
+      "spearman": 0.6936318133736776,
+      "mae": 0.7555479707462429,
+      "rmse": 0.945630463963891,
+      "fold": 2,
+      "train_size": 338,
+      "test_size": 20,
+      "best_iteration": 56
+    },
+    {
+      "spearman": 0.9998390082900298,
+      "mae": 34.92772978120375,
+      "rmse": 35.55987405172377,
+      "fold": 5,
+      "train_size": 370,
+      "test_size": 47,
       "best_iteration": 56
     }
   ],
   "tier": "per_stock",
   "identifier": "PAPCO",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

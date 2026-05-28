@@ -1,46 +1,57 @@
 {
-  "auc": 0.6734711455641689,
-  "log_loss": 0.36909398690214523,
-  "calibration_error": 0.3168238831058768,
-  "n_train_events": 455,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.3366842217751119,
+  "mae": 22.413084401581923,
+  "rmse": 24.374907043982667,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 572,
   "train_date_range": {
-    "start": "2023-07-05",
-    "end": "2026-04-16"
+    "start": "2023-07-04",
+    "end": "2026-05-24"
   },
   "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 1.0,
-      "log_loss": 2.2269229743449782e-05,
-      "calibration_max_error": 3.461290205264422e-05,
-      "calibration_mean_error": 2.689793998149461e-05,
+      "spearman": 0.24981479809690194,
+      "mae": 39.238938785882326,
+      "rmse": 42.42318527003463,
       "fold": 1,
-      "train_size": 273,
-      "test_size": 45,
-      "best_iteration": 200
+      "train_size": 375,
+      "test_size": 35,
+      "best_iteration": 12
     },
     {
-      "auc": 0.8111111111111111,
-      "log_loss": 0.8083097003533565,
-      "calibration_max_error": 0.693177607095401,
-      "calibration_mean_error": 0.5368853144341571,
+      "spearman": -0.4937853861904038,
+      "mae": 26.610918823771918,
+      "rmse": 29.215920195033988,
       "fold": 2,
-      "train_size": 318,
-      "test_size": 46,
-      "best_iteration": 9
+      "train_size": 410,
+      "test_size": 43,
+      "best_iteration": 34
     },
     {
-      "auc": 0.20930232558139536,
-      "log_loss": 0.29894999112333576,
-      "calibration_max_error": 0.25725942932017676,
-      "calibration_mean_error": 0.1355262819461273,
+      "spearman": 0.7469371177783697,
+      "mae": 2.8971728619617254,
+      "rmse": 3.97412634209131,
       "fold": 3,
-      "train_size": 364,
-      "test_size": 45,
-      "best_iteration": 37
+      "train_size": 453,
+      "test_size": 19,
+      "best_iteration": 144
+    },
+    {
+      "spearman": 0.84377035741558,
+      "mae": 20.905307134711737,
+      "rmse": 21.88639636877074,
+      "fold": 5,
+      "train_size": 478,
+      "test_size": 94,
+      "best_iteration": 336
     }
   ],
   "tier": "per_stock",
   "identifier": "MRC",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

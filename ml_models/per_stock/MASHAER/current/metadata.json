@@ -1,36 +1,48 @@
 {
-  "auc": 0.5234375,
-  "log_loss": 0.23235937485885116,
-  "calibration_error": 0.14340457944586116,
-  "n_train_events": 326,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.8250006140455199,
+  "mae": 12.773465574395152,
+  "rmse": 14.435000185958538,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 477,
   "train_date_range": {
-    "start": "2023-07-09",
-    "end": "2026-04-16"
+    "start": "2023-07-06",
+    "end": "2026-04-15"
   },
-  "rejected_reason": "auc_below_threshold_0.5234",
+  "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 1.0,
-      "log_loss": 0.10073829632651218,
-      "calibration_max_error": 0.03762669051725809,
-      "calibration_mean_error": 0.029592116166484606,
-      "fold": 2,
-      "train_size": 228,
-      "test_size": 32,
-      "best_iteration": 97
+      "spearman": 0.6695212516923281,
+      "mae": 24.496408770204592,
+      "rmse": 24.514958972433828,
+      "fold": 1,
+      "train_size": 266,
+      "test_size": 68,
+      "best_iteration": 1
     },
     {
-      "auc": 0.046875,
-      "log_loss": 0.3639804533911902,
-      "calibration_max_error": 0.24918246837446423,
-      "calibration_mean_error": 0.24918246837446423,
-      "fold": 3,
-      "train_size": 260,
-      "test_size": 33,
+      "spearman": 0.8068602186017464,
+      "mae": 6.4661616312301025,
+      "rmse": 9.204017593122892,
+      "fold": 2,
+      "train_size": 334,
+      "test_size": 47,
+      "best_iteration": 32
+    },
+    {
+      "spearman": 0.9986203718424852,
+      "mae": 7.357826321750759,
+      "rmse": 9.586023992318898,
+      "fold": 5,
+      "train_size": 407,
+      "test_size": 70,
       "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "MASHAER",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

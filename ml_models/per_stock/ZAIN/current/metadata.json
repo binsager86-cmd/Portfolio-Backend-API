@@ -1,46 +1,66 @@
 {
-  "auc": 0.8333333333333334,
-  "log_loss": 0.7640436823169523,
-  "calibration_error": 0.27198245249278613,
-  "n_train_events": 134,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.6575409009823237,
+  "mae": 3.0185129364130754,
+  "rmse": 4.581463531151753,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 626,
   "train_date_range": {
-    "start": "2023-11-15",
-    "end": "2026-03-03"
+    "start": "2023-08-02",
+    "end": "2026-04-26"
   },
   "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 1.0,
-      "log_loss": 9.006308471137495e-05,
-      "calibration_max_error": 0.00017159108998365813,
-      "calibration_mean_error": 0.00010534460245073799,
+      "spearman": 0.6915582068103577,
+      "mae": 0.4429848875948787,
+      "rmse": 0.778611908344486,
       "fold": 1,
-      "train_size": 80,
-      "test_size": 13,
-      "best_iteration": 171
+      "train_size": 358,
+      "test_size": 61,
+      "best_iteration": 50
     },
     {
-      "auc": 0.5,
-      "log_loss": 1.9111107128966616,
-      "calibration_max_error": 0.7394905098097525,
-      "calibration_mean_error": 0.7394905098097525,
+      "spearman": 0.49454192790172846,
+      "mae": 2.9174424647171637,
+      "rmse": 4.951878436118995,
+      "fold": 2,
+      "train_size": 419,
+      "test_size": 62,
+      "best_iteration": 45
+    },
+    {
+      "spearman": 0.7628706626005959,
+      "mae": 5.070588983213598,
+      "rmse": 7.501092301641654,
       "fold": 3,
-      "train_size": 107,
-      "test_size": 13,
-      "best_iteration": 1
+      "train_size": 481,
+      "test_size": 72,
+      "best_iteration": 10
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.38093027096948406,
-      "calibration_max_error": 0.07628525657862217,
-      "calibration_mean_error": 0.07010072997626313,
+      "spearman": 0.9275500672104149,
+      "mae": 5.607445045447663,
+      "rmse": 7.644634664975121,
+      "fold": 4,
+      "train_size": 553,
+      "test_size": 46,
+      "best_iteration": 55
+    },
+    {
+      "spearman": 0.41118364038852157,
+      "mae": 1.0541033010920733,
+      "rmse": 2.0311003446785074,
       "fold": 5,
-      "train_size": 127,
-      "test_size": 7,
-      "best_iteration": 36
+      "train_size": 599,
+      "test_size": 27,
+      "best_iteration": 230
     }
   ],
   "tier": "per_stock",
   "identifier": "ZAIN",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

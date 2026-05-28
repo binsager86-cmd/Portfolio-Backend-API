@@ -1,15 +1,48 @@
 {
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.7150441528414362,
+  "mae": 2.926475658364056,
+  "rmse": 5.763527837359849,
   "auc": NaN,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 332,
+  "n_train_events": 421,
   "train_date_range": {
-    "start": "2023-08-02",
-    "end": "2026-04-28"
+    "start": "2023-08-01",
+    "end": "2026-05-24"
   },
-  "rejected_reason": "auc_below_threshold_nan",
-  "fold_metrics": [],
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "spearman": 0.59182064322954,
+      "mae": 6.5924011508063405,
+      "rmse": 8.472458379240953,
+      "fold": 2,
+      "train_size": 294,
+      "test_size": 39,
+      "best_iteration": 29
+    },
+    {
+      "spearman": 0.5533118152947685,
+      "mae": 2.1827885410743306,
+      "rmse": 8.813440639990926,
+      "fold": 3,
+      "train_size": 333,
+      "test_size": 61,
+      "best_iteration": 215
+    },
+    {
+      "spearman": 1.0,
+      "mae": 0.004237283211497633,
+      "rmse": 0.004684492847669931,
+      "fold": 5,
+      "train_size": 399,
+      "test_size": 22,
+      "best_iteration": 89
+    }
+  ],
   "tier": "per_stock",
   "identifier": "OSOS",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

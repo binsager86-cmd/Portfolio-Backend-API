@@ -1,46 +1,57 @@
 {
-  "auc": 0.5922619047619048,
-  "log_loss": 0.8358488062487727,
-  "calibration_error": 0.6036063301851715,
-  "n_train_events": 431,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": -0.193323593425991,
+  "mae": 8.594454062991833,
+  "rmse": 10.566338209459605,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 465,
   "train_date_range": {
-    "start": "2023-10-01",
-    "end": "2026-04-16"
+    "start": "2023-09-12",
+    "end": "2026-04-15"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_-0.1933",
   "fold_metrics": [
     {
-      "auc": 1.0,
-      "log_loss": 1.3236320530961523,
-      "calibration_max_error": 0.785243587639558,
-      "calibration_mean_error": 0.39269649685841657,
+      "spearman": -0.7950335041387466,
+      "mae": 14.944074869707071,
+      "rmse": 18.649251339764685,
       "fold": 1,
-      "train_size": 258,
-      "test_size": 43,
-      "best_iteration": 84
+      "train_size": 336,
+      "test_size": 40,
+      "best_iteration": 88
     },
     {
-      "auc": 0.3125,
-      "log_loss": 0.8153904683588165,
-      "calibration_max_error": 0.9154745214052767,
-      "calibration_mean_error": 0.5610162664173284,
+      "spearman": 0.0,
+      "mae": 2.768080371099941,
+      "rmse": 4.623794680879698,
       "fold": 2,
-      "train_size": 301,
-      "test_size": 43,
-      "best_iteration": 8
+      "train_size": 376,
+      "test_size": 10,
+      "best_iteration": 498
     },
     {
-      "auc": 0.4642857142857143,
-      "log_loss": 0.3685238972913492,
-      "calibration_max_error": 0.11010088151067982,
-      "calibration_mean_error": 0.04986780129480419,
+      "spearman": 0.0,
+      "mae": 4.39749643511724,
+      "rmse": 6.488221023464886,
       "fold": 3,
-      "train_size": 344,
-      "test_size": 43,
-      "best_iteration": 80
+      "train_size": 386,
+      "test_size": 29,
+      "best_iteration": 115
+    },
+    {
+      "spearman": 0.02173913043478261,
+      "mae": 12.268164576043084,
+      "rmse": 12.50408579372915,
+      "fold": 5,
+      "train_size": 418,
+      "test_size": 47,
+      "best_iteration": 125
     }
   ],
   "tier": "per_stock",
   "identifier": "TAHSSILAT",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

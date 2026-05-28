@@ -1,56 +1,66 @@
 {
-  "auc": 0.6784188034188035,
-  "log_loss": 0.5267187057120992,
-  "calibration_error": 0.2851180169978454,
-  "n_train_events": 283,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": -0.1302670151103571,
+  "mae": 34.93228888554928,
+  "rmse": 38.591285065361134,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 496,
   "train_date_range": {
-    "start": "2023-08-10",
-    "end": "2026-04-21"
+    "start": "2023-08-02",
+    "end": "2026-04-20"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_-0.1303",
   "fold_metrics": [
     {
-      "auc": 0.5,
-      "log_loss": 0.7212595700429645,
-      "calibration_max_error": 0.16476504938161715,
-      "calibration_mean_error": 0.16476504938161715,
+      "spearman": -0.21646735560855954,
+      "mae": 53.82540852400962,
+      "rmse": 57.67425252575837,
       "fold": 1,
-      "train_size": 169,
-      "test_size": 29,
-      "best_iteration": 1
-    },
-    {
-      "auc": 1.0,
-      "log_loss": 0.007884003502340335,
-      "calibration_max_error": 0.009692354533858971,
-      "calibration_mean_error": 0.005128123394968971,
-      "fold": 2,
-      "train_size": 198,
-      "test_size": 28,
-      "best_iteration": 170
-    },
-    {
-      "auc": 0.7692307692307692,
-      "log_loss": 0.7210104887574474,
-      "calibration_max_error": 0.9575880684860338,
-      "calibration_mean_error": 0.5473926010402898,
-      "fold": 3,
       "train_size": 226,
-      "test_size": 28,
-      "best_iteration": 40
+      "test_size": 101,
+      "best_iteration": 1
     },
     {
-      "auc": 0.4444444444444444,
-      "log_loss": 0.6567207605456444,
-      "calibration_max_error": 0.008426595589871633,
-      "calibration_mean_error": 0.008426595589871633,
-      "fold": 4,
-      "train_size": 254,
-      "test_size": 14,
+      "spearman": 0.24573075916352086,
+      "mae": 55.56327694883305,
+      "rmse": 58.08720345984074,
+      "fold": 2,
+      "train_size": 327,
+      "test_size": 56,
       "best_iteration": 1
+    },
+    {
+      "spearman": -0.5515862027981286,
+      "mae": 51.31163422327772,
+      "rmse": 54.19371188568347,
+      "fold": 3,
+      "train_size": 383,
+      "test_size": 60,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.3282082242946272,
+      "mae": 5.946686088601487,
+      "rmse": 13.53809229901808,
+      "fold": 4,
+      "train_size": 443,
+      "test_size": 20,
+      "best_iteration": 416
+    },
+    {
+      "spearman": -0.4572205006032453,
+      "mae": 8.01443864302449,
+      "rmse": 9.463165156504997,
+      "fold": 5,
+      "train_size": 463,
+      "test_size": 33,
+      "best_iteration": 109
     }
   ],
   "tier": "per_stock",
   "identifier": "ARABREC",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

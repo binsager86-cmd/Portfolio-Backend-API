@@ -1,26 +1,30 @@
 {
-  "auc": 1.0,
-  "log_loss": 0.0036862049114795665,
-  "calibration_error": 0.035931410604973846,
-  "n_train_events": 102,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.6172133998483676,
+  "mae": 22.265783205109255,
+  "rmse": 22.92107017494872,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 171,
   "train_date_range": {
-    "start": "2023-07-13",
-    "end": "2025-10-21"
+    "start": "2023-07-12",
+    "end": "2026-04-20"
   },
   "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 1.0,
-      "log_loss": 0.0036862049114795665,
-      "calibration_max_error": 0.035931410604973846,
-      "calibration_mean_error": 0.017980661358622193,
-      "fold": 1,
-      "train_size": 61,
-      "test_size": 10,
-      "best_iteration": 170
+      "spearman": 0.6172133998483676,
+      "mae": 22.265783205109255,
+      "rmse": 22.92107017494872,
+      "fold": 3,
+      "train_size": 124,
+      "test_size": 39,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "KCIN",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

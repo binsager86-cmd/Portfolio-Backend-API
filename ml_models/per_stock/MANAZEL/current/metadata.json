@@ -1,46 +1,66 @@
 {
-  "auc": 0.9143518518518517,
-  "log_loss": 0.16942880065957042,
-  "calibration_error": 0.47678887285100496,
-  "n_train_events": 404,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.32826529072581395,
+  "mae": 17.6390435443748,
+  "rmse": 18.992082118967286,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 606,
   "train_date_range": {
-    "start": "2023-06-14",
-    "end": "2026-04-27"
+    "start": "2023-06-13",
+    "end": "2026-04-26"
   },
   "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 1.0,
-      "log_loss": 0.0005104846173460369,
-      "calibration_max_error": 0.0032070386633381576,
-      "calibration_mean_error": 0.0016203753901000522,
+      "spearman": 0.6198436657149019,
+      "mae": 52.75254015421026,
+      "rmse": 52.95464701430751,
       "fold": 1,
-      "train_size": 242,
-      "test_size": 40,
-      "best_iteration": 200
+      "train_size": 399,
+      "test_size": 90,
+      "best_iteration": 1
     },
     {
-      "auc": 0.7430555555555556,
-      "log_loss": 0.2917828443315863,
-      "calibration_max_error": 0.7555369970252314,
-      "calibration_mean_error": 0.39261092789584806,
+      "spearman": -0.5917621529871744,
+      "mae": 17.119435548826598,
+      "rmse": 19.57458777245086,
+      "fold": 2,
+      "train_size": 489,
+      "test_size": 41,
+      "best_iteration": 30
+    },
+    {
+      "spearman": 0.3078622519792479,
+      "mae": 2.9372544214747545,
+      "rmse": 4.56057483862846,
       "fold": 3,
-      "train_size": 323,
-      "test_size": 40,
-      "best_iteration": 58
+      "train_size": 530,
+      "test_size": 26,
+      "best_iteration": 117
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.21599307302977885,
-      "calibration_max_error": 0.6716225828644454,
-      "calibration_mean_error": 0.3558477155421781,
+      "spearman": 0.5011402523360258,
+      "mae": 0.5214250005867274,
+      "rmse": 0.8299478426116151,
       "fold": 4,
-      "train_size": 363,
-      "test_size": 20,
-      "best_iteration": 74
+      "train_size": 556,
+      "test_size": 11,
+      "best_iteration": 105
+    },
+    {
+      "spearman": 0.8042424365860686,
+      "mae": 14.864562596775666,
+      "rmse": 17.04065312683799,
+      "fold": 5,
+      "train_size": 567,
+      "test_size": 39,
+      "best_iteration": 155
     }
   ],
   "tier": "per_stock",
   "identifier": "MANAZEL",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

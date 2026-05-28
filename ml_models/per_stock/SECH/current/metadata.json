@@ -1,46 +1,57 @@
 {
-  "auc": 0.8989898989898989,
-  "log_loss": 0.3496082840421267,
-  "calibration_error": 0.2735758569910126,
-  "n_train_events": 283,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.780074848583402,
+  "mae": 6.276605527044897,
+  "rmse": 7.116045780194723,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 577,
   "train_date_range": {
-    "start": "2023-05-09",
-    "end": "2026-04-19"
+    "start": "2023-05-08",
+    "end": "2026-05-21"
   },
   "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 0.6969696969696969,
-      "log_loss": 0.4932454902506152,
-      "calibration_max_error": 0.23663278749184566,
-      "calibration_mean_error": 0.17202856058042953,
+      "spearman": 0.7728188024900069,
+      "mae": 10.468063519154242,
+      "rmse": 11.122903873757297,
+      "fold": 1,
+      "train_size": 325,
+      "test_size": 84,
+      "best_iteration": 29
+    },
+    {
+      "spearman": 0.5620740922818959,
+      "mae": 5.583267819604961,
+      "rmse": 6.951459417238571,
       "fold": 2,
-      "train_size": 198,
-      "test_size": 28,
-      "best_iteration": 25
+      "train_size": 409,
+      "test_size": 46,
+      "best_iteration": 187
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.5491424172377642,
-      "calibration_max_error": 0.5117440607885233,
-      "calibration_mean_error": 0.41440920749204013,
+      "spearman": 0.9869275424396534,
+      "mae": 0.6632851331666451,
+      "rmse": 0.7512040038675668,
       "fold": 4,
-      "train_size": 254,
-      "test_size": 14,
-      "best_iteration": 18
+      "train_size": 486,
+      "test_size": 55,
+      "best_iteration": 94
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.006436944638000538,
-      "calibration_max_error": 0.07235072269266883,
-      "calibration_mean_error": 0.03694093956602983,
+      "spearman": 0.7984789571220521,
+      "mae": 8.391805636253736,
+      "rmse": 9.638615825915455,
       "fold": 5,
-      "train_size": 268,
-      "test_size": 15,
-      "best_iteration": 125
+      "train_size": 541,
+      "test_size": 36,
+      "best_iteration": 45
     }
   ],
   "tier": "per_stock",
   "identifier": "SECH",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

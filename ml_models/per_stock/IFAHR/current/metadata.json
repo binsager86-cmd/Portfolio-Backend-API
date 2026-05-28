@@ -1,26 +1,66 @@
 {
-  "auc": 0.8181818181818181,
-  "log_loss": 0.2776351980292737,
-  "calibration_error": 0.0017193597967860574,
-  "n_train_events": 240,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.2675965426974159,
+  "mae": 6.077530935177815,
+  "rmse": 6.918469002027154,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 427,
   "train_date_range": {
-    "start": "2023-05-31",
-    "end": "2026-04-19"
+    "start": "2023-05-30",
+    "end": "2026-04-16"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.2676",
   "fold_metrics": [
     {
-      "auc": 0.8181818181818181,
-      "log_loss": 0.2776351980292737,
-      "calibration_max_error": 0.0017193597967860574,
-      "calibration_mean_error": 0.0017193597967860574,
-      "fold": 5,
-      "train_size": 228,
+      "spearman": 0.3701780228629409,
+      "mae": 0.632591576301608,
+      "rmse": 1.2638712209215603,
+      "fold": 1,
+      "train_size": 254,
+      "test_size": 20,
+      "best_iteration": 115
+    },
+    {
+      "spearman": 0.8136162320546944,
+      "mae": 19.697636109070586,
+      "rmse": 21.155479133579302,
+      "fold": 2,
+      "train_size": 274,
+      "test_size": 108,
+      "best_iteration": 41
+    },
+    {
+      "spearman": 0.30066218601686834,
+      "mae": 0.7725563251961399,
+      "rmse": 1.3681086611038429,
+      "fold": 3,
+      "train_size": 382,
+      "test_size": 20,
+      "best_iteration": 93
+    },
+    {
+      "spearman": 0.5895063447465633,
+      "mae": 4.648428820386232,
+      "rmse": 5.349695870811202,
+      "fold": 4,
+      "train_size": 402,
       "test_size": 12,
-      "best_iteration": 2
+      "best_iteration": 49
+    },
+    {
+      "spearman": -0.7359800721939873,
+      "mae": 4.636441844934508,
+      "rmse": 5.4551901237198654,
+      "fold": 5,
+      "train_size": 414,
+      "test_size": 13,
+      "best_iteration": 69
     }
   ],
   "tier": "per_stock",
   "identifier": "IFAHR",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

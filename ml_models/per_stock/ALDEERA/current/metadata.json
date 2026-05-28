@@ -1,15 +1,48 @@
 {
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": -0.08565777337168295,
+  "mae": 14.288622678458063,
+  "rmse": 16.92965039717575,
   "auc": NaN,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 347,
+  "n_train_events": 482,
   "train_date_range": {
-    "start": "2023-07-13",
-    "end": "2026-04-02"
+    "start": "2023-07-11",
+    "end": "2026-04-21"
   },
-  "rejected_reason": "auc_below_threshold_nan",
-  "fold_metrics": [],
+  "rejected_reason": "spearman_below_threshold_-0.0857",
+  "fold_metrics": [
+    {
+      "spearman": NaN,
+      "mae": 34.74993401521246,
+      "rmse": 34.970928148413606,
+      "fold": 2,
+      "train_size": 244,
+      "test_size": 132,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.6614471851091736,
+      "mae": 2.049189463863052,
+      "rmse": 2.8576895950377956,
+      "fold": 3,
+      "train_size": 376,
+      "test_size": 22,
+      "best_iteration": 55
+    },
+    {
+      "spearman": -0.8327627318525395,
+      "mae": 6.066744556298678,
+      "rmse": 12.960333448075845,
+      "fold": 5,
+      "train_size": 405,
+      "test_size": 77,
+      "best_iteration": 5
+    }
+  ],
   "tier": "per_stock",
   "identifier": "ALDEERA",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

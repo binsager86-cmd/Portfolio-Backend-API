@@ -1,26 +1,39 @@
 {
-  "auc": 0.10869565217391303,
-  "log_loss": 0.6977499576192611,
-  "calibration_error": 0.11618126497349557,
-  "n_train_events": 308,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.38941601469018955,
+  "mae": 3.4242155104637924,
+  "rmse": 3.787368284663231,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 516,
   "train_date_range": {
-    "start": "2023-07-24",
-    "end": "2026-04-02"
+    "start": "2023-07-23",
+    "end": "2026-04-01"
   },
-  "rejected_reason": "auc_below_threshold_0.1087",
+  "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 0.10869565217391303,
-      "log_loss": 0.6977499576192611,
-      "calibration_max_error": 0.11618126497349557,
-      "calibration_mean_error": 0.11618126497349557,
+      "spearman": 0.9965014770128385,
+      "mae": 1.3873083690428865,
+      "rmse": 1.5809145157048154,
       "fold": 3,
-      "train_size": 246,
-      "test_size": 31,
+      "train_size": 324,
+      "test_size": 133,
+      "best_iteration": 185
+    },
+    {
+      "spearman": -0.21766944763245946,
+      "mae": 5.461122651884698,
+      "rmse": 5.993822053621646,
+      "fold": 5,
+      "train_size": 468,
+      "test_size": 48,
       "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "CATTL",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

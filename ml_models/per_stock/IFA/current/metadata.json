@@ -1,36 +1,39 @@
 {
-  "auc": 0.7916666666666666,
-  "log_loss": 0.2902611722801915,
-  "calibration_error": 0.23074862605777613,
-  "n_train_events": 257,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.9489985619589472,
+  "mae": 4.090437365636167,
+  "rmse": 5.137020196110848,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 597,
   "train_date_range": {
-    "start": "2023-04-30",
-    "end": "2026-04-12"
+    "start": "2023-04-20",
+    "end": "2026-04-26"
   },
   "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 0.5833333333333333,
-      "log_loss": 0.5687793032281515,
-      "calibration_max_error": 0.29944930776703255,
-      "calibration_mean_error": 0.23391507135795228,
-      "fold": 1,
-      "train_size": 154,
-      "test_size": 25,
-      "best_iteration": 10
+      "spearman": 0.9233413152610743,
+      "mae": 4.940151384479174,
+      "rmse": 5.58762446038244,
+      "fold": 2,
+      "train_size": 396,
+      "test_size": 95,
+      "best_iteration": 23
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.011743041332231445,
-      "calibration_max_error": 0.1620479443485197,
-      "calibration_mean_error": 0.08357355574868389,
-      "fold": 2,
-      "train_size": 179,
-      "test_size": 26,
-      "best_iteration": 132
+      "spearman": 0.9746558086568201,
+      "mae": 3.2407233467931604,
+      "rmse": 4.6864159318392575,
+      "fold": 5,
+      "train_size": 545,
+      "test_size": 52,
+      "best_iteration": 16
     }
   ],
   "tier": "per_stock",
   "identifier": "IFA",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

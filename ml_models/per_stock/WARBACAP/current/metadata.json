@@ -1,46 +1,48 @@
 {
-  "auc": 0.6392676767676768,
-  "log_loss": 0.5591720253731681,
-  "calibration_error": 0.10425809641223827,
-  "n_train_events": 423,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": -0.021026936376691147,
+  "mae": 17.033261114087107,
+  "rmse": 17.496056666286897,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 545,
   "train_date_range": {
-    "start": "2023-05-31",
-    "end": "2026-04-16"
+    "start": "2023-05-30",
+    "end": "2026-04-15"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_-0.0210",
   "fold_metrics": [
     {
-      "auc": 0.6136363636363636,
-      "log_loss": 0.6139832536934211,
-      "calibration_max_error": 0.05304041128534076,
-      "calibration_mean_error": 0.02711715740093637,
+      "spearman": -0.15696479190502696,
+      "mae": 41.74405438445445,
+      "rmse": 42.12889922617608,
       "fold": 1,
-      "train_size": 253,
-      "test_size": 43,
-      "best_iteration": 34
-    },
-    {
-      "auc": 0.4375,
-      "log_loss": 0.5555536300294639,
-      "calibration_max_error": 0.004530953323055531,
-      "calibration_mean_error": 0.004530953323055531,
-      "fold": 4,
-      "train_size": 380,
-      "test_size": 21,
+      "train_size": 353,
+      "test_size": 128,
       "best_iteration": 1
     },
     {
-      "auc": 0.8666666666666667,
-      "log_loss": 0.5079791923966194,
-      "calibration_max_error": 0.2552029246283185,
-      "calibration_mean_error": 0.18192221301097686,
+      "spearman": 0.38263969661337205,
+      "mae": 1.0915736099449063,
+      "rmse": 1.7246006013634163,
+      "fold": 3,
+      "train_size": 510,
+      "test_size": 14,
+      "best_iteration": 75
+    },
+    {
+      "spearman": -0.2887557138384185,
+      "mae": 8.26415534786196,
+      "rmse": 8.634670171321197,
       "fold": 5,
-      "train_size": 401,
-      "test_size": 22,
+      "train_size": 531,
+      "test_size": 14,
       "best_iteration": 38
     }
   ],
   "tier": "per_stock",
   "identifier": "WARBACAP",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

@@ -1,46 +1,66 @@
 {
-  "auc": 0.5952380952380952,
-  "log_loss": 0.7583667169023117,
-  "calibration_error": 0.1947516665959038,
-  "n_train_events": 86,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": -0.04708079889147291,
+  "mae": 15.780463449435558,
+  "rmse": 18.608051052085877,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 2658,
   "train_date_range": {
-    "start": "2023-12-11",
-    "end": "2026-04-19"
+    "start": "2023-05-03",
+    "end": "2026-05-21"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_-0.0471",
   "fold_metrics": [
     {
-      "auc": 0.7142857142857143,
-      "log_loss": 0.7636790486125418,
-      "calibration_max_error": 0.1882996860249245,
-      "calibration_mean_error": 0.1882996860249245,
+      "spearman": 0.18821984036422496,
+      "mae": 35.52346853121928,
+      "rmse": 43.69550873970253,
       "fold": 1,
-      "train_size": 51,
-      "test_size": 9,
-      "best_iteration": 6
+      "train_size": 1450,
+      "test_size": 344,
+      "best_iteration": 1
     },
     {
-      "auc": 0.5714285714285714,
-      "log_loss": 0.700808343131956,
-      "calibration_max_error": 0.1722448319774991,
-      "calibration_mean_error": 0.1722448319774991,
+      "spearman": -0.470709397614703,
+      "mae": 14.214388087479128,
+      "rmse": 15.48826953986755,
+      "fold": 2,
+      "train_size": 1794,
+      "test_size": 252,
+      "best_iteration": 16
+    },
+    {
+      "spearman": 0.17352363748182198,
+      "mae": 3.7653273987626257,
+      "rmse": 5.570721399882476,
       "fold": 3,
-      "train_size": 68,
-      "test_size": 9,
-      "best_iteration": 5
+      "train_size": 2046,
+      "test_size": 143,
+      "best_iteration": 221
     },
     {
-      "auc": 0.5,
-      "log_loss": 0.8106127589624373,
-      "calibration_max_error": 0.22371048178528774,
-      "calibration_mean_error": 0.22371048178528774,
+      "spearman": 0.13949009761928022,
+      "mae": 11.362937406099967,
+      "rmse": 12.308538040194735,
+      "fold": 4,
+      "train_size": 2189,
+      "test_size": 65,
+      "best_iteration": 25
+    },
+    {
+      "spearman": -0.2659281723079887,
+      "mae": 14.036195823616794,
+      "rmse": 15.977217540782094,
       "fold": 5,
-      "train_size": 81,
-      "test_size": 5,
-      "best_iteration": 50
+      "train_size": 2254,
+      "test_size": 404,
+      "best_iteration": 4
     }
   ],
   "tier": "per_sector",
   "identifier": "insurance",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

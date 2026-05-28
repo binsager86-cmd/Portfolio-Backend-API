@@ -1,66 +1,66 @@
 {
-  "auc": 0.7122773676809995,
-  "log_loss": 0.4039013159552568,
-  "calibration_error": 0.43042161692796643,
-  "n_train_events": 1761,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.008898543594861663,
+  "mae": 18.76244678905624,
+  "rmse": 24.644305389767347,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 3283,
   "train_date_range": {
-    "start": "2023-06-05",
-    "end": "2026-04-23"
+    "start": "2023-06-04",
+    "end": "2026-05-21"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.0089",
   "fold_metrics": [
     {
-      "auc": 0.5215841584158416,
-      "log_loss": 0.7264289180706477,
-      "calibration_max_error": 0.12924349236965005,
-      "calibration_mean_error": 0.12924349236965005,
+      "spearman": -0.7782438041948988,
+      "mae": 34.25614757217009,
+      "rmse": 43.73883668927203,
       "fold": 1,
-      "train_size": 1056,
-      "test_size": 176,
+      "train_size": 1912,
+      "test_size": 299,
       "best_iteration": 1
     },
     {
-      "auc": 0.8855629139072848,
-      "log_loss": 0.377505887106657,
-      "calibration_max_error": 0.6093162981466328,
-      "calibration_mean_error": 0.3475911059954457,
+      "spearman": 0.6144517710268713,
+      "mae": 11.285626889622172,
+      "rmse": 25.507953707478904,
       "fold": 2,
-      "train_size": 1232,
-      "test_size": 176,
-      "best_iteration": 30
+      "train_size": 2211,
+      "test_size": 407,
+      "best_iteration": 98
     },
     {
-      "auc": 0.5986842105263158,
-      "log_loss": 0.5100534673163121,
-      "calibration_max_error": 0.5696321215609979,
-      "calibration_mean_error": 0.2475993271010654,
+      "spearman": -0.14944294644084907,
+      "mae": 12.962966962515452,
+      "rmse": 14.585577778941056,
       "fold": 3,
-      "train_size": 1408,
-      "test_size": 176,
-      "best_iteration": 43
+      "train_size": 2618,
+      "test_size": 290,
+      "best_iteration": 14
     },
     {
-      "auc": 0.5555555555555556,
-      "log_loss": 0.39263510812601043,
-      "calibration_max_error": 0.2247506468041569,
-      "calibration_mean_error": 0.14856577861892126,
+      "spearman": -0.3160773980378514,
+      "mae": 7.457030990690898,
+      "rmse": 8.428074624159416,
       "fold": 4,
-      "train_size": 1584,
-      "test_size": 88,
-      "best_iteration": 44
+      "train_size": 2908,
+      "test_size": 158,
+      "best_iteration": 13
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.012883199156657161,
-      "calibration_max_error": 0.6191655257583946,
-      "calibration_mean_error": 0.3106113300431272,
+      "spearman": 0.6738050956210363,
+      "mae": 27.850461530282583,
+      "rmse": 30.96108414898534,
       "fold": 5,
-      "train_size": 1672,
-      "test_size": 89,
-      "best_iteration": 110
+      "train_size": 3066,
+      "test_size": 217,
+      "best_iteration": 1
     }
   ],
   "tier": "per_sector",
   "identifier": "transport",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

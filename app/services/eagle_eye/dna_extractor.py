@@ -18,6 +18,11 @@ from app.services.eagle_eye.recorder import ForensicSnapshot, SIGNAL_DEFS
 
 DNA_DEFAULT_WINDOW_DAYS = 20
 DNA_WINDOW_OPTIONS = (20, 60, 180)
+
+# ---------------------------------------------------------------------------
+# Multi-horizon analysis constants — mirrors feature_builder.MULTI_HORIZON_DAYS
+# ---------------------------------------------------------------------------
+_HORIZON_OPTIONS = (20, 40, 60, 90, 180)
 DNA_CONFIDENCE_FLOOR = 5
 DNA_BUILDING_FLOOR = 10
 DNA_ESTABLISHED_FLOOR = 20
@@ -121,6 +126,37 @@ class SetupExample:
 
 
 @dataclass
+class PullbackEntryProfile:
+    """
+    Describes how a stock historically behaves after a setup signal fires.
+
+    The model uses this to tell the user: "Don't chase — wait for the pullback.
+    This stock typically retraces X% within Y days before continuing higher."
+    """
+    median_pullback_pct: float      # Median retracement from setup price (%)
+    max_pullback_pct: float         # Deepest historical retracement (worst case)
+    pullback_within_days: int       # Median days until the pullback arrives
+    recovery_days: int              # Median days from low back to new high
+    pullback_success_rate: float    # % of pullbacks that went on to higher highs
+    sample_count: int               # How many historical setups this is based on
+
+
+@dataclass
+class HistoricalTargetCluster:
+    """
+    A natural gain-level where the stock has historically paused, consolidated,
+    or reversed — derived purely from past move data, not ATR multiples.
+
+    These become the DNA-informed TP1/TP2/TP3 levels shown to the user.
+    They are informative milestones, never forced exit triggers.
+    """
+    gain_pct_from_entry: float   # % gain from setup entry to reach this cluster
+    cluster_strength: int        # 1-10: how many historical moves clustered here
+    avg_days_to_reach: float     # Average trading days to reach this level
+    hit_rate: float              # % of setups that ever reached this level (0-1)
+
+
+@dataclass
 class BehavioralDNA:
     ticker: str
     total_events_studied: int
@@ -143,6 +179,20 @@ class BehavioralDNA:
     confidence_floor: int = DNA_CONFIDENCE_FLOOR
     window_profiles: List[SetupWindowProfile] = field(default_factory=list)
     setup_examples: List[SetupExample] = field(default_factory=list)
+    # ── New: per-stock learned behaviour ──────────────────────────────────
+    optimal_hold_window_days: int = DNA_DEFAULT_WINDOW_DAYS
+    """The forward window (days) that historically captures the most of this
+    stock's move.  Ranges across _HORIZON_OPTIONS; chosen by highest median
+    risk-adjusted gain across historical setups."""
+    pullback_entry_profile: Optional[PullbackEntryProfile] = None
+    """How this stock typically retraces after a setup fires — guides the
+    "wait for pullback" entry recommendation."""
+    historical_target_clusters: List[HistoricalTargetCluster] = field(default_factory=list)
+    """DNA-derived TP levels: gain % levels where this stock historically
+    stalled or reversed.  Used in place of ATR multiples for TP1/TP2/TP3."""
+    avg_entry_quality_score: float = 0.0
+    """Average entry quality across all historical setups (0-100).
+    Measures how early the signal fires relative to the full eventual move."""
 
 
 def _round_optional(value: Any, digits: int = 1) -> Optional[float]:
@@ -769,6 +819,226 @@ def _build_setup_examples(
     return examples
 
 
+def _compute_optimal_hold_window(
+    indicators_df: pd.DataFrame,
+    setup_matches: List[Dict[str, Any]],
+) -> int:
+    """
+    Find the forward window (from _HORIZON_OPTIONS) that historically delivers
+    the best risk-adjusted gain for this stock's setups.
+
+    Logic: for each horizon, compute median(max_gain / max_drawdown_before_peak)
+    across all setups that had enough forward data.  Return the horizon with the
+    highest median ratio.  Falls back to DNA_DEFAULT_WINDOW_DAYS when data is thin.
+    """
+    if indicators_df is None or indicators_df.empty or not setup_matches:
+        return DNA_DEFAULT_WINDOW_DAYS
+
+    closes = indicators_df["close"].astype(float).to_numpy()
+    lows   = indicators_df["low"].astype(float).to_numpy() \
+        if "low" in indicators_df.columns else closes
+
+    ratios_by_horizon: Dict[int, List[float]] = {h: [] for h in _HORIZON_OPTIONS}
+
+    for match in setup_matches:
+        pos        = match["pos"]
+        base_price = closes[pos] if pos < len(closes) else float("nan")
+        if np.isnan(base_price) or base_price <= 0:
+            continue
+
+        for horizon in _HORIZON_OPTIONS:
+            end = min(len(closes), pos + horizon + 1)
+            fwd_closes = closes[pos + 1: end]
+            fwd_lows   = lows[pos + 1: end]
+
+            if fwd_closes.size == 0:
+                continue
+
+            valid_closes = fwd_closes[~np.isnan(fwd_closes)]
+            if valid_closes.size == 0:
+                continue
+
+            peak_idx       = int(np.argmax(valid_closes))
+            peak_gain      = float((valid_closes.max() / base_price - 1.0) * 100.0)
+            pre_peak_lows  = fwd_lows[:peak_idx + 1]
+            valid_lows     = pre_peak_lows[~np.isnan(pre_peak_lows)]
+            pre_peak_dd    = float(
+                max(0.0, (base_price - valid_lows.min()) / base_price * 100.0)
+            ) if valid_lows.size > 0 else 0.0
+
+            if pre_peak_dd > 0:
+                ratio = peak_gain / pre_peak_dd
+            elif peak_gain > 0:
+                ratio = peak_gain * 5.0   # no drawdown = high quality
+            else:
+                ratio = 0.0
+
+            ratios_by_horizon[horizon].append(ratio)
+
+    best_horizon  = DNA_DEFAULT_WINDOW_DAYS
+    best_median   = -1.0
+    for horizon, ratios in ratios_by_horizon.items():
+        if len(ratios) < 3:
+            continue
+        median_ratio = float(np.median(ratios))
+        if median_ratio > best_median:
+            best_median  = median_ratio
+            best_horizon = horizon
+
+    return best_horizon
+
+
+def _compute_pullback_entry_profile(
+    indicators_df: pd.DataFrame,
+    setup_matches: List[Dict[str, Any]],
+) -> Optional[PullbackEntryProfile]:
+    """
+    Characterise how this stock retraces after a setup fires.
+
+    For each setup match, look at the first N days forward to find:
+      - The deepest low within the first 10 days (the pullback dip)
+      - Whether price recovered to a new high within 30 days afterward
+
+    Returns None when there are fewer than 3 usable samples.
+    """
+    if indicators_df is None or indicators_df.empty or len(setup_matches) < 3:
+        return None
+
+    closes = indicators_df["close"].astype(float).to_numpy()
+    lows   = indicators_df["low"].astype(float).to_numpy() \
+        if "low" in indicators_df.columns else closes
+
+    pullbacks:         List[float] = []
+    pullback_days:     List[int]   = []
+    recovery_days_lst: List[int]   = []
+    recovered_count    = 0
+
+    for match in setup_matches:
+        pos        = match["pos"]
+        base_price = closes[pos] if pos < len(closes) else float("nan")
+        if np.isnan(base_price) or base_price <= 0:
+            continue
+
+        # Pullback scan: first 10 forward bars
+        fwd_lows_10  = lows[pos + 1: min(len(lows), pos + 11)]
+        valid_10 = fwd_lows_10[~np.isnan(fwd_lows_10)]
+        if valid_10.size == 0:
+            continue
+
+        min_low     = float(valid_10.min())
+        pullback_pct = float(max(0.0, (base_price - min_low) / base_price * 100.0))
+        pullbacks.append(pullback_pct)
+
+        # Days to that low
+        low_idx = int(np.argmin(valid_10))
+        pullback_days.append(low_idx + 1)
+
+        # Recovery scan: did price exceed base_price within 30 days from the low?
+        recovery_start = pos + 1 + low_idx
+        fwd_closes_30  = closes[recovery_start: min(len(closes), recovery_start + 31)]
+        valid_30 = fwd_closes_30[~np.isnan(fwd_closes_30)]
+        if valid_30.size > 0 and valid_30.max() > base_price:
+            recovered_count += 1
+            rec_idx = int(np.argmax(valid_30 > base_price))
+            recovery_days_lst.append(rec_idx + 1)
+
+    n = len(pullbacks)
+    if n < 3:
+        return None
+
+    return PullbackEntryProfile(
+        median_pullback_pct   = round(float(np.median(pullbacks)),    2),
+        max_pullback_pct      = round(float(np.max(pullbacks)),       2),
+        pullback_within_days  = int(round(float(np.median(pullback_days)))),
+        recovery_days         = int(round(float(np.median(recovery_days_lst)))) if recovery_days_lst else 0,
+        pullback_success_rate = round(recovered_count / n * 100.0, 1),
+        sample_count          = n,
+    )
+
+
+def _compute_historical_target_clusters(
+    indicators_df: pd.DataFrame,
+    setup_matches: List[Dict[str, Any]],
+    optimal_window: int,
+) -> List[HistoricalTargetCluster]:
+    """
+    Identify natural gain-% levels where this stock historically paused or peaked.
+
+    Method:
+      1. For each setup, record the gain at each peak/stall within optimal_window.
+      2. Cluster those gain levels into 1%-wide buckets.
+      3. Return the top 3 clusters sorted by strength, expressed as
+         HistoricalTargetCluster objects.
+
+    These replace ATR-based TP levels with levels the stock itself has proven.
+    """
+    if indicators_df is None or indicators_df.empty or len(setup_matches) < 3:
+        return []
+
+    closes = indicators_df["close"].astype(float).to_numpy()
+    highs  = indicators_df["high"].astype(float).to_numpy() \
+        if "high" in indicators_df.columns else closes
+
+    # Collect local-high gain-pct values
+    all_gains:    List[float] = []
+    days_by_gain: List[float] = []   # parallel list
+
+    for match in setup_matches:
+        pos        = match["pos"]
+        base_price = closes[pos] if pos < len(closes) else float("nan")
+        if np.isnan(base_price) or base_price <= 0:
+            continue
+
+        end = min(len(highs), pos + optimal_window + 1)
+        fwd = highs[pos + 1: end]
+
+        # Rolling local peaks (simple 3-bar fractal)
+        for i in range(1, len(fwd) - 1):
+            if np.isnan(fwd[i]):
+                continue
+            if fwd[i] >= fwd[i - 1] and fwd[i] >= fwd[i + 1]:
+                gain = (fwd[i] / base_price - 1.0) * 100.0
+                if gain > 0:
+                    all_gains.append(gain)
+                    days_by_gain.append(float(i + 1))
+
+    if len(all_gains) < 3:
+        return []
+
+    # Cluster into 1%-wide buckets
+    bucket_count:    Dict[float, int]         = {}
+    bucket_days:     Dict[float, List[float]] = {}
+    bucket_hit_sets: Dict[float, List[int]]   = {}
+
+    for gain, days in zip(all_gains, days_by_gain):
+        bucket = round(gain / 1.0) * 1.0   # nearest 1%
+        bucket_count[bucket]    = bucket_count.get(bucket, 0) + 1
+        bucket_days.setdefault(bucket, []).append(days)
+
+    n_setups = len(setup_matches)
+    # Sort by strength, keep top 3
+    sorted_buckets = sorted(bucket_count.items(), key=lambda x: -x[1])
+
+    clusters: List[HistoricalTargetCluster] = []
+    for gain_level, count in sorted_buckets[:3]:
+        if count < 2:
+            continue
+        avg_days = float(np.mean(bucket_days.get(gain_level, [optimal_window])))
+        hit_rate = float(min(count / n_setups, 1.0))
+        strength = min(10, int(round(count / max(n_setups, 1) * 10)))
+        clusters.append(
+            HistoricalTargetCluster(
+                gain_pct_from_entry = round(gain_level, 1),
+                cluster_strength    = max(1, strength),
+                avg_days_to_reach   = round(avg_days, 1),
+                hit_rate            = round(hit_rate, 3),
+            )
+        )
+
+    # Return sorted from nearest to farthest (TP1 → TP2 → TP3 order)
+    return sorted(clusters, key=lambda c: c.gain_pct_from_entry)
+
+
 def extract_dna(
     ticker: str,
     snapshots: List[ForensicSnapshot],
@@ -860,6 +1130,37 @@ def extract_dna(
         "INSUFFICIENT_HISTORY",
     )
 
+    # ── Per-stock learned behaviour (new) ─────────────────────────────────
+    optimal_hold_window = _compute_optimal_hold_window(indicators_df, setup_matches)
+    pullback_profile    = _compute_pullback_entry_profile(indicators_df, setup_matches)
+    target_clusters     = _compute_historical_target_clusters(
+        indicators_df, setup_matches, optimal_hold_window
+    )
+
+    # Average entry quality: how early does the signal historically fire?
+    # Proxy: ratio of 20-day forward gain to optimal-horizon forward gain,
+    # averaged over all setup occurrences for the optimal window.
+    optimal_occurrences = occurrences_by_window.get(optimal_hold_window, default_occurrences)
+    eq_scores: List[float] = []
+    if optimal_occurrences and indicators_df is not None and not indicators_df.empty:
+        closes_arr = indicators_df["close"].astype(float).to_numpy()
+        highs_arr  = indicators_df["high"].astype(float).to_numpy() \
+            if "high" in indicators_df.columns else closes_arr
+        for occ in optimal_occurrences:
+            pos       = occ.get("pos", -1)
+            if pos < 0 or pos >= len(closes_arr):
+                continue
+            base = closes_arr[pos]
+            if np.isnan(base) or base <= 0:
+                continue
+            g20  = float(np.nanmax(highs_arr[pos + 1: pos + 21]) / base - 1.0) * 100.0 \
+                if pos + 1 < len(highs_arr) else float("nan")
+            gopt = float(np.nanmax(highs_arr[pos + 1: pos + optimal_hold_window + 1]) / base - 1.0) * 100.0 \
+                if pos + 1 < len(highs_arr) else float("nan")
+            if not np.isnan(g20) and not np.isnan(gopt) and gopt > 0.5:
+                eq_scores.append(float(np.clip(g20 / gopt * 100.0, 0.0, 100.0)))
+    avg_eq = round(float(np.mean(eq_scores)), 1) if eq_scores else 0.0
+
     return BehavioralDNA(
         ticker=ticker,
         total_events_studied=len(default_occurrences),
@@ -878,10 +1179,19 @@ def extract_dna(
         pre_move_volume_profile=pre_move_volume_profile,
         fakeout_volume_profile=fakeout_volume_profile,
         available_window_days=list(windows),
-        default_window_days=default_window,
+        # Use the data-driven optimal hold window as the default display window.
+        # This replaces the hardcoded 20-day default — each stock now shows
+        # its own historically best horizon (e.g. 40d for a slow mover, 60d
+        # for a compounding accumulator, etc.).
+        default_window_days=optimal_hold_window,
         confidence_floor=min_setup_occurrences,
         window_profiles=window_profiles,
         setup_examples=_build_setup_examples(indicators_df, setup_matches, windows, thresholds),
+        # ── New per-stock learned behaviour ───────────────────────────────
+        optimal_hold_window_days=optimal_hold_window,
+        pullback_entry_profile=pullback_profile,
+        historical_target_clusters=target_clusters,
+        avg_entry_quality_score=avg_eq,
     )
 
 
@@ -993,4 +1303,28 @@ def dna_to_dict(dna: BehavioralDNA) -> Dict[str, Any]:
         "fakeout_signatures": dna.fakeout_signatures,
         "pre_move_volume_profile": dna.pre_move_volume_profile,
         "fakeout_volume_profile": dna.fakeout_volume_profile,
+        # ── Per-stock learned behaviour ────────────────────────────────────
+        "optimal_hold_window_days": dna.optimal_hold_window_days,
+        "avg_entry_quality_score":  dna.avg_entry_quality_score,
+        "pullback_entry_profile": (
+            {
+                "median_pullback_pct":  dna.pullback_entry_profile.median_pullback_pct,
+                "max_pullback_pct":     dna.pullback_entry_profile.max_pullback_pct,
+                "pullback_within_days": dna.pullback_entry_profile.pullback_within_days,
+                "recovery_days":        dna.pullback_entry_profile.recovery_days,
+                "pullback_success_rate": dna.pullback_entry_profile.pullback_success_rate,
+                "sample_count":         dna.pullback_entry_profile.sample_count,
+            }
+            if dna.pullback_entry_profile is not None
+            else None
+        ),
+        "historical_target_clusters": [
+            {
+                "gain_pct_from_entry": cluster.gain_pct_from_entry,
+                "cluster_strength":    cluster.cluster_strength,
+                "avg_days_to_reach":   cluster.avg_days_to_reach,
+                "hit_rate":            cluster.hit_rate,
+            }
+            for cluster in dna.historical_target_clusters
+        ],
     }

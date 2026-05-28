@@ -12,6 +12,7 @@ Given an indicator snapshot and optional behavioral DNA, computes:
 """
 from __future__ import annotations
 
+from datetime import date, datetime
 import math
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -28,6 +29,8 @@ __all__ = [
     "compute_support_resistance",
     "compute_entry_stop_targets",
     "compute_position_size",
+    "is_stock_active",
+    "validate_and_adjust_ml_score",
     "compute_confidence",
     "compute_rating",
     "generate_thesis",
@@ -103,9 +106,9 @@ def compute_volume_context(df: pd.DataFrame, stage: str) -> Dict[str, Any]:
         character = "NEUTRAL"
 
     # Liquidity tier
-    if avg_20d_turnover >= 25_000:
+    if avg_20d_turnover >= 10_000:
         tier = "TRADEABLE"
-    elif avg_20d_turnover >= 5_000:
+    elif avg_20d_turnover >= 2_000:
         tier = "WATCH_ONLY"
     else:
         tier = "ILLIQUID"
@@ -144,6 +147,201 @@ def _safe(v, default=None):
     except (TypeError, ValueError):
         pass
     return v
+
+
+def _safe_numeric(v: Any) -> Optional[float]:
+    """Coerce a value to finite float; return None for non-numeric/NaN/Inf."""
+    if v is None:
+        return None
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    if math.isnan(f) or math.isinf(f):
+        return None
+    return f
+
+
+def is_stock_active(
+    ticker: str,
+    df: Optional[pd.DataFrame],
+    *,
+    as_of: Optional[date] = None,
+) -> bool:
+    """
+    Return False for suspended/delisted/dead symbols.
+
+    Activity checks are deliberately conservative and focus on recency,
+    executable price, and non-zero recent participation.
+    """
+    if df is None or len(df) < 5:
+        return False
+    if "close" not in df.columns or "volume" not in df.columns:
+        return False
+
+    try:
+        last_bar_date = pd.Timestamp(df.index[-1]).date()
+    except Exception:
+        return False
+
+    today = as_of or datetime.utcnow().date()
+    if (today - last_bar_date).days > 20:
+        return False
+
+    try:
+        recent_volume = float(pd.to_numeric(df["volume"], errors="coerce").tail(10).fillna(0.0).sum())
+    except Exception:
+        recent_volume = 0.0
+    if recent_volume <= 0.0:
+        return False
+
+    last_close = _safe_numeric(df["close"].iloc[-1])
+    if last_close is None or last_close <= 0.0:
+        return False
+
+    return True
+
+
+def validate_and_adjust_ml_score(
+    ml_score: float,
+    indicators: IndicatorsRow,
+    df: pd.DataFrame,
+    ticker: str,
+) -> float:
+    """
+    Reality-check ML opportunity score against current market state.
+
+    This guards against late-entry chasing and stale/dead symbols while
+    preserving the existing gain->confidence mapping in compute_confidence().
+    """
+    adjusted = _safe_numeric(ml_score)
+    if adjusted is None:
+        return 0.0
+
+    if df is None or len(df) < 10:
+        return 0.0
+    if not is_stock_active(ticker, df):
+        return 0.0
+
+    close_now = _safe_numeric(df["close"].iloc[-1]) if "close" in df.columns else None
+
+    def _indicator_float(name: str) -> Optional[float]:
+        try:
+            return _safe_numeric(indicators.get(name))
+        except Exception:
+            return None
+
+    # Check 1: Extension from 20d base.
+    price_ext_20d = _indicator_float("price_extension_from_20d_low_pct")
+    if price_ext_20d is None and close_now is not None and len(df) >= 20 and "low" in df.columns:
+        low_20d = _safe_numeric(pd.to_numeric(df["low"], errors="coerce").tail(20).min())
+        if low_20d is not None and low_20d > 0:
+            price_ext_20d = (close_now / low_20d - 1.0) * 100.0
+
+    if price_ext_20d is not None:
+        if price_ext_20d >= 50.0:
+            adjusted = min(adjusted, 10.0)
+        elif price_ext_20d >= 30.0:
+            adjusted = min(adjusted, 25.0)
+        elif price_ext_20d >= 20.0:
+            adjusted = min(adjusted, 40.0)
+        elif price_ext_20d >= 15.0:
+            adjusted = min(adjusted, 55.0)
+
+    # Check 2: Position in 60d range (top-of-range chasing filter).
+    range_position_60d = _indicator_float("position_in_60d_range_pct")
+    if (
+        range_position_60d is None
+        and close_now is not None
+        and len(df) >= 60
+        and "low" in df.columns
+        and "high" in df.columns
+    ):
+        low_60d = _safe_numeric(pd.to_numeric(df["low"], errors="coerce").tail(60).min())
+        high_60d = _safe_numeric(pd.to_numeric(df["high"], errors="coerce").tail(60).max())
+        if low_60d is not None and high_60d is not None and high_60d > low_60d:
+            range_position_60d = ((close_now - low_60d) / (high_60d - low_60d)) * 100.0
+
+    if range_position_60d is not None:
+        if range_position_60d >= 90.0:
+            adjusted = min(adjusted, 20.0)
+        elif range_position_60d >= 75.0:
+            adjusted = min(adjusted, 45.0)
+
+    # Check 3: Extension from 120d low (major move exhaustion filter).
+    ext_120d = _indicator_float("price_extension_from_120d_low_pct")
+    if ext_120d is None and close_now is not None and len(df) >= 120 and "low" in df.columns:
+        low_120d = _safe_numeric(pd.to_numeric(df["low"], errors="coerce").tail(120).min())
+        if low_120d is not None and low_120d > 0:
+            ext_120d = (close_now / low_120d - 1.0) * 100.0
+
+    if ext_120d is not None:
+        if ext_120d >= 100.0:
+            adjusted = min(adjusted, 10.0)
+        elif ext_120d >= 60.0:
+            adjusted = min(adjusted, 30.0)
+
+    # Check 4: RSI extreme overbought.
+    rsi = _indicator_float("rsi")
+    if rsi is not None:
+        if rsi >= 80.0:
+            adjusted = min(adjusted, 25.0)
+        elif rsi >= 75.0:
+            adjusted = min(adjusted, 45.0)
+
+    return float(np.clip(adjusted, 0.0, 100.0))
+
+
+def _apply_universal_safety_clamp(confidence: float, indicators: IndicatorsRow) -> float:
+    """Apply hard extension/overbought caps regardless of scoring method."""
+    clamped = _safe_numeric(confidence)
+    if clamped is None:
+        clamped = 0.0
+
+    def _get(key: str) -> Optional[float]:
+        try:
+            return _safe_numeric(indicators.get(key))
+        except Exception:
+            return None
+
+    ext_20 = _get("price_extension_from_20d_low_pct")
+    if ext_20 is not None:
+        if ext_20 >= 50.0:
+            clamped = min(clamped, 10.0)
+        elif ext_20 >= 30.0:
+            clamped = min(clamped, 25.0)
+        elif ext_20 >= 20.0:
+            clamped = min(clamped, 40.0)
+
+    ext_60 = _get("price_extension_from_60d_low_pct")
+    if ext_60 is not None:
+        if ext_60 >= 80.0:
+            clamped = min(clamped, 10.0)
+        elif ext_60 >= 50.0:
+            clamped = min(clamped, 25.0)
+
+    ext_120 = _get("price_extension_from_120d_low_pct")
+    if ext_120 is not None:
+        if ext_120 >= 100.0:
+            clamped = min(clamped, 10.0)
+        elif ext_120 >= 60.0:
+            clamped = min(clamped, 25.0)
+
+    range_pos = _get("position_in_60d_range_pct")
+    if range_pos is not None:
+        if range_pos >= 90.0:
+            clamped = min(clamped, 20.0)
+        elif range_pos >= 75.0:
+            clamped = min(clamped, 45.0)
+
+    rsi = _get("rsi")
+    if rsi is not None:
+        if rsi >= 80.0:
+            clamped = min(clamped, 25.0)
+        elif rsi >= 75.0:
+            clamped = min(clamped, 45.0)
+
+    return float(np.clip(clamped, 0.0, 100.0))
 
 
 # ---------------------------------------------------------------------------
@@ -327,16 +525,6 @@ def compute_entry_stop_targets(
     min_favorable_rr = 1.8
     max_conditional_pullback = max(2.5 * atr_v, current_close * 0.12)
 
-    bullish_stages = {
-        "STEALTH_ACCUMULATION",
-        "EARLY_BREAKOUT",
-        "MARKUP_TRENDING",
-        "ACCELERATION_CLIMAX",
-        "CAPITULATION_EXHAUSTION",
-    }
-
-    stale_support_gap = max(1.5 * atr_v, current_close * 0.08)
-
     def _nearest_support_below(price: float) -> Optional[float]:
         candidates = [float(item["price"]) for item in supports if float(item["price"]) < price]
         return max(candidates) if candidates else None
@@ -464,25 +652,72 @@ def compute_entry_stop_targets(
             "raw_tp1_source": raw_tp1_source,
         }
 
+    def _entry_status(entry_price: float) -> str:
+        """
+        Classify how far current price is from the setup anchor.
+
+        AT_ANCHOR      → price is still within 3% of the 20-day low — ideal entry
+        PULLBACK_ZONE  → price has pulled back to within 5% of anchor after a run
+        EXTENDED       → price is 8-15% above anchor — risk/reward deteriorated
+        WAIT_FOR_PULLBACK → price is >15% above anchor — wait for a reset
+        """
+        price_ext = _safe(indicators.get("price_extension_from_20d_low_pct"), None)
+        if price_ext is None:
+            return "UNKNOWN"
+        ext = float(price_ext)
+        if ext <= 3.0:
+            return "AT_ANCHOR"
+        if ext <= 5.0:
+            return "PULLBACK_ZONE"
+        if ext <= 15.0:
+            return "EXTENDED"
+        return "WAIT_FOR_PULLBACK"
+
     def _declined_plan(reason: str) -> Dict[str, Any]:
         return {
-            "plan_state": "DECLINED",
-            "plan_reason": reason,
+            "plan_state":       "DECLINED",
+            "plan_reason":      reason,
+            "entry_status":     _entry_status(current_close),
             "conditional_entry": None,
             "tp1_sanitize_reasons": [],
-            "entry_primary": None,
+            "entry_primary":    None,
             "entry_aggressive": None,
             "entry_conservative": None,
-            "stop_loss": None,
-            "tp1": None,
-            "tp1_probability": None,
-            "tp2": None,
-            "tp2_probability": None,
-            "tp3": None,
-            "tp3_probability": None,
+            "stop_loss":        None,
+            "tp1":              None,
+            "tp1_probability":  None,
+            "tp2":              None,
+            "tp2_probability":  None,
+            "tp3":              None,
+            "tp3_probability":  None,
             "risk_reward_ratio": None,
-            "gain_pct_to_tp1": None,
+            "gain_pct_to_tp1":  None,
         }
+
+    def _dna_target_prices(
+        entry_price: float,
+    ) -> Tuple[Optional[float], Optional[float], Optional[float]]:
+        """
+        Derive TP1/TP2/TP3 from the stock's historical target clusters when
+        available.  Falls back to the ATR-based plan values if DNA is absent
+        or has no clusters.
+
+        DNA clusters are informative milestones — they show WHERE the stock
+        has historically paused.  The exit decision system runs separately
+        and never forces an exit when a cluster is reached.
+        """
+        if dna is None:
+            return None, None, None
+        clusters = getattr(dna, "historical_target_clusters", [])
+        if not clusters:
+            return None, None, None
+        sorted_clusters = sorted(clusters, key=lambda c: c.gain_pct_from_entry)
+        def _cluster_price(idx: int) -> Optional[float]:
+            if idx < len(sorted_clusters):
+                gain = sorted_clusters[idx].gain_pct_from_entry / 100.0
+                return round(entry_price * (1.0 + gain), 4)
+            return None
+        return _cluster_price(0), _cluster_price(1), _cluster_price(2)
 
     def _finalize_plan(
         *,
@@ -494,34 +729,62 @@ def compute_entry_stop_targets(
         tp1_prob = _dna_tp_prob(0, 0.55)
         tp2_prob = _dna_tp_prob(1, 0.35)
         tp3_prob = _dna_tp_prob(2, 0.15)
+
+        # Use DNA-derived TP levels when available; fall back to ATR plan
+        entry_for_dna  = plan["entry_primary"] or current_close
+        dna_tp1, dna_tp2, dna_tp3 = _dna_target_prices(entry_for_dna)
+        tp1_final = dna_tp1 if dna_tp1 is not None else plan["tp1"]
+        tp2_final = dna_tp2 if dna_tp2 is not None else plan["tp2"]
+        tp3_final = dna_tp3 if dna_tp3 is not None else plan["tp3"]
+
+        # Hit-rate probabilities from DNA clusters when available
+        clusters = getattr(dna, "historical_target_clusters", []) if dna else []
+        sorted_c = sorted(clusters, key=lambda c: c.gain_pct_from_entry)
+        if sorted_c:
+            tp1_prob = sorted_c[0].hit_rate if len(sorted_c) > 0 else tp1_prob
+            tp2_prob = sorted_c[1].hit_rate if len(sorted_c) > 1 else tp2_prob
+            tp3_prob = sorted_c[2].hit_rate if len(sorted_c) > 2 else tp3_prob
+
         return {
-            "plan_state": state,
-            "plan_reason": reason,
-            "conditional_entry": round(conditional_entry, 4) if conditional_entry is not None else None,
+            "plan_state":         state,
+            "plan_reason":        reason,
+            "entry_status":       _entry_status(entry_for_dna),
+            "conditional_entry":  round(conditional_entry, 4) if conditional_entry is not None else None,
             "tp1_sanitize_reasons": plan.get("tp1_sanitize_reasons", []),
-            "entry_primary": plan["entry_primary"],
-            "entry_aggressive": plan["entry_aggressive"],
+            "entry_primary":      plan["entry_primary"],
+            "entry_aggressive":   plan["entry_aggressive"],
             "entry_conservative": plan["entry_conservative"],
-            "stop_loss": plan["stop_loss"],
-            "tp1": plan["tp1"],
-            "tp1_probability": tp1_prob,
-            "tp2": plan["tp2"],
-            "tp2_probability": tp2_prob,
-            "tp3": plan["tp3"],
-            "tp3_probability": tp3_prob,
-            "risk_reward_ratio": plan["risk_reward_ratio"],
-            "gain_pct_to_tp1": plan["gain_pct_to_tp1"],
+            "stop_loss":          plan["stop_loss"],
+            "tp1":                tp1_final,
+            "tp1_probability":    round(float(tp1_prob), 3),
+            "tp2":                tp2_final,
+            "tp2_probability":    round(float(tp2_prob), 3),
+            "tp3":                tp3_final,
+            "tp3_probability":    round(float(tp3_prob), 3),
+            "tp_source":          "dna_clusters" if dna_tp1 is not None else "atr_based",
+            "risk_reward_ratio":  plan["risk_reward_ratio"],
+            "gain_pct_to_tp1":    plan["gain_pct_to_tp1"],
+            # Informational: optimal hold window from DNA
+            "optimal_hold_window_days": getattr(dna, "optimal_hold_window_days", None),
         }
 
-    # Entry zones
-    primary_support = float(supports[0]["price"]) if supports else None
-    support_gap = (current_close - primary_support) if primary_support is not None else 0.0
-    if primary_support is not None and not (
-        stage in bullish_stages and support_gap > stale_support_gap
-    ):
-        entry_primary = primary_support * 1.005  # slightly above nearest support
+    # Entry zones: keep entry near current price and reject deep historical anchors.
+    max_entry_distance = 2.0 * atr_v
+    nearby_supports = [
+        float(s["price"])
+        for s in supports
+        if float(s["price"]) < current_close
+        and (current_close - float(s["price"])) <= max_entry_distance
+    ]
+    nearby_supports = sorted(nearby_supports, reverse=True)
+
+    if nearby_supports:
+        entry_primary = nearby_supports[0] * 1.005
     else:
-        entry_primary = max(current_close - 0.35 * atr_v, current_close * 0.985)
+        entry_primary = current_close - 0.5 * atr_v
+
+    # Hard guardrail: never let entry drift far below spot.
+    entry_primary = max(entry_primary, current_close - max_entry_distance)
 
     # Check if momentum signals are firing
     rsi_v = _safe(indicators.get("rsi"), 50.0)
@@ -724,6 +987,8 @@ def compute_confidence(
     stage: str,
     dna: Optional[Any],
     regime: str = "NEUTRAL",
+    ml_score: Optional[float] = None,
+    ml_proba: Optional[Dict[str, float]] = None,
 ) -> float:
     """
     Weighted composite confidence score 0-100.
@@ -738,6 +1003,83 @@ def compute_confidence(
       0.06 stage_score
       0.02 dna_pattern_match
     """
+    if ml_proba is not None:
+        try:
+            p_buy = float(ml_proba.get("buy", 0.0))
+            p_sell = float(ml_proba.get("sell", 0.0))
+            p_hold = float(ml_proba.get("hold", 0.0))
+            del p_hold
+
+            buy_confidence = p_buy * 100.0
+
+            if p_sell > p_buy and p_sell > 0.40:
+                buy_confidence = min(buy_confidence, 20.0)
+
+            if stage in ("MARKDOWN_DECLINE", "DISTRIBUTION_TOPPING"):
+                buy_confidence = min(buy_confidence, 30.0)
+
+            regime_u = str(regime or "NEUTRAL").upper()
+            if regime_u == "RISK_OFF":
+                buy_confidence -= 3.0
+            elif regime_u == "RISK_ON":
+                buy_confidence += 2.0
+
+            buy_confidence = _apply_universal_safety_clamp(buy_confidence, indicators)
+            return round(float(np.clip(buy_confidence, 0.0, 100.0)), 1)
+        except (TypeError, ValueError, AttributeError):
+            pass
+
+    if ml_score is not None:
+        try:
+            predicted_gain = float(ml_score)
+            if not math.isnan(predicted_gain):
+                # Translate predicted gain (0-100%) to user confidence.
+                if predicted_gain <= 0.0:
+                    base_confidence = 5.0
+                elif predicted_gain <= 2.0:
+                    base_confidence = 10.0 + predicted_gain * 7.5
+                elif predicted_gain <= 5.0:
+                    base_confidence = 25.0 + (predicted_gain - 2.0) * 6.67
+                elif predicted_gain <= 10.0:
+                    base_confidence = 45.0 + (predicted_gain - 5.0) * 3.0
+                elif predicted_gain <= 20.0:
+                    base_confidence = 60.0 + (predicted_gain - 10.0) * 1.8
+                elif predicted_gain <= 40.0:
+                    base_confidence = 78.0 + (predicted_gain - 20.0) * 0.6
+                else:
+                    base_confidence = 90.0 + min(8.0, (predicted_gain - 40.0) * 0.13)
+
+                # Stage hard cap for clearly bearish lifecycle states.
+                if stage in ("MARKDOWN_DECLINE", "DISTRIBUTION_TOPPING"):
+                    base_confidence = min(base_confidence, 35.0)
+
+                # Regime nudge.
+                if regime == "RISK_OFF":
+                    base_confidence -= 4.0
+                elif regime == "RISK_ON":
+                    base_confidence += 3.0
+
+                # Volume confirmation bonus.
+                vol_ratio = None
+                try:
+                    vol_ratio = indicators.get("volume_ratio_20d")
+                    if vol_ratio is None:
+                        vol_ratio = indicators.get("rel_volume")
+                except Exception:
+                    vol_ratio = None
+                if vol_ratio is not None:
+                    try:
+                        vr = float(vol_ratio)
+                        if vr > 2.0 and base_confidence > 55.0:
+                            base_confidence += 4.0
+                    except (TypeError, ValueError):
+                        pass
+
+                base_confidence = _apply_universal_safety_clamp(base_confidence, indicators)
+                return round(float(np.clip(base_confidence, 0.0, 100.0)), 1)
+        except (TypeError, ValueError):
+            pass
+
     # --- 1. Category scores: how many indicators in each category have bullish signals ---
     from app.services.eagle_eye.config import INDICATOR_CATEGORIES
     category_bullish = {}
@@ -835,6 +1177,32 @@ def compute_confidence(
     )
     raw_confidence = float(np.clip(score, 0.0, 100.0))
 
+    # ── Entry extension penalty ────────────────────────────────────────────
+    # If price has already moved significantly from the setup anchor before the
+    # signal fires, the risk/reward has deteriorated.  A stock that is 15%+
+    # above its 20-day low is NOT a "cheap entry" regardless of how bullish the
+    # indicators look.  Penalise confidence so the rating correctly reflects
+    # that the easy money has already been made.
+    #
+    # Penalty table (applied to raw_confidence):
+    #   < 5%   extension → no penalty   (still near the base)
+    #   5-10%  extension → −5 points    (slightly stretched)
+    #   10-15% extension → −12 points   (extended)
+    #   15-20% extension → −20 points   (chasing)
+    #   > 20%  extension → −30 points   (dangerous late entry)
+    price_ext = _safe(indicators.get("price_extension_from_20d_low_pct"), None)
+    if price_ext is not None:
+        ext = float(price_ext)
+        if ext >= 20.0:
+            raw_confidence -= 30.0
+        elif ext >= 15.0:
+            raw_confidence -= 20.0
+        elif ext >= 10.0:
+            raw_confidence -= 12.0
+        elif ext >= 5.0:
+            raw_confidence -= 5.0
+    raw_confidence = float(np.clip(raw_confidence, 0.0, 100.0))
+
     # --- TASK 1: Stage-gated confidence caps ---
     # A DORMANT stock structurally cannot hit TP1 in 20 days.
     # These caps prevent the composite score from misleading callers.
@@ -871,12 +1239,52 @@ def compute_confidence(
     if not is_structurally_ready:
         capped_confidence = min(capped_confidence, 55)
 
-    return round(capped_confidence, 2)
+    capped_confidence = _apply_universal_safety_clamp(capped_confidence, indicators)
+    return round(float(np.clip(capped_confidence, 0.0, 100.0)), 1)
 
 
 # ---------------------------------------------------------------------------
 # 5. Rating
 # ---------------------------------------------------------------------------
+
+def compute_rating_from_proba(
+    ml_proba: Optional[Dict[str, float]],
+    confidence: float,
+    dna: Optional[Any] = None,
+) -> str:
+    """Map ML class probabilities to rating tiers.
+
+    Falls back to the legacy confidence-only mapping when probability payload
+    is unavailable.
+    """
+    if ml_proba is None:
+        return compute_rating(confidence, dna=dna)
+
+    try:
+        p_buy = float(ml_proba.get("buy", 0.0))
+        p_sell = float(ml_proba.get("sell", 0.0))
+    except (TypeError, ValueError, AttributeError):
+        return compute_rating(confidence, dna=dna)
+
+    safe_conf = _safe_numeric(confidence)
+    if safe_conf is None:
+        safe_conf = 0.0
+
+    if p_sell > 0.60:
+        return "STRONG_SELL"
+    if safe_conf <= 25.0:
+        return "SELL" if p_sell > 0.40 else "HOLD"
+    if p_sell > 0.40:
+        return "SELL"
+    if safe_conf <= 40.0:
+        return "HOLD"
+    if p_buy > 0.75:
+        return "STRONG_BUY"
+    if p_buy > 0.55:
+        return "BUY"
+    if p_buy > 0.40:
+        return "HOLD"
+    return "HOLD"
 
 def compute_rating(confidence: float, dna: Optional[Any] = None) -> str:
     """
@@ -919,11 +1327,11 @@ _STAGE_INTRO: Dict[str, str] = {
 }
 
 _RATING_TAIL: Dict[str, str] = {
-    "STRONG_BUY":       "presenting a high-conviction opportunity.",
-    "BUY":              "presenting a favourable risk/reward setup.",
-    "HOLD":             "warranting a hold stance.",
-    "SELL":             "suggesting reducing exposure.",
-    "STRONG_SELL":      "indicating a strong sell signal.",
+    "STRONG_BUY":        "presenting a high-conviction opportunity.",
+    "BUY":               "presenting a favourable risk/reward setup.",
+    "HOLD":              "warranting a hold stance.",
+    "SELL":              "suggesting reducing exposure.",
+    "STRONG_SELL":       "indicating a strong sell signal.",
     "INSUFFICIENT_DATA": "but data is insufficient for a firm recommendation.",
 }
 
@@ -938,7 +1346,7 @@ def generate_thesis(
 ) -> str:
     """
     Build a one- to two-sentence plain-English thesis from templates.
-    No AI generation — deterministic and fast.
+    No AI generation -- deterministic and fast.
     """
     intro_tmpl = _STAGE_INTRO.get(stage, "{ticker} shows mixed signals")
     intro = intro_tmpl.format(ticker=ticker)
@@ -960,6 +1368,11 @@ def generate_thesis(
     if acc and acc > 60:
         detail_parts.append(f"accumulation score {acc:.0f}")
 
+    # Entry status -- inform the user if price is extended
+    price_ext = _safe(indicators.get("price_extension_from_20d_low_pct"), None)
+    if price_ext is not None and float(price_ext) >= 10.0:
+        detail_parts.append(f"price {float(price_ext):.0f}% above base (wait for pullback)")
+
     # DNA base rate
     dna_note = ""
     if dna is not None:
@@ -979,8 +1392,8 @@ def generate_thesis(
     rating_tail = _RATING_TAIL.get(rating, "")
 
     if detail_parts:
-        detail = " with " + ", ".join(detail_parts) + " — " + rating_tail
+        detail = " with " + ", ".join(detail_parts) + " -- " + rating_tail
     else:
-        detail = " — " + rating_tail
+        detail = " -- " + rating_tail
 
     return f"{intro}{detail}{dna_note}".strip()

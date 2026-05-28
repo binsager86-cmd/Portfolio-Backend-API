@@ -1,26 +1,66 @@
 {
-  "auc": 0.5789473684210527,
-  "log_loss": 0.9759130657480258,
-  "calibration_error": 0.38367552666201465,
-  "n_train_events": 295,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": -0.026086409521958242,
+  "mae": 20.607450512778748,
+  "rmse": 22.489140418758993,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 488,
   "train_date_range": {
-    "start": "2023-07-04",
-    "end": "2026-04-30"
+    "start": "2023-07-03",
+    "end": "2026-05-20"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_-0.0261",
   "fold_metrics": [
     {
-      "auc": 0.5789473684210527,
-      "log_loss": 0.9759130657480258,
-      "calibration_max_error": 0.38367552666201465,
-      "calibration_mean_error": 0.38367552666201465,
-      "fold": 2,
-      "train_size": 206,
-      "test_size": 30,
+      "spearman": -0.33086425289860777,
+      "mae": 51.236014093258724,
+      "rmse": 54.674068756037336,
+      "fold": 1,
+      "train_size": 242,
+      "test_size": 66,
       "best_iteration": 1
+    },
+    {
+      "spearman": 0.5077588112644296,
+      "mae": 4.9333484989733245,
+      "rmse": 8.167709339939533,
+      "fold": 2,
+      "train_size": 308,
+      "test_size": 21,
+      "best_iteration": 43
+    },
+    {
+      "spearman": -0.1187442057312266,
+      "mae": 14.083926317670493,
+      "rmse": 14.502737737721125,
+      "fold": 3,
+      "train_size": 329,
+      "test_size": 63,
+      "best_iteration": 10
+    },
+    {
+      "spearman": -0.6918585560380088,
+      "mae": 11.462030918109178,
+      "rmse": 13.224590339916059,
+      "fold": 4,
+      "train_size": 392,
+      "test_size": 27,
+      "best_iteration": 195
+    },
+    {
+      "spearman": 0.5032761557936224,
+      "mae": 21.321932735882033,
+      "rmse": 21.8765959201809,
+      "fold": 5,
+      "train_size": 419,
+      "test_size": 69,
+      "best_iteration": 13
     }
   ],
   "tier": "per_stock",
   "identifier": "MUNTAZAHAT",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

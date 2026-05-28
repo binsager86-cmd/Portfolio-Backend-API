@@ -1,26 +1,57 @@
 {
-  "auc": 0.6666666666666667,
-  "log_loss": 1.0334043880170891,
-  "calibration_error": 0.7237547840402604,
-  "n_train_events": 196,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.11958343230736962,
+  "mae": 2.0366552275942884,
+  "rmse": 3.2543159974289066,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 566,
   "train_date_range": {
-    "start": "2023-07-11",
-    "end": "2026-03-31"
+    "start": "2023-04-26",
+    "end": "2026-04-26"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.1196",
   "fold_metrics": [
     {
-      "auc": 0.6666666666666667,
-      "log_loss": 1.0334043880170891,
-      "calibration_max_error": 0.7237547840402604,
-      "calibration_mean_error": 0.5249233712308825,
+      "spearman": 0.6085645661888421,
+      "mae": 2.0726617499358637,
+      "rmse": 5.784306541728344,
+      "fold": 1,
+      "train_size": 390,
+      "test_size": 43,
+      "best_iteration": 274
+    },
+    {
+      "spearman": 0.11477887150223841,
+      "mae": 2.0459916774960503,
+      "rmse": 2.672036291089218,
+      "fold": 2,
+      "train_size": 433,
+      "test_size": 49,
+      "best_iteration": 50
+    },
+    {
+      "spearman": -0.3824189027626159,
+      "mae": 1.4768608301488382,
+      "rmse": 1.6167824521600302,
       "fold": 3,
-      "train_size": 156,
-      "test_size": 20,
-      "best_iteration": 2
+      "train_size": 482,
+      "test_size": 40,
+      "best_iteration": 105
+    },
+    {
+      "spearman": 0.1374091943010138,
+      "mae": 2.5511066527964017,
+      "rmse": 2.9441387047380334,
+      "fold": 5,
+      "train_size": 541,
+      "test_size": 25,
+      "best_iteration": 36
     }
   ],
   "tier": "per_stock",
   "identifier": "CABLE",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

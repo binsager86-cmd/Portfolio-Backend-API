@@ -1,46 +1,57 @@
 {
-  "auc": 0.3717948717948718,
-  "log_loss": 0.6750739017946198,
-  "calibration_error": 0.45585123657383697,
-  "n_train_events": 317,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.4115727288499888,
+  "mae": 23.49481765510364,
+  "rmse": 26.59680533309413,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 370,
   "train_date_range": {
-    "start": "2023-07-23",
-    "end": "2026-04-21"
+    "start": "2023-07-18",
+    "end": "2026-05-06"
   },
-  "rejected_reason": "auc_below_threshold_0.3718",
+  "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 0.5,
-      "log_loss": 0.14250645664450243,
-      "calibration_max_error": 0.00019217457625276407,
-      "calibration_mean_error": 0.00019217457625276407,
+      "spearman": NaN,
+      "mae": 45.41774881866588,
+      "rmse": 45.507586110364954,
       "fold": 1,
-      "train_size": 190,
-      "test_size": 31,
-      "best_iteration": 47
-    },
-    {
-      "auc": 0.0,
-      "log_loss": 1.1477157607058657,
-      "calibration_max_error": 0.6363109725624873,
-      "calibration_mean_error": 0.6363109725624873,
-      "fold": 2,
-      "train_size": 221,
-      "test_size": 32,
+      "train_size": 196,
+      "test_size": 66,
       "best_iteration": 1
     },
     {
-      "auc": 0.6153846153846154,
-      "log_loss": 0.7349994880334915,
-      "calibration_max_error": 0.7310505625827709,
-      "calibration_mean_error": 0.46880250815303703,
+      "spearman": 0.9253808454167872,
+      "mae": 33.87060782170742,
+      "rmse": 35.117987766848906,
+      "fold": 2,
+      "train_size": 262,
+      "test_size": 47,
+      "best_iteration": 5
+    },
+    {
+      "spearman": -0.0549365163332909,
+      "mae": 12.010144108974334,
+      "rmse": 20.195513152248736,
       "fold": 3,
-      "train_size": 253,
-      "test_size": 32,
-      "best_iteration": 20
+      "train_size": 309,
+      "test_size": 14,
+      "best_iteration": 56
+    },
+    {
+      "spearman": 0.36427385746646995,
+      "mae": 2.680769871066932,
+      "rmse": 5.566134302913926,
+      "fold": 5,
+      "train_size": 326,
+      "test_size": 44,
+      "best_iteration": 37
     }
   ],
   "tier": "per_stock",
   "identifier": "ALAQARIA",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

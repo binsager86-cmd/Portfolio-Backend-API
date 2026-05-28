@@ -1,36 +1,57 @@
 {
-  "auc": 0.8795405982905983,
-  "log_loss": 0.6469001144632514,
-  "calibration_error": 0.5178693049977194,
-  "n_train_events": 441,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.18945014590365755,
+  "mae": 20.65160091009302,
+  "rmse": 21.797205853298667,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 600,
   "train_date_range": {
-    "start": "2023-05-30",
-    "end": "2026-04-29"
+    "start": "2023-05-29",
+    "end": "2026-04-30"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.1895",
   "fold_metrics": [
     {
-      "auc": 0.9465811965811965,
-      "log_loss": 0.6795649509524939,
-      "calibration_max_error": 0.49557473242189587,
-      "calibration_mean_error": 0.34157203678999615,
-      "fold": 3,
-      "train_size": 352,
-      "test_size": 44,
-      "best_iteration": 21
+      "spearman": 0.9915889877016123,
+      "mae": 11.983152113448785,
+      "rmse": 14.531593349978532,
+      "fold": 1,
+      "train_size": 387,
+      "test_size": 84,
+      "best_iteration": 20
     },
     {
-      "auc": 0.8125,
-      "log_loss": 0.6142352779740087,
-      "calibration_max_error": 0.540163877573543,
-      "calibration_mean_error": 0.37298207963019775,
-      "fold": 4,
-      "train_size": 396,
-      "test_size": 22,
-      "best_iteration": 7
+      "spearman": -0.8506866332251283,
+      "mae": 24.852223262390428,
+      "rmse": 25.336989431785977,
+      "fold": 2,
+      "train_size": 471,
+      "test_size": 33,
+      "best_iteration": 18
+    },
+    {
+      "spearman": 0.9738241873181961,
+      "mae": 39.29742608809198,
+      "rmse": 39.35647244132749,
+      "fold": 3,
+      "train_size": 504,
+      "test_size": 51,
+      "best_iteration": 5
+    },
+    {
+      "spearman": -0.35692595818004985,
+      "mae": 6.473602176440876,
+      "rmse": 7.963768190102665,
+      "fold": 5,
+      "train_size": 564,
+      "test_size": 36,
+      "best_iteration": 53
     }
   ],
   "tier": "per_stock",
   "identifier": "BAYANINV",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

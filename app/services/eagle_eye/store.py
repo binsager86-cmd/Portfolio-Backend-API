@@ -84,6 +84,7 @@ def ensure_tables() -> None:
             stage                TEXT,
             rating               TEXT,
             confidence           REAL,
+            ml_score             REAL,
             thesis               TEXT,
             entry_primary        REAL,
             entry_aggressive     REAL,
@@ -112,6 +113,7 @@ def ensure_tables() -> None:
     from app.core.database import add_column_if_missing as _acim
     _acim("ee_ratings_cache", "market_tier", "TEXT")
     _acim("ee_ratings_cache", "volume_context_json", "TEXT")
+    _acim("ee_ratings_cache", "ml_score", "REAL")
 
     exec_sql(
         """
@@ -399,12 +401,12 @@ def save_rating(
     exec_sql(
         """
         INSERT INTO ee_ratings_cache (
-            ticker, name_en, sector, market_tier, stage, rating, confidence, thesis,
+            ticker, name_en, sector, market_tier, stage, rating, confidence, ml_score, thesis,
             entry_primary, entry_aggressive, entry_conservative,
             stop_loss, tp1, tp1_probability, tp2, tp2_probability, tp3, tp3_probability,
             last_price, supports_json, resistances_json, signals_json, indicators_json,
             days_of_history, computed_at, updated_at, volume_context_json
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT (ticker) DO UPDATE SET
             name_en = excluded.name_en,
             sector = excluded.sector,
@@ -412,6 +414,7 @@ def save_rating(
             stage = excluded.stage,
             rating = excluded.rating,
             confidence = excluded.confidence,
+            ml_score = excluded.ml_score,
             thesis = excluded.thesis,
             entry_primary = excluded.entry_primary,
             entry_aggressive = excluded.entry_aggressive,
@@ -441,6 +444,7 @@ def save_rating(
             result.get("stage"),
             result.get("rating"),
             result.get("confidence"),
+            _f(result.get("ml_score")),
             result.get("thesis"),
             _f(et.get("entry_primary")),
             _f(et.get("entry_aggressive")),
@@ -465,7 +469,11 @@ def save_rating(
     )
 
 
-def load_all_ratings(min_confidence: float = 0.0, limit: int = 500) -> List[dict]:
+def load_all_ratings(
+    min_confidence: float = 0.0,
+    limit: int = 500,
+    computed_at: Optional[str] = None,
+) -> List[dict]:
     """
     Load rows from ee_ratings_cache ordered by confidence descending.
 
@@ -476,17 +484,19 @@ def load_all_ratings(min_confidence: float = 0.0, limit: int = 500) -> List[dict
     """
     from app.core.database import query_all
 
+    target_date = computed_at or date.today().isoformat()
+
     rows = query_all(
         """
-        SELECT ticker, name_en, sector, market_tier, stage, rating, confidence, thesis,
+         SELECT ticker, name_en, sector, market_tier, stage, rating, confidence, ml_score, thesis,
                entry_primary, stop_loss, tp1, last_price, computed_at,
                volume_context_json
         FROM   ee_ratings_cache
-        WHERE  confidence >= ?
+        WHERE  confidence >= ? AND computed_at = ?
         ORDER  BY confidence DESC
         LIMIT  ?
         """,
-        (float(min_confidence), int(limit)),
+        (float(min_confidence), target_date, int(limit)),
     )
     if not rows:
         return []
@@ -508,7 +518,7 @@ def load_rating(ticker: str) -> Optional[dict]:
 
     row = query_one(
         """
-                SELECT ticker, name_en, sector, market_tier, stage, rating, confidence, thesis,
+            SELECT ticker, name_en, sector, market_tier, stage, rating, confidence, ml_score, thesis,
                entry_primary, entry_aggressive, entry_conservative,
                stop_loss, tp1, tp1_probability, tp2, tp2_probability,
                tp3, tp3_probability, last_price,

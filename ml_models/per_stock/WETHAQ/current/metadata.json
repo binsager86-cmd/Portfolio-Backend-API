@@ -1,26 +1,57 @@
 {
-  "auc": 1.0,
-  "log_loss": 0.22272115223143155,
-  "calibration_error": 0.8320178060482494,
-  "n_train_events": 431,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.16742908091524306,
+  "mae": 20.798021439752986,
+  "rmse": 23.50054020465999,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 487,
   "train_date_range": {
-    "start": "2023-06-15",
-    "end": "2026-04-16"
+    "start": "2023-06-14",
+    "end": "2026-05-07"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.1674",
   "fold_metrics": [
     {
-      "auc": 1.0,
-      "log_loss": 0.22272115223143155,
-      "calibration_max_error": 0.8320178060482494,
-      "calibration_mean_error": 0.409934549391632,
+      "spearman": -0.3654317619895779,
+      "mae": 38.321420086929564,
+      "rmse": 39.02569710022169,
+      "fold": 1,
+      "train_size": 258,
+      "test_size": 93,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.9835574228694698,
+      "mae": 33.73646628662511,
+      "rmse": 34.666464483357416,
       "fold": 2,
-      "train_size": 301,
-      "test_size": 43,
-      "best_iteration": 65
+      "train_size": 351,
+      "test_size": 21,
+      "best_iteration": 23
+    },
+    {
+      "spearman": 0.3698330063230244,
+      "mae": 8.156619708843966,
+      "rmse": 13.484119266787705,
+      "fold": 3,
+      "train_size": 372,
+      "test_size": 20,
+      "best_iteration": 87
+    },
+    {
+      "spearman": -0.3182423435419441,
+      "mae": 2.9775796766133085,
+      "rmse": 6.825879968273159,
+      "fold": 5,
+      "train_size": 396,
+      "test_size": 91,
+      "best_iteration": 21
     }
   ],
   "tier": "per_stock",
   "identifier": "WETHAQ",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

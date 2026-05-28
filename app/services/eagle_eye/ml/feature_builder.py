@@ -14,12 +14,19 @@ from app.core.config import get_settings
 from app.services.eagle_eye.adapter import StockMeta, TickerChartAdapter
 from app.services.eagle_eye.config import STAGES
 from app.services.eagle_eye.indicators import compute_all_indicators
+from app.services.eagle_eye.ml.labelers import detect_buy_sell_points
 from app.services.eagle_eye.move_detector import detect_fakeouts, detect_moves
 from app.services.eagle_eye.recorder import SIGNAL_DEFS
 from app.services.eagle_eye.stage_classifier import classify_stage
 from app.services.eagle_eye.store import list_tickers_with_ohlcv, load_ohlcv
 
 LOGGER = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Multi-horizon forward windows — variable profit capture per stock personality
+# The ML learns WHICH horizon best fits each setup, not a fixed 20-day gate.
+# ---------------------------------------------------------------------------
+MULTI_HORIZON_DAYS = (20, 40, 60, 90, 180)
 
 REGIMES = ("RISK_ON", "NEUTRAL", "RISK_OFF")
 CORE_VELOCITY_COLUMNS = (
@@ -72,6 +79,9 @@ RAMADAN_WINDOWS = (
 
 NON_FEATURE_COLUMNS = {
     "ticker",
+    "date",
+    "bar_index",
+    "label",
     "event_id",
     "event_date",
     "acceleration_date",
@@ -100,6 +110,16 @@ NON_FEATURE_COLUMNS = {
     "signal_acceleration",
     "n_signals_fired_in_last_30d",
     "n_signals_fired_in_last_7d",
+    # Multi-horizon outcomes — forward-looking, must never become features
+    "max_gain_pct_20d",
+    "max_gain_pct_40d",
+    "max_gain_pct_60d",
+    "max_gain_pct_90d",
+    "max_gain_pct_180d",
+    "days_to_peak",
+    "max_drawdown_before_peak_pct",
+    "risk_adjusted_gain",
+    "y_opportunity_score",
     *(f"current_stage_{stage.lower()}" for stage in STAGES),
     *(f"stage_before_{stage.lower()}" for stage in STAGES),
 }
@@ -293,6 +313,23 @@ def _trajectory_slope(df: pd.DataFrame, pos: int, col: str, offsets: Sequence[in
     return float(np.polyfit(xs, values, deg=1)[0])
 
 
+def _trajectory_slope_np(col_arr: np.ndarray, pos: int, offsets: Sequence[int]) -> float:
+    """Like _trajectory_slope but operates on a pre-extracted numpy column — zero iloc overhead."""
+    xs: List[float] = []
+    values: List[float] = []
+    n = len(col_arr)
+    for off in offsets:
+        i = pos - off
+        if 0 <= i < n:
+            v = float(col_arr[i])
+            if not (math.isnan(v) or math.isinf(v)):
+                xs.append(float(-off))
+                values.append(v)
+    if len(values) < 3:
+        return float("nan")
+    return float(np.polyfit(xs, values, deg=1)[0])
+
+
 def _days_since_flag(df: pd.DataFrame, pos: int, col: str) -> float:
     if col not in df.columns:
         return float("nan")
@@ -306,71 +343,160 @@ def _days_since_flag(df: pd.DataFrame, pos: int, col: str) -> float:
     return float("nan")
 
 
-def _compute_trade_outcome(ohlcv: pd.DataFrame, accel_pos: int, entry: float) -> Dict[str, Any]:
+def _compute_multi_horizon_outcome(
+    ohlcv: pd.DataFrame,
+    accel_pos: int,
+    entry: float,
+) -> Dict[str, Any]:
+    """
+    Compute trade outcomes across all configured time horizons.
+
+    This replaces the legacy fixed 20-day window.  The model learns the TRUE
+    maximum profit each setup can deliver — whether that takes 3 weeks or 6
+    months — and also learns how much pain (drawdown) occurred before the peak
+    so it can score entries on risk-adjusted quality, not raw return alone.
+
+    Returns
+    -------
+    Legacy fields (tp1_hit_day, tp2_hit_day, stop_hit_day, max_excursion_pct)
+    kept for labeler/labeler_v2 backward compatibility, plus:
+      max_gain_pct_20d … max_gain_pct_180d  — best high in each window
+      days_to_peak                           — bars until global max (180d)
+      max_drawdown_before_peak_pct           — deepest low vs entry before peak
+      risk_adjusted_gain                     — peak gain / pre-peak drawdown
+    """
+    _empty: Dict[str, Any] = {
+        "tp1_hit_day": None,
+        "tp2_hit_day": None,
+        "stop_hit_day": None,
+        "max_excursion_pct": float("nan"),
+        "max_gain_pct_20d":  float("nan"),
+        "max_gain_pct_40d":  float("nan"),
+        "max_gain_pct_60d":  float("nan"),
+        "max_gain_pct_90d":  float("nan"),
+        "max_gain_pct_180d": float("nan"),
+        "days_to_peak": float("nan"),
+        "max_drawdown_before_peak_pct": float("nan"),
+        "risk_adjusted_gain": float("nan"),
+    }
+
     if math.isnan(entry) or entry <= 0:
-        return {
-            "tp1_hit_day": None,
-            "tp2_hit_day": None,
-            "stop_hit_day": None,
-            "max_excursion_pct": float("nan"),
-        }
+        return _empty
 
-    future = ohlcv.iloc[accel_pos + 1: accel_pos + 21]
-    if future.empty:
-        return {
-            "tp1_hit_day": None,
-            "tp2_hit_day": None,
-            "stop_hit_day": None,
-            "max_excursion_pct": float("nan"),
-        }
+    # Broadest forward slice we ever need — 180 trading days
+    future_full = ohlcv.iloc[accel_pos + 1: accel_pos + 181]
+    if future_full.empty:
+        return _empty
 
-    tp1_target = entry * 1.05
-    tp2_target = entry * 1.10
+    highs = future_full["high"].to_numpy(dtype=float)
+    lows  = future_full["low"].to_numpy(dtype=float)
+
+    # ── Legacy TP1 / TP2 / Stop scan (first 20 days only) ─────────────────
+    # Hard-coded percentage levels kept for backward compatibility with
+    # labelers and existing model bundles that reference binary TP columns.
+    tp1_target  = entry * 1.05
+    tp2_target  = entry * 1.10
     stop_target = entry * 0.95
 
-    tp1_day: Optional[int] = None
-    tp2_day: Optional[int] = None
+    tp1_day:  Optional[int] = None
+    tp2_day:  Optional[int] = None
     stop_day: Optional[int] = None
 
-    for day_num, (_, row) in enumerate(future.iterrows(), start=1):
+    for day_num, (_, row) in enumerate(future_full.iterrows(), start=1):
+        if day_num > 20:
+            break
         day_high = _safe_float(row.get("high"))
-        day_low = _safe_float(row.get("low"))
+        day_low  = _safe_float(row.get("low"))
 
-        stop_hit = (not math.isnan(day_low)) and day_low <= stop_target
-        tp1_hit = (not math.isnan(day_high)) and day_high >= tp1_target
-        tp2_hit = (not math.isnan(day_high)) and day_high >= tp2_target
+        stop_hit = not math.isnan(day_low)  and day_low  <= stop_target
+        tp1_hit  = not math.isnan(day_high) and day_high >= tp1_target
+        tp2_hit  = not math.isnan(day_high) and day_high >= tp2_target
 
-        # Ambiguous intraday touch (both hit): choose conservative stop-first ordering.
-        if stop_hit and (tp1_hit or tp2_hit):
-            if tp1_day is None and tp2_day is None:
-                stop_day = day_num
-                break
-
+        # Ambiguous intraday: conservative stop-first ordering
+        if stop_hit and (tp1_hit or tp2_hit) and tp1_day is None and tp2_day is None:
+            stop_day = day_num
+            break
         if tp1_hit and tp1_day is None:
             tp1_day = day_num
         if tp2_hit and tp2_day is None:
             tp2_day = day_num
-
         if stop_hit and stop_day is None and tp2_day is None:
             stop_day = day_num
             break
 
-    if stop_day is None:
-        scope = future
-    else:
-        scope = future.iloc[: max(stop_day - 1, 1)]
+    # Legacy max_excursion_pct — 20-day stop-adjusted high
+    scope_slice = future_full.iloc[:20] if stop_day is None else future_full.iloc[:max(stop_day - 1, 1)]
+    scope_high  = _safe_float(scope_slice["high"].max()) if not scope_slice.empty else float("nan")
+    max_exc     = (scope_high / entry - 1.0) * 100.0 if not math.isnan(scope_high) else float("nan")
 
-    scope_high = _safe_float(scope["high"].max()) if not scope.empty else float("nan")
-    if math.isnan(scope_high):
-        scope_high = entry
-    max_exc = (scope_high / entry - 1.0) * 100.0
+    # ── Multi-horizon max gain ─────────────────────────────────────────────
+    # For each horizon we find the single best high within that window.
+    # Uses high prices (not close) — captures the real achievable exit level.
+    horizon_gains: Dict[int, float] = {}
+    for horizon in MULTI_HORIZON_DAYS:
+        window_highs = highs[:horizon]
+        valid = window_highs[~np.isnan(window_highs)]
+        if valid.size > 0:
+            horizon_gains[horizon] = float((valid.max() / entry - 1.0) * 100.0)
+        else:
+            horizon_gains[horizon] = float("nan")
+
+    # ── Days to peak and global max (180d scope) ───────────────────────────
+    valid_mask = ~np.isnan(highs)
+    if valid_mask.any():
+        peak_idx       = int(np.argmax(np.where(valid_mask, highs, -np.inf)))
+        peak_price     = float(highs[peak_idx])
+        days_to_peak   = float(peak_idx + 1)           # 1-based trading day count
+        global_max_gain = (peak_price / entry - 1.0) * 100.0
+    else:
+        days_to_peak    = float("nan")
+        global_max_gain = float("nan")
+
+    # ── Max drawdown BEFORE the peak — measures entry quality ─────────────
+    # A setup that runs straight up with no drawdown is far safer than one
+    # that drops 8% before eventually recovering.  The model learns to prefer
+    # entries where the risk-before-reward is minimal.
+    max_drawdown_before_peak = 0.0
+    if not math.isnan(days_to_peak):
+        pre_peak_lows = lows[:int(days_to_peak)]
+        valid_lows    = pre_peak_lows[~np.isnan(pre_peak_lows)]
+        if valid_lows.size > 0:
+            max_drawdown_before_peak = float(
+                max(0.0, (entry - valid_lows.min()) / entry * 100.0)
+            )
+
+    # ── Risk-adjusted gain ─────────────────────────────────────────────────
+    # How much reward per unit of pre-peak pain.
+    # Infinite reward (no drawdown) is capped at gain × 10 to stay numeric.
+    if not math.isnan(global_max_gain) and global_max_gain > 0:
+        if max_drawdown_before_peak > 0:
+            risk_adjusted_gain = global_max_gain / max_drawdown_before_peak
+        else:
+            risk_adjusted_gain = global_max_gain * 10.0   # pristine: no drawdown at all
+    else:
+        risk_adjusted_gain = float("nan")
 
     return {
-        "tp1_hit_day": tp1_day,
-        "tp2_hit_day": tp2_day,
-        "stop_hit_day": stop_day,
-        "max_excursion_pct": float(max_exc),
+        # Legacy
+        "tp1_hit_day":       tp1_day,
+        "tp2_hit_day":       tp2_day,
+        "stop_hit_day":      stop_day,
+        "max_excursion_pct": float(max_exc) if not math.isnan(max_exc) else float("nan"),
+        # Multi-horizon gains
+        "max_gain_pct_20d":  horizon_gains.get(20,  float("nan")),
+        "max_gain_pct_40d":  horizon_gains.get(40,  float("nan")),
+        "max_gain_pct_60d":  horizon_gains.get(60,  float("nan")),
+        "max_gain_pct_90d":  horizon_gains.get(90,  float("nan")),
+        "max_gain_pct_180d": horizon_gains.get(180, float("nan")),
+        # Quality metrics
+        "days_to_peak":                  days_to_peak,
+        "max_drawdown_before_peak_pct":  max_drawdown_before_peak,
+        "risk_adjusted_gain":            risk_adjusted_gain,
     }
+
+
+# Backward-compatible alias so any call sites referencing the old name still work.
+_compute_trade_outcome = _compute_multi_horizon_outcome
 
 
 def _signal_slug(name: str) -> str:
@@ -386,9 +512,42 @@ def _signal_slug(name: str) -> str:
     return out.strip("_")
 
 
-def _extract_signal_features_asof(indicators: pd.DataFrame, pos: int) -> Dict[str, float]:
+def _precompute_signal_matrix(
+    indicators: pd.DataFrame,
+) -> Tuple[Dict[str, np.ndarray], List[Dict[str, Any]]]:
+    """Evaluate every signal function once per row across the full series.
+
+    Returns (matrix, records) where:
+      matrix  — {signal_name: bool_array[len(indicators)]}
+      records — plain-dict list of all indicator rows, reused for fast
+                per-anchor lookups (avoids repeated pandas iloc calls).
+    Computed ONCE per stock; every per-anchor extraction is then O(1).
+    """
+    records = indicators.to_dict("records")  # list of plain dicts — faster than iloc
+    n = len(records)
+    matrix: Dict[str, np.ndarray] = {}
+    for signal_name, signal_fn in SIGNAL_DEFS.items():
+        fires = np.zeros(n, dtype=bool)
+        for i, row in enumerate(records):
+            try:
+                fires[i] = bool(signal_fn(row))
+            except Exception:
+                pass
+        matrix[signal_name] = fires
+    return matrix, records
+
+
+def _extract_signal_features_asof(
+    indicators: pd.DataFrame,
+    pos: int,
+    signal_matrix: Optional[Dict[str, np.ndarray]] = None,
+) -> Dict[str, float]:
     """
     Build signal features at timestamp T=pos using only bars up to and including T.
+
+    Pass ``signal_matrix`` (from ``_precompute_signal_matrix``) to avoid
+    recomputing signal firings from scratch for every anchor — reduces training
+    time from O(anchors × 90 × signals) to O(signals) per anchor.
     """
     features: Dict[str, float] = {}
 
@@ -402,24 +561,43 @@ def _extract_signal_features_asof(indicators: pd.DataFrame, pos: int) -> Dict[st
     n_60 = 0
 
     for signal_name, signal_fn in SIGNAL_DEFS.items():
-        fired_positions: List[int] = []
-        for i in range(last_90_start, pos + 1):
-            try:
-                if signal_fn(indicators.iloc[i]):
-                    fired_positions.append(i)
-            except Exception:
-                continue
-
         slug = _signal_slug(signal_name)
-        if fired_positions:
-            first_fire = min(fired_positions)
-            days_since_first = float(pos - first_fire)
-        else:
-            days_since_first = float("nan")
 
-        in_7 = any(i >= last_7_start for i in fired_positions)
-        in_30 = any(i >= last_30_start for i in fired_positions)
-        in_60 = any(i >= last_60_start for i in fired_positions)
+        if signal_matrix is not None:
+            fires = signal_matrix[signal_name]
+            # Slice the pre-built boolean array — O(1) numpy ops
+            window_90 = fires[last_90_start: pos + 1]
+            window_7  = fires[last_7_start:  pos + 1]
+            window_30 = fires[last_30_start: pos + 1]
+            window_60 = fires[last_60_start: pos + 1]
+
+            if window_90.any():
+                first_local = int(np.argmax(window_90))  # index of first True
+                days_since_first = float(pos - (last_90_start + first_local))
+            else:
+                days_since_first = float("nan")
+
+            in_7  = bool(window_7.any())
+            in_30 = bool(window_30.any())
+            in_60 = bool(window_60.any())
+        else:
+            # Fallback path (inference without pre-built matrix)
+            fired_positions: List[int] = []
+            for i in range(last_90_start, pos + 1):
+                try:
+                    if signal_fn(indicators.iloc[i]):
+                        fired_positions.append(i)
+                except Exception:
+                    continue
+
+            if fired_positions:
+                days_since_first = float(pos - min(fired_positions))
+            else:
+                days_since_first = float("nan")
+
+            in_7  = any(i >= last_7_start  for i in fired_positions)
+            in_30 = any(i >= last_30_start for i in fired_positions)
+            in_60 = any(i >= last_60_start for i in fired_positions)
 
         if in_7:
             n_7 += 1
@@ -442,6 +620,198 @@ def _extract_signal_features_asof(indicators: pd.DataFrame, pos: int) -> Dict[st
         features["signal_density_acceleration_30d_vs_60d_as_of_t"] = 0.0
 
     return features
+
+
+def _compute_signal_pattern_features_asof(
+    pred_pos: int,
+    signal_matrix: Mapping[str, np.ndarray],
+    indicator_records: Sequence[Mapping[str, Any]],
+) -> Dict[str, float]:
+    """
+    Pattern features that capture signal sequencing, clustering, and
+    price/volume behavior while signals are firing.
+
+    Used by both training row construction and live inference so feature
+    semantics remain identical.
+    """
+    _defaults: Dict[str, float] = {
+        "signals_active_now": 0.0,
+        "signals_active_now_pct": 0.0,
+        "signals_fired_5d": 0.0,
+        "signals_fired_10d": 0.0,
+        "signals_fired_20d": 0.0,
+        "signals_fired_40d": 0.0,
+        "signals_fired_5d_pct": 0.0,
+        "signals_fired_20d_pct": 0.0,
+        "most_recent_signal_days_ago": 999.0,
+        "oldest_active_signal_days_ago": 999.0,
+        "mean_signal_recency": 999.0,
+        "num_signals_in_lookback": 0.0,
+        "signal_cluster_span_days": 0.0,
+        "signal_clustering_density": 0.0,
+        "signal_acceleration_5d": 0.0,
+        "signal_acceleration_20d": 0.0,
+        "price_change_during_signals_pct": float("nan"),
+        "price_cv_during_signals": float("nan"),
+        "volume_trend_20d": float("nan"),
+        "higher_lows_20d": 0.0,
+        "higher_highs_20d": 0.0,
+        "range_contraction_ratio": float("nan"),
+    }
+
+    if pred_pos < 0 or pred_pos >= len(indicator_records):
+        return _defaults.copy()
+
+    _active_now = 0
+    _active_5d = 0
+    _active_10d = 0
+    _active_20d = 0
+    _active_40d = 0
+
+    for _sig_arr in signal_matrix.values():
+        if pred_pos < len(_sig_arr) and bool(_sig_arr[pred_pos]):
+            _active_now += 1
+
+        for _lookback in (5, 10, 20, 40):
+            _start = max(0, pred_pos - _lookback + 1)
+            _end = pred_pos + 1
+            if _start >= _end or _end > len(_sig_arr):
+                continue
+            if bool(_sig_arr[_start:_end].any()):
+                if _lookback == 5:
+                    _active_5d += 1
+                elif _lookback == 10:
+                    _active_10d += 1
+                elif _lookback == 20:
+                    _active_20d += 1
+                else:
+                    _active_40d += 1
+
+    _total_signals = len(signal_matrix)
+
+    _recency_list: List[int] = []
+    for _sig_arr in signal_matrix.values():
+        _found = False
+        for _back in range(min(90, pred_pos + 1)):
+            _idx = pred_pos - _back
+            if 0 <= _idx < len(_sig_arr) and bool(_sig_arr[_idx]):
+                _recency_list.append(_back)
+                _found = True
+                break
+        if not _found:
+            _recency_list.append(999)
+
+    _valid_recencies = [r for r in _recency_list if r < 999]
+
+    out: Dict[str, float] = {
+        "signals_active_now": float(_active_now),
+        "signals_active_now_pct": (_active_now / _total_signals * 100.0) if _total_signals > 0 else 0.0,
+        "signals_fired_5d": float(_active_5d),
+        "signals_fired_10d": float(_active_10d),
+        "signals_fired_20d": float(_active_20d),
+        "signals_fired_40d": float(_active_40d),
+        "signals_fired_5d_pct": (_active_5d / _total_signals * 100.0) if _total_signals > 0 else 0.0,
+        "signals_fired_20d_pct": (_active_20d / _total_signals * 100.0) if _total_signals > 0 else 0.0,
+        "most_recent_signal_days_ago": float(min(_valid_recencies)) if _valid_recencies else 999.0,
+        "oldest_active_signal_days_ago": float(max(_valid_recencies)) if _valid_recencies else 999.0,
+        "mean_signal_recency": (sum(_valid_recencies) / len(_valid_recencies)) if _valid_recencies else 999.0,
+        "num_signals_in_lookback": float(len(_valid_recencies)),
+    }
+
+    if len(_valid_recencies) >= 2:
+        _sorted_rec = sorted(_valid_recencies)
+        _span = _sorted_rec[-1] - _sorted_rec[0]
+        out["signal_cluster_span_days"] = float(_span)
+        out["signal_clustering_density"] = len(_valid_recencies) / max(1.0, float(_span))
+    else:
+        out["signal_cluster_span_days"] = 0.0
+        out["signal_clustering_density"] = 0.0
+
+    out["signal_acceleration_5d"] = float(_active_5d - _active_10d)
+    out["signal_acceleration_20d"] = float(_active_20d - _active_40d)
+
+    _price_now = _safe_float(indicator_records[pred_pos].get("close"))
+    _span_bars = int(out["signal_cluster_span_days"])
+    if _span_bars > 0 and not math.isnan(_price_now) and _price_now > 0:
+        _span_idx = max(0, pred_pos - _span_bars)
+        _price_at_start = _safe_float(indicator_records[_span_idx].get("close"))
+        if not math.isnan(_price_at_start) and _price_at_start > 0:
+            out["price_change_during_signals_pct"] = (_price_now / _price_at_start - 1.0) * 100.0
+        else:
+            out["price_change_during_signals_pct"] = float("nan")
+    else:
+        out["price_change_during_signals_pct"] = float("nan")
+
+    if _span_bars > 2:
+        _start_idx = max(0, pred_pos - _span_bars)
+        _close_slice: List[float] = []
+        for _k in range(_start_idx, min(pred_pos + 1, len(indicator_records))):
+            _c = _safe_float(indicator_records[_k].get("close"))
+            if not math.isnan(_c):
+                _close_slice.append(_c)
+        if len(_close_slice) >= 3:
+            _arr = np.asarray(_close_slice, dtype=float)
+            _mean = float(_arr.mean())
+            out["price_cv_during_signals"] = float((_arr.std() / _mean) * 100.0) if _mean > 0 else float("nan")
+        else:
+            out["price_cv_during_signals"] = float("nan")
+    else:
+        out["price_cv_during_signals"] = float("nan")
+
+    _vol_now = _safe_float(indicator_records[pred_pos].get("volume"))
+    if pred_pos >= 20:
+        _vol_20ago = _safe_float(indicator_records[pred_pos - 20].get("volume"))
+        if not math.isnan(_vol_now) and not math.isnan(_vol_20ago) and _vol_20ago > 0:
+            out["volume_trend_20d"] = (_vol_now / _vol_20ago - 1.0) * 100.0
+        else:
+            out["volume_trend_20d"] = float("nan")
+    else:
+        out["volume_trend_20d"] = float("nan")
+
+    _higher_lows = 0
+    for _k in range(max(1, pred_pos - 19), pred_pos + 1):
+        _low_now = _safe_float(indicator_records[_k].get("low"))
+        _low_prev = _safe_float(indicator_records[_k - 1].get("low"))
+        if not math.isnan(_low_now) and not math.isnan(_low_prev) and _low_now > _low_prev:
+            _higher_lows += 1
+    out["higher_lows_20d"] = float(_higher_lows)
+
+    _higher_highs = 0
+    for _k in range(max(1, pred_pos - 19), pred_pos + 1):
+        _high_now = _safe_float(indicator_records[_k].get("high"))
+        _high_prev = _safe_float(indicator_records[_k - 1].get("high"))
+        if not math.isnan(_high_now) and not math.isnan(_high_prev) and _high_now > _high_prev:
+            _higher_highs += 1
+    out["higher_highs_20d"] = float(_higher_highs)
+
+    if pred_pos >= 20:
+        _ranges_recent: List[float] = []
+        _ranges_older: List[float] = []
+        for _k in range(pred_pos - 4, pred_pos + 1):
+            if 0 <= _k < len(indicator_records):
+                _h = _safe_float(indicator_records[_k].get("high"))
+                _l = _safe_float(indicator_records[_k].get("low"))
+                if not math.isnan(_h) and not math.isnan(_l) and _l > 0:
+                    _ranges_recent.append((_h - _l) / _l * 100.0)
+        for _k in range(pred_pos - 19, pred_pos - 9):
+            if 0 <= _k < len(indicator_records):
+                _h = _safe_float(indicator_records[_k].get("high"))
+                _l = _safe_float(indicator_records[_k].get("low"))
+                if not math.isnan(_h) and not math.isnan(_l) and _l > 0:
+                    _ranges_older.append((_h - _l) / _l * 100.0)
+
+        if _ranges_recent and _ranges_older:
+            _mean_recent = sum(_ranges_recent) / len(_ranges_recent)
+            _mean_older = sum(_ranges_older) / len(_ranges_older)
+            out["range_contraction_ratio"] = (_mean_recent / _mean_older) if _mean_older > 0 else float("nan")
+        else:
+            out["range_contraction_ratio"] = float("nan")
+    else:
+        out["range_contraction_ratio"] = float("nan")
+
+    merged = _defaults.copy()
+    merged.update(out)
+    return merged
 
 
 def _dedupe_move_events_for_ml(events: Sequence[Any]) -> List[Any]:
@@ -540,6 +910,20 @@ def build_event_feature_rows_for_ticker(
 
     stage_series = indicators.apply(lambda row: classify_stage(row.to_dict()), axis=1)
 
+    # ── Precompute run-length arrays — O(N_rows) forward pass replaces the
+    # O(pred_pos) backward scan previously done inside the per-anchor loop.
+    _sv = stage_series.to_numpy(dtype=object)
+    _n_sv = len(_sv)
+    _days_arr = np.ones(_n_sv, dtype=np.int32)
+    _sbefore_arr = np.full(_n_sv, "UNKNOWN", dtype=object)
+    for _p in range(1, _n_sv):
+        if _sv[_p] == _sv[_p - 1]:
+            _days_arr[_p] = _days_arr[_p - 1] + 1
+            _sbefore_arr[_p] = _sbefore_arr[_p - 1]
+        else:
+            _days_arr[_p] = 1
+            _sbefore_arr[_p] = _sv[_p - 1]
+
     moves = detect_moves(ticker, ohlcv)
     if include_fakeouts:
         moves.extend(detect_fakeouts(ticker, ohlcv))
@@ -581,6 +965,20 @@ def build_event_feature_rows_for_ticker(
 
     anchor_specs.sort(key=lambda x: x[1])
 
+    # Precompute signal firings once for the full series — avoids 90×21 iloc
+    # calls per anchor (the main training bottleneck for large stocks).
+    signal_matrix, indicator_records = _precompute_signal_matrix(indicators)
+
+    # ── Per-column numpy arrays for zero-overhead trajectory / velocity ────
+    _n_ind = len(indicators)
+    _nan_col = np.full(_n_ind, float("nan"))
+    _obv_np = indicators["obv"].to_numpy(dtype=float) if "obv" in indicators.columns else _nan_col
+    _acc_np = indicators["accumulation_score"].to_numpy(dtype=float) if "accumulation_score" in indicators.columns else _nan_col
+    _bb_np  = indicators["bb_bandwidth"].to_numpy(dtype=float) if "bb_bandwidth" in indicators.columns else _nan_col
+    _ohlcv_low_np   = ohlcv["low"].to_numpy(dtype=float)
+    _ohlcv_close_np = ohlcv["close"].to_numpy(dtype=float)
+    _ohlcv_turn_np  = ohlcv["turnover_kwd"].to_numpy(dtype=float) if "turnover_kwd" in ohlcv.columns else None
+
     for event, pred_pos, is_control in anchor_specs:
         pred_ts = pd.Timestamp(indicators.index[pred_pos]).normalize()
 
@@ -594,25 +992,27 @@ def build_event_feature_rows_for_ticker(
                 continue
             accel_ts = pd.Timestamp(indicators.index[accel_pos]).normalize()
 
-        stage_now = stage_series.iloc[pred_pos]
+        stage_now = str(_sv[pred_pos])
+        days_in_stage = int(_days_arr[pred_pos])
+        stage_before = str(_sbefore_arr[pred_pos])
 
-        days_in_stage = 0
-        stage_before = "UNKNOWN"
-        for i in range(pred_pos, -1, -1):
-            if stage_series.iloc[i] == stage_now:
-                days_in_stage += 1
-            else:
-                stage_before = stage_series.iloc[i]
-                break
-
+        _row_pred = indicator_records[pred_pos]
         if is_control:
-            close_t = _safe_float(indicators.iloc[pred_pos].get("close"))
+            close_t = _safe_float(_row_pred.get("close"))
             entry = close_t
             outcome = {
                 "tp1_hit_day": None,
                 "tp2_hit_day": None,
                 "stop_hit_day": None,
                 "max_excursion_pct": 0.0,
+                "max_gain_pct_20d":  0.0,
+                "max_gain_pct_40d":  0.0,
+                "max_gain_pct_60d":  0.0,
+                "max_gain_pct_90d":  0.0,
+                "max_gain_pct_180d": 0.0,
+                "days_to_peak":                 float("nan"),
+                "max_drawdown_before_peak_pct": 0.0,
+                "risk_adjusted_gain":           float("nan"),
             }
             event_id = f"{ticker.upper()}_{pred_ts.date().isoformat()}_non_event"
             start_date = None
@@ -624,9 +1024,9 @@ def build_event_feature_rows_for_ticker(
             gain_pct = 0.0
             failed_at_pct = float("nan")
         else:
-            close_t = _safe_float(indicators.iloc[pred_pos].get("close"))
+            close_t = _safe_float(_row_pred.get("close"))
             entry = _safe_float(event.acceleration_price)
-            outcome = _compute_trade_outcome(ohlcv, accel_pos, entry)
+            outcome = _compute_multi_horizon_outcome(ohlcv, accel_pos, entry)
             event_id = event.event_id
             start_date = event.start_date.isoformat() if event.start_date else None
             peak_date = event.peak_date.isoformat() if event.peak_date else None
@@ -637,8 +1037,43 @@ def build_event_feature_rows_for_ticker(
             gain_pct = _safe_float(event.gain_pct)
             failed_at_pct = _safe_float(event.failed_at_pct)
 
-        signal_features = _extract_signal_features_asof(indicators, pred_pos)
+        signal_features = _extract_signal_features_asof(indicators, pred_pos, signal_matrix)
+        signal_pattern_features = _compute_signal_pattern_features_asof(
+            pred_pos=pred_pos,
+            signal_matrix=signal_matrix,
+            indicator_records=indicator_records,
+        )
         regime_name, pmi_trend, brent_trend = _lookup_regime(regime_frame, pred_ts)
+
+        # ── Entry quality features (available at prediction time) ──────────
+        # price_extension_from_20d_low_pct: how far has price risen from the
+        # recent consolidation base?  Low = still near the anchor = good entry.
+        # High = already extended = risky late entry.
+        close_at_pred = close_t  # already computed above — no duplicate iloc
+        low_20d = float(_ohlcv_low_np[max(0, pred_pos - 19): pred_pos + 1].min()) \
+            if pred_pos >= 0 else float("nan")
+        if not math.isnan(close_at_pred) and not math.isnan(low_20d) and low_20d > 0:
+            price_extension_20d = (close_at_pred / low_20d - 1.0) * 100.0
+        else:
+            price_extension_20d = float("nan")
+
+        # accumulation_compression_days: how many consecutive days before the
+        # setup was the stock in a tight low-volatility range?
+        # Long compression = smart money quietly building = early, high-quality signal.
+        compression_days = float("nan")
+        if pred_pos >= 10:
+            _pre_close = _ohlcv_close_np[max(0, pred_pos - 60): pred_pos + 1]
+            if len(_pre_close) >= 5:
+                comp = 0
+                for _i in range(len(_pre_close) - 1, 4, -1):
+                    _w = _pre_close[max(0, _i - 4): _i + 1]
+                    w_mean = float(_w.mean())
+                    w_std  = float(_w.std())
+                    if w_mean > 0 and (w_std / w_mean) < 0.025:
+                        comp += 1
+                    else:
+                        break
+                compression_days = float(comp)
 
         cap_price = close_t if not math.isnan(close_t) else entry
 
@@ -664,7 +1099,7 @@ def build_event_feature_rows_for_ticker(
                 else None
             ),
             "avg_daily_turnover_log": _log1p_or_nan(
-                ohlcv["turnover_kwd"].iloc[max(0, pred_pos - 60):pred_pos].mean() if "turnover_kwd" in ohlcv.columns else None
+                float(_ohlcv_turn_np[max(0, pred_pos - 60): pred_pos].mean()) if _ohlcv_turn_np is not None else None
             ),
             "current_stage": stage_now,
             "stage_before": stage_before,
@@ -676,32 +1111,57 @@ def build_event_feature_rows_for_ticker(
             "is_earnings_window": float(_is_earnings_window(pred_ts.date())),
             "day_of_week": float(pred_ts.weekday()),
             "month": float(pred_ts.month),
-            "tp1_hit_day": outcome["tp1_hit_day"],
-            "tp2_hit_day": outcome["tp2_hit_day"],
-            "stop_hit_day": outcome["stop_hit_day"],
+            # ── Legacy outcome fields ──────────────────────────────────────
+            "tp1_hit_day":       outcome["tp1_hit_day"],
+            "tp2_hit_day":       outcome["tp2_hit_day"],
+            "stop_hit_day":      outcome["stop_hit_day"],
             "max_excursion_pct": outcome["max_excursion_pct"],
+            # ── Multi-horizon gains (forward-looking, non-feature columns) ─
+            "max_gain_pct_20d":  outcome["max_gain_pct_20d"],
+            "max_gain_pct_40d":  outcome["max_gain_pct_40d"],
+            "max_gain_pct_60d":  outcome["max_gain_pct_60d"],
+            "max_gain_pct_90d":  outcome["max_gain_pct_90d"],
+            "max_gain_pct_180d": outcome["max_gain_pct_180d"],
+            "days_to_peak":                 outcome["days_to_peak"],
+            "max_drawdown_before_peak_pct": outcome["max_drawdown_before_peak_pct"],
+            "risk_adjusted_gain":           outcome["risk_adjusted_gain"],
         }
         row.update(signal_features)
+        row.update(signal_pattern_features)
+
+        # Entry quality features — these ARE features (available at pred time)
+        row["price_extension_from_20d_low_pct"] = price_extension_20d
+        row["price_extension_from_60d_low_pct"] = _safe_float(_row_pred.get("price_extension_from_60d_low_pct"))
+        row["price_extension_from_120d_low_pct"] = _safe_float(_row_pred.get("price_extension_from_120d_low_pct"))
+        row["position_in_60d_range_pct"] = _safe_float(_row_pred.get("position_in_60d_range_pct"))
+        row["distance_from_52w_high_pct"] = _safe_float(_row_pred.get("distance_from_52w_high_pct"))
+        row["accumulation_compression_days"]     = compression_days
 
         for col in indicators.columns:
             if col in LEAKY_INDICATOR_COLUMNS:
                 continue
-            val = indicators.iloc[pred_pos].get(col)
+            val = _row_pred.get(col)  # dict lookup — no pandas iloc overhead
             if col == "wyckoff_phase":
                 row[f"t0_{col}_code"] = _encode_wyckoff(val)
             else:
                 row[f"t0_{col}"] = _safe_float(val)
 
+        _i3 = pred_pos - 3
+        _rec3 = indicator_records[_i3] if _i3 >= 0 else None
         for col in CORE_VELOCITY_COLUMNS:
-            row[f"{col}_velocity"] = _velocity(indicators, pred_pos, col, 3)
+            now_v  = _safe_float(_row_pred.get(col))
+            past_v = _safe_float(_rec3.get(col)) if _rec3 is not None else float("nan")
+            row[f"{col}_velocity"] = (now_v - past_v) / 3.0 if not (math.isnan(now_v) or math.isnan(past_v)) else float("nan")
 
-        row["obv_trajectory_slope"] = _trajectory_slope(indicators, pred_pos, "obv", TRAJECTORY_OFFSETS)
-        row["accumulation_trajectory_slope"] = _trajectory_slope(indicators, pred_pos, "accumulation_score", TRAJECTORY_OFFSETS)
-        row["bb_bandwidth_trajectory"] = _trajectory_slope(indicators, pred_pos, "bb_bandwidth", TRAJECTORY_OFFSETS)
+        row["obv_trajectory_slope"] = _trajectory_slope_np(_obv_np, pred_pos, TRAJECTORY_OFFSETS)
+        row["accumulation_trajectory_slope"] = _trajectory_slope_np(_acc_np, pred_pos, TRAJECTORY_OFFSETS)
+        row["bb_bandwidth_trajectory"] = _trajectory_slope_np(_bb_np, pred_pos, TRAJECTORY_OFFSETS)
 
         for lookback in CONTEXT_LOOKBACKS:
+            _i_lb = pred_pos - lookback
+            _rec_lb = indicator_records[_i_lb] if _i_lb >= 0 else None
             for col in CONTEXT_COLUMNS:
-                row[f"t{lookback}_{col}"] = _value_at_offset(indicators, pred_pos, col, lookback)
+                row[f"t{lookback}_{col}"] = _safe_float(_rec_lb.get(col)) if _rec_lb is not None else float("nan")
 
         for stage_name in STAGES:
             stage_key = stage_name.lower()
@@ -824,7 +1284,8 @@ def build_events_from_ohlcv_cache(
     regime = _build_regime_frame(start, end, logger=log)
 
     all_rows: List[Dict[str, Any]] = []
-    for ticker in tickers:
+    n_tickers = len(tickers)
+    for idx, ticker in enumerate(tickers, 1):
         try:
             ohlcv = load_ohlcv(ticker)
             rows = build_event_feature_rows_for_ticker(
@@ -835,8 +1296,343 @@ def build_events_from_ohlcv_cache(
                 include_fakeouts=include_fakeouts,
             )
             all_rows.extend(rows)
+            log.info("[%d/%d] %s \u2192 %d rows (running total %d)", idx, n_tickers, ticker, len(rows), len(all_rows))
         except Exception as exc:
             log.warning("Event build failed for %s: %s", ticker, exc)
+
+    return all_rows
+
+
+def _compute_signal_pattern_features(
+    row: Dict[str, float],
+    pos: int,
+    signal_matrix: Mapping[str, np.ndarray],
+    n: int,
+) -> None:
+    """Add signal-count/recency/cluster features used by the classifier."""
+    del n  # retained for compatibility with the public function signature
+
+    total_signals = len(signal_matrix)
+    counts = {5: 0, 10: 0, 20: 0, 40: 0}
+    active_now = 0
+
+    recencies: List[int] = []
+    for arr in signal_matrix.values():
+        if pos < len(arr) and bool(arr[pos]):
+            active_now += 1
+
+        for lookback in (5, 10, 20, 40):
+            start = max(0, pos - lookback + 1)
+            end = min(pos + 1, len(arr))
+            if start < end and bool(arr[start:end].any()):
+                counts[lookback] += 1
+
+        found = False
+        for back in range(min(90, pos + 1)):
+            idx = pos - back
+            if 0 <= idx < len(arr) and bool(arr[idx]):
+                recencies.append(back)
+                found = True
+                break
+        if not found:
+            recencies.append(999)
+
+    valid = [r for r in recencies if r < 999]
+
+    row["signals_active_now"] = float(active_now)
+    row["signals_active_now_pct"] = (active_now / total_signals * 100.0) if total_signals > 0 else 0.0
+    row["signals_fired_5d"] = float(counts[5])
+    row["signals_fired_10d"] = float(counts[10])
+    row["signals_fired_20d"] = float(counts[20])
+    row["signals_fired_40d"] = float(counts[40])
+
+    row["most_recent_signal_days_ago"] = float(min(valid)) if valid else 999.0
+    row["oldest_active_signal_days_ago"] = float(max(valid)) if valid else 999.0
+    row["mean_signal_recency"] = (sum(valid) / len(valid)) if valid else 999.0
+    row["num_signals_in_lookback"] = float(len(valid))
+
+    if len(valid) >= 2:
+        sv = sorted(valid)
+        span = sv[-1] - sv[0]
+        row["signal_cluster_span_days"] = float(span)
+        row["signal_clustering_density"] = len(valid) / max(1.0, float(span))
+    else:
+        row["signal_cluster_span_days"] = 0.0
+        row["signal_clustering_density"] = 0.0
+
+    row["signal_acceleration_5d"] = float(counts[5] - counts[10])
+    row["signal_acceleration_20d"] = float(counts[20] - counts[40])
+
+
+def _compute_price_structure_features(
+    row: Dict[str, float],
+    pos: int,
+    records: Sequence[Mapping[str, Any]],
+    n: int,
+) -> None:
+    """Add local structure metrics: higher highs/lows and range contraction."""
+    higher_lows = 0
+    for k in range(max(1, pos - 19), pos + 1):
+        if 0 <= k < n:
+            low_now = _safe_float(records[k].get("low"))
+            low_prev = _safe_float(records[k - 1].get("low"))
+            if low_now is not None and low_prev is not None and low_now > low_prev:
+                higher_lows += 1
+    row["higher_lows_20d"] = float(higher_lows)
+
+    higher_highs = 0
+    for k in range(max(1, pos - 19), pos + 1):
+        if 0 <= k < n:
+            high_now = _safe_float(records[k].get("high"))
+            high_prev = _safe_float(records[k - 1].get("high"))
+            if high_now is not None and high_prev is not None and high_now > high_prev:
+                higher_highs += 1
+    row["higher_highs_20d"] = float(higher_highs)
+
+    if pos >= 20:
+        ranges_recent: List[float] = []
+        ranges_older: List[float] = []
+        for k in range(pos - 4, pos + 1):
+            if 0 <= k < n:
+                h = _safe_float(records[k].get("high"))
+                l = _safe_float(records[k].get("low"))
+                if h is not None and l is not None and l > 0:
+                    ranges_recent.append((h - l) / l * 100.0)
+        for k in range(pos - 19, pos - 9):
+            if 0 <= k < n:
+                h = _safe_float(records[k].get("high"))
+                l = _safe_float(records[k].get("low"))
+                if h is not None and l is not None and l > 0:
+                    ranges_older.append((h - l) / l * 100.0)
+
+        if ranges_recent and ranges_older:
+            mr = sum(ranges_recent) / len(ranges_recent)
+            mo = sum(ranges_older) / len(ranges_older)
+            row["range_contraction_ratio"] = mr / mo if mo > 0 else float("nan")
+        else:
+            row["range_contraction_ratio"] = float("nan")
+    else:
+        row["range_contraction_ratio"] = float("nan")
+
+
+def _add_market_context(row: Dict[str, float], market_df: Optional[pd.DataFrame], bar_date: pd.Timestamp) -> None:
+    """Attach coarse market regime context to each training row."""
+    if market_df is None or market_df.empty:
+        row["market_rsi"] = float("nan")
+        row["market_return_5d"] = float("nan")
+        row["market_return_20d"] = float("nan")
+        return
+
+    key = pd.Timestamp(bar_date).normalize()
+    if key not in market_df.index:
+        prior = market_df.loc[:key]
+        if prior.empty:
+            row["market_rsi"] = float("nan")
+            row["market_return_5d"] = float("nan")
+            row["market_return_20d"] = float("nan")
+            return
+        key = prior.index[-1]
+
+    idx_pos = int(market_df.index.get_loc(key))
+    row["market_rsi"] = _safe_float(market_df.iloc[idx_pos].get("rsi")) or float("nan")
+
+    c_now = _safe_float(market_df.iloc[idx_pos].get("close"))
+    if c_now is None or c_now <= 0:
+        row["market_return_5d"] = float("nan")
+        row["market_return_20d"] = float("nan")
+        return
+
+    if idx_pos >= 5:
+        c_5ago = _safe_float(market_df.iloc[idx_pos - 5].get("close"))
+        row["market_return_5d"] = ((c_now / c_5ago - 1.0) * 100.0) if c_5ago and c_5ago > 0 else float("nan")
+    else:
+        row["market_return_5d"] = float("nan")
+
+    if idx_pos >= 20:
+        c_20ago = _safe_float(market_df.iloc[idx_pos - 20].get("close"))
+        row["market_return_20d"] = ((c_now / c_20ago - 1.0) * 100.0) if c_20ago and c_20ago > 0 else float("nan")
+    else:
+        row["market_return_20d"] = float("nan")
+
+
+def build_labeled_training_data(
+    ticker: str,
+    df: pd.DataFrame,
+    indicators: pd.DataFrame,
+    labels: pd.Series,
+    signal_matrix: Mapping[str, np.ndarray],
+    indicator_records: Sequence[Mapping[str, Any]],
+    market_df: Optional[pd.DataFrame] = None,
+) -> pd.DataFrame:
+    """
+    Build training rows from labeled bars (BUY/SELL/HOLD) instead of event anchors.
+    """
+    del ticker, df
+
+    n = len(indicators)
+    if n < 30 or len(indicator_records) != n:
+        return pd.DataFrame()
+
+    aligned_labels = labels.reindex(indicators.index).fillna(0).astype(int)
+    label_arr = aligned_labels.to_numpy(dtype=int)
+
+    buy_positions = [i for i, v in enumerate(label_arr) if v == 1]
+    sell_positions = [i for i, v in enumerate(label_arr) if v == -1]
+    hold_positions = [i for i, v in enumerate(label_arr) if v == 0]
+
+    n_signal = len(buy_positions) + len(sell_positions)
+    if n_signal == 0:
+        return pd.DataFrame()
+
+    max_hold = n_signal * 3
+    if len(hold_positions) > max_hold:
+        rng = np.random.default_rng(42)
+        hold_positions = sorted(int(v) for v in rng.choice(hold_positions, size=max_hold, replace=False))
+
+    all_positions = sorted(buy_positions + sell_positions + hold_positions)
+
+    lookback_columns = [
+        "rsi", "adx", "macd_histogram", "plus_di", "minus_di",
+        "volume_ratio_20d", "obv_trajectory_slope",
+        "price_extension_from_20d_low_pct",
+        "accumulation_compression_days",
+    ]
+    lookback_offsets = [1, 2, 3, 5]
+
+    rows: List[Dict[str, Any]] = []
+    for pos in all_positions:
+        if pos < 20:
+            continue
+
+        rec = indicator_records[pos]
+        bar_ts = pd.Timestamp(indicators.index[pos]).normalize()
+        row: Dict[str, Any] = {
+            "bar_index": int(pos),
+            "date": bar_ts.date().isoformat(),
+            "event_date": bar_ts.date().isoformat(),
+        }
+
+        for col in indicators.columns:
+            val = rec.get(col)
+            row[f"t0_{col}"] = _safe_float(val) if _safe_float(val) is not None else float("nan")
+
+        for offset in lookback_offsets:
+            lb_pos = pos - offset
+            if 0 <= lb_pos < n:
+                lb_rec = indicator_records[lb_pos]
+                for col in lookback_columns:
+                    val = _safe_float(lb_rec.get(col))
+                    row[f"t{offset}_{col}"] = val if val is not None else float("nan")
+            else:
+                for col in lookback_columns:
+                    row[f"t{offset}_{col}"] = float("nan")
+
+        for col in lookback_columns:
+            t0_val = row.get(f"t0_{col}", float("nan"))
+            t5_val = row.get(f"t5_{col}", float("nan"))
+            t3_val = row.get(f"t3_{col}", float("nan"))
+            t1_val = row.get(f"t1_{col}", float("nan"))
+
+            row[f"delta5_{col}"] = (t0_val - t5_val) if np.isfinite(t0_val) and np.isfinite(t5_val) else float("nan")
+            row[f"delta3_{col}"] = (t0_val - t3_val) if np.isfinite(t0_val) and np.isfinite(t3_val) else float("nan")
+            row[f"delta1_{col}"] = (t0_val - t1_val) if np.isfinite(t0_val) and np.isfinite(t1_val) else float("nan")
+
+        _compute_signal_pattern_features(row, pos, signal_matrix, n)
+        _compute_price_structure_features(row, pos, indicator_records, n)
+        _add_market_context(row, market_df, bar_ts)
+
+        row["label"] = int(label_arr[pos])
+        rows.append(row)
+
+    return pd.DataFrame(rows)
+
+
+def build_labeled_rows_from_ohlcv_cache(
+    tickers: Optional[Sequence[str]] = None,
+    logger: Optional[logging.Logger] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Build supervised rows from all cached OHLCV bars using peak/trough labels.
+    """
+    log = logger or LOGGER
+    meta_map = _build_stock_meta_map()
+
+    if tickers is None:
+        tickers = list_tickers_with_ohlcv()
+
+    market_df: Optional[pd.DataFrame] = None
+    try:
+        adapter = TickerChartAdapter()
+        end = date.today()
+        start = date(max(2000, end.year - 6), end.month, min(end.day, 28))
+        raw_market = adapter.get_market_index("BKA", start, end)
+        if raw_market is not None and not raw_market.empty:
+            market_df = compute_all_indicators(raw_market)
+            market_df.index = pd.to_datetime(market_df.index).normalize()
+            market_df = market_df[~market_df.index.duplicated(keep="last")]
+    except Exception as exc:
+        log.debug("Market context unavailable for labeled rows: %s", exc)
+        market_df = None
+
+    all_rows: List[Dict[str, Any]] = []
+    n_tickers = len(tickers)
+    for idx, ticker in enumerate(tickers, start=1):
+        try:
+            ohlcv = load_ohlcv(ticker)
+            if ohlcv is None or ohlcv.empty or len(ohlcv) < 120:
+                continue
+
+            indicators = compute_all_indicators(ohlcv)
+            if indicators is None or indicators.empty:
+                continue
+
+            labels = detect_buy_sell_points(ohlcv)
+            signal_matrix, indicator_records = _precompute_signal_matrix(indicators)
+            frame = build_labeled_training_data(
+                ticker=ticker,
+                df=ohlcv,
+                indicators=indicators,
+                labels=labels,
+                signal_matrix=signal_matrix,
+                indicator_records=indicator_records,
+                market_df=market_df,
+            )
+            if frame.empty:
+                continue
+
+            meta = meta_map.get(ticker.upper())
+            name_en = meta.name_en if meta else ticker
+            sector = _normalize_sector(name_en, meta.sector if meta else None, ticker)
+            market_tier = (meta.market_tier if meta and meta.market_tier else "premier").lower()
+
+            frame["ticker"] = ticker.upper()
+            frame["sector"] = sector
+            frame["market_tier"] = market_tier
+            frame["sector_raw"] = sector
+            frame["market_tier_raw"] = market_tier
+
+            evt_dt = pd.to_datetime(frame["event_date"], errors="coerce")
+            frame["day_of_week"] = evt_dt.dt.weekday.astype(float)
+            frame["month"] = evt_dt.dt.month.astype(float)
+            frame["day_of_week_raw"] = frame["day_of_week"]
+            frame["month_raw"] = frame["month"]
+            frame["event_id"] = frame.apply(
+                lambda r: f"{ticker.upper()}_{r['event_date']}_{int(r['bar_index'])}",
+                axis=1,
+            )
+
+            rows = frame.to_dict(orient="records")
+            all_rows.extend(rows)
+            log.info(
+                "[%d/%d] %s -> %d labeled rows (running total %d)",
+                idx,
+                n_tickers,
+                ticker,
+                len(rows),
+                len(all_rows),
+            )
+        except Exception as exc:
+            log.warning("Labeled row build failed for %s: %s", ticker, exc)
 
     return all_rows
 
@@ -970,9 +1766,18 @@ def build_inference_row(
     pred_ts = pd.Timestamp(indicators.index[pred_pos]).normalize()
     today = pred_ts.date()
 
+    signal_matrix, indicator_records = _precompute_signal_matrix(indicators)
+
     # ── Signal features ────────────────────────────────────────────────────
     row: Dict[str, Any] = {}
-    row.update(_extract_signal_features_asof(indicators, pred_pos))
+    row.update(_extract_signal_features_asof(indicators, pred_pos, signal_matrix))
+    row.update(
+        _compute_signal_pattern_features_asof(
+            pred_pos=pred_pos,
+            signal_matrix=signal_matrix,
+            indicator_records=indicator_records,
+        )
+    )
 
     # ── Regime ────────────────────────────────────────────────────────────
     rf = regime_frame if regime_frame is not None else pd.DataFrame()
@@ -995,6 +1800,15 @@ def build_inference_row(
         if "turnover_kwd" in ohlcv.columns
         else None
     )
+
+    # ── Entry quality features (explicit, non-prefixed) ──────────────────
+    pred_row = indicators.iloc[pred_pos]
+    row["price_extension_from_20d_low_pct"] = _safe_float(pred_row.get("price_extension_from_20d_low_pct"))
+    row["price_extension_from_60d_low_pct"] = _safe_float(pred_row.get("price_extension_from_60d_low_pct"))
+    row["price_extension_from_120d_low_pct"] = _safe_float(pred_row.get("price_extension_from_120d_low_pct"))
+    row["position_in_60d_range_pct"] = _safe_float(pred_row.get("position_in_60d_range_pct"))
+    row["distance_from_52w_high_pct"] = _safe_float(pred_row.get("distance_from_52w_high_pct"))
+    row["accumulation_compression_days"] = _safe_float(pred_row.get("accumulation_compression_days"))
 
     # ── t0 indicator snapshot ─────────────────────────────────────────────
     for col in indicators.columns:

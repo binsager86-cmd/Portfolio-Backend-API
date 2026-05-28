@@ -1,36 +1,66 @@
 {
-  "auc": 0.7536764705882353,
-  "log_loss": 0.13270651577315623,
-  "calibration_error": 0.11008292107869588,
-  "n_train_events": 365,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.17694694514496276,
+  "mae": 20.513033395087383,
+  "rmse": 23.87971125361087,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 488,
   "train_date_range": {
-    "start": "2023-07-10",
-    "end": "2026-04-29"
+    "start": "2023-07-06",
+    "end": "2026-05-05"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.1769",
   "fold_metrics": [
     {
-      "auc": 0.5073529411764706,
-      "log_loss": 0.26508357126431653,
-      "calibration_max_error": 0.2149466531104669,
-      "calibration_mean_error": 0.14227060857347007,
+      "spearman": 0.9980981454128419,
+      "mae": 4.502144009376958,
+      "rmse": 8.308726251097717,
       "fold": 1,
-      "train_size": 219,
-      "test_size": 36,
-      "best_iteration": 28
+      "train_size": 203,
+      "test_size": 91,
+      "best_iteration": 65
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.00032946028199592846,
-      "calibration_max_error": 0.005219189046924862,
-      "calibration_mean_error": 0.0026381183978045324,
+      "spearman": -0.617033532905936,
+      "mae": 50.65118555503064,
+      "rmse": 51.35225526850949,
+      "fold": 2,
+      "train_size": 294,
+      "test_size": 28,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.4629100498862757,
+      "mae": 11.249203928034131,
+      "rmse": 14.503805218113197,
+      "fold": 3,
+      "train_size": 322,
+      "test_size": 13,
+      "best_iteration": 131
+    },
+    {
+      "spearman": -0.30107526881720426,
+      "mae": 32.83061762600693,
+      "rmse": 34.22441878736008,
+      "fold": 4,
+      "train_size": 335,
+      "test_size": 32,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.34183533214883643,
+      "mae": 3.3320158569882845,
+      "rmse": 11.009350742973878,
       "fold": 5,
-      "train_size": 346,
-      "test_size": 19,
-      "best_iteration": 175
+      "train_size": 367,
+      "test_size": 121,
+      "best_iteration": 3
     }
   ],
   "tier": "per_stock",
   "identifier": "OSOUL",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

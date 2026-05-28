@@ -1,26 +1,48 @@
 {
-  "auc": 1.0,
-  "log_loss": 0.0006615968865321303,
-  "calibration_error": 0.0016087751326465422,
-  "n_train_events": 162,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.057879512568242246,
+  "mae": 2.825539907638447,
+  "rmse": 3.1697342539919187,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-06-15",
-    "end": "2026-04-01"
+    "start": "2023-06-14",
+    "end": "2026-04-23"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.0579",
   "fold_metrics": [
     {
-      "auc": 1.0,
-      "log_loss": 0.0006615968865321303,
-      "calibration_max_error": 0.0016087751326465422,
-      "calibration_mean_error": 0.0008980195896675522,
+      "spearman": 0.4103395126031124,
+      "mae": 5.373005020731447,
+      "rmse": 5.998544087667324,
+      "fold": 2,
+      "train_size": 444,
+      "test_size": 131,
+      "best_iteration": 15
+    },
+    {
+      "spearman": -0.39342628299351556,
+      "mae": 0.26220379095364876,
+      "rmse": 0.5557326230741636,
+      "fold": 3,
+      "train_size": 575,
+      "test_size": 55,
+      "best_iteration": 54
+    },
+    {
+      "spearman": 0.15672530809512988,
+      "mae": 2.8414109112302466,
+      "rmse": 2.9549260512342683,
       "fold": 5,
-      "train_size": 153,
-      "test_size": 9,
-      "best_iteration": 187
+      "train_size": 656,
+      "test_size": 27,
+      "best_iteration": 8
     }
   ],
   "tier": "per_stock",
   "identifier": "AZNOULA",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

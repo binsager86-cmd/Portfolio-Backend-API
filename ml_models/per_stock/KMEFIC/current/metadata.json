@@ -1,46 +1,48 @@
 {
-  "auc": 1.0,
-  "log_loss": 0.09996651415389107,
-  "calibration_error": 0.4034166198408669,
-  "n_train_events": 295,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.9033708673727663,
+  "mae": 20.699666599170605,
+  "rmse": 21.41735274646464,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 352,
   "train_date_range": {
-    "start": "2023-08-17",
-    "end": "2026-04-26"
+    "start": "2023-08-14",
+    "end": "2026-04-23"
   },
   "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 1.0,
-      "log_loss": 0.21684823303718848,
-      "calibration_max_error": 0.4230285624066213,
-      "calibration_mean_error": 0.2745523250757449,
+      "spearman": 0.9666572451020045,
+      "mae": 30.707897547362425,
+      "rmse": 31.984123639876362,
       "fold": 1,
-      "train_size": 177,
-      "test_size": 29,
-      "best_iteration": 27
+      "train_size": 228,
+      "test_size": 19,
+      "best_iteration": 75
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.00034976959002667204,
-      "calibration_max_error": 0.0005275269330138403,
-      "calibration_mean_error": 0.00042873789817604943,
-      "fold": 2,
-      "train_size": 206,
-      "test_size": 30,
-      "best_iteration": 157
-    },
-    {
-      "auc": 1.0,
-      "log_loss": 0.08270153983445806,
-      "calibration_max_error": 0.7866937701829656,
-      "calibration_mean_error": 0.23673080286552003,
+      "spearman": 0.7444563582681727,
+      "mae": 20.389827423546496,
+      "rmse": 21.077329799851032,
       "fold": 3,
-      "train_size": 236,
-      "test_size": 29,
-      "best_iteration": 106
+      "train_size": 254,
+      "test_size": 56,
+      "best_iteration": 40
+    },
+    {
+      "spearman": 0.9989989987481218,
+      "mae": 11.001274826602897,
+      "rmse": 11.190604799666524,
+      "fold": 5,
+      "train_size": 314,
+      "test_size": 38,
+      "best_iteration": 86
     }
   ],
   "tier": "per_stock",
   "identifier": "KMEFIC",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

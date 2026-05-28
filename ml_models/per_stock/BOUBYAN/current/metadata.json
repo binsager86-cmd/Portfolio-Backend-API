@@ -1,26 +1,39 @@
 {
-  "auc": 1.0,
-  "log_loss": 0.0003988994351180439,
-  "calibration_error": 0.0004905275775714036,
-  "n_train_events": 102,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.3685220843571215,
+  "mae": 1.5723137239247964,
+  "rmse": 2.1255538116671753,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 612,
   "train_date_range": {
-    "start": "2024-01-07",
-    "end": "2025-09-23"
+    "start": "2023-08-03",
+    "end": "2026-04-26"
   },
   "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 1.0,
-      "log_loss": 0.0003988994351180439,
-      "calibration_max_error": 0.0004905275775714036,
-      "calibration_mean_error": 0.00033766506175714477,
-      "fold": 3,
-      "train_size": 81,
-      "test_size": 10,
-      "best_iteration": 173
+      "spearman": 0.5584231379345056,
+      "mae": 2.7919944864172126,
+      "rmse": 3.3647550741238605,
+      "fold": 1,
+      "train_size": 389,
+      "test_size": 66,
+      "best_iteration": 18
+    },
+    {
+      "spearman": 0.17862103077973748,
+      "mae": 0.3526329614323802,
+      "rmse": 0.8863525492104904,
+      "fold": 2,
+      "train_size": 455,
+      "test_size": 53,
+      "best_iteration": 83
     }
   ],
   "tier": "per_stock",
   "identifier": "BOUBYAN",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

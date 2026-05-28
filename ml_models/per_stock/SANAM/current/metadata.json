@@ -1,46 +1,57 @@
 {
-  "auc": 0.8142857142857144,
-  "log_loss": 0.6769569946262858,
-  "calibration_error": 0.3757709918595311,
-  "n_train_events": 408,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.5120277281318727,
+  "mae": 19.88053816793337,
+  "rmse": 20.298925946171572,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 595,
   "train_date_range": {
-    "start": "2023-07-16",
-    "end": "2026-04-02"
+    "start": "2023-07-11",
+    "end": "2026-04-20"
   },
   "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 1.0,
-      "log_loss": 0.0005337126569242223,
-      "calibration_max_error": 0.0006336040817586644,
-      "calibration_mean_error": 0.0003405766577501963,
+      "spearman": 0.6742988545672532,
+      "mae": 2.0993701122756976,
+      "rmse": 2.8987694554754633,
       "fold": 1,
-      "train_size": 244,
-      "test_size": 41,
-      "best_iteration": 200
+      "train_size": 398,
+      "test_size": 25,
+      "best_iteration": 223
     },
     {
-      "auc": 0.9428571428571428,
-      "log_loss": 0.9735414097584295,
-      "calibration_max_error": 0.510809742509934,
-      "calibration_mean_error": 0.510809742509934,
+      "spearman": 0.9301632984350037,
+      "mae": 33.15847888652379,
+      "rmse": 33.5101352887061,
       "fold": 2,
-      "train_size": 285,
-      "test_size": 41,
-      "best_iteration": 1
+      "train_size": 423,
+      "test_size": 48,
+      "best_iteration": 2
     },
     {
-      "auc": 0.5,
-      "log_loss": 1.0567958614635033,
-      "calibration_max_error": 0.6158696289869006,
-      "calibration_mean_error": 0.6158696289869006,
+      "spearman": 0.9972852918835005,
+      "mae": 10.738610400888405,
+      "rmse": 11.238982655654016,
+      "fold": 4,
+      "train_size": 491,
+      "test_size": 74,
+      "best_iteration": 11
+    },
+    {
+      "spearman": -0.5536365323582665,
+      "mae": 33.52569327204559,
+      "rmse": 33.547816384850705,
       "fold": 5,
-      "train_size": 387,
-      "test_size": 21,
+      "train_size": 565,
+      "test_size": 30,
       "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "SANAM",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

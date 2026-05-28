@@ -1,46 +1,48 @@
 {
-  "auc": 0.6,
-  "log_loss": 0.47011041379723134,
-  "calibration_error": 0.18489052720255497,
-  "n_train_events": 356,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": -0.474220640011035,
+  "mae": 26.679438511649987,
+  "rmse": 29.525752834950328,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 625,
   "train_date_range": {
-    "start": "2023-07-11",
-    "end": "2026-04-15"
+    "start": "2023-07-10",
+    "end": "2026-04-26"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_-0.4742",
   "fold_metrics": [
     {
-      "auc": 0.8,
-      "log_loss": 0.5821679166542867,
-      "calibration_max_error": 0.005363483089676158,
-      "calibration_mean_error": 0.005363483089676158,
+      "spearman": -0.22186657159864082,
+      "mae": 64.12800965441139,
+      "rmse": 68.52731132074626,
       "fold": 2,
-      "train_size": 249,
-      "test_size": 35,
-      "best_iteration": 17
-    },
-    {
-      "auc": 1.0,
-      "log_loss": 0.12687689739181035,
-      "calibration_max_error": 0.0006323624589446644,
-      "calibration_mean_error": 0.0006323624589446644,
-      "fold": 3,
-      "train_size": 284,
-      "test_size": 36,
-      "best_iteration": 60
-    },
-    {
-      "auc": 0.0,
-      "log_loss": 0.7012864273455971,
-      "calibration_max_error": 0.5486757360590441,
-      "calibration_mean_error": 0.5249853283701802,
-      "fold": 4,
-      "train_size": 320,
-      "test_size": 18,
+      "train_size": 357,
+      "test_size": 136,
       "best_iteration": 1
+    },
+    {
+      "spearman": -0.6166970082435309,
+      "mae": 13.383198005106586,
+      "rmse": 15.157593774176897,
+      "fold": 3,
+      "train_size": 493,
+      "test_size": 89,
+      "best_iteration": 10
+    },
+    {
+      "spearman": -0.5840983401909331,
+      "mae": 2.5271078754319887,
+      "rmse": 4.892353409927827,
+      "fold": 5,
+      "train_size": 596,
+      "test_size": 29,
+      "best_iteration": 58
     }
   ],
   "tier": "per_stock",
   "identifier": "KAMCO",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

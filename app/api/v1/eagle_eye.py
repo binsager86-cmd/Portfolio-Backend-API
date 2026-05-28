@@ -13,6 +13,7 @@ Endpoints:
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import threading
@@ -61,6 +62,8 @@ router = APIRouter(prefix="/eagle-eye", tags=["Eagle Eye"])
 _cache: Dict[str, dict] = {}
 _DNA_CACHE: Dict[str, dict] = {}
 _EVENTS_CACHE: Dict[str, list] = {}
+_DNA_BUILD_LOCK = threading.Lock()
+_DNA_BUILD_IN_PROGRESS: set[str] = set()
 _RECOMPUTE_LOCK = threading.Lock()
 _RECOMPUTE_IN_PROGRESS = False
 _RECOMPUTE_LAST_ATTEMPT_AT = 0.0
@@ -76,6 +79,12 @@ _RECOMPUTE_COOLDOWN_SEC = 300
 _META_MAP_CACHE: Optional[Dict[str, object]] = None
 _META_MAP_CACHE_AT: float = 0.0
 _META_MAP_TTL_SEC: float = 600.0  # 10 minutes
+
+# Fundamentals map: ticker -> {pe_ratio, book_value_per_share, eps}.
+# Built from local tables (stocks + stock_metrics) and refreshed every 10 min.
+_FUNDAMENTALS_MAP_CACHE: Optional[Dict[str, Dict[str, Optional[float]]]] = None
+_FUNDAMENTALS_MAP_CACHE_AT: float = 0.0
+_FUNDAMENTALS_MAP_TTL_SEC: float = 600.0  # 10 minutes
 
 # Scanner response cache: assembled List[RatedStock] held for 30 s so
 # rapid re-fetches (focus events, filter clicks) return instantly.
@@ -108,6 +117,268 @@ def _get_meta_map() -> Dict[str, object]:
         return _META_MAP_CACHE or {}
 
 
+def _normalize_symbol(raw: object) -> str:
+    sym = str(raw or "").upper().strip()
+    if sym.endswith(".KW"):
+        sym = sym[:-3]
+    return sym
+
+
+def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
+    """Return cached ticker fundamentals used by scanner table columns.
+
+    Source priority:
+    1) TickerChart QuotesSnapShot (P/E, LTM EPS, BVPS)
+    2) ``stocks.pe_ratio``
+    3) Latest ``stock_metrics`` values for:
+         - "Book Value / Share"
+         - "EPS" (used to derive P/E when direct PE is missing)
+    4) Latest ``ml_fundamentals`` snapshot (fills remaining gaps)
+    """
+    global _FUNDAMENTALS_MAP_CACHE, _FUNDAMENTALS_MAP_CACHE_AT
+
+    now = time.time()
+    if (
+        _FUNDAMENTALS_MAP_CACHE is not None
+        and (now - _FUNDAMENTALS_MAP_CACHE_AT) < _FUNDAMENTALS_MAP_TTL_SEC
+    ):
+        return _FUNDAMENTALS_MAP_CACHE
+
+    fmap: Dict[str, Dict[str, Optional[float]]] = {}
+
+    try:
+        from app.core.database import column_exists, query_all
+        from app.services import tickerchart_service as tc
+
+        # Primary source: TickerChart QuotesSnapShot fundamentals.
+        # Scanner universe is Kuwait-focused, so symbols are resolved as KSE.
+        for raw_ticker in _get_meta_map().keys():
+            ticker = _normalize_symbol(raw_ticker)
+            if not ticker:
+                continue
+
+            fmap.setdefault(
+                ticker,
+                {
+                    "pe_ratio": None,
+                    "book_value_per_share": None,
+                    "eps": None,
+                },
+            )
+
+            try:
+                pe_val = _safe_float(tc.read_quotes_snapshot_pe(ticker, "KSE"))
+                eps_val = _safe_float(tc.read_quotes_snapshot_ltm_eps(ticker, "KSE", price_divisor=1000.0))
+                bvps_val = _safe_float(tc.read_quotes_snapshot_bvps(ticker, "KSE", price_divisor=1000.0))
+            except Exception as exc:
+                logger.debug("TickerChart snapshot fundamentals unavailable for %s: %s", ticker, exc)
+                continue
+
+            if pe_val is not None:
+                fmap[ticker]["pe_ratio"] = pe_val
+            if eps_val is not None:
+                fmap[ticker]["eps"] = eps_val
+            if bvps_val is not None:
+                fmap[ticker]["book_value_per_share"] = bvps_val
+
+        has_stocks_symbol = column_exists("stocks", "symbol")
+        has_stocks_pe = column_exists("stocks", "pe_ratio")
+
+        if has_stocks_symbol:
+            pe_select = "pe_ratio" if has_stocks_pe else "NULL AS pe_ratio"
+            rows = query_all(f"SELECT symbol, {pe_select} FROM stocks", ())
+            for r in rows or []:
+                ticker = _normalize_symbol(r.get("symbol"))
+                if not ticker:
+                    continue
+                fmap.setdefault(
+                    ticker,
+                    {
+                        "pe_ratio": None,
+                        "book_value_per_share": None,
+                        "eps": None,
+                    },
+                )
+                pe_val = _safe_float(r.get("pe_ratio"))
+                if fmap[ticker].get("pe_ratio") is None and pe_val is not None:
+                    fmap[ticker]["pe_ratio"] = pe_val
+
+        # Pull latest EPS + BVPS per ticker from stock_metrics.
+        has_metric_name = column_exists("stock_metrics", "metric_name")
+        has_metric_value = column_exists("stock_metrics", "metric_value")
+        has_metric_stock_id = column_exists("stock_metrics", "stock_id")
+        has_metric_id = column_exists("stock_metrics", "id")
+        has_metric_period_end = column_exists("stock_metrics", "period_end_date")
+        has_metric_year = column_exists("stock_metrics", "fiscal_year")
+        has_metric_q = column_exists("stock_metrics", "fiscal_quarter")
+        has_metric_created = column_exists("stock_metrics", "created_at")
+        has_stocks_id = column_exists("stocks", "id")
+
+        def _merge_metric_rows(rows: list) -> None:
+            for r in rows or []:
+                ticker = _normalize_symbol(r.get("symbol"))
+                if not ticker:
+                    continue
+                metric_name = str(r.get("metric_name") or "").lower().strip()
+                metric_val = _safe_float(r.get("metric_value"))
+                if metric_val is None:
+                    continue
+
+                fmap.setdefault(
+                    ticker,
+                    {
+                        "pe_ratio": None,
+                        "book_value_per_share": None,
+                        "eps": None,
+                    },
+                )
+                if metric_name == "book value / share":
+                    if fmap[ticker].get("book_value_per_share") is None:
+                        fmap[ticker]["book_value_per_share"] = metric_val
+                elif metric_name == "eps":
+                    if fmap[ticker].get("eps") is None:
+                        fmap[ticker]["eps"] = metric_val
+
+        has_metrics_table = (
+            has_metric_name
+            and has_metric_value
+            and has_metric_stock_id
+            and has_metric_id
+            and has_metric_period_end
+            and has_metric_year
+            and has_metric_q
+            and has_metric_created
+        )
+
+        if has_metrics_table and has_stocks_symbol and has_stocks_id:
+            metric_rows = query_all(
+                """
+                WITH ranked AS (
+                    SELECT
+                        s.symbol AS symbol,
+                        LOWER(sm.metric_name) AS metric_name,
+                        sm.metric_value AS metric_value,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY s.symbol, LOWER(sm.metric_name)
+                            ORDER BY
+                                COALESCE(sm.period_end_date, '') DESC,
+                                COALESCE(sm.fiscal_year, 0) DESC,
+                                COALESCE(sm.fiscal_quarter, 0) DESC,
+                                COALESCE(sm.created_at, 0) DESC,
+                                sm.id DESC
+                        ) AS rn
+                    FROM stock_metrics sm
+                    JOIN stocks s ON s.id = sm.stock_id
+                    WHERE LOWER(sm.metric_name) IN ('book value / share', 'eps')
+                )
+                SELECT symbol, metric_name, metric_value
+                FROM ranked
+                WHERE rn = 1
+                """,
+                (),
+            )
+            _merge_metric_rows(metric_rows)
+
+        has_master_id = column_exists("stocks_master", "id")
+        has_master_ticker = column_exists("stocks_master", "ticker")
+        if has_metrics_table and has_master_id and has_master_ticker:
+            metric_rows_master = query_all(
+                """
+                WITH ranked AS (
+                    SELECT
+                        smt.ticker AS symbol,
+                        LOWER(sm.metric_name) AS metric_name,
+                        sm.metric_value AS metric_value,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY smt.ticker, LOWER(sm.metric_name)
+                            ORDER BY
+                                COALESCE(sm.period_end_date, '') DESC,
+                                COALESCE(sm.fiscal_year, 0) DESC,
+                                COALESCE(sm.fiscal_quarter, 0) DESC,
+                                COALESCE(sm.created_at, 0) DESC,
+                                sm.id DESC
+                        ) AS rn
+                    FROM stock_metrics sm
+                    JOIN stocks_master smt ON smt.id = sm.stock_id
+                    WHERE LOWER(sm.metric_name) IN ('book value / share', 'eps')
+                )
+                SELECT symbol, metric_name, metric_value
+                FROM ranked
+                WHERE rn = 1
+                """,
+                (),
+            )
+            _merge_metric_rows(metric_rows_master)
+
+        # Fill any remaining gaps from latest ml_fundamentals snapshots.
+        has_mlf_ticker = column_exists("ml_fundamentals", "stock_ticker")
+        has_mlf_disclosure = column_exists("ml_fundamentals", "disclosure_date")
+        has_mlf_id = column_exists("ml_fundamentals", "id")
+        has_mlf_period_end = column_exists("ml_fundamentals", "period_end_date")
+        has_mlf_created = column_exists("ml_fundamentals", "created_at")
+        has_mlf_pe = column_exists("ml_fundamentals", "pe_ratio")
+        has_mlf_eps = column_exists("ml_fundamentals", "eps")
+        has_mlf_bvps = column_exists("ml_fundamentals", "book_value_per_share")
+
+        if has_mlf_ticker and has_mlf_disclosure and has_mlf_id:
+            mlf_rows = query_all(
+                f"""
+                WITH ranked AS (
+                    SELECT
+                        stock_ticker AS symbol,
+                        {'pe_ratio' if has_mlf_pe else 'NULL'} AS pe_ratio,
+                        {'eps' if has_mlf_eps else 'NULL'} AS eps,
+                        {'book_value_per_share' if has_mlf_bvps else 'NULL'} AS book_value_per_share,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY UPPER(TRIM(stock_ticker))
+                            ORDER BY
+                                COALESCE(disclosure_date, '') DESC,
+                                COALESCE({'period_end_date' if has_mlf_period_end else "''"}, '') DESC,
+                                COALESCE({'created_at' if has_mlf_created else "''"}, '') DESC,
+                                id DESC
+                        ) AS rn
+                    FROM ml_fundamentals
+                )
+                SELECT symbol, pe_ratio, eps, book_value_per_share
+                FROM ranked
+                WHERE rn = 1
+                """,
+                (),
+            )
+
+            for r in mlf_rows or []:
+                ticker = _normalize_symbol(r.get("symbol"))
+                if not ticker:
+                    continue
+
+                fmap.setdefault(
+                    ticker,
+                    {
+                        "pe_ratio": None,
+                        "book_value_per_share": None,
+                        "eps": None,
+                    },
+                )
+
+                pe_val = _safe_float(r.get("pe_ratio"))
+                eps_val = _safe_float(r.get("eps"))
+                bvps_val = _safe_float(r.get("book_value_per_share"))
+
+                if fmap[ticker].get("pe_ratio") is None and pe_val is not None:
+                    fmap[ticker]["pe_ratio"] = pe_val
+                if fmap[ticker].get("eps") is None and eps_val is not None:
+                    fmap[ticker]["eps"] = eps_val
+                if fmap[ticker].get("book_value_per_share") is None and bvps_val is not None:
+                    fmap[ticker]["book_value_per_share"] = bvps_val
+
+        _FUNDAMENTALS_MAP_CACHE = fmap
+        _FUNDAMENTALS_MAP_CACHE_AT = now
+        return fmap
+    except Exception as exc:
+        logger.warning("Could not refresh fundamentals map; using stale cache or empty dict: %s", exc)
+        return _FUNDAMENTALS_MAP_CACHE or {}
+
+
 def _cache_key(ticker: str, as_of: Optional[date] = None) -> str:
     d = (as_of or date.today()).isoformat()
     return f"{ticker.upper()}:{d}"
@@ -123,6 +394,104 @@ def _safe_float(v) -> Optional[float]:
         return None if (math.isnan(f) or math.isinf(f)) else f
     except (TypeError, ValueError):
         return None
+
+
+def _build_live_feature_vector(feature_row: Dict[str, object], feature_names: List[str]) -> List[float]:
+    """Build a model-ordered feature vector from a live feature row."""
+    out: List[float] = []
+    for name in feature_names:
+        val = feature_row.get(name)
+        fv = _safe_float(val)
+        out.append(float("nan") if fv is None else float(fv))
+    return out
+
+
+def _predict_ml_signal(ticker: str, ohlcv_df, as_of: date) -> Optional[Dict[str, float]]:
+    """Resolve best model tier and return BUY/HOLD/SELL probabilities.
+
+    Returns payload:
+      {"buy": 0.0-1.0, "hold": 0.0-1.0, "sell": 0.0-1.0,
+       "signal": "BUY|HOLD|SELL", "confidence": 0.0-100.0}
+    """
+    try:
+        import pandas as pd
+
+        from app.services.eagle_eye.ml.feature_builder import build_inference_row
+        from app.services.eagle_eye.ml.model_store import load_feature_names
+        from app.services.eagle_eye.ml.tier_resolver import resolve_model_for_ticker
+
+        bundle = resolve_model_for_ticker(ticker)
+        if bundle is None or bundle.model is None:
+            return None
+
+        feature_row = build_inference_row(ticker=ticker, ohlcv=ohlcv_df, T=as_of)
+        if feature_row is None:
+            return None
+
+        try:
+            feature_names = load_feature_names(tier=bundle.tier, identifier=bundle.identifier)
+        except Exception:
+            feature_names = list(bundle.feature_list or [])
+
+        if not feature_names:
+            return None
+
+        vector = _build_live_feature_vector(feature_row, feature_names)
+        X_live = pd.DataFrame([vector], columns=feature_names)
+        raw_pred = bundle.model.predict(X_live)
+        pred_arr = np.asarray(raw_pred, dtype=float)
+
+        # Multiclass model output: [P(SELL), P(HOLD), P(BUY)]
+        if pred_arr.ndim == 2 and pred_arr.shape[1] >= 3:
+            proba = pred_arr[0]
+            sell = float(max(0.0, min(1.0, proba[0])))
+            hold = float(max(0.0, min(1.0, proba[1])))
+            buy = float(max(0.0, min(1.0, proba[2])))
+        elif pred_arr.ndim == 1 and pred_arr.size >= 3 and pred_arr.size % 3 == 0:
+            proba = pred_arr.reshape(-1, 3)[0]
+            sell = float(max(0.0, min(1.0, proba[0])))
+            hold = float(max(0.0, min(1.0, proba[1])))
+            buy = float(max(0.0, min(1.0, proba[2])))
+        else:
+            # Compatibility path for legacy scalar bundles.
+            scalar = float(pred_arr.ravel()[0])
+            if bundle.calibrator is not None and 0.0 <= scalar <= 1.0:
+                try:
+                    scalar = float(bundle.calibrator.predict(np.asarray([scalar], dtype=float))[0])
+                except Exception:
+                    pass
+            buy = float(np.clip(scalar if 0.0 <= scalar <= 1.0 else scalar / 100.0, 0.0, 1.0))
+            hold = float(max(0.0, 1.0 - buy))
+            sell = 0.0
+
+        total = buy + hold + sell
+        if total > 0:
+            buy /= total
+            hold /= total
+            sell /= total
+
+        signal_idx = int(np.argmax([sell, hold, buy]))
+        signal = ["SELL", "HOLD", "BUY"][signal_idx]
+        confidence = [sell, hold, buy][signal_idx] * 100.0
+
+        return {
+            "buy": float(round(buy, 6)),
+            "hold": float(round(hold, 6)),
+            "sell": float(round(sell, 6)),
+            "signal": signal,
+            "confidence": float(round(confidence, 2)),
+        }
+    except Exception as exc:
+        logger.debug("ML inference failed for %s: %s", ticker, exc)
+        return None
+
+
+def _predict_ml_opportunity_score(ticker: str, ohlcv_df, as_of: date) -> Optional[float]:
+    """Compatibility wrapper: expose BUY probability as 0-100 score."""
+    proba = _predict_ml_signal(ticker, ohlcv_df, as_of)
+    if proba is None:
+        return None
+    return round(float(np.clip(float(proba.get("buy", 0.0)) * 100.0, 0.0, 100.0)), 2)
 
 
 def _build_threshold_profile_response(
@@ -250,6 +619,40 @@ def _trigger_eagle_eye_recompute(reason: str, *, force: bool = False) -> bool:
         return False
 
 
+def _trigger_dna_build(ticker: str, cache_key: str) -> bool:
+    """Best-effort background DNA build for a single ticker."""
+    with _DNA_BUILD_LOCK:
+        if ticker in _DNA_BUILD_IN_PROGRESS:
+            logger.info("DNA build already in progress for %s", ticker)
+            return False
+        _DNA_BUILD_IN_PROGRESS.add(ticker)
+
+    def _runner() -> None:
+        try:
+            from app.services.eagle_eye.ingest import build_dna_for_ticker
+
+            rebuilt = build_dna_for_ticker(ticker)
+            if rebuilt is not None:
+                _DNA_CACHE.pop(cache_key, None)
+                logger.info("Background DNA build finished for %s", ticker)
+            else:
+                logger.info("Background DNA build found insufficient data for %s", ticker)
+        except Exception:
+            logger.exception("Background DNA build failed for %s", ticker)
+        finally:
+            with _DNA_BUILD_LOCK:
+                _DNA_BUILD_IN_PROGRESS.discard(ticker)
+
+    thread = threading.Thread(
+        target=_runner,
+        daemon=True,
+        name=f"ee_dna_{ticker}",
+    )
+    thread.start()
+    logger.info("Background DNA build triggered for %s", ticker)
+    return True
+
+
 # ---------------------------------------------------------------------------
 # Shared analysis helper
 # ---------------------------------------------------------------------------
@@ -268,14 +671,49 @@ def _run_analysis(ticker: str) -> Optional[dict]:
 
     # ── DB fast path: today's pre-computed rating ──
     try:
-        from app.services.eagle_eye.store import load_rating
+        from app.services.eagle_eye.rating_engine import (
+            compute_confidence,
+            compute_rating,
+            is_stock_active,
+            validate_and_adjust_ml_score,
+        )
+        from app.services.eagle_eye.store import load_ohlcv, load_rating
 
         cached_row = load_rating(ticker)
         if cached_row and cached_row.get("computed_at") == date.today().isoformat():
+            ohlcv_cached = load_ohlcv(ticker)
+            if ohlcv_cached is None or len(ohlcv_cached) == 0:
+                raise ValueError(f"Missing cached OHLCV for {ticker}")
+            if not is_stock_active(ticker, ohlcv_cached):
+                return None
+
             indicators = cached_row.get("indicators_json") or {}
             if isinstance(indicators, str):
                 import json
                 indicators = json.loads(indicators)
+
+            if not isinstance(indicators, dict):
+                indicators = {}
+
+            cached_ml_score = _safe_float(cached_row.get("ml_score"))
+            if cached_ml_score is not None:
+                adjusted_ml = validate_and_adjust_ml_score(
+                    cached_ml_score,
+                    indicators,
+                    ohlcv_cached,
+                    ticker,
+                )
+                confidence_cap = compute_confidence(
+                    indicators,
+                    str(cached_row.get("stage") or "DORMANT"),
+                    dna=None,
+                    ml_score=adjusted_ml,
+                )
+                cached_conf = _safe_float(cached_row.get("confidence")) or 0.0
+                cached_row["ml_score"] = adjusted_ml
+                cached_row["confidence"] = round(min(cached_conf, confidence_cap), 2)
+                cached_row["rating"] = compute_rating(float(cached_row["confidence"]))
+
             supports = cached_row.get("supports_json") or []
             resistances = cached_row.get("resistances_json") or []
             entry = {
@@ -317,6 +755,7 @@ def _run_analysis(ticker: str) -> Optional[dict]:
                 "stage": cached_row.get("stage"),
                 "rating": cached_row.get("rating"),
                 "confidence": cached_row.get("confidence"),
+                "ml_score": cached_row.get("ml_score"),
                 "thesis": cached_row.get("thesis"),
                 "supports": supports,
                 "resistances": resistances,
@@ -339,9 +778,12 @@ def _run_analysis(ticker: str) -> Optional[dict]:
             compute_confidence,
             compute_entry_stop_targets,
             compute_rating,
+            compute_rating_from_proba,
             compute_support_resistance,
             compute_volume_context,
             generate_thesis,
+            is_stock_active,
+            validate_and_adjust_ml_score,
         )
 
         adapter = TickerChartAdapter()
@@ -351,6 +793,8 @@ def _run_analysis(ticker: str) -> Optional[dict]:
         df = adapter.get_ohlcv_daily(ticker, start_d, end_d)
         if df is None or len(df) < 30:
             return None
+        if not is_stock_active(ticker, df):
+            return None
 
         indicators_df = compute_all_indicators(df)
         if indicators_df is None or len(indicators_df) == 0:
@@ -359,21 +803,42 @@ def _run_analysis(ticker: str) -> Optional[dict]:
         latest = indicators_df.iloc[-1].to_dict()
 
         stage = classify_stage(latest)
-        confidence = compute_confidence(latest, stage, dna=None)
+        ml_proba = _predict_ml_signal(ticker, df, end_d)
+        ml_score = None
+        if ml_proba is not None:
+            raw_buy_conf = float(ml_proba.get("buy", 0.0)) * 100.0
+            adjusted_buy_conf = validate_and_adjust_ml_score(raw_buy_conf, latest, df, ticker)
+            ml_proba["buy"] = max(0.0, min(1.0, adjusted_buy_conf / 100.0))
+
+            total = float(ml_proba.get("buy", 0.0) + ml_proba.get("hold", 0.0) + ml_proba.get("sell", 0.0))
+            if total > 0:
+                ml_proba["buy"] = float(ml_proba.get("buy", 0.0) / total)
+                ml_proba["hold"] = float(ml_proba.get("hold", 0.0) / total)
+                ml_proba["sell"] = float(ml_proba.get("sell", 0.0) / total)
+
+            ml_score = round(float(ml_proba["buy"] * 100.0), 2)
+
+        confidence = compute_confidence(
+            latest,
+            stage,
+            dna=None,
+            ml_score=ml_score,
+            ml_proba=ml_proba,
+        )
 
         # Volume context + confidence multiplier
         volume_context = compute_volume_context(df, stage)
         _tier = volume_context["liquidity_tier"]
-        _LMUL = {"ILLIQUID": 0.50, "WATCH_ONLY": 0.70}
+        _LMUL = {"ILLIQUID": 0.75, "WATCH_ONLY": 0.85}
         if _tier in _LMUL:
             confidence = confidence * _LMUL[_tier]
         elif not volume_context["is_volume_confirmed"]:
-            confidence = confidence * 0.85
+            confidence = confidence * 0.95
         elif volume_context["relative_volume_percentile"] > 80:
             confidence = min(confidence * 1.10, 100)
         confidence = round(min(confidence, 100), 2)
 
-        rating = compute_rating(confidence)
+        rating = compute_rating_from_proba(ml_proba, confidence)
         sr = compute_support_resistance(df, latest)
         et = compute_entry_stop_targets(df, latest, sr, stage=stage)
         thesis = generate_thesis(ticker, rating, stage, latest, dna=None, top_signals_fired=[])
@@ -383,6 +848,8 @@ def _run_analysis(ticker: str) -> Optional[dict]:
             "stage": stage,
             "rating": rating,
             "confidence": confidence,
+            "ml_score": ml_score,
+            "ml_proba": ml_proba,
             "thesis": thesis,
             "supports": sr.get("supports", []),
             "resistances": sr.get("resistances", []),
@@ -446,7 +913,8 @@ async def get_scanner(
     # The background warmup (started at app startup) populates ee_ratings_cache.
     # Return warming_up immediately when cache is cold so the UI stays responsive.
     try:
-        from app.services.eagle_eye.store import load_all_ratings
+        from app.services.eagle_eye.rating_engine import is_stock_active
+        from app.services.eagle_eye.store import load_all_ratings, load_ohlcv
 
         db_rows = load_all_ratings(min_confidence=min_confidence, limit=limit)
         if not db_rows:
@@ -457,6 +925,7 @@ async def get_scanner(
 
         # ── Use cached meta map (rebuilt at most every 10 min) ───────────────
         meta_map = _get_meta_map()
+        fundamentals_map = _get_fundamentals_map()
 
         results: List[RatedStock] = []
         for row in db_rows:
@@ -473,6 +942,22 @@ async def get_scanner(
 
             conf = float(row.get("confidence") or 0.0)
 
+            if row.get("ml_score") is not None and conf > 60.0:
+                try:
+                    live_df = load_ohlcv(t)
+                    if not is_stock_active(t, live_df):
+                        continue
+                    if live_df is not None and len(live_df) >= 20:
+                        low_20d = _safe_float(live_df["low"].tail(20).min())
+                        close_now = _safe_float(live_df["close"].iloc[-1])
+                        if low_20d is not None and close_now is not None and low_20d > 0:
+                            ext_20d = (close_now / low_20d - 1.0) * 100.0
+                            if ext_20d > 30.0:
+                                conf = min(conf, 30.0)
+                                row["rating"] = "HOLD"
+                except Exception as exc:
+                    logger.debug("Scanner safety recheck skipped for %s: %s", t, exc)
+
             vc_raw = row.get("volume_context") or {}
             vc_summary = VolumeContextSummary(
                 relative_volume=float(vc_raw.get("relative_volume") or 1.0),
@@ -481,6 +966,17 @@ async def get_scanner(
                 volume_character=str(vc_raw.get("volume_character") or "NEUTRAL"),
                 volume_trend_5d=str(vc_raw.get("volume_trend_5d") or "NEUTRAL"),
             ) if vc_raw else None
+
+            fmeta = fundamentals_map.get(t, {})
+            bvps = _safe_float(fmeta.get("book_value_per_share"))
+            pe_ratio = _safe_float(fmeta.get("pe_ratio"))
+
+            # Derive P/E from latest scanner price and EPS when direct PE is missing.
+            if pe_ratio is None:
+                eps_latest = _safe_float(fmeta.get("eps"))
+                last_price = _safe_float(row.get("last_price"))
+                if eps_latest is not None and eps_latest > 0 and last_price is not None:
+                    pe_ratio = last_price / eps_latest
 
             results.append(RatedStock(
                 ticker=t,
@@ -494,6 +990,8 @@ async def get_scanner(
                 stop_loss=row.get("stop_loss"),
                 tp1=row.get("tp1"),
                 last_price=row.get("last_price"),
+                book_value_per_share=round(bvps, 3) if bvps is not None else None,
+                pe_ratio=round(pe_ratio, 2) if pe_ratio is not None else None,
                 computed_at=row.get("computed_at"),
                 volume_context=vc_summary,
             ))
@@ -677,6 +1175,9 @@ async def _get_stock_dna_inner(t: str, cache_key: str, load_dna):
             or "window_profiles" not in stored
             or "setup_examples" not in stored
             or "default_window_days" not in stored
+            # New per-stock ML fields (added with multi-horizon upgrade).
+            # Force a DNA rebuild for any stored entry that pre-dates this.
+            or "optimal_hold_window_days" not in stored
         )
     )
 
@@ -695,21 +1196,22 @@ async def _get_stock_dna_inner(t: str, cache_key: str, load_dna):
                 break
 
     if stored is None or needs_refresh:
-        # DNA not in DB — compute on-demand in a thread to avoid blocking the event loop
-        import asyncio
-
-        from app.services.eagle_eye.ingest import build_dna_for_ticker
-
-        logger.info("Building DNA on-demand for %s", t)
-        loop = asyncio.get_event_loop()
-        try:
-            rebuilt = await loop.run_in_executor(None, build_dna_for_ticker, t)
-            if rebuilt is not None:
-                stored = rebuilt
-        except Exception as exc:
-            logger.warning("On-demand DNA build failed for %s: %s", t, exc)
-            if stored is None:
-                stored = None
+        build_started = _trigger_dna_build(t, cache_key)
+        if stored is None:
+            message = (
+                f"Computing Behavioral DNA for {t}. Check back shortly."
+                if build_started
+                else f"Behavioral DNA for {t} is still computing. Check back shortly."
+            )
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "status": "pending",
+                    "message": message,
+                    "ticker": t,
+                },
+            )
+        logger.info("Serving stored DNA for %s while background refresh runs", t)
 
     if stored is None:
         return JSONResponse(
@@ -1425,7 +1927,7 @@ async def get_market_regime(
     ):
         return RegimeResponse(**_REGIME_RESP_CACHE)
 
-    try:
+    def _compute_regime_response() -> RegimeResponse:
         import json
 
         from app.core.database import query_all
@@ -1443,6 +1945,7 @@ async def get_market_regime(
                 regime="NEUTRAL",
                 last_updated=datetime.utcnow().date().isoformat(),
             )
+
         sample_tickers = [meta.ticker.upper() for meta in stocks_meta[:30]]
         indicators_map: dict[str, dict] = {}
         if sample_tickers:
@@ -1494,7 +1997,7 @@ async def get_market_regime(
         else:
             regime = "NEUTRAL"
 
-        response = RegimeResponse(
+        return RegimeResponse(
             status="ok",
             regime=regime,
             breadth_pct_above_50ma=breadth_pct,
@@ -1502,6 +2005,9 @@ async def get_market_regime(
             pmi_trend="neutral",
             last_updated=datetime.utcnow().date().isoformat(),
         )
+
+    try:
+        response = await asyncio.to_thread(_compute_regime_response)
         _REGIME_RESP_CACHE = response.model_dump()
         _REGIME_RESP_CACHE_AT = now
         return response

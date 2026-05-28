@@ -99,6 +99,10 @@ def save_model_bundle(
     with (bundle / "feature_list.json").open("w", encoding="utf-8") as f:
         json.dump(feature_list, f, indent=2)
 
+    # Keep a second canonical name for live-inference callers.
+    with (bundle / "feature_names.json").open("w", encoding="utf-8") as f:
+        json.dump(feature_list, f, indent=2)
+
     payload = dict(metadata)
     payload.update({"tier": tier, "identifier": identifier, "version": version_name})
     with (bundle / "metadata.json").open("w", encoding="utf-8") as f:
@@ -114,7 +118,8 @@ def save_model_bundle(
     current = _current_dir(root, tier, identifier)
     if current.exists():
         shutil.rmtree(current, ignore_errors=True)
-    shutil.copytree(bundle, current)
+    # dirs_exist_ok=True handles Windows file-lock edge cases where rmtree silently fails.
+    shutil.copytree(bundle, current, dirs_exist_ok=True)
 
     return bundle
 
@@ -135,6 +140,7 @@ def load_model_bundle(
 
     meta_path = path / "metadata.json"
     feats_path = path / "feature_list.json"
+    names_path = path / "feature_names.json"
     model_path = path / "model.lgb"
     cal_path = path / "calibrator.pkl"
 
@@ -145,6 +151,8 @@ def load_model_bundle(
     feature_list: List[str] = []
     if feats_path.exists():
         feature_list = json.loads(feats_path.read_text(encoding="utf-8"))
+    elif names_path.exists():
+        feature_list = json.loads(names_path.read_text(encoding="utf-8"))
 
     model = lgb.Booster(model_file=str(model_path)) if model_path.exists() else None
     calibrator = joblib.load(cal_path) if cal_path.exists() else None
@@ -191,3 +199,36 @@ def latest_report_summary(models_root: Optional[Path | str] = None) -> Optional[
     if not summary.exists():
         return None
     return json.loads(summary.read_text(encoding="utf-8"))
+
+
+def load_feature_names(
+    *,
+    tier: str = "global",
+    identifier: str = "baseline",
+    models_root: Optional[Path | str] = None,
+) -> List[str]:
+    """Load saved feature names for a model bundle, with global fallback."""
+    root = get_models_root(models_root)
+
+    def _read_names(path: Path) -> Optional[List[str]]:
+        names_file = path / "feature_names.json"
+        feats_file = path / "feature_list.json"
+        if names_file.exists():
+            return json.loads(names_file.read_text(encoding="utf-8"))
+        if feats_file.exists():
+            return json.loads(feats_file.read_text(encoding="utf-8"))
+        return None
+
+    primary = _current_dir(root, tier, identifier)
+    names = _read_names(primary)
+    if names:
+        return names
+
+    fallback = _current_dir(root, "global", "baseline")
+    names = _read_names(fallback)
+    if names:
+        return names
+
+    raise FileNotFoundError(
+        f"No feature names found for {tier}/{identifier} or global/baseline"
+    )

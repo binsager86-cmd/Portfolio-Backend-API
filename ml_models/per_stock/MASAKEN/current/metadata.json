@@ -1,56 +1,48 @@
 {
-  "auc": 0.6818181818181819,
-  "log_loss": 0.47436666560995455,
-  "calibration_error": 0.37077942614403686,
-  "n_train_events": 306,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.4999008231667324,
+  "mae": 18.233128837283125,
+  "rmse": 20.079787147641504,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 352,
   "train_date_range": {
-    "start": "2023-06-18",
-    "end": "2025-08-11"
+    "start": "2023-06-15",
+    "end": "2025-08-10"
   },
   "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 0.7272727272727273,
-      "log_loss": 0.5624970964544928,
-      "calibration_max_error": 0.7193327831823112,
-      "calibration_mean_error": 0.4185943273884429,
-      "fold": 1,
-      "train_size": 183,
-      "test_size": 31,
-      "best_iteration": 3
+      "spearman": NaN,
+      "mae": 26.88260868971055,
+      "rmse": 28.111363342225214,
+      "fold": 3,
+      "train_size": 253,
+      "test_size": 64,
+      "best_iteration": 1
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.00722177480412622,
-      "calibration_max_error": 0.007340663643061185,
-      "calibration_mean_error": 0.006252778497029184,
-      "fold": 2,
-      "train_size": 214,
-      "test_size": 30,
-      "best_iteration": 137
-    },
-    {
-      "auc": 0.0,
-      "log_loss": 1.326377558805537,
-      "calibration_max_error": 0.7519956903746638,
-      "calibration_mean_error": 0.5324683781742137,
+      "spearman": 0.0,
+      "mae": 19.735781002963225,
+      "rmse": 23.936935358253574,
       "fold": 4,
-      "train_size": 275,
-      "test_size": 15,
-      "best_iteration": 3
+      "train_size": 317,
+      "test_size": 3,
+      "best_iteration": 27
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.0013702323756622148,
-      "calibration_max_error": 0.004448567376111212,
-      "calibration_mean_error": 0.002394660954226984,
+      "spearman": 0.9998016463334648,
+      "mae": 8.080996819175605,
+      "rmse": 8.191062742445721,
       "fold": 5,
-      "train_size": 290,
-      "test_size": 16,
-      "best_iteration": 180
+      "train_size": 320,
+      "test_size": 32,
+      "best_iteration": 45
     }
   ],
   "tier": "per_stock",
   "identifier": "MASAKEN",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

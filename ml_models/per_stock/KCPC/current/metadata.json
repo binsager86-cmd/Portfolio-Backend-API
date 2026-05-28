@@ -1,36 +1,48 @@
 {
-  "auc": 1.0,
-  "log_loss": 0.0004827945799184113,
-  "calibration_error": 0.0009248528512123559,
-  "n_train_events": 169,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.5283665772206168,
+  "mae": 4.509236522635604,
+  "rmse": 4.819744147328811,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 467,
   "train_date_range": {
-    "start": "2023-07-17",
-    "end": "2026-05-10"
+    "start": "2023-07-16",
+    "end": "2026-05-07"
   },
   "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 1.0,
-      "log_loss": 0.0008675867101388398,
-      "calibration_max_error": 0.0017074741784749436,
-      "calibration_mean_error": 0.0008668568402454271,
-      "fold": 4,
-      "train_size": 152,
-      "test_size": 8,
-      "best_iteration": 200
+      "spearman": 0.6590732205454571,
+      "mae": 1.268755140837104,
+      "rmse": 1.759320261100207,
+      "fold": 1,
+      "train_size": 323,
+      "test_size": 40,
+      "best_iteration": 166
     },
     {
-      "auc": 1.0,
-      "log_loss": 9.80024496979828e-05,
-      "calibration_max_error": 0.00014223152394976805,
-      "calibration_mean_error": 0.0001137952808769064,
+      "spearman": 0.3666666666666667,
+      "mae": 11.451797073275893,
+      "rmse": 11.820101904997106,
+      "fold": 2,
+      "train_size": 363,
+      "test_size": 41,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.5593598444497264,
+      "mae": 0.8071573537938147,
+      "rmse": 0.87981027588912,
       "fold": 5,
-      "train_size": 160,
-      "test_size": 9,
-      "best_iteration": 200
+      "train_size": 450,
+      "test_size": 17,
+      "best_iteration": 77
     }
   ],
   "tier": "per_stock",
   "identifier": "KCPC",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

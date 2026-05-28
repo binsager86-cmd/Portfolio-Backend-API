@@ -1,26 +1,39 @@
 {
-  "auc": 0.8,
-  "log_loss": 0.7485383046134566,
-  "calibration_error": 0.8602125536642223,
-  "n_train_events": 205,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": -0.04786212776964971,
+  "mae": 4.8332756309985125,
+  "rmse": 5.075268838339089,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 665,
   "train_date_range": {
-    "start": "2023-06-19",
-    "end": "2026-04-08"
+    "start": "2023-06-18",
+    "end": "2026-04-26"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_-0.0479",
   "fold_metrics": [
     {
-      "auc": 0.8,
-      "log_loss": 0.7485383046134566,
-      "calibration_max_error": 0.8602125536642223,
-      "calibration_mean_error": 0.46211827136388434,
+      "spearman": -0.3620930918579043,
+      "mae": 9.10410199601519,
+      "rmse": 9.449886172032588,
+      "fold": 1,
+      "train_size": 462,
+      "test_size": 61,
+      "best_iteration": 12
+    },
+    {
+      "spearman": 0.26636883631860486,
+      "mae": 0.5624492659818354,
+      "rmse": 0.7006515046455897,
       "fold": 5,
-      "train_size": 194,
-      "test_size": 11,
-      "best_iteration": 15
+      "train_size": 640,
+      "test_size": 25,
+      "best_iteration": 95
     }
   ],
   "tier": "per_stock",
   "identifier": "BURG",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

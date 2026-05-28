@@ -1,26 +1,39 @@
 {
-  "auc": 1.0,
-  "log_loss": 0.5353955570726635,
-  "calibration_error": 0.0014160999982982814,
-  "n_train_events": 464,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.24449821400737332,
+  "mae": 19.70723402767717,
+  "rmse": 20.053916969651247,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 757,
   "train_date_range": {
-    "start": "2023-09-13",
-    "end": "2026-04-08"
+    "start": "2023-04-27",
+    "end": "2026-04-23"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.2445",
   "fold_metrics": [
     {
-      "auc": 1.0,
-      "log_loss": 0.5353955570726635,
-      "calibration_max_error": 0.0014160999982982814,
-      "calibration_mean_error": 0.0014160999982982814,
+      "spearman": 0.9124162777087326,
+      "mae": 14.122428213112137,
+      "rmse": 14.329842681491536,
       "fold": 2,
-      "train_size": 324,
-      "test_size": 47,
-      "best_iteration": 26
+      "train_size": 527,
+      "test_size": 65,
+      "best_iteration": 22
+    },
+    {
+      "spearman": -0.42341984969398594,
+      "mae": 25.292039842242204,
+      "rmse": 25.777991257810957,
+      "fold": 5,
+      "train_size": 638,
+      "test_size": 119,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "NIH",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

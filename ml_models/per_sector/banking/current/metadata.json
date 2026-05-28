@@ -1,66 +1,66 @@
 {
-  "auc": 0.6133292722931933,
-  "log_loss": 0.5650407516552499,
-  "calibration_error": 0.5976778210830991,
-  "n_train_events": 1688,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.06689275591897335,
+  "mae": 4.011289525216474,
+  "rmse": 5.1938579566717635,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 4644,
   "train_date_range": {
-    "start": "2023-06-19",
+    "start": "2023-04-26",
     "end": "2026-04-26"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.0669",
   "fold_metrics": [
     {
-      "auc": 0.9860481339379144,
-      "log_loss": 0.422981164660833,
-      "calibration_max_error": 0.8997763995965462,
-      "calibration_mean_error": 0.5275710482537677,
+      "spearman": 0.16784422383058764,
+      "mae": 12.23997867436283,
+      "rmse": 13.151376403041276,
       "fold": 1,
-      "train_size": 1012,
-      "test_size": 169,
-      "best_iteration": 61
+      "train_size": 3077,
+      "test_size": 397,
+      "best_iteration": 7
     },
     {
-      "auc": 0.14323793490460154,
-      "log_loss": 0.752991367962437,
-      "calibration_max_error": 0.4210054607131609,
-      "calibration_mean_error": 0.42093150993989836,
+      "spearman": -0.13762282989542432,
+      "mae": 2.839232738050425,
+      "rmse": 4.2341320069590775,
       "fold": 2,
-      "train_size": 1181,
-      "test_size": 169,
-      "best_iteration": 1
+      "train_size": 3474,
+      "test_size": 389,
+      "best_iteration": 71
     },
     {
-      "auc": 0.5319548872180452,
-      "log_loss": 0.801002814149251,
-      "calibration_max_error": 0.37283435337019627,
-      "calibration_mean_error": 0.37283435337019627,
+      "spearman": 0.4636354927702599,
+      "mae": 2.1681342341552488,
+      "rmse": 3.2040979516140093,
       "fold": 3,
-      "train_size": 1350,
-      "test_size": 169,
-      "best_iteration": 1
+      "train_size": 3863,
+      "test_size": 424,
+      "best_iteration": 68
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.35294141464339585,
-      "calibration_max_error": 0.5585887548230947,
-      "calibration_mean_error": 0.2612611753398363,
+      "spearman": 0.07733515270680123,
+      "mae": 1.0569940860973657,
+      "rmse": 2.4956755387623,
       "fold": 4,
-      "train_size": 1519,
-      "test_size": 84,
-      "best_iteration": 77
+      "train_size": 4287,
+      "test_size": 193,
+      "best_iteration": 223
     },
     {
-      "auc": 0.4054054054054054,
-      "log_loss": 0.4952869968603323,
-      "calibration_max_error": 0.7361841369124977,
-      "calibration_mean_error": 0.3280566618751711,
+      "spearman": -0.23672825981735762,
+      "mae": 1.7521078934165037,
+      "rmse": 2.884007882982152,
       "fold": 5,
-      "train_size": 1603,
-      "test_size": 85,
-      "best_iteration": 42
+      "train_size": 4480,
+      "test_size": 164,
+      "best_iteration": 84
     }
   ],
   "tier": "per_sector",
   "identifier": "banking",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

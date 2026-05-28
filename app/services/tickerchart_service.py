@@ -76,6 +76,12 @@ _SUFFIX_MAP: dict[str, str] = {
 _token_cache: dict[str, object] = {"token": None, "expires": 0.0}
 _company_id_cache: dict[str, object] = {"entries": None, "expires": 0.0}
 _kse_market_tier_cache: Optional[dict[str, str]] = None
+_quotes_snapshot_cache: dict[str, object] = {
+    "entries": None,
+    "path": None,
+    "mtime": None,
+    "expires": 0.0,
+}
 
 # L3 signal cache stores the Kuwait market tier classification per symbol.
 _KSE_MARKET_TIER_CACHE_DIR = Path(__file__).resolve().parents[2] / "cache" / "l3_signals"
@@ -483,16 +489,56 @@ def _ole_date_to_python(ole_val: float) -> Optional[date]:
     return None
 
 
-def _read_quotes_snapshot_entry(base_symbol: str, market_abb: str) -> Optional[dict]:
-    """Return the raw QuotesSnapShot.bin entry for a stock, or None."""
-    import json
+def _load_quotes_snapshot_entries(snapshot_path: Path) -> Optional[dict]:
+    """Load QuotesSnapShot.bin once and reuse it for repeated symbol lookups."""
+    now = time.time()
 
-    snapshot_path = _TC_FLATFILES_BASE.parent / "Cache" / "QuotesSnapShot.bin"
+    cached_entries = _quotes_snapshot_cache.get("entries")
+    cached_path = _quotes_snapshot_cache.get("path")
+    if (
+        isinstance(cached_entries, dict)
+        and cached_path == str(snapshot_path)
+        and float(_quotes_snapshot_cache.get("expires", 0.0)) > now
+    ):
+        return cached_entries
+
     if not snapshot_path.exists():
         return None
+
+    # Revalidate by mtime first to avoid repeatedly parsing the same JSON.
     try:
-        data = json.loads(snapshot_path.read_bytes())
+        current_mtime = snapshot_path.stat().st_mtime
+    except OSError:
+        current_mtime = None
+
+    if (
+        isinstance(cached_entries, dict)
+        and cached_path == str(snapshot_path)
+        and _quotes_snapshot_cache.get("mtime") == current_mtime
+    ):
+        _quotes_snapshot_cache["expires"] = now + 5.0
+        return cached_entries
+
+    try:
+        payload = json.loads(snapshot_path.read_bytes())
     except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return None
+
+    if not isinstance(payload, dict):
+        return None
+
+    _quotes_snapshot_cache["entries"] = payload
+    _quotes_snapshot_cache["path"] = str(snapshot_path)
+    _quotes_snapshot_cache["mtime"] = current_mtime
+    _quotes_snapshot_cache["expires"] = now + 5.0
+    return payload
+
+
+def _read_quotes_snapshot_entry(base_symbol: str, market_abb: str) -> Optional[dict]:
+    """Return the raw QuotesSnapShot.bin entry for a stock, or None."""
+    snapshot_path = _TC_FLATFILES_BASE.parent / "Cache" / "QuotesSnapShot.bin"
+    data = _load_quotes_snapshot_entries(snapshot_path)
+    if not isinstance(data, dict):
         return None
     return data.get(f"QO.{base_symbol.upper()}.{market_abb.upper()}")
 
@@ -513,6 +559,11 @@ def _read_quotes_snapshot_pe(base_symbol: str, market_abb: str) -> Optional[floa
     except (KeyError, TypeError, ValueError):
         return None
     return pe_val if pe_val > 0 else None
+
+
+def read_quotes_snapshot_pe(base_symbol: str, market_abb: str) -> Optional[float]:
+    """Public wrapper for the live QuotesSnapShot P/E reader."""
+    return _read_quotes_snapshot_pe(base_symbol, market_abb)
 
 
 def read_quotes_snapshot_ltm_eps(base_symbol: str, market_abb: str, price_divisor: float = 1000.0) -> Optional[float]:
@@ -547,6 +598,45 @@ def read_quotes_snapshot_ltm_eps(base_symbol: str, market_abb: str, price_diviso
         price = float(entry["last"]) / price_divisor
         if pe > 0 and price > 0:
             return price / pe
+    except (KeyError, TypeError, ValueError, ZeroDivisionError):
+        pass
+
+    return None
+
+
+def read_quotes_snapshot_bvps(base_symbol: str, market_abb: str, price_divisor: float = 1000.0) -> Optional[float]:
+    """
+    Read the current Book Value Per Share from TickerChart's QuotesSnapShot.bin.
+
+    Tries direct ``bookvalue`` first, then derives BVPS from
+    ``last`` / ``price_book`` (where ``price_book`` is scaled by 1000).
+    Returns None when no usable value is available.
+    """
+    entry = _read_quotes_snapshot_entry(base_symbol, market_abb)
+    if not entry:
+        return None
+
+    # Most Kuwait entries include bookvalue directly (per-share, same currency unit).
+    for key in ("bookvalue", "book_value", "bookValue"):
+        raw_val = entry.get(key)
+        if raw_val is None:
+            continue
+        try:
+            bvps_direct = float(raw_val)
+        except (TypeError, ValueError):
+            continue
+        if bvps_direct > 0:
+            return bvps_direct
+
+    # Fallback derivation: BVPS = price / P/B.
+    # Snapshot stores `last` as fils for KSE and `price_book` as ratio * 1000.
+    try:
+        price = float(entry["last"]) / price_divisor
+        price_to_book = float(entry["price_book"]) / 1000.0
+        if price > 0 and price_to_book > 0:
+            bvps = price / price_to_book
+            if bvps > 0:
+                return bvps
     except (KeyError, TypeError, ValueError, ZeroDivisionError):
         pass
 
@@ -845,12 +935,12 @@ def _parse_ondemand_csv(text: str) -> list[dict]:
         except ValueError:
             continue
     
-    # Strip phantom rows: ex-dividend entries where any OHLC value is zero.
-    # A valid candle must have ALL of open, high, low, close > 0.
-    # Using OR (any non-zero) was insufficient — a row like open=789,h=0,l=0,c=0
-    # would pass and drag the Y-axis down to zero.
+    # Strip phantom rows: ex-dividend entries with invalid price fields.
+    # Keep rows where high/low/close are all present and positive.
+    # Some feeds legitimately provide open=0 for older candles; we normalize
+    # those opens below so historical coverage is preserved.
     def _has_price(r: dict) -> bool:
-        return r["open"] > 0 and r["high"] > 0 and r["low"] > 0 and r["close"] > 0
+        return r["high"] > 0 and r["low"] > 0 and r["close"] > 0
 
     out = [r for r in out if _has_price(r)]
 
@@ -866,7 +956,21 @@ def _parse_ondemand_csv(text: str) -> list[dict]:
             if row["volume"] > deduped[d]["volume"]:
                 deduped[d] = row
 
-    return sorted(deduped.values(), key=lambda r: r["date"])
+    cleaned = sorted(deduped.values(), key=lambda r: r["date"])
+
+    # Normalize zero opens to previous close (or same-bar close for first row).
+    # This keeps candles usable for charting/indicators without discarding rows.
+    prev_close: Optional[float] = None
+    for row in cleaned:
+        if row["open"] <= 0:
+            if prev_close is not None and prev_close > 0:
+                row["open"] = prev_close
+            else:
+                row["open"] = row["close"]
+        if row["close"] > 0:
+            prev_close = row["close"]
+
+    return cleaned
 
 
 # ── Order Book / Market Depth ────────────────────────────────────────

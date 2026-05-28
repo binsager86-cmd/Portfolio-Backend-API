@@ -1,26 +1,57 @@
 {
-  "auc": 1.0,
-  "log_loss": 0.22689844898634937,
-  "calibration_error": 0.8957811959519603,
-  "n_train_events": 330,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": -0.31588217164940696,
+  "mae": 26.168028940006575,
+  "rmse": 29.729165127630054,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 613,
   "train_date_range": {
-    "start": "2023-06-15",
-    "end": "2026-05-10"
+    "start": "2023-04-17",
+    "end": "2026-05-07"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_-0.3159",
   "fold_metrics": [
     {
-      "auc": 1.0,
-      "log_loss": 0.22689844898634937,
-      "calibration_max_error": 0.8957811959519603,
-      "calibration_mean_error": 0.4724512482615914,
+      "spearman": -0.6561568371319215,
+      "mae": 75.72229631702514,
+      "rmse": 78.8683660630124,
+      "fold": 2,
+      "train_size": 317,
+      "test_size": 212,
+      "best_iteration": 1
+    },
+    {
+      "spearman": -0.6085806194501846,
+      "mae": 24.81368830176979,
+      "rmse": 35.44530984029372,
+      "fold": 3,
+      "train_size": 529,
+      "test_size": 35,
+      "best_iteration": 107
+    },
+    {
+      "spearman": 0.4997059111597352,
+      "mae": 0.4786501645792102,
+      "rmse": 0.7738127015919246,
       "fold": 4,
-      "train_size": 297,
-      "test_size": 16,
-      "best_iteration": 30
+      "train_size": 564,
+      "test_size": 26,
+      "best_iteration": 62
+    },
+    {
+      "spearman": -0.49849714117525695,
+      "mae": 3.6574809766521605,
+      "rmse": 3.829171905622176,
+      "fold": 5,
+      "train_size": 590,
+      "test_size": 23,
+      "best_iteration": 54
     }
   ],
   "tier": "per_stock",
   "identifier": "ALSAFAT",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

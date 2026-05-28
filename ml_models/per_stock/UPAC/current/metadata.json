@@ -1,46 +1,48 @@
 {
-  "auc": 0.8148148148148149,
-  "log_loss": 0.31533681492829296,
-  "calibration_error": 0.23974530346455625,
-  "n_train_events": 419,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.09209626959183853,
+  "mae": 25.815401065599403,
+  "rmse": 26.965998819684334,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 503,
   "train_date_range": {
-    "start": "2023-06-18",
-    "end": "2026-04-23"
+    "start": "2023-06-15",
+    "end": "2026-04-22"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.0921",
   "fold_metrics": [
     {
-      "auc": 0.5,
-      "log_loss": 0.5195875502576397,
-      "calibration_max_error": 0.0016084557287918966,
-      "calibration_mean_error": 0.0016084557287918966,
-      "fold": 1,
-      "train_size": 251,
-      "test_size": 42,
-      "best_iteration": 35
-    },
-    {
-      "auc": 0.9444444444444444,
-      "log_loss": 0.2649337412009761,
-      "calibration_max_error": 0.7167085516783149,
-      "calibration_mean_error": 0.31920170179704643,
+      "spearman": NaN,
+      "mae": 55.893087131651086,
+      "rmse": 56.25993324949963,
       "fold": 2,
-      "train_size": 293,
-      "test_size": 42,
-      "best_iteration": 81
+      "train_size": 237,
+      "test_size": 54,
+      "best_iteration": 1
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.16148915332626315,
-      "calibration_max_error": 0.0009189029865619425,
-      "calibration_mean_error": 0.0009189029865619425,
+      "spearman": -0.3157223906328063,
+      "mae": 1.5382458885682142,
+      "rmse": 4.290901406537319,
+      "fold": 3,
+      "train_size": 291,
+      "test_size": 90,
+      "best_iteration": 153
+    },
+    {
+      "spearman": 0.4999149298164834,
+      "mae": 20.014870176578906,
+      "rmse": 20.347161803016046,
       "fold": 5,
-      "train_size": 398,
-      "test_size": 21,
-      "best_iteration": 36
+      "train_size": 386,
+      "test_size": 117,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "UPAC",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

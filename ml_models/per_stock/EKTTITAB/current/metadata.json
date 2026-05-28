@@ -1,36 +1,57 @@
 {
-  "auc": 0.04411764705882353,
-  "log_loss": 0.4276622229427078,
-  "calibration_error": 0.6740392629917972,
-  "n_train_events": 351,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.4636308184665035,
+  "mae": 31.169020956848225,
+  "rmse": 33.84842282504332,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 445,
   "train_date_range": {
-    "start": "2023-05-01",
-    "end": "2026-04-08"
+    "start": "2023-04-30",
+    "end": "2026-04-26"
   },
-  "rejected_reason": "auc_below_threshold_0.0441",
+  "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 0.08823529411764706,
-      "log_loss": 0.6471785508473039,
-      "calibration_max_error": 0.4436174382205269,
-      "calibration_mean_error": 0.4436174382205269,
+      "spearman": 0.604292068173073,
+      "mae": 66.65520344988299,
+      "rmse": 67.26567281963797,
+      "fold": 1,
+      "train_size": 169,
+      "test_size": 175,
+      "best_iteration": 10
+    },
+    {
+      "spearman": 0.2749325479732263,
+      "mae": 23.628005748372196,
+      "rmse": 30.411826389873006,
       "fold": 2,
-      "train_size": 245,
-      "test_size": 35,
+      "train_size": 344,
+      "test_size": 49,
       "best_iteration": 1
     },
     {
-      "auc": 0.0,
-      "log_loss": 0.20814589503811165,
-      "calibration_max_error": 0.9044610877630674,
-      "calibration_mean_error": 0.5196379119706014,
+      "spearman": 0.7776379194790097,
+      "mae": 28.644468507696637,
+      "rmse": 30.890437208190182,
       "fold": 3,
-      "train_size": 280,
-      "test_size": 35,
-      "best_iteration": 30
+      "train_size": 393,
+      "test_size": 25,
+      "best_iteration": 345
+    },
+    {
+      "spearman": 0.1976607382407049,
+      "mae": 5.748406121441079,
+      "rmse": 6.825754882472127,
+      "fold": 5,
+      "train_size": 424,
+      "test_size": 21,
+      "best_iteration": 42
     }
   ],
   "tier": "per_stock",
   "identifier": "EKTTITAB",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

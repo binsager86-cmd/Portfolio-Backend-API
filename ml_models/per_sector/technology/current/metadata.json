@@ -1,46 +1,57 @@
 {
-  "auc": 0.8260117980884109,
-  "log_loss": 0.5646147130768391,
-  "calibration_error": 0.6136873331923642,
-  "n_train_events": 939,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.4386854276347033,
+  "mae": 28.75005182502626,
+  "rmse": 33.79536622145111,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 1110,
   "train_date_range": {
-    "start": "2023-06-15",
-    "end": "2026-05-10"
+    "start": "2023-05-17",
+    "end": "2026-05-07"
   },
   "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 0.9974798387096774,
-      "log_loss": 0.7666995977440628,
-      "calibration_max_error": 0.7410274445505022,
-      "calibration_mean_error": 0.38758482290406215,
+      "spearman": 0.6201593748206535,
+      "mae": 18.25286962227775,
+      "rmse": 29.16263329638647,
       "fold": 1,
-      "train_size": 563,
-      "test_size": 94,
-      "best_iteration": 25
+      "train_size": 674,
+      "test_size": 79,
+      "best_iteration": 15
     },
     {
-      "auc": 0.9472222222222222,
-      "log_loss": 0.24118038003409661,
-      "calibration_max_error": 0.3241475209645909,
-      "calibration_mean_error": 0.24390072585285394,
+      "spearman": -0.2271069768757574,
+      "mae": 38.64594975826468,
+      "rmse": 41.20603494706045,
       "fold": 2,
-      "train_size": 657,
-      "test_size": 94,
-      "best_iteration": 16
+      "train_size": 753,
+      "test_size": 126,
+      "best_iteration": 1
     },
     {
-      "auc": 0.5333333333333333,
-      "log_loss": 0.6859641614523576,
-      "calibration_max_error": 0.7758870340619997,
-      "calibration_mean_error": 0.4548283774199164,
+      "spearman": 0.3704792868174742,
+      "mae": 22.825095421218943,
+      "rmse": 28.34228759486556,
+      "fold": 3,
+      "train_size": 879,
+      "test_size": 21,
+      "best_iteration": 176
+    },
+    {
+      "spearman": 0.991210025776443,
+      "mae": 35.276292498343686,
+      "rmse": 36.47050904749195,
       "fold": 5,
-      "train_size": 892,
-      "test_size": 47,
-      "best_iteration": 1
+      "train_size": 911,
+      "test_size": 199,
+      "best_iteration": 5
     }
   ],
   "tier": "per_sector",
   "identifier": "technology",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

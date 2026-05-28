@@ -1,26 +1,57 @@
 {
-  "auc": 0.9285714285714286,
-  "log_loss": 0.2683231012569935,
-  "calibration_error": 0.053805226994457334,
-  "n_train_events": 307,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.26413181465452606,
+  "mae": 22.21031599458618,
+  "rmse": 24.780486289223774,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 561,
   "train_date_range": {
-    "start": "2024-04-02",
-    "end": "2026-04-06"
+    "start": "2023-08-02",
+    "end": "2026-04-20"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.2641",
   "fold_metrics": [
     {
-      "auc": 0.9285714285714286,
-      "log_loss": 0.2683231012569935,
-      "calibration_max_error": 0.053805226994457334,
-      "calibration_mean_error": 0.053805226994457334,
+      "spearman": 0.4122490007006448,
+      "mae": 8.189535832676707,
+      "rmse": 10.356766005576315,
+      "fold": 1,
+      "train_size": 264,
+      "test_size": 31,
+      "best_iteration": 29
+    },
+    {
+      "spearman": 0.9040979560511981,
+      "mae": 45.49933484677903,
+      "rmse": 51.235987836854655,
+      "fold": 3,
+      "train_size": 322,
+      "test_size": 186,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.7153530039916176,
+      "mae": 24.28721947045881,
+      "rmse": 25.35799815551696,
       "fold": 4,
-      "train_size": 276,
-      "test_size": 15,
-      "best_iteration": 14
+      "train_size": 508,
+      "test_size": 13,
+      "best_iteration": 13
+    },
+    {
+      "spearman": -0.9751727021253563,
+      "mae": 10.865173828430171,
+      "rmse": 12.171193158947181,
+      "fold": 5,
+      "train_size": 521,
+      "test_size": 40,
+      "best_iteration": 19
     }
   ],
   "tier": "per_stock",
   "identifier": "MEZZAN",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

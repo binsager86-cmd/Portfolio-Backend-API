@@ -1,36 +1,57 @@
 {
-  "auc": 0.5,
-  "log_loss": 1.4305959705600846,
-  "calibration_error": 0.4739213791488907,
-  "n_train_events": 296,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.30521501476046053,
+  "mae": 13.353237200526033,
+  "rmse": 14.066239395775447,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 731,
   "train_date_range": {
-    "start": "2023-10-17",
-    "end": "2026-04-05"
+    "start": "2023-08-02",
+    "end": "2026-04-26"
   },
-  "rejected_reason": "auc_below_threshold_0.5000",
+  "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 0.0,
-      "log_loss": 2.8611497562886514,
-      "calibration_max_error": 0.9477869342792687,
-      "calibration_mean_error": 0.5703160541674006,
-      "fold": 3,
-      "train_size": 236,
-      "test_size": 30,
-      "best_iteration": 3
+      "spearman": 0.9361647795030652,
+      "mae": 7.447564482318217,
+      "rmse": 7.599097695382435,
+      "fold": 1,
+      "train_size": 401,
+      "test_size": 91,
+      "best_iteration": 34
     },
     {
-      "auc": 1.0,
-      "log_loss": 4.21848315176335e-05,
-      "calibration_max_error": 5.582401851267349e-05,
-      "calibration_mean_error": 4.4457236193417667e-05,
+      "spearman": -0.03323569830471032,
+      "mae": 9.781636116774575,
+      "rmse": 12.135142848424003,
+      "fold": 2,
+      "train_size": 492,
+      "test_size": 57,
+      "best_iteration": 35
+    },
+    {
+      "spearman": 0.6722711355000569,
+      "mae": 18.032289118190732,
+      "rmse": 18.22232008838146,
+      "fold": 3,
+      "train_size": 549,
+      "test_size": 76,
+      "best_iteration": 9
+    },
+    {
+      "spearman": -0.3543401576565698,
+      "mae": 18.15145908482061,
+      "rmse": 18.3083969509139,
       "fold": 5,
-      "train_size": 281,
-      "test_size": 15,
-      "best_iteration": 200
+      "train_size": 647,
+      "test_size": 84,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "RASIYAT",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

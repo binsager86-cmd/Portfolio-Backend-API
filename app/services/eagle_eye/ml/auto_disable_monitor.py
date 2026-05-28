@@ -14,13 +14,13 @@ weekly reviewer has data to look at.
 Trigger conditions
 ------------------
 A. 7-day mean MCE (Mean Calibration Error) > 30% across scored models.
-   Proxy: use |calibrated_prob - rule_confidence| averaged over last 7 days.
-   (Full calibration error requires labelled outcomes; rule confidence is used
-   as a proxy until outcomes are filled in.)
+    Uses multiclass BUY-class calibration error: compare predicted P(BUY)
+    against realised BUY outcomes on labelled rows only.
 
 B. Any individual model's BSS (Brier Skill Score) < 0 for 2+ consecutive days.
    Proxy: calibrated_prob outside [0.05, 0.95] for 2+ consecutive days
    (extreme misprediction indicator).
+    Advisory-only in v8: logged for observability but does not auto-disable ML.
 
 C. 3 or more CASCADE ROLLBACKs logged in the last 7 days.
 
@@ -31,14 +31,204 @@ from __future__ import annotations
 
 import logging
 from datetime import date, timedelta
+from typing import Any, Iterable, Optional
+
+import numpy as np
 
 LOGGER = logging.getLogger(__name__)
 
 MCE_THRESHOLD = 0.30       # trigger A
 MIN_SCORED_ROWS_FOR_MCE = 14
+OUTCOME_LABEL_LOOKAHEAD_DAYS = 60
 BSS_CONSECUTIVE_DAYS = 2   # trigger B
 CASCADE_ROLLBACK_THRESHOLD = 3  # trigger C
 FAILURE_CONSECUTIVE_DAYS = 2    # trigger D
+
+
+def _safe_float(value: Any) -> Optional[float]:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not np.isfinite(numeric):
+        return None
+    return numeric
+
+
+def _extract_buy_probability(prediction: Any) -> Optional[float]:
+    p_buy: Optional[float]
+
+    if isinstance(prediction, dict):
+        p_buy = _safe_float(prediction.get("buy"))
+    elif isinstance(prediction, (list, tuple, np.ndarray)):
+        try:
+            arr = np.asarray(prediction, dtype=float).reshape(-1)
+        except Exception:
+            return None
+        if arr.size == 0:
+            return None
+        if arr.size >= 3:
+            # Multiclass convention in this pipeline: [sell, hold, buy].
+            p_buy = _safe_float(arr[2])
+        else:
+            p_buy = _safe_float(arr[0])
+    else:
+        p_buy = _safe_float(prediction)
+
+    if p_buy is None:
+        return None
+
+    # Legacy compatibility: some historical rows store 0-100 scalar scores.
+    if p_buy > 1.0:
+        p_buy = p_buy / 100.0
+
+    return float(np.clip(p_buy, 0.0, 1.0))
+
+
+def _extract_buy_actual(actual: Any) -> Optional[float]:
+    if isinstance(actual, str):
+        token = actual.strip().upper()
+        if token == "BUY":
+            return 1.0
+        if token in {"HOLD", "SELL"}:
+            return 0.0
+
+    value = _safe_float(actual)
+    if value is None:
+        return None
+
+    # Native multiclass labels are {-1, 0, 1}.
+    if value in (-1.0, 0.0, 1.0):
+        return 1.0 if value == 1.0 else 0.0
+
+    # Legacy realised-return fallback.
+    return 1.0 if value > 0.0 else 0.0
+
+
+def compute_multiclass_calibration_error(
+    predictions: Iterable[Any],
+    actuals: Iterable[Any],
+    n_bins: int = 10,
+) -> float:
+    """Compute BUY-class mean calibration error in [0, 1]."""
+    buy_probs: list[float] = []
+    buy_actuals: list[float] = []
+
+    for pred, actual in zip(predictions, actuals):
+        p_buy = _extract_buy_probability(pred)
+        y_buy = _extract_buy_actual(actual)
+        if p_buy is None or y_buy is None:
+            continue
+        buy_probs.append(p_buy)
+        buy_actuals.append(y_buy)
+
+    if len(buy_probs) < MIN_SCORED_ROWS_FOR_MCE:
+        return 0.0
+
+    probs = np.asarray(buy_probs, dtype=float)
+    actual_arr = np.asarray(buy_actuals, dtype=float)
+    edges = np.linspace(0.0, 1.0, int(max(2, n_bins)) + 1)
+
+    weighted_abs_error = 0.0
+    n_used = 0
+    for i in range(len(edges) - 1):
+        lo = edges[i]
+        hi = edges[i + 1]
+        if i == len(edges) - 2:
+            mask = (probs >= lo) & (probs <= hi)
+        else:
+            mask = (probs >= lo) & (probs < hi)
+        count = int(mask.sum())
+        if count == 0:
+            continue
+
+        mean_pred = float(probs[mask].mean())
+        mean_actual = float(actual_arr[mask].mean())
+        weighted_abs_error += abs(mean_pred - mean_actual) * count
+        n_used += count
+
+    if n_used == 0:
+        return 0.0
+    return float(weighted_abs_error / n_used)
+
+
+def _backfill_shadow_actual_outcomes(today_str: str, query_all, exec_sql) -> int:
+    """Populate ml_shadow_log.actual_outcome from v6 BUY/HOLD/SELL labels."""
+    from app.services.eagle_eye.ml.labelers import detect_buy_sell_points
+    from app.services.eagle_eye.store import load_ohlcv
+
+    cutoff = (date.fromisoformat(today_str) - timedelta(days=OUTCOME_LABEL_LOOKAHEAD_DAYS)).isoformat()
+    pending_rows = query_all(
+        """
+        SELECT id, stock_ticker, log_date
+          FROM ml_shadow_log
+         WHERE calibrated_prob IS NOT NULL
+           AND (outcome_filled = 0 OR actual_outcome IS NULL)
+           AND log_date <= ?
+         ORDER BY stock_ticker, log_date
+        """,
+        (cutoff,),
+    )
+    if not pending_rows:
+        return 0
+
+    rows_by_ticker: dict[str, list[dict]] = {}
+    for row in pending_rows:
+        ticker = str(row["stock_ticker"]).upper()
+        rows_by_ticker.setdefault(ticker, []).append(row)
+
+    updated = 0
+    for ticker, ticker_rows in rows_by_ticker.items():
+        try:
+            ohlcv = load_ohlcv(ticker)
+        except Exception as exc:
+            LOGGER.debug(
+                "auto_disable_monitor: OHLCV load failed while backfilling %s: %s",
+                ticker,
+                exc,
+            )
+            continue
+
+        if ohlcv is None or ohlcv.empty:
+            continue
+
+        try:
+            labels = detect_buy_sell_points(ohlcv)
+        except Exception as exc:
+            LOGGER.debug(
+                "auto_disable_monitor: label generation failed while backfilling %s: %s",
+                ticker,
+                exc,
+            )
+            continue
+
+        label_by_date: dict[str, int] = {}
+        for idx, value in labels.items():
+            try:
+                if hasattr(idx, "date"):
+                    key = idx.date().isoformat()
+                else:
+                    key = str(idx)[:10]
+                label_by_date[key] = int(value)
+            except (TypeError, ValueError):
+                continue
+
+        for row in ticker_rows:
+            log_date = str(row["log_date"])
+            label_val = label_by_date.get(log_date)
+            if label_val is None:
+                continue
+            exec_sql(
+                """
+                UPDATE ml_shadow_log
+                   SET actual_outcome = ?, outcome_filled = 1
+                 WHERE id = ?
+                """,
+                (int(label_val), int(row["id"])),
+            )
+            updated += 1
+
+    return updated
 
 
 def run_auto_disable_check(signal_date: str | None = None) -> dict:
@@ -56,6 +246,15 @@ def run_auto_disable_check(signal_date: str | None = None) -> dict:
     from app.core.database import exec_sql, query_all, query_one
 
     today_str = signal_date or date.today().isoformat()
+
+    # Update labelled outcomes so trigger-A evaluates multiclass reality,
+    # not stale proxy values from the pre-v6 architecture.
+    try:
+        filled = _backfill_shadow_actual_outcomes(today_str, query_all, exec_sql)
+        if filled > 0:
+            LOGGER.info("auto_disable_monitor: backfilled %d shadow outcomes", filled)
+    except Exception as exc:
+        LOGGER.warning("auto_disable_monitor: outcome backfill failed (non-fatal): %s", exc)
 
     # ── Check each trigger ────────────────────────────────────────────────
     trigger, reason = _check_all(today_str, query_one, query_all)
@@ -91,7 +290,11 @@ def _check_all(today_str, query_one, query_all):
 
     trig, reason = _check_trigger_b(today_str, query_all)
     if trig:
-        return trig, reason
+        LOGGER.warning(
+            "auto_disable_monitor: advisory-only trigger %s reason=%s",
+            trig,
+            reason,
+        )
 
     trig, reason = _check_trigger_c(today_str, query_all)
     if trig:
@@ -105,35 +308,41 @@ def _check_all(today_str, query_one, query_all):
 
 
 def _check_trigger_a(today_str: str, query_one, query_all) -> tuple:
-    """7-day mean |calibrated_prob - rule_confidence| > MCE_THRESHOLD."""
+    """7-day mean multiclass BUY-class MCE > MCE_THRESHOLD."""
     scored_row_count = query_one(
         """
         SELECT COUNT(*) AS n
           FROM ml_shadow_log
          WHERE calibrated_prob IS NOT NULL
+           AND outcome_filled = 1
+           AND actual_outcome IS NOT NULL
         """,
         (),
     )
     if not scored_row_count or int(scored_row_count["n"]) < MIN_SCORED_ROWS_FOR_MCE:
+        # Temporary bypass until enough labelled multiclass outcomes exist.
         return None, None
 
     seven_days_ago = (date.fromisoformat(today_str) - timedelta(days=7)).isoformat()
     rows = query_all(
         """
-        SELECT calibrated_prob, rule_confidence
+        SELECT calibrated_prob, actual_outcome
           FROM ml_shadow_log
          WHERE log_date > ?
            AND log_date <= ?
            AND calibrated_prob IS NOT NULL
-           AND rule_confidence IS NOT NULL
+           AND outcome_filled = 1
+           AND actual_outcome IS NOT NULL
         """,
         (seven_days_ago, today_str),
     )
-    if not rows:
+    if not rows or len(rows) < MIN_SCORED_ROWS_FOR_MCE:
         return None, None
 
-    errors = [abs(float(r["calibrated_prob"]) - float(r["rule_confidence"])) for r in rows]
-    mean_mce = sum(errors) / len(errors)
+    mean_mce = compute_multiclass_calibration_error(
+        [r["calibrated_prob"] for r in rows],
+        [r["actual_outcome"] for r in rows],
+    )
     if mean_mce > MCE_THRESHOLD:
         return "MCE_EXCEEDED", f"7-day mean MCE={mean_mce:.3f} > threshold={MCE_THRESHOLD}"
     return None, None

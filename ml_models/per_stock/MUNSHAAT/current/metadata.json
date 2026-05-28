@@ -1,46 +1,57 @@
 {
-  "auc": 1.0,
-  "log_loss": 0.11836061720821416,
-  "calibration_error": 0.31788105422225105,
-  "n_train_events": 287,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.6413875739370545,
+  "mae": 22.960790551174643,
+  "rmse": 25.27784526837882,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 527,
   "train_date_range": {
-    "start": "2023-07-26",
-    "end": "2026-04-22"
+    "start": "2023-05-11",
+    "end": "2026-05-10"
   },
   "rejected_reason": "",
   "fold_metrics": [
     {
-      "auc": 1.0,
-      "log_loss": 0.14601741557437298,
-      "calibration_max_error": 0.5234510440518624,
-      "calibration_mean_error": 0.2642842765238675,
+      "spearman": 0.7878169723634583,
+      "mae": 57.44787506650781,
+      "rmse": 61.24633604354205,
+      "fold": 1,
+      "train_size": 207,
+      "test_size": 180,
+      "best_iteration": 30
+    },
+    {
+      "spearman": 0.042317483410239255,
+      "mae": 20.95687312023969,
+      "rmse": 22.557645224989407,
       "fold": 2,
-      "train_size": 200,
-      "test_size": 29,
-      "best_iteration": 55
+      "train_size": 387,
+      "test_size": 65,
+      "best_iteration": 12
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.126385188251321,
-      "calibration_max_error": 0.3496207331933624,
-      "calibration_mean_error": 0.1443426357133507,
+      "spearman": 0.7771009924746107,
+      "mae": 2.1653387582573274,
+      "rmse": 2.8550429337950596,
       "fold": 3,
-      "train_size": 229,
-      "test_size": 29,
-      "best_iteration": 80
+      "train_size": 452,
+      "test_size": 36,
+      "best_iteration": 64
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.08267924779894847,
-      "calibration_max_error": 0.08057138542152831,
-      "calibration_mean_error": 0.0713528323331673,
+      "spearman": 0.9583148474999099,
+      "mae": 11.273075259693751,
+      "rmse": 14.452356871188751,
       "fold": 5,
-      "train_size": 272,
-      "test_size": 15,
-      "best_iteration": 54
+      "train_size": 501,
+      "test_size": 26,
+      "best_iteration": 85
     }
   ],
   "tier": "per_stock",
   "identifier": "MUNSHAAT",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

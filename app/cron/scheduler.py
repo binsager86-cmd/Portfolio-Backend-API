@@ -60,8 +60,11 @@ def _run_daily_price_then_snapshot(user_id: int | None = None) -> dict:
     """
     import time
     from app.core.database import query_all
+    from app.cron.fundamentals_updater import run_tickerchart_fundamentals_update
     from app.cron.price_updater import run_price_update
     from app.cron.snapshot_saver import run_snapshot_save
+
+    fundamentals_result = run_tickerchart_fundamentals_update()
 
     # Determine which users to process
     if user_id is not None:
@@ -109,8 +112,11 @@ def _run_daily_price_then_snapshot(user_id: int | None = None) -> dict:
             "source": "scheduler",
             "user_ids": user_ids,
             "result": {
-                uid: r.to_dict() if hasattr(r, "to_dict") else r
-                for uid, r in all_price_results.items()
+                "fundamentals": fundamentals_result,
+                "prices": {
+                    uid: r.to_dict() if hasattr(r, "to_dict") else r
+                    for uid, r in all_price_results.items()
+                },
             },
         })
         _last_snapshot_run.update({
@@ -122,7 +128,11 @@ def _run_daily_price_then_snapshot(user_id: int | None = None) -> dict:
     except Exception:
         pass  # non-critical — don't let tracking break the job
 
-    return {"price": all_price_results, "snapshot": all_snapshot_results}
+    return {
+        "fundamentals": fundamentals_result,
+        "price": all_price_results,
+        "snapshot": all_snapshot_results,
+    }
 
 
 def _run_daily_technical_batch() -> dict:

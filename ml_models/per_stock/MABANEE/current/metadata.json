@@ -1,26 +1,57 @@
 {
-  "auc": 1.0,
-  "log_loss": 0.31823387065057673,
-  "calibration_error": 0.004108557331070517,
-  "n_train_events": 180,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.20066748637014198,
+  "mae": 10.163528284489088,
+  "rmse": 12.847385926993308,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 646,
   "train_date_range": {
-    "start": "2023-06-11",
-    "end": "2026-04-16"
+    "start": "2023-06-08",
+    "end": "2026-04-26"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.2007",
   "fold_metrics": [
     {
-      "auc": 1.0,
-      "log_loss": 0.31823387065057673,
-      "calibration_max_error": 0.004108557331070517,
-      "calibration_mean_error": 0.004108557331070517,
-      "fold": 4,
-      "train_size": 162,
-      "test_size": 9,
-      "best_iteration": 26
+      "spearman": 0.8150788367490615,
+      "mae": 10.770672584582146,
+      "rmse": 13.724227543138966,
+      "fold": 1,
+      "train_size": 333,
+      "test_size": 98,
+      "best_iteration": 13
+    },
+    {
+      "spearman": -0.4573338329986377,
+      "mae": 22.62059021889405,
+      "rmse": 28.908848325768766,
+      "fold": 2,
+      "train_size": 431,
+      "test_size": 99,
+      "best_iteration": 1
+    },
+    {
+      "spearman": -0.13739054312601678,
+      "mae": 6.345039149027343,
+      "rmse": 7.663745930978667,
+      "fold": 3,
+      "train_size": 530,
+      "test_size": 60,
+      "best_iteration": 30
+    },
+    {
+      "spearman": 0.582315484856161,
+      "mae": 0.917811185452815,
+      "rmse": 1.0927219080868285,
+      "fold": 5,
+      "train_size": 614,
+      "test_size": 32,
+      "best_iteration": 48
     }
   ],
   "tier": "per_stock",
   "identifier": "MABANEE",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

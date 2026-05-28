@@ -164,7 +164,7 @@ async def _fetch_snapshot_from_tickerchart(symbol: str, currency: str) -> dict:
     KSE prices are in fils → divided by 1000 to get KWD.
     """
     from datetime import date, timedelta
-    from app.services.tickerchart_service import fetch_ohlcv
+    from app.services import tickerchart_service as tc
 
     sym_upper = symbol.strip().upper()
 
@@ -180,7 +180,12 @@ async def _fetch_snapshot_from_tickerchart(symbol: str, currency: str) -> dict:
     to_d = date.today()
     from_d = to_d - timedelta(days=7)
 
-    rows = await fetch_ohlcv(sym_upper, market_abb, from_d=from_d, to_d=to_d, interval="day")
+    # 5-second hard cap so a slow/unreachable TickerChart host doesn't stall
+    # all parallel holdings requests (Yahoo Finance fallback fires immediately).
+    rows = await asyncio.wait_for(
+        tc.fetch_ohlcv(sym_upper, market_abb, from_d=from_d, to_d=to_d, interval="day"),
+        timeout=5.0,
+    )
     if not rows:
         raise ValueError(f"No TickerChart data for {sym_upper}.{market_abb}")
 
@@ -194,11 +199,23 @@ async def _fetch_snapshot_from_tickerchart(symbol: str, currency: str) -> dict:
         raw_prev = float(rows[1]["close"])
         previous_close = _normalise_kwd_price(raw_prev, currency)
 
+    pe_ratio = tc.read_quotes_snapshot_pe(sym_upper, market_abb)
+    if pe_ratio is None and price > 0:
+        try:
+            ltm_eps = await tc.fetch_ltm_eps(sym_upper, market_abb)
+        except Exception as exc:
+            logger.debug("TickerChart EPS fetch failed for %s.%s: %s", sym_upper, market_abb, exc)
+        else:
+            if ltm_eps is not None and ltm_eps > 0:
+                pe_ratio = round(price / ltm_eps, 2)
+    elif pe_ratio is not None:
+        pe_ratio = round(pe_ratio, 2)
+
     return {
         "symbol": symbol,
         "price": round(price, 6),
         "previous_close": round(previous_close, 6) if previous_close is not None else None,
-        "pe_ratio": None,
+        "pe_ratio": pe_ratio,
         "currency": currency,
         "fetched_at": datetime.now(timezone.utc).isoformat(),
         "source": "tickerchart",

@@ -1,56 +1,57 @@
 {
-  "auc": 0.8125,
-  "log_loss": 0.32742928360013523,
-  "calibration_error": 0.2249528816211655,
-  "n_train_events": 216,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.2846487454450823,
+  "mae": 3.851161473996853,
+  "rmse": 4.796616885445561,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 645,
   "train_date_range": {
-    "start": "2023-07-05",
-    "end": "2026-04-16"
+    "start": "2023-07-04",
+    "end": "2026-04-26"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.2846",
   "fold_metrics": [
     {
-      "auc": 0.75,
-      "log_loss": 0.847693093332712,
-      "calibration_max_error": 0.8439273589436701,
-      "calibration_mean_error": 0.486375280005811,
+      "spearman": 0.7402725163550842,
+      "mae": 0.8979118573170989,
+      "rmse": 1.6199946094943152,
+      "fold": 1,
+      "train_size": 414,
+      "test_size": 55,
+      "best_iteration": 85
+    },
+    {
+      "spearman": 0.6088035427540124,
+      "mae": 4.894410166182527,
+      "rmse": 7.24269902452501,
       "fold": 2,
-      "train_size": 151,
-      "test_size": 21,
-      "best_iteration": 11
+      "train_size": 469,
+      "test_size": 77,
+      "best_iteration": 64
     },
     {
-      "auc": 1.0,
-      "log_loss": 0.00258399991220899,
-      "calibration_max_error": 0.004033731739452873,
-      "calibration_mean_error": 0.0020332124498819906,
+      "spearman": 0.1514726744230451,
+      "mae": 6.474998578728729,
+      "rmse": 6.840428081740677,
       "fold": 3,
-      "train_size": 172,
-      "test_size": 22,
-      "best_iteration": 200
+      "train_size": 546,
+      "test_size": 46,
+      "best_iteration": 7
     },
     {
-      "auc": 0.5,
-      "log_loss": 0.45066212172644915,
-      "calibration_max_error": 0.04133784730362089,
-      "calibration_mean_error": 0.04133784730362089,
-      "fold": 4,
-      "train_size": 194,
-      "test_size": 11,
-      "best_iteration": 18
-    },
-    {
-      "auc": 1.0,
-      "log_loss": 0.008777919429170729,
-      "calibration_max_error": 0.01051258849791814,
-      "calibration_mean_error": 0.005616911346478496,
+      "spearman": -0.3619537517518124,
+      "mae": 3.1373252937590568,
+      "rmse": 3.4833458260222403,
       "fold": 5,
-      "train_size": 205,
-      "test_size": 11,
-      "best_iteration": 194
+      "train_size": 614,
+      "test_size": 31,
+      "best_iteration": 23
     }
   ],
   "tier": "per_stock",
   "identifier": "NIND",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

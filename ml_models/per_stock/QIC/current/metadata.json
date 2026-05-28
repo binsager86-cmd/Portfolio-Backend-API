@@ -1,15 +1,39 @@
 {
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": 0.8535533905932737,
+  "mae": 0.39093499234424794,
+  "rmse": 0.5442077712338698,
   "auc": NaN,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 210,
+  "n_train_events": 294,
   "train_date_range": {
-    "start": "2025-07-31",
-    "end": "2026-03-10"
+    "start": "2024-10-09",
+    "end": "2026-05-21"
   },
-  "rejected_reason": "auc_below_threshold_nan",
-  "fold_metrics": [],
+  "rejected_reason": "",
+  "fold_metrics": [
+    {
+      "spearman": 1.0,
+      "mae": 0.192366666914405,
+      "rmse": 0.28631223887958757,
+      "fold": 4,
+      "train_size": 285,
+      "test_size": 4,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.7071067811865475,
+      "mae": 0.5895033177740909,
+      "rmse": 0.8021033035881521,
+      "fold": 5,
+      "train_size": 289,
+      "test_size": 5,
+      "best_iteration": 11
+    }
+  ],
   "tier": "per_stock",
   "identifier": "QIC",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }

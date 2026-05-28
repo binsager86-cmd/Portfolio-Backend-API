@@ -1,56 +1,48 @@
 {
-  "auc": 0.5114889705882353,
-  "log_loss": 0.6291034170956055,
-  "calibration_error": 0.2814890575690089,
-  "n_train_events": 353,
+  "task": "regression",
+  "target_col": "y_opportunity_score",
+  "spearman": -0.3438368008111523,
+  "mae": 7.604209491994076,
+  "rmse": 10.128150256734884,
+  "auc": NaN,
+  "log_loss": NaN,
+  "calibration_error": NaN,
+  "n_train_events": 628,
   "train_date_range": {
-    "start": "2023-12-26",
-    "end": "2026-03-12"
+    "start": "2023-07-16",
+    "end": "2026-03-11"
   },
-  "rejected_reason": "auc_below_threshold_0.5115",
+  "rejected_reason": "spearman_below_threshold_-0.3438",
   "fold_metrics": [
     {
-      "auc": 0.0,
-      "log_loss": 0.24891837224632804,
-      "calibration_max_error": 0.14592065593936165,
-      "calibration_mean_error": 0.14592065593936165,
+      "spearman": 0.2949680947743432,
+      "mae": 12.583349912589982,
+      "rmse": 13.4464295692708,
+      "fold": 1,
+      "train_size": 448,
+      "test_size": 63,
+      "best_iteration": 29
+    },
+    {
+      "spearman": -0.6660055683182668,
+      "mae": 3.512203466336002,
+      "rmse": 9.285275939146906,
       "fold": 2,
-      "train_size": 247,
-      "test_size": 35,
-      "best_iteration": 1
+      "train_size": 511,
+      "test_size": 55,
+      "best_iteration": 120
     },
     {
-      "auc": 0.5147058823529411,
-      "log_loss": 0.2256064896187505,
-      "calibration_max_error": 0.1356543800245078,
-      "calibration_mean_error": 0.1356543800245078,
-      "fold": 3,
-      "train_size": 282,
-      "test_size": 35,
-      "best_iteration": 1
-    },
-    {
-      "auc": 0.53125,
-      "log_loss": 2.0411601121251612,
-      "calibration_max_error": 0.8418640777517944,
-      "calibration_mean_error": 0.8126036537287538,
-      "fold": 4,
-      "train_size": 317,
-      "test_size": 18,
-      "best_iteration": 1
-    },
-    {
-      "auc": 1.0,
-      "log_loss": 0.0007286943921822422,
-      "calibration_max_error": 0.0025171165603715684,
-      "calibration_mean_error": 0.0012783675007496803,
+      "spearman": -0.6604729288895332,
+      "mae": 6.717075097056241,
+      "rmse": 7.652745261786946,
       "fold": 5,
-      "train_size": 335,
-      "test_size": 18,
-      "best_iteration": 198
+      "train_size": 609,
+      "test_size": 19,
+      "best_iteration": 51
     }
   ],
   "tier": "per_stock",
   "identifier": "DALQANRE",
-  "version": "2026-05-13"
+  "version": "2026-05-26"
 }
