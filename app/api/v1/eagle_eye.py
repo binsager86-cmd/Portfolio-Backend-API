@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import threading
 import time
 import uuid
@@ -26,7 +27,7 @@ import numpy as np
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_admin
 from app.core.security import TokenData
 from app.schemas.eagle_eye import (
     BehavioralDNAResponse,
@@ -214,12 +215,41 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
         has_metric_created = column_exists("stock_metrics", "created_at")
         has_stocks_id = column_exists("stocks", "id")
 
+        metric_filter_values = (
+            "'book value / share',"
+            "'book value per share',"
+            "'book value/share',"
+            "'book value per-share',"
+            "'bvps',"
+            "'eps',"
+            "'earnings per share'"
+        )
+
+        def _metric_order_expr(alias: str) -> str:
+            parts: list[str] = []
+            if has_metric_period_end:
+                parts.append(f"COALESCE({alias}.period_end_date, '') DESC")
+            if has_metric_year:
+                parts.append(f"COALESCE({alias}.fiscal_year, 0) DESC")
+            if has_metric_q:
+                parts.append(f"COALESCE({alias}.fiscal_quarter, 0) DESC")
+            if has_metric_created:
+                parts.append(f"COALESCE({alias}.created_at, 0) DESC")
+            if has_metric_id:
+                parts.append(f"{alias}.id DESC")
+            if not parts:
+                parts.append(f"LOWER({alias}.metric_name) ASC")
+            return ",\n                                ".join(parts)
+
+        metric_order = _metric_order_expr("sm")
+
         def _merge_metric_rows(rows: list) -> None:
             for r in rows or []:
                 ticker = _normalize_symbol(r.get("symbol"))
                 if not ticker:
                     continue
                 metric_name = str(r.get("metric_name") or "").lower().strip()
+                metric_name_norm = " ".join(metric_name.replace("/", " ").replace("-", " ").split())
                 metric_val = _safe_float(r.get("metric_value"))
                 if metric_val is None:
                     continue
@@ -232,10 +262,15 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
                         "eps": None,
                     },
                 )
-                if metric_name == "book value / share":
+                is_bvps = (
+                    metric_name_norm == "bvps"
+                    or ("book value" in metric_name_norm and "share" in metric_name_norm)
+                )
+                is_eps = metric_name_norm == "eps" or "earnings per share" in metric_name_norm
+                if is_bvps:
                     if fmap[ticker].get("book_value_per_share") is None:
                         fmap[ticker]["book_value_per_share"] = metric_val
-                elif metric_name == "eps":
+                elif is_eps:
                     if fmap[ticker].get("eps") is None:
                         fmap[ticker]["eps"] = metric_val
 
@@ -243,16 +278,11 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
             has_metric_name
             and has_metric_value
             and has_metric_stock_id
-            and has_metric_id
-            and has_metric_period_end
-            and has_metric_year
-            and has_metric_q
-            and has_metric_created
         )
 
         if has_metrics_table and has_stocks_symbol and has_stocks_id:
             metric_rows = query_all(
-                """
+                f"""
                 WITH ranked AS (
                     SELECT
                         s.symbol AS symbol,
@@ -261,15 +291,11 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
                         ROW_NUMBER() OVER (
                             PARTITION BY s.symbol, LOWER(sm.metric_name)
                             ORDER BY
-                                COALESCE(sm.period_end_date, '') DESC,
-                                COALESCE(sm.fiscal_year, 0) DESC,
-                                COALESCE(sm.fiscal_quarter, 0) DESC,
-                                COALESCE(sm.created_at, 0) DESC,
-                                sm.id DESC
+                                {metric_order}
                         ) AS rn
                     FROM stock_metrics sm
                     JOIN stocks s ON s.id = sm.stock_id
-                    WHERE LOWER(sm.metric_name) IN ('book value / share', 'eps')
+                    WHERE LOWER(sm.metric_name) IN ({metric_filter_values})
                 )
                 SELECT symbol, metric_name, metric_value
                 FROM ranked
@@ -283,7 +309,7 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
         has_master_ticker = column_exists("stocks_master", "ticker")
         if has_metrics_table and has_master_id and has_master_ticker:
             metric_rows_master = query_all(
-                """
+                f"""
                 WITH ranked AS (
                     SELECT
                         smt.ticker AS symbol,
@@ -292,15 +318,11 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
                         ROW_NUMBER() OVER (
                             PARTITION BY smt.ticker, LOWER(sm.metric_name)
                             ORDER BY
-                                COALESCE(sm.period_end_date, '') DESC,
-                                COALESCE(sm.fiscal_year, 0) DESC,
-                                COALESCE(sm.fiscal_quarter, 0) DESC,
-                                COALESCE(sm.created_at, 0) DESC,
-                                sm.id DESC
+                                {metric_order}
                         ) AS rn
                     FROM stock_metrics sm
                     JOIN stocks_master smt ON smt.id = sm.stock_id
-                    WHERE LOWER(sm.metric_name) IN ('book value / share', 'eps')
+                    WHERE LOWER(sm.metric_name) IN ({metric_filter_values})
                 )
                 SELECT symbol, metric_name, metric_value
                 FROM ranked
@@ -392,6 +414,19 @@ def _safe_float(v) -> Optional[float]:
         import math
         f = float(v)
         return None if (math.isnan(f) or math.isinf(f)) else f
+    except (TypeError, ValueError):
+        return None
+
+
+def _extract_mce_from_reason(reason: object) -> Optional[float]:
+    """Parse MCE value from disable reason text, if present."""
+    if reason is None:
+        return None
+    match = re.search(r"\bMCE\s*=\s*([0-9]+(?:\.[0-9]+)?)", str(reason), flags=re.IGNORECASE)
+    if not match:
+        return None
+    try:
+        return float(match.group(1))
     except (TypeError, ValueError):
         return None
 
@@ -2065,6 +2100,48 @@ async def get_ml_eligibility_summary(
 # Phase 3 — ML band display endpoints
 # ---------------------------------------------------------------------------
 
+def _resolve_ml_display_state() -> tuple[bool, bool, Optional[str], bool]:
+    """Return (enabled, auto_disabled, disabled_reason, config_enabled).
+
+    Includes a one-time self-heal for legacy false-disable rows where MCE was
+    historically recorded on a 0-100 scale (e.g., 40.027) instead of 0-1.
+    """
+    from app.core.config import get_settings
+    from app.core.database import exec_sql, query_one
+
+    settings = get_settings()
+    state = query_one(
+        "SELECT auto_disabled, disabled_reason FROM ml_display_state WHERE id = 1",
+        (),
+    )
+    auto_disabled = bool(state and state["auto_disabled"]) if state else False
+    disabled_reason = state["disabled_reason"] if state else None
+
+    if auto_disabled and disabled_reason:
+        legacy_mce = _extract_mce_from_reason(disabled_reason)
+        if legacy_mce is not None and legacy_mce > 1.0:
+            exec_sql(
+                """
+                UPDATE ml_display_state
+                   SET auto_disabled = 0,
+                       disabled_at = NULL,
+                       disabled_reason = NULL,
+                       updated_at = CURRENT_TIMESTAMP
+                 WHERE id = 1
+                """,
+                (),
+            )
+            logger.info(
+                "Eagle Eye: cleared legacy ML auto-disable state (reason=%s)",
+                disabled_reason,
+            )
+            auto_disabled = False
+            disabled_reason = None
+
+    config_enabled = settings.ENABLE_ML_DISPLAY
+    enabled = config_enabled and not auto_disabled
+    return enabled, auto_disabled, disabled_reason, config_enabled
+
 @router.get("/ml/display-state", summary="ML display kill-switch state")
 async def get_ml_display_state(
     _user: TokenData = Depends(get_current_user),
@@ -2080,16 +2157,10 @@ async def get_ml_display_state(
             "disabled_reason": null   // reason if auto_disabled=true
         }
     """
-    from app.core.config import get_settings
-    from app.core.database import query_one
-
-    settings = get_settings()
-    state = query_one("SELECT auto_disabled, disabled_reason FROM ml_display_state WHERE id = 1", ())
-    auto_disabled = bool(state and state["auto_disabled"]) if state else False
-    disabled_reason = state["disabled_reason"] if state else None
+    enabled, auto_disabled, disabled_reason, config_enabled = _resolve_ml_display_state()
     return {
-        "enabled": settings.ENABLE_ML_DISPLAY and not auto_disabled,
-        "config_enabled": settings.ENABLE_ML_DISPLAY,
+        "enabled": enabled,
+        "config_enabled": config_enabled,
         "auto_disabled": auto_disabled,
         "disabled_reason": disabled_reason,
     }
@@ -2116,15 +2187,11 @@ async def get_ml_bands(
             ]
         }
     """
-    from app.core.config import get_settings
-    from app.core.database import query_one, query_all
+    from app.core.database import query_one
     from app.services.eagle_eye.ml.band_display import band_for_display, DISCLAIMER_TEXT
     from app.services.eagle_eye.ml.shadow_runner import SHADOW_ROSTER
 
-    settings = get_settings()
-    state = query_one("SELECT auto_disabled FROM ml_display_state WHERE id = 1", ())
-    auto_disabled = bool(state and state["auto_disabled"]) if state else False
-    ml_enabled = settings.ENABLE_ML_DISPLAY and not auto_disabled
+    ml_enabled, _, _, _ = _resolve_ml_display_state()
 
     bands = []
     for ticker in SHADOW_ROSTER:
@@ -2178,6 +2245,23 @@ async def get_ml_bands(
     }
 
 
+@router.post("/ml/display-state/re-enable", summary="Manually re-enable ML display (admin)")
+async def re_enable_ml_display_state(
+    _admin: TokenData = Depends(require_admin),
+):
+    """Admin-only override to clear ML auto-disable state immediately."""
+    from app.services.eagle_eye.ml.auto_disable_monitor import re_enable_display
+
+    re_enable_display()
+    return {
+        "status": "ok",
+        "enabled": True,
+        "config_enabled": True,
+        "auto_disabled": False,
+        "disabled_reason": None,
+    }
+
+
 @router.get("/ml/bands/{ticker}", summary="Full ML band card for one stock")
 async def get_ml_band_for_ticker(
     ticker: str,
@@ -2193,7 +2277,6 @@ async def get_ml_band_for_ticker(
     Returns 404 if the ticker is not in the SHADOW roster.
     Returns null band fields if ML display is disabled.
     """
-    from app.core.config import get_settings
     from app.core.database import query_one
     from app.services.eagle_eye.ml.band_display import band_for_display, DISCLAIMER_TEXT
     from app.services.eagle_eye.ml.shadow_runner import SHADOW_ROSTER
@@ -2202,10 +2285,7 @@ async def get_ml_band_for_ticker(
     if ticker not in SHADOW_ROSTER:
         raise HTTPException(status_code=404, detail=f"{ticker} is not in the ML SHADOW roster")
 
-    settings = get_settings()
-    state = query_one("SELECT auto_disabled, disabled_reason FROM ml_display_state WHERE id = 1", ())
-    auto_disabled = bool(state and state["auto_disabled"]) if state else False
-    ml_enabled = settings.ENABLE_ML_DISPLAY and not auto_disabled
+    ml_enabled, _, _, config_enabled = _resolve_ml_display_state()
 
     if not ml_enabled:
         return {
@@ -2213,7 +2293,7 @@ async def get_ml_band_for_ticker(
             "enabled": False,
             "band": None,
             "disclaimer": DISCLAIMER_TEXT
-            if not settings.ENABLE_ML_DISPLAY
+            if not config_enabled
             else "⚠️ ML signals temporarily disabled.",
         }
 
