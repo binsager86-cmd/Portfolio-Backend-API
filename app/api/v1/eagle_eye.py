@@ -225,16 +225,20 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
             "'earnings per share'"
         )
 
+        def _nulls_last_desc(expr: str) -> str:
+            # Cross-db nulls-last ordering that works for text/date/timestamp/numeric.
+            return f"CASE WHEN {expr} IS NULL THEN 1 ELSE 0 END, {expr} DESC"
+
         def _metric_order_expr(alias: str) -> str:
             parts: list[str] = []
             if has_metric_period_end:
-                parts.append(f"COALESCE({alias}.period_end_date, '') DESC")
+                parts.append(_nulls_last_desc(f"{alias}.period_end_date"))
             if has_metric_year:
-                parts.append(f"COALESCE({alias}.fiscal_year, 0) DESC")
+                parts.append(_nulls_last_desc(f"{alias}.fiscal_year"))
             if has_metric_q:
-                parts.append(f"COALESCE({alias}.fiscal_quarter, 0) DESC")
+                parts.append(_nulls_last_desc(f"{alias}.fiscal_quarter"))
             if has_metric_created:
-                parts.append(f"COALESCE({alias}.created_at, 0) DESC")
+                parts.append(_nulls_last_desc(f"{alias}.created_at"))
             if has_metric_id:
                 parts.append(f"{alias}.id DESC")
             if not parts:
@@ -281,56 +285,62 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
         )
 
         if has_metrics_table and has_stocks_symbol and has_stocks_id:
-            metric_rows = query_all(
-                f"""
-                WITH ranked AS (
-                    SELECT
-                        s.symbol AS symbol,
-                        LOWER(sm.metric_name) AS metric_name,
-                        sm.metric_value AS metric_value,
-                        ROW_NUMBER() OVER (
-                            PARTITION BY s.symbol, LOWER(sm.metric_name)
-                            ORDER BY
-                                {metric_order}
-                        ) AS rn
-                    FROM stock_metrics sm
-                    JOIN stocks s ON s.id = sm.stock_id
-                    WHERE LOWER(sm.metric_name) IN ({metric_filter_values})
+            try:
+                metric_rows = query_all(
+                    f"""
+                    WITH ranked AS (
+                        SELECT
+                            s.symbol AS symbol,
+                            LOWER(sm.metric_name) AS metric_name,
+                            sm.metric_value AS metric_value,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY s.symbol, LOWER(sm.metric_name)
+                                ORDER BY
+                                    {metric_order}
+                            ) AS rn
+                        FROM stock_metrics sm
+                        JOIN stocks s ON s.id = sm.stock_id
+                        WHERE LOWER(sm.metric_name) IN ({metric_filter_values})
+                    )
+                    SELECT symbol, metric_name, metric_value
+                    FROM ranked
+                    WHERE rn = 1
+                    """,
+                    (),
                 )
-                SELECT symbol, metric_name, metric_value
-                FROM ranked
-                WHERE rn = 1
-                """,
-                (),
-            )
-            _merge_metric_rows(metric_rows)
+                _merge_metric_rows(metric_rows)
+            except Exception as exc:
+                logger.warning("stock_metrics->stocks fundamentals query failed: %s", exc)
 
         has_master_id = column_exists("stocks_master", "id")
         has_master_ticker = column_exists("stocks_master", "ticker")
         if has_metrics_table and has_master_id and has_master_ticker:
-            metric_rows_master = query_all(
-                f"""
-                WITH ranked AS (
-                    SELECT
-                        smt.ticker AS symbol,
-                        LOWER(sm.metric_name) AS metric_name,
-                        sm.metric_value AS metric_value,
-                        ROW_NUMBER() OVER (
-                            PARTITION BY smt.ticker, LOWER(sm.metric_name)
-                            ORDER BY
-                                {metric_order}
-                        ) AS rn
-                    FROM stock_metrics sm
-                    JOIN stocks_master smt ON smt.id = sm.stock_id
-                    WHERE LOWER(sm.metric_name) IN ({metric_filter_values})
+            try:
+                metric_rows_master = query_all(
+                    f"""
+                    WITH ranked AS (
+                        SELECT
+                            smt.ticker AS symbol,
+                            LOWER(sm.metric_name) AS metric_name,
+                            sm.metric_value AS metric_value,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY smt.ticker, LOWER(sm.metric_name)
+                                ORDER BY
+                                    {metric_order}
+                            ) AS rn
+                        FROM stock_metrics sm
+                        JOIN stocks_master smt ON smt.id = sm.stock_id
+                        WHERE LOWER(sm.metric_name) IN ({metric_filter_values})
+                    )
+                    SELECT symbol, metric_name, metric_value
+                    FROM ranked
+                    WHERE rn = 1
+                    """,
+                    (),
                 )
-                SELECT symbol, metric_name, metric_value
-                FROM ranked
-                WHERE rn = 1
-                """,
-                (),
-            )
-            _merge_metric_rows(metric_rows_master)
+                _merge_metric_rows(metric_rows_master)
+            except Exception as exc:
+                logger.warning("stock_metrics->stocks_master fundamentals query failed: %s", exc)
 
         # Fill any remaining gaps from latest ml_fundamentals snapshots.
         has_mlf_ticker = column_exists("ml_fundamentals", "stock_ticker")
@@ -342,56 +352,69 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
         has_mlf_eps = column_exists("ml_fundamentals", "eps")
         has_mlf_bvps = column_exists("ml_fundamentals", "book_value_per_share")
 
+        mlf_order_parts: list[str] = []
+        if has_mlf_disclosure:
+            mlf_order_parts.append(_nulls_last_desc("disclosure_date"))
+        if has_mlf_period_end:
+            mlf_order_parts.append(_nulls_last_desc("period_end_date"))
+        if has_mlf_created:
+            mlf_order_parts.append(_nulls_last_desc("created_at"))
+        if has_mlf_id:
+            mlf_order_parts.append("id DESC")
+        if not mlf_order_parts:
+            mlf_order_parts.append("UPPER(TRIM(stock_ticker)) ASC")
+        mlf_order = ",\n                                ".join(mlf_order_parts)
+
         if has_mlf_ticker and has_mlf_disclosure and has_mlf_id:
-            mlf_rows = query_all(
-                f"""
-                WITH ranked AS (
-                    SELECT
-                        stock_ticker AS symbol,
-                        {'pe_ratio' if has_mlf_pe else 'NULL'} AS pe_ratio,
-                        {'eps' if has_mlf_eps else 'NULL'} AS eps,
-                        {'book_value_per_share' if has_mlf_bvps else 'NULL'} AS book_value_per_share,
-                        ROW_NUMBER() OVER (
-                            PARTITION BY UPPER(TRIM(stock_ticker))
-                            ORDER BY
-                                COALESCE(disclosure_date, '') DESC,
-                                COALESCE({'period_end_date' if has_mlf_period_end else "''"}, '') DESC,
-                                COALESCE({'created_at' if has_mlf_created else "''"}, '') DESC,
-                                id DESC
-                        ) AS rn
-                    FROM ml_fundamentals
-                )
-                SELECT symbol, pe_ratio, eps, book_value_per_share
-                FROM ranked
-                WHERE rn = 1
-                """,
-                (),
-            )
-
-            for r in mlf_rows or []:
-                ticker = _normalize_symbol(r.get("symbol"))
-                if not ticker:
-                    continue
-
-                fmap.setdefault(
-                    ticker,
-                    {
-                        "pe_ratio": None,
-                        "book_value_per_share": None,
-                        "eps": None,
-                    },
+            try:
+                mlf_rows = query_all(
+                    f"""
+                    WITH ranked AS (
+                        SELECT
+                            stock_ticker AS symbol,
+                            {'pe_ratio' if has_mlf_pe else 'NULL'} AS pe_ratio,
+                            {'eps' if has_mlf_eps else 'NULL'} AS eps,
+                            {'book_value_per_share' if has_mlf_bvps else 'NULL'} AS book_value_per_share,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY UPPER(TRIM(stock_ticker))
+                                ORDER BY
+                                    {mlf_order}
+                            ) AS rn
+                        FROM ml_fundamentals
+                    )
+                    SELECT symbol, pe_ratio, eps, book_value_per_share
+                    FROM ranked
+                    WHERE rn = 1
+                    """,
+                    (),
                 )
 
-                pe_val = _safe_float(r.get("pe_ratio"))
-                eps_val = _safe_float(r.get("eps"))
-                bvps_val = _safe_float(r.get("book_value_per_share"))
+                for r in mlf_rows or []:
+                    ticker = _normalize_symbol(r.get("symbol"))
+                    if not ticker:
+                        continue
 
-                if fmap[ticker].get("pe_ratio") is None and pe_val is not None:
-                    fmap[ticker]["pe_ratio"] = pe_val
-                if fmap[ticker].get("eps") is None and eps_val is not None:
-                    fmap[ticker]["eps"] = eps_val
-                if fmap[ticker].get("book_value_per_share") is None and bvps_val is not None:
-                    fmap[ticker]["book_value_per_share"] = bvps_val
+                    fmap.setdefault(
+                        ticker,
+                        {
+                            "pe_ratio": None,
+                            "book_value_per_share": None,
+                            "eps": None,
+                        },
+                    )
+
+                    pe_val = _safe_float(r.get("pe_ratio"))
+                    eps_val = _safe_float(r.get("eps"))
+                    bvps_val = _safe_float(r.get("book_value_per_share"))
+
+                    if fmap[ticker].get("pe_ratio") is None and pe_val is not None:
+                        fmap[ticker]["pe_ratio"] = pe_val
+                    if fmap[ticker].get("eps") is None and eps_val is not None:
+                        fmap[ticker]["eps"] = eps_val
+                    if fmap[ticker].get("book_value_per_share") is None and bvps_val is not None:
+                        fmap[ticker]["book_value_per_share"] = bvps_val
+            except Exception as exc:
+                logger.warning("ml_fundamentals fallback query failed: %s", exc)
 
         _FUNDAMENTALS_MAP_CACHE = fmap
         _FUNDAMENTALS_MAP_CACHE_AT = now
@@ -1908,6 +1931,28 @@ async def get_simulator_activity(
     feed = sorted(exits + opens, key=lambda x: x.get("exit_date") or x.get("event_date") or "", reverse=True)[:limit]
 
     return {"status": "ok", "feed": feed}
+
+
+# ---------------------------------------------------------------------------
+# POST /eagle-eye/simulator/reset   — clear stale simulator state
+# ---------------------------------------------------------------------------
+
+@router.post("/simulator/reset", summary="Reset simulator data and restart from today")
+async def reset_simulator_now(
+    run_after_reset: bool = Query(False, description="Run one simulation cycle after reset"),
+    _admin: TokenData = Depends(require_admin),
+):
+    try:
+        from app.services.eagle_eye.simulator import get_engine
+
+        engine = get_engine()
+        result = engine.reset_all()
+        if run_after_reset:
+            result["run_result"] = engine.run_daily()
+        return {"status": "ok", "result": result}
+    except Exception as exc:
+        logger.exception("Simulator reset failed: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 # ---------------------------------------------------------------------------
