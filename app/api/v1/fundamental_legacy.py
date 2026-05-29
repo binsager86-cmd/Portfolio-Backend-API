@@ -15,7 +15,7 @@ import time
 import logging
 from datetime import date
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import asyncio
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
@@ -2490,7 +2490,7 @@ _CANONICAL_CODES: Dict[str, str] = {
     "operating_income": "operating_income", "operating_profit": "operating_income",
     "income_from_operations": "operating_income",
     "interest_expense": "interest_expense", "finance_costs": "interest_expense",
-    "finance_cost": "interest_expense",
+    "finance_cost": "interest_expense", "net_interest_expense": "interest_expense",
     "other_income": "other_income", "other_income_expense": "other_income",
     "income_before_tax": "income_before_tax", "profit_before_tax": "income_before_tax",
     "income_tax": "income_tax", "income_tax_expense": "income_tax",
@@ -2514,7 +2514,9 @@ _CANONICAL_CODES: Dict[str, str] = {
     "cash_and_bank_balances": "cash", "cash_and_balances_with_banks": "cash",
     "accounts_receivable": "accounts_receivable", "trade_receivables": "accounts_receivable",
     "receivables": "accounts_receivable", "trade_and_other_receivables": "accounts_receivable",
+    "other_receivables": "other_receivables",
     "inventory": "inventory", "inventories": "inventory",
+    "prepaid_expenses": "prepaid_expenses",
     "other_current_assets": "other_current_assets",
     "total_current_assets": "total_current_assets",
     "property_plant_equipment": "ppe_net", "property_plant_and_equipment": "ppe_net",
@@ -2528,6 +2530,7 @@ _CANONICAL_CODES: Dict[str, str] = {
     "trade_and_other_payables": "accounts_payable",
     "short_term_debt": "short_term_debt", "current_portion_of_debt": "short_term_debt",
     "current_portion_of_long_term_debt": "short_term_debt",
+    "current_port_long_term_debt": "short_term_debt",
     "currentportdebt": "short_term_debt",
     "short_term_borrowings": "short_term_debt",
     "short_term_loans": "short_term_debt", "short_term_loan": "short_term_debt",
@@ -2536,6 +2539,12 @@ _CANONICAL_CODES: Dict[str, str] = {
     "bank_borrowing_current": "short_term_debt",
     "bank_overdraft": "short_term_debt", "bank_overdrafts": "short_term_debt",
     "overdraft": "short_term_debt", "overdrafts": "short_term_debt",
+    "current_cap_leases": "current_portion_of_leases",
+    "current_capital_leases": "current_portion_of_leases",
+    "current_portion_of_leases": "current_portion_of_leases",
+    "current_income_taxes_payable": "current_income_taxes_payable",
+    "current_unearned_revenue": "current_unearned_revenue",
+    "other_current_liabilities": "other_current_liabilities",
     "total_current_liabilities": "total_current_liabilities",
     "long_term_debt": "long_term_debt", "long_term_borrowings": "long_term_debt",
     "debtnc": "long_term_debt",
@@ -2546,6 +2555,8 @@ _CANONICAL_CODES: Dict[str, str] = {
     "bank_borrowing_non_current": "long_term_debt",
     "long_term_bank_borrowings": "long_term_debt",
     "non_current_murabaha_payable": "long_term_debt",
+    "capital_leases": "long_term_debt",
+    "total_debt": "total_debt",
     "total_non_current_liabilities": "total_non_current_liabilities",
     "total_liabilities": "total_liabilities",
     "common_stock": "share_capital", "share_capital": "share_capital",
@@ -2558,6 +2569,7 @@ _CANONICAL_CODES: Dict[str, str] = {
     "treasury_shares": "treasury_shares", "treasury_shares_equity": "treasury_shares",
     "total_equity": "total_equity", "total_shareholders_equity": "total_equity",
     "total_stockholders_equity": "total_equity",
+    "total_common_equity": "total_common_equity",
     "equity_attributable_to_shareholders": "total_equity",
     "total_liabilities_and_equity": "total_liabilities_and_equity",
     "total_liabilities_and_shareholders_equity": "total_liabilities_and_equity",
@@ -2603,6 +2615,7 @@ _CANONICAL_CODES: Dict[str, str] = {
     "fcf_per_share": "free_cash_flow_per_share",
     "free_cash_flow_growth": "free_cash_flow_growth",
     "operating_cash_flow": "cash_from_operations",
+    "property_expenses": "property_expenses",
     # Equity statement
     "shares_outstanding": "shares_diluted", "share_count": "share_count",
     "shares_basic": "shares_basic", "shares_diluted": "shares_diluted",
@@ -2709,19 +2722,28 @@ CRITICAL — COMPLETENESS & PRECISION:
 def _normalize_key(raw_key: str) -> str:
     """Map an AI-extracted key to a canonical lowercase line item code."""
     import re as _re
-    k = raw_key.strip().lower().replace(" ", "_").replace("-", "_")
+    k = _re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", raw_key.strip())
+    k = k.lower().replace(" ", "_").replace("-", "_")
     k = _re.sub(r"_+", "_", k).strip("_")
-    # Direct lookup in canonical map
-    if k in _CANONICAL_CODES:
-        return _CANONICAL_CODES[k]
-    # Try without trailing _total, _net etc.
-    for suffix in ("_total", "_net", "_and_equivalents"):
+
+    candidates = [k]
+    for suffix in ("_suppl_re", "_re", "_as_reported", "_suppl"):
         if k.endswith(suffix):
             trimmed = k[: -len(suffix)].rstrip("_")
-            if trimmed in _CANONICAL_CODES:
-                return _CANONICAL_CODES[trimmed]
-    # Fallback: clean lowercase snake_case (never uppercase)
-    return k
+            if trimmed and trimmed not in candidates:
+                candidates.append(trimmed)
+
+    for candidate in candidates:
+        if candidate in _CANONICAL_CODES:
+            return _CANONICAL_CODES[candidate]
+        for suffix in ("_total", "_net", "_and_equivalents"):
+            if candidate.endswith(suffix):
+                trimmed = candidate[: -len(suffix)].rstrip("_")
+                if trimmed in _CANONICAL_CODES:
+                    return _CANONICAL_CODES[trimmed]
+
+    # Fallback to the most simplified snake_case candidate for downstream lookups.
+    return candidates[-1]
 
 
 def _reconcile_code_with_existing(
@@ -5726,12 +5748,8 @@ def _verify_stock_owner(stock_id: int, user_id: int) -> None:
 
 # ── Metrics calculation (mirrors MetricsCalculator) ──────────────────
 
-def _load_items_for_period(stock_id: int, period_end_date: str) -> Dict[str, float]:
-    """Flatten all line items across all statement types for one period.
-
-    Keys are uppercased so callers can use ``_get("REVENUE")`` regardless
-    of whether the DB stores ``revenue`` or ``REVENUE``.
-    """
+def _load_item_rows_for_period(stock_id: int, period_end_date: str) -> List[Tuple[str, str, float]]:
+    """Return raw and normalized line-item codes for one reporting period."""
     rows = query_all(
         """SELECT li.line_item_code, li.amount
            FROM financial_line_items li
@@ -5739,13 +5757,20 @@ def _load_items_for_period(stock_id: int, period_end_date: str) -> Dict[str, flo
            WHERE fs.stock_id = ? AND fs.period_end_date = ?""",
         (stock_id, period_end_date),
     )
-    items: Dict[str, float] = {}
+    item_rows: List[Tuple[str, str, float]] = []
     for r in rows:
-        code = (r[0] if isinstance(r, (tuple, list)) else r["line_item_code"]).upper()
+        raw_code = r[0] if isinstance(r, (tuple, list)) else r["line_item_code"]
         amount = r[1] if isinstance(r, (tuple, list)) else r["amount"]
-        # Keep first occurrence (don't overwrite with duplicates)
-        if code not in items:
-            items[code] = amount
+        item_rows.append((raw_code.upper(), _normalize_key(raw_code).upper(), amount))
+    return item_rows
+
+
+def _load_items_for_period(stock_id: int, period_end_date: str) -> Dict[str, float]:
+    """Flatten canonical line items across all statement types for one period."""
+    items: Dict[str, float] = {}
+    for _raw_code, normalized_code, amount in _load_item_rows_for_period(stock_id, period_end_date):
+        if normalized_code not in items:
+            items[normalized_code] = amount
     return items
 
 
@@ -5782,9 +5807,14 @@ def _calculate_all_metrics(
     fiscal_quarter: Optional[int] = None,
 ) -> Dict[str, Dict[str, Optional[float]]]:
     """Calculate every metric for one period (mirrors MetricsCalculator)."""
-    items = _load_items_for_period(stock_id, period_end_date)
-    if not items:
+    item_rows = _load_item_rows_for_period(stock_id, period_end_date)
+    if not item_rows:
         return {}
+
+    items: Dict[str, float] = {}
+    for _raw_code, normalized_code, amount in item_rows:
+        if normalized_code not in items:
+            items[normalized_code] = amount
 
     def _get(code: str) -> Optional[float]:
         return items.get(code)
@@ -5796,16 +5826,18 @@ def _calculate_all_metrics(
     ) -> Optional[float]:
         total = 0.0
         found = False
-        for code, amount in items.items():
+        for raw_code, normalized_code, amount in item_rows:
             if amount is None:
                 continue
-            code_upper = code.upper()
-            code_lower = code.lower()
-            is_exact = code_upper in exact_codes
-            is_keyword = bool(include_keywords) and any(keyword in code_lower for keyword in include_keywords)
+            raw_lower = raw_code.lower()
+            normalized_lower = normalized_code.lower()
+            is_exact = raw_code in exact_codes or normalized_code in exact_codes
+            is_keyword = bool(include_keywords) and any(
+                keyword in raw_lower or keyword in normalized_lower for keyword in include_keywords
+            )
             if not is_exact and not is_keyword:
                 continue
-            if any(keyword in code_lower for keyword in exclude_keywords):
+            if any(keyword in raw_lower or keyword in normalized_lower for keyword in exclude_keywords):
                 continue
             total += abs(amount)
             found = True
@@ -5820,7 +5852,13 @@ def _calculate_all_metrics(
     operating_income = _get("OPERATING_INCOME")
     net_income = _get("NET_INCOME")
     total_assets = _get("TOTAL_ASSETS")
-    total_equity = _get("TOTAL_EQUITY") or _get("SHAREHOLDERS_EQUITY")
+    total_equity = (
+        _get("TOTAL_EQUITY")
+        or _get("SHAREHOLDERS_EQUITY")
+        or _get("TOTAL_SHAREHOLDERS_EQUITY")
+        or _get("STOCKHOLDERS_EQUITY")
+        or _get("TOTAL_COMMON_EQUITY")
+    )
 
     if revenue and revenue != 0:
         if gross_profit is not None:
@@ -5859,15 +5897,17 @@ def _calculate_all_metrics(
     current_assets = _get("TOTAL_CURRENT_ASSETS")
     current_liab = _get("TOTAL_CURRENT_LIABILITIES")
     inventory = _get("INVENTORY")
-    cash = _get("CASH_EQUIVALENTS")
-    short_term_inv = _get("SHORT_TERM_INVESTMENTS")
+    cash = _get("CASH_EQUIVALENTS") or _get("CASH")
+    short_term_inv = _get("SHORT_TERM_INVESTMENTS") or _get("MARKETABLE_SECURITIES")
     ar = _get("ACCOUNTS_RECEIVABLE")
+    other_receivables = _get("OTHER_RECEIVABLES")
+    prepaid_expenses = _get("PREPAID_EXPENSES")
 
     # Synthesize current assets/liabilities from components when aggregates are missing
     if current_assets is None:
         ca_parts = [
             cash, short_term_inv, ar,
-            _get("OTHER_RECEIVABLES"), _get("PREPAID_EXPENSES"),
+            other_receivables, prepaid_expenses,
             _get("OTHER_CURRENT_ASSETS"), inventory,
         ]
         known = [v for v in ca_parts if v is not None]
@@ -5875,7 +5915,7 @@ def _calculate_all_metrics(
             current_assets = sum(known)
     if current_liab is None:
         cl_parts = [
-            _get("ACCOUNTS_PAYABLE"), _get("CURRENT_PORTION_OF_LONG_TERM_DEBT"),
+            _get("ACCOUNTS_PAYABLE"), _get("SHORT_TERM_DEBT"), _get("CURRENT_PORTION_OF_LONG_TERM_DEBT"),
             _get("CURRENT_PORTION_OF_LEASES"), _get("CURRENT_INCOME_TAXES_PAYABLE"),
             _get("CURRENT_UNEARNED_REVENUE"), _get("OTHER_CURRENT_LIABILITIES"),
         ]
@@ -5885,7 +5925,7 @@ def _calculate_all_metrics(
     if current_assets is not None and current_liab and current_liab != 0:
         liq["Current Ratio"] = current_assets / current_liab
         # CFA: Quick Ratio = (Cash + ST Investments + Receivables) / CL
-        quick_assets = (cash or 0) + (short_term_inv or 0) + (ar or 0)
+        quick_assets = (cash or 0) + (short_term_inv or 0) + (ar or 0) + (other_receivables or 0)
         if quick_assets > 0:
             liq["Quick Ratio"] = quick_assets / current_liab
         elif inventory is not None:
@@ -5901,11 +5941,19 @@ def _calculate_all_metrics(
     # ── leverage (CFA: "debt" = interest-bearing ST + LT debt, NOT total liabilities)
     lev: Dict[str, Optional[float]] = {}
     total_liab = _get("TOTAL_LIABILITIES")
-    lt_debt = _get("LONG_TERM_DEBT")
-    st_debt = _get("SHORT_TERM_DEBT")
+    aggregate_total_debt = _get("TOTAL_DEBT")
+    lt_debt = _get("LONG_TERM_DEBT") or _get("LONG_TERM_BORROWINGS") or _get("DEBTNC") or _get("CAPITAL_LEASES")
+    st_debt = (
+        _get("SHORT_TERM_DEBT")
+        or _get("SHORT_TERM_BORROWINGS")
+        or _get("CURRENT_PORTION_OF_DEBT")
+        or _get("CURRENT_PORTION_OF_LONG_TERM_DEBT")
+        or _get("CURRENT_PORTION_LT_DEBT")
+        or _get("CURRENT_PORTION_OF_LONG_TERM_DEBTS")
+        or _get("CURRENT_PORTION_OF_LEASES")
+        or _get("CURRENTPORTDEBT")
+    )
     interest_expense = _get("INTEREST_EXPENSE")
-    has_debt_data = lt_debt is not None or st_debt is not None
-    total_debt = (lt_debt or 0) + (st_debt or 0)
     current_bank_borrowings = _sum_matching_items(
         {
             "SHORT_TERM_DEBT",
@@ -5978,12 +6026,20 @@ def _calculate_all_metrics(
         if value is not None
     ]
     bank_borrowings_total = sum(bank_borrowings_components) if bank_borrowings_components else None
-    # CFA: Debt-to-Equity = Total Debt / Total Equity
-    if has_debt_data and total_equity and total_equity != 0:
-        lev["Debt-to-Equity"] = total_debt / total_equity
+    if aggregate_total_debt is None:
+        if lt_debt is not None or st_debt is not None:
+            aggregate_total_debt = (lt_debt or 0) + (st_debt or 0)
+        else:
+            aggregate_total_debt = bank_borrowings_total
+    has_debt_data = aggregate_total_debt is not None
+    total_debt = aggregate_total_debt or 0
     # Bank-borrowings leverage = current + non-current bank borrowings / total equity
     if bank_borrowings_total is not None and total_equity and total_equity != 0:
         lev["Debt / Equity"] = bank_borrowings_total / total_equity
+    # Fall back to the legacy label only when a UI-friendly Debt / Equity row
+    # was not produced for this period.
+    if "Debt / Equity" not in lev and has_debt_data and total_equity and total_equity != 0:
+        lev["Debt-to-Equity"] = total_debt / total_equity
     # CFA: Debt-to-Assets = Total Debt / Total Assets
     if has_debt_data and total_assets and total_assets != 0:
         lev["Debt-to-Assets"] = total_debt / total_assets
@@ -6023,8 +6079,8 @@ def _calculate_all_metrics(
     if ar is None:
         ar = _get("ACCOUNTS_RECEIVABLE")
     ap = _get("ACCOUNTS_PAYABLE")
-    cogs = _get("COST_OF_REVENUE")
-    ppe = _get("NET_FIXED_ASSETS") or _get("PROPERTY_PLANT_EQUIPMENT")
+    cogs = _get("COST_OF_REVENUE") or _get("COST_OF_OPERATIONS") or _get("PROPERTY_EXPENSES") or _get("OPERATING_EXPENSES")
+    ppe = _get("NET_FIXED_ASSETS") or _get("PROPERTY_PLANT_EQUIPMENT") or _get("PPE_NET")
     if revenue and total_assets and total_assets != 0:
         eff["Asset Turnover"] = revenue / total_assets
     # CFA: Fixed Asset Turnover = Revenue / Net PP&E
