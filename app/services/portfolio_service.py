@@ -45,6 +45,37 @@ def _soft_delete_filter(table_alias: str = "") -> str:
     prefix = f"{table_alias}." if table_alias else ""
     return f" AND COALESCE({prefix}is_deleted, 0) = 0"
 
+def _normalize_position_symbol(value: Any) -> str:
+    """Canonical symbol key for cross-query matching."""
+    if value is None:
+        return ""
+    return str(value).strip().upper()
+
+def _normalize_position_portfolio(value: Any) -> str:
+    """Canonical portfolio key for cross-query matching."""
+    if value is None:
+        return "KFH"
+    text = str(value).strip().upper()
+    return text or "KFH"
+
+def _normalize_txn_type(value: Any) -> str:
+    """Canonical transaction type key tolerant of legacy casing/spacing."""
+    if value is None:
+        return ""
+    text = str(value).strip().upper().replace(" ", "_")
+    if text == "DIVIDEND":
+        return "DIVIDEND_ONLY"
+    return text
+
+def _resolve_position_metric_key(mapping: Dict[Tuple[str, str], float], sym: str, pf: str) -> Optional[Tuple[str, str]]:
+    """Prefer exact symbol/portfolio match, else allow a unique symbol-only fallback."""
+    exact = (sym, pf)
+    if exact in mapping:
+        return exact
+    symbol_matches = [key for key, value in mapping.items() if key[0] == sym and safe_float(value, 0.0) > 0.0]
+    if len(symbol_matches) == 1:
+        return symbol_matches[0]
+    return None
 
 def _parse_stockanalysis_pe(page_text: str) -> Optional[float]:
     """Extract P/E ratio from StockAnalysis statistics page HTML payload."""
@@ -645,12 +676,12 @@ class PortfolioService:
                 t.id, t.stock_symbol, t.txn_date, t.txn_type, t.shares,
                 t.purchase_cost, t.sell_value, t.realized_pnl_at_txn,
                 t.avg_cost_at_txn,
-                COALESCE(t.portfolio, s.portfolio, 'KFH') AS portfolio,
+                COALESCE(NULLIF(TRIM(t.portfolio), ''), s.portfolio, 'KFH') AS portfolio,
                 COALESCE(s.currency, 'KWD') AS currency,
                 COALESCE(t.category, 'portfolio') AS category
             FROM transactions t
             LEFT JOIN stocks s
-                ON UPPER(t.stock_symbol) = UPPER(s.symbol) AND s.user_id = t.user_id
+                ON UPPER(TRIM(t.stock_symbol)) = UPPER(TRIM(s.symbol)) AND s.user_id = t.user_id
             WHERE t.user_id = ? {soft_del}
             ORDER BY t.stock_symbol, t.portfolio, t.txn_date ASC, t.id ASC
         """
@@ -669,6 +700,11 @@ class PortfolioService:
                 "details": [],
             }
 
+        df = df.copy()
+        df["_sym_key"] = df["stock_symbol"].map(_normalize_position_symbol)
+        df["_pf_key"] = df["portfolio"].map(_normalize_position_portfolio)
+        df["_txn_type_key"] = df["txn_type"].map(_normalize_txn_type)
+
         # Pre-compute per-(symbol, portfolio) totals so each sell can be
         # credited a proportional share of the dividends collected on that
         # position. A sell is considered a "win" by the UI when
@@ -678,31 +714,36 @@ class PortfolioService:
             dividends_kwd_per_pos: dict[tuple[str, str], float] = {}
             shares_bought_per_pos: dict[tuple[str, str], float] = {}
             for _, r in df.iterrows():
-                key = (str(r["stock_symbol"]).strip(), str(r.get("portfolio", "KFH")))
-                ccy = r.get("currency", "KWD")
+                key = (r["_sym_key"], r["_pf_key"])
                 # Dividends are recorded on Buy rows (cash_dividend column).
                 # Use raw column from df via re-query is overkill; pull from
                 # transactions via a lightweight aggregate query below.
                 shares_bought_per_pos.setdefault(key, 0.0)
-                if str(r.get("txn_type")) == "Buy":
+                if r["_txn_type_key"] == "BUY":
                     shares_bought_per_pos[key] += safe_float(r.get("shares"), 0.0)
 
             soft_del2 = _soft_delete_filter()
             div_sql = f"""
                 SELECT
-                    stock_symbol,
-                    COALESCE(portfolio, 'KFH') AS portfolio,
-                    SUM(COALESCE(cash_dividend, 0)) AS total_div,
-                    COALESCE((SELECT currency FROM stocks s
-                              WHERE UPPER(s.symbol) = UPPER(t.stock_symbol)
-                                AND s.user_id = t.user_id LIMIT 1), 'KWD') AS currency
+                    t.stock_symbol,
+                    COALESCE(NULLIF(TRIM(t.portfolio), ''), s.portfolio, 'KFH') AS portfolio,
+                    SUM(COALESCE(t.cash_dividend, 0)) AS total_div,
+                    COALESCE(s.currency, 'KWD') AS currency
                 FROM transactions t
+                LEFT JOIN stocks s
+                    ON UPPER(TRIM(s.symbol)) = UPPER(TRIM(t.stock_symbol)) AND s.user_id = t.user_id
                 WHERE t.user_id = ? {soft_del2}
-                GROUP BY stock_symbol, COALESCE(portfolio, 'KFH')
+                GROUP BY
+                    t.stock_symbol,
+                    COALESCE(NULLIF(TRIM(t.portfolio), ''), s.portfolio, 'KFH'),
+                    COALESCE(s.currency, 'KWD')
             """
             div_df = query_df(div_sql, (self.user_id,))
             for _, r in div_df.iterrows():
-                key = (str(r["stock_symbol"]).strip(), str(r["portfolio"]))
+                key = (
+                    _normalize_position_symbol(r.get("stock_symbol")),
+                    _normalize_position_portfolio(r.get("portfolio")),
+                )
                 dividends_kwd_per_pos[key] = convert_to_kwd(
                     safe_float(r.get("total_div"), 0.0),
                     r.get("currency", "KWD"),
@@ -724,16 +765,17 @@ class PortfolioService:
 
         def _alloc_div(sym: str, pf: str, sold_shares: float) -> float:
             """Pro-rata share of position dividends for this sell."""
-            key = (sym, pf)
-            total_div = dividends_kwd_per_pos.get(key, 0.0)
-            total_bought = shares_bought_per_pos.get(key, 0.0)
+            div_key = _resolve_position_metric_key(dividends_kwd_per_pos, sym, pf)
+            shares_key = _resolve_position_metric_key(shares_bought_per_pos, sym, pf)
+            total_div = dividends_kwd_per_pos.get(div_key, 0.0) if div_key else 0.0
+            total_bought = shares_bought_per_pos.get(shares_key, 0.0) if shares_key else 0.0
             if total_div == 0.0 or total_bought <= 0.0 or sold_shares <= 0.0:
                 return 0.0
             ratio = min(sold_shares / total_bought, 1.0)
             return total_div * ratio
 
         if has_stored:
-            sells = df[df["txn_type"] == "Sell"].copy()
+            sells = df[df["_txn_type_key"] == "SELL"].copy()
             for _, row in sells.iterrows():
                 stored_pnl = row.get("realized_pnl_at_txn")
                 if pd.isna(stored_pnl):
@@ -741,8 +783,8 @@ class PortfolioService:
                 profit = float(stored_pnl)
                 ccy = row.get("currency", "KWD")
                 profit_kwd = convert_to_kwd(profit, ccy)
-                sym = str(row["stock_symbol"]).strip()
-                pf = str(row.get("portfolio", "KFH"))
+                sym = row["_sym_key"]
+                pf = row["_pf_key"]
                 div_alloc = _alloc_div(sym, pf, safe_float(row.get("shares"), 0.0))
                 total_realized_kwd += profit_kwd
                 total_div_alloc_kwd += div_alloc
@@ -768,9 +810,9 @@ class PortfolioService:
         else:
             position_basis: Dict[Tuple[str, str], dict] = {}
             for _, row in df.iterrows():
-                sym = str(row["stock_symbol"]).strip()
-                pf = str(row.get("portfolio", "KFH"))
-                typ = str(row["txn_type"])
+                sym = row["_sym_key"]
+                pf = row["_pf_key"]
+                typ = row["_txn_type_key"]
                 qty = safe_float(row.get("shares"), 0.0)
                 ccy = row.get("currency", "KWD")
                 key = (sym, pf)
@@ -778,12 +820,12 @@ class PortfolioService:
                 if key not in position_basis:
                     position_basis[key] = {"qty": 0.0, "total_cost": 0.0, "currency": ccy}
 
-                if typ == "Buy":
+                if typ == "BUY":
                     cost = safe_float(row.get("purchase_cost"), 0.0)
                     position_basis[key]["qty"] += qty
                     position_basis[key]["total_cost"] += cost
 
-                elif typ == "Sell" and qty > 0:
+                elif typ == "SELL" and qty > 0:
                     cur_qty = position_basis[key]["qty"]
                     cur_cost = position_basis[key]["total_cost"]
                     if cur_qty > 0:
