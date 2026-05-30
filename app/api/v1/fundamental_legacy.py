@@ -6473,6 +6473,317 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
 
 # ── Score calculation (mirrors MetricsCalculator.compute_stock_score)
 
+_PERCENT_STYLE_SCORE_METRICS = {
+    "ROIC",
+    "ROE",
+    "ROA",
+    "Net Margin",
+    "Operating Margin",
+    "EBITDA Margin",
+    "FCF Margin",
+    "Revenue Growth",
+    "EPS Growth",
+    "Revenue CAGR 3Y",
+    "Revenue CAGR 5Y",
+    "EPS CAGR 3Y",
+    "EPS CAGR 5Y",
+}
+
+_SCORE_METRIC_ALIAS_MAP: Dict[str, Tuple[str, ...]] = {
+    "Current Ratio": ("Current Ratio (TTM)", "current ratio"),
+    "Quick Ratio": ("Quick Ratio (TTM)", "Acid-Test Ratio", "quick ratio"),
+    "Cash Ratio": ("Cash Ratio (TTM)", "cash ratio"),
+    "Debt-to-Equity": (
+        "Debt / Equity",
+        "Debt/Equity Ratio",
+        "Debt to Equity Ratio",
+        "Debt-to-Equity Ratio",
+        "Debt / Equity Ratio",
+    ),
+    "Debt-to-Assets": (
+        "Debt / Assets",
+        "Debt/Assets Ratio",
+        "Debt to Assets Ratio",
+        "Debt-to-Assets Ratio",
+    ),
+    "Debt-to-Capital": (
+        "Debt / Capital",
+        "Debt/Capital Ratio",
+        "Debt to Capital Ratio",
+        "Debt-to-Capital Ratio",
+    ),
+    "Interest Coverage": (
+        "Interest Coverage Ratio",
+        "Times Interest Earned",
+        "interest coverage",
+    ),
+    "Net Debt / EBITDA": (
+        "Debt / EBITDA",
+        "Debt/EBITDA",
+        "Net Debt to EBITDA",
+    ),
+    "Asset Turnover": (
+        "Asset Turnover Ratio",
+        "Total Asset Turnover",
+    ),
+    "Fixed Asset Turnover": ("Fixed Asset Turnover Ratio",),
+    "Working Capital Turnover": ("Working Capital Turnover Ratio",),
+    "Receivables Turnover": (
+        "Receivables Turnover Ratio",
+        "Accounts Receivable Turnover",
+    ),
+    "Inventory Turnover": (
+        "Inventory Turnover Ratio",
+        "Stock Turnover",
+    ),
+    "Cash Conversion Cycle": (
+        "Cash Conversion Cycle (Days)",
+        "CCC",
+    ),
+    "ROA": (
+        "ROA %",
+        "Return on Assets",
+        "Return on Assets (ROA)",
+    ),
+    "ROE": (
+        "ROE %",
+        "Return on Equity",
+        "Return on Equity (ROE)",
+    ),
+    "ROIC": (
+        "ROIC %",
+        "Return on Invested Capital",
+        "Return on Invested Capital (ROIC)",
+    ),
+    "Net Margin": (
+        "Net Margin %",
+        "Net Profit Margin",
+    ),
+    "Operating Margin": (
+        "Operating Margin %",
+        "Operating Profit Margin",
+    ),
+    "EBITDA Margin": ("EBITDA Margin %",),
+    "FCF Margin": (
+        "FCF Margin %",
+        "Free Cash Flow Margin",
+    ),
+    "Cash from Operations": (
+        "Cash From Operations",
+        "Operating Cash Flow",
+    ),
+    "Free Cash Flow": ("FCF",),
+    "Revenue Growth": ("Revenue Growth YoY",),
+    "EPS Growth": ("EPS Growth YoY",),
+    "Revenue Growth Stability": (
+        "Revenue Stability",
+        "Revenue Growth Std Dev",
+    ),
+}
+
+_STOCKANALYSIS_CORE_RATIO_LABELS: Dict[str, Tuple[Tuple[str, bool], ...]] = {
+    "Current Ratio": (("Current Ratio", False),),
+    "Quick Ratio": (("Quick Ratio", False),),
+    "Cash Ratio": (("Cash Ratio", False),),
+    "Debt-to-Equity": (
+        ("Debt / Equity Ratio", False),
+        ("Debt to Equity Ratio", False),
+        ("Debt / Equity", False),
+    ),
+    "Debt-to-Assets": (
+        ("Debt / Assets Ratio", False),
+        ("Debt to Assets Ratio", False),
+    ),
+    "Debt-to-Capital": (
+        ("Debt / Capital Ratio", False),
+        ("Debt to Capital Ratio", False),
+    ),
+    "Interest Coverage": (("Interest Coverage", False),),
+    "Net Debt / EBITDA": (
+        ("Net Debt / EBITDA", False),
+        ("Debt / EBITDA", False),
+    ),
+    "Asset Turnover": (("Asset Turnover", False),),
+    "Fixed Asset Turnover": (("Fixed Asset Turnover", False),),
+    "Working Capital Turnover": (("Working Capital Turnover", False),),
+    "Receivables Turnover": (("Receivables Turnover", False),),
+    "Inventory Turnover": (("Inventory Turnover", False),),
+    "Cash Conversion Cycle": (("Cash Conversion Cycle", False),),
+    "ROA": (
+        ("ROA %", True),
+        ("Return on Assets (ROA)", True),
+    ),
+    "ROE": (
+        ("ROE %", True),
+        ("Return on Equity (ROE)", True),
+    ),
+    "ROIC": (
+        ("ROIC %", True),
+        ("Return on Invested Capital (ROIC)", True),
+    ),
+    "Net Margin": (
+        ("Net Margin %", True),
+        ("Profit Margin", True),
+    ),
+    "Operating Margin": (("Operating Margin %", True),),
+    "EBITDA Margin": (("EBITDA Margin %", True),),
+    "FCF Margin": (
+        ("FCF Margin %", True),
+        ("Free Cash Flow Margin", True),
+    ),
+}
+
+_STOCKANALYSIS_CORE_METRIC_KEYS = tuple(_STOCKANALYSIS_CORE_RATIO_LABELS.keys())
+
+
+def _normalize_metric_name(metric_name: str) -> str:
+    import re as _re
+
+    return _re.sub(r"[^a-z0-9]+", "", (metric_name or "").lower())
+
+
+def _coerce_score_metric_value(metric_name: str, metric_value: Optional[float]) -> Optional[float]:
+    if metric_value is None:
+        return None
+    if metric_name in _PERCENT_STYLE_SCORE_METRICS and 1 < abs(metric_value) <= 100:
+        return metric_value / 100.0
+    return metric_value
+
+
+def _apply_score_metric_aliases(latest: Dict[str, float]) -> None:
+    normalized_lookup: Dict[str, float] = {}
+    for raw_name, raw_value in latest.items():
+        if raw_value is None:
+            continue
+        norm_name = _normalize_metric_name(raw_name)
+        if norm_name and norm_name not in normalized_lookup:
+            normalized_lookup[norm_name] = raw_value
+
+    for canonical_name, alias_names in _SCORE_METRIC_ALIAS_MAP.items():
+        current_value = _coerce_score_metric_value(canonical_name, latest.get(canonical_name))
+        if current_value is not None:
+            latest[canonical_name] = current_value
+            continue
+
+        found_value: Optional[float] = None
+        for alias_name in alias_names:
+            alias_value = latest.get(alias_name)
+            if alias_value is None:
+                alias_value = normalized_lookup.get(_normalize_metric_name(alias_name))
+            if alias_value is not None:
+                found_value = alias_value
+                break
+
+        coerced = _coerce_score_metric_value(canonical_name, found_value)
+        if coerced is not None:
+            latest[canonical_name] = coerced
+
+
+def _extract_stockanalysis_table_value(page_html: str, label: str) -> Optional[str]:
+    import re as _re
+
+    escaped_label = r"\s*".join(_re.escape(token) for token in label.split())
+    patterns = [
+        _re.compile(rf">{escaped_label}<.*?title=\"([^\"]+)\"", _re.IGNORECASE | _re.DOTALL),
+        _re.compile(rf">{escaped_label}<.*?<td[^>]*>\s*([^<]+)\s*</td>", _re.IGNORECASE | _re.DOTALL),
+    ]
+    for pattern in patterns:
+        match = pattern.search(page_html)
+        if match:
+            return match.group(1).strip()
+    return None
+
+
+def _parse_stockanalysis_numeric(value_text: str, as_percent: bool = False) -> Optional[float]:
+    cleaned = (
+        (value_text or "")
+        .strip()
+        .replace(",", "")
+        .replace("\u2212", "-")
+        .replace("x", "")
+        .replace("X", "")
+    )
+    if cleaned in {"", "-", "--", "N/A", "n/a", "—"}:
+        return None
+
+    negative_parentheses = cleaned.startswith("(") and cleaned.endswith(")")
+    if negative_parentheses:
+        cleaned = cleaned[1:-1].strip()
+
+    percent_in_value = cleaned.endswith("%")
+    if percent_in_value:
+        cleaned = cleaned[:-1].strip()
+
+    multiplier = 1.0
+    if cleaned:
+        suffix = cleaned[-1].upper()
+        if suffix in {"K", "M", "B", "T"}:
+            multiplier = {"K": 1e3, "M": 1e6, "B": 1e9, "T": 1e12}[suffix]
+            cleaned = cleaned[:-1].strip()
+
+    try:
+        value = float(cleaned) * multiplier
+    except ValueError:
+        return None
+
+    if negative_parentheses:
+        value = -value
+
+    if as_percent or percent_in_value:
+        value = value / 100.0
+
+    return value
+
+
+def _fetch_stockanalysis_core_ratios(symbol: str) -> Dict[str, float]:
+    import re as _re
+    import httpx
+
+    resolved = (symbol or "").strip()
+    if not resolved:
+        return {}
+
+    is_kw = resolved.upper().endswith(".KW")
+    if is_kw:
+        base = _re.sub(r"\.KW$", "", resolved, flags=_re.IGNORECASE).upper()
+        url = f"https://stockanalysis.com/quote/kwse/{base}/statistics/"
+    else:
+        base = _re.sub(r"[^a-zA-Z0-9-]", "-", resolved).strip("-").lower()
+        if not base:
+            return {}
+        url = f"https://stockanalysis.com/stocks/{base}/statistics/"
+
+    ratios: Dict[str, float] = {}
+    try:
+        response = httpx.get(
+            url,
+            timeout=15,
+            follow_redirects=True,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Accept": "text/html,application/xhtml+xml",
+                "Accept-Language": "en-US,en;q=0.9",
+            },
+        )
+        if response.status_code != 200:
+            return ratios
+
+        page_html = response.text
+        for metric_name, label_specs in _STOCKANALYSIS_CORE_RATIO_LABELS.items():
+            for label, as_percent in label_specs:
+                raw_value = _extract_stockanalysis_table_value(page_html, label)
+                if raw_value is None:
+                    continue
+                parsed = _parse_stockanalysis_numeric(raw_value, as_percent=as_percent)
+                if parsed is None:
+                    continue
+                ratios[metric_name] = parsed
+                break
+    except Exception as exc:
+        logger.warning("stockanalysis core ratios fetch failed for %s: %s", resolved, exc)
+
+    return ratios
+
 def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
     # ── Auto-recalculate all metrics from financial statements before scoring ──
     # This ensures newly added formulas (ROIC, Accruals Ratio, Net Debt/EBITDA, etc.)
@@ -6520,6 +6831,7 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
         "SELECT symbol FROM analysis_stocks WHERE id = ?", (stock_id,)
     )
     symbol = None
+    yf_ticker = None
     if symbol_row:
         symbol = symbol_row[0] if isinstance(symbol_row, (tuple, list)) else symbol_row.get("symbol")
     if symbol:
@@ -6576,6 +6888,10 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
 
     # Also try to compute Discount to Intrinsic Value from latest valuation
     _enrich_intrinsic_discount(stock_id, latest)
+
+    # Normalize known metric aliases so score breakdown rows do not show N/A
+    # when equivalent ratios already exist under alternate names.
+    _apply_score_metric_aliases(latest)
 
     # ── Fallback: compute ROIC, Debt-to-Equity, Interest Coverage from
     #    financial_line_items if they are missing from stock_metrics.
@@ -6641,6 +6957,17 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
         _inv_cap  = (_eq or 0) + _td_r - (_cash or 0) - (_st_inv or 0)
         if _op_inc is not None and _eq is not None and _inv_cap > 0:
             latest["ROIC"] = round(_op_inc * (1 - _safe_tx) / _inv_cap, 6)
+
+    _apply_score_metric_aliases(latest)
+
+    if symbol:
+        missing_core_metrics = [metric_name for metric_name in _STOCKANALYSIS_CORE_METRIC_KEYS if latest.get(metric_name) is None]
+        if missing_core_metrics:
+            sa_ratios = _fetch_stockanalysis_core_ratios(yf_ticker or symbol)
+            for metric_name, metric_value in sa_ratios.items():
+                if latest.get(metric_name) is None and metric_value is not None:
+                    latest[metric_name] = metric_value
+            _apply_score_metric_aliases(latest)
 
     fund, fund_breakdown = _score_fundamentals_detailed(latest)
     val, val_breakdown = _score_valuation_detailed(latest)
