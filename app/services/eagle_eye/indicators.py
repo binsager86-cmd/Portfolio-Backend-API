@@ -3,9 +3,10 @@ Indicator Engine — every technical indicator the analysis layer needs.
 Pure numpy/pandas implementations. No TA-Lib dependency, no system libs needed.
 Every indicator is unit-testable. Validated math, no hand-wavy approximations.
 """
+from datetime import datetime
 import numpy as np
 import pandas as pd
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 from app.services.eagle_eye.config import CONFIG
 
 
@@ -189,10 +190,23 @@ def rsi_divergence(df: pd.DataFrame, lookback: int = 28) -> pd.Series:
     return out
 
 
-def stochastic(df: pd.DataFrame, k: int = 14, d: int = 3) -> Tuple[pd.Series, pd.Series]:
+def stochastic(
+    df: pd.DataFrame,
+    k: int = 14,
+    d: int = 3,
+    smooth_k: int = 1,
+) -> Tuple[pd.Series, pd.Series]:
+    """
+    Stochastic oscillator.
+
+    When smooth_k > 1, returns Slow Stochastic values:
+      - stoch_k = SMA(smooth_k) of raw %K
+      - stoch_d = SMA(d) of stoch_k
+    """
     lowest = df['low'].rolling(k).min()
     highest = df['high'].rolling(k).max()
-    stoch_k = 100 * (df['close'] - lowest) / (highest - lowest).replace(0, np.nan)
+    raw_k = 100 * (df['close'] - lowest) / (highest - lowest).replace(0, np.nan)
+    stoch_k = raw_k.rolling(smooth_k).mean() if smooth_k > 1 else raw_k
     stoch_d = stoch_k.rolling(d).mean()
     return stoch_k, stoch_d
 
@@ -351,10 +365,9 @@ def mfi(df: pd.DataFrame, period: int = 14) -> pd.Series:
 
 
 def vwap(df: pd.DataFrame) -> pd.Series:
-    """Rolling 20-day VWAP."""
+    """Session VWAP proxy for daily bars (typical price)."""
     tp = (df['high'] + df['low'] + df['close']) / 3
-    pv = tp * df['volume']
-    return pv.rolling(20).sum() / df['volume'].rolling(20).sum().replace(0, np.nan)
+    return tp
 
 
 def vwap_distance_sigma(df: pd.DataFrame) -> pd.Series:
@@ -548,7 +561,7 @@ def accumulation_score(df: pd.DataFrame) -> pd.Series:
     obv_norm = (obv_s.rank(pct=True) * 100).fillna(50)
 
     # Component 2: CMF
-    cmf_v = cmf(df, 20)
+    cmf_v = cmf(df, CONFIG.CMF_PERIOD)
     cmf_norm = ((cmf_v + 0.3) / 0.6 * 100).clip(0, 100).fillna(50)
 
     # Component 3: A/D Line slope
@@ -623,7 +636,10 @@ def wyckoff_phase(df: pd.DataFrame, lookback: int = 60) -> pd.Series:
 # THE PUBLIC INTERFACE — compute every indicator in one pass
 # =============================================================================
 
-def compute_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
+def compute_all_indicators(
+    df: pd.DataFrame,
+    market_close: Optional[pd.Series] = None,
+) -> pd.DataFrame:
     """
     Run every indicator and return a DataFrame indexed by date with all values
     as columns. This is the canonical 'indicator snapshot' consumed by the
@@ -637,11 +653,25 @@ def compute_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
     # Trend
     for p in CONFIG.EMA_PERIODS:
         out[f'ema_{p}'] = _ema(df['close'], p)
+    # Canonical moving-average fields expected by downstream diagnostics/features.
+    out['ema_20'] = _ema(df['close'], 20)
+    out['ema_10'] = _ema(df['close'], 10)
+    out['ema_30'] = _ema(df['close'], 30)
+    out['sma_200'] = df['close'].rolling(200, min_periods=1).mean()
     out['ema_ribbon_aligned'] = ema_ribbon_aligned(df, CONFIG.EMA_PERIODS)
-    m, s, h = macd(df)
+    macd_short = min(int(CONFIG.MACD_FAST), int(CONFIG.MACD_SLOW))
+    macd_long = max(int(CONFIG.MACD_FAST), int(CONFIG.MACD_SLOW))
+    m, s, h = macd(
+        df,
+        fast=macd_short,
+        slow=macd_long,
+        signal=CONFIG.MACD_SIGNAL,
+    )
     out['macd_line'] = m; out['macd_signal'] = s; out['macd_histogram'] = h
     a_, pd_, md_ = adx(df, CONFIG.ADX_PERIOD)
     out['adx'] = a_; out['plus_di'] = pd_; out['minus_di'] = md_
+    out['plus_di_minus_di_diff'] = out['plus_di'] - out['minus_di']
+    out['di_spread'] = out['plus_di_minus_di_diff']
     out['supertrend'] = supertrend(df, CONFIG.SUPERTREND_PERIOD, CONFIG.SUPERTREND_MULTIPLIER)
     out['psar'] = parabolic_sar(df)
     out['hull_ma'] = hull_ma(df)
@@ -653,8 +683,15 @@ def compute_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
     # Momentum
     out['rsi'] = rsi(df, CONFIG.RSI_PERIOD)
     out['rsi_divergence'] = rsi_divergence(df)
-    sk, sd = stochastic(df, CONFIG.STOCH_K, CONFIG.STOCH_D)
+    sk, sd = stochastic(
+        df,
+        k=CONFIG.STOCH_K,
+        d=CONFIG.STOCH_D,
+        smooth_k=CONFIG.STOCH_SMOOTH_K,
+    )
     out['stoch_k'] = sk; out['stoch_d'] = sd
+    out['stochastic_k'] = sk
+    out['stochastic_d'] = sd
     out['stoch_rsi'] = stoch_rsi(df)
     out['williams_r'] = williams_r(df)
     out['cci'] = cci(df, CONFIG.CCI_PERIOD)
@@ -662,6 +699,10 @@ def compute_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
     out['tsi'] = tsi(df)
     out['ao'] = awesome_oscillator(df)
     out['connors_rsi'] = connors_rsi(df)
+    momentum_rsi_bullish = ((out['rsi'] >= 40) & (out['rsi'] <= 70)).astype(float)
+    momentum_macd_bullish = (out['macd_histogram'] > 0).astype(float)
+    momentum_adx_bullish = (out['adx'] > 20).astype(float)
+    out['momentum_confluence'] = (momentum_rsi_bullish + momentum_macd_bullish + momentum_adx_bullish) / 3.0
 
     # Volatility
     out['atr'] = atr(df, CONFIG.ATR_PERIOD)
@@ -678,14 +719,33 @@ def compute_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
 
     # Volume / Flow
     out['obv'] = obv(df)
+    out['obv_value'] = out['obv']
+    out['obv_change_5d'] = out['obv'] - out['obv'].shift(5)
+    out['obv_change_10d'] = out['obv'] - out['obv'].shift(10)
+    out['obv_change_20d'] = out['obv'] - out['obv'].shift(20)
+    out['obv_direction_10d'] = np.sign(out['obv_change_10d'])
     out['obv_slope_20'] = obv_slope(df, 20)
     out['obv_slope_60'] = obv_slope(df, 60)
     out['ad_line'] = ad_line(df)
     out['cmf'] = cmf(df, CONFIG.CMF_PERIOD)
+    out['cmf_change_5d'] = out['cmf'] - out['cmf'].shift(5)
+    out['cmf_change_10d'] = out['cmf'] - out['cmf'].shift(10)
     out['mfi'] = mfi(df, CONFIG.MFI_PERIOD)
     out['vwap'] = vwap(df)
+    out['vwap_session'] = out['vwap']
     out['vwap_distance_sigma'] = vwap_distance_sigma(df)
     out['rel_volume'] = relative_volume(df, CONFIG.VOLUME_AVG_PERIOD)
+    out['volume_ratio_20d'] = df['volume'] / df['volume'].rolling(20).mean().replace(0, np.nan)
+    out['obv_trajectory_slope'] = out['obv_slope_20']
+    open_px = df['open'] if 'open' in df.columns else df['close']
+    green_vol = df['volume'] * (df['close'] > open_px).astype(float)
+    red_vol = df['volume'] * (df['close'] < open_px).astype(float)
+    out['green_red_volume_ratio_5d'] = green_vol.rolling(5).sum() / red_vol.rolling(5).sum().replace(0, np.nan)
+    out['green_red_volume_ratio_10d'] = green_vol.rolling(10).sum() / red_vol.rolling(10).sum().replace(0, np.nan)
+    flow_cmf_positive = (out['cmf'] > 0).astype(float)
+    flow_obv_rising = (out['obv_change_10d'] > 0).astype(float)
+    flow_mfi_healthy = (out['mfi'] > 40).astype(float)
+    out['volume_flow_confluence'] = (flow_cmf_positive + flow_obv_rising + flow_mfi_healthy) / 3.0
     out['force_index'] = force_index(df)
     out['eom'] = ease_of_movement(df)
     out['klinger'] = klinger(df)
@@ -699,6 +759,7 @@ def compute_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
     out['zscore_20'] = zscore_vs_ma(df, 20)
     out['zscore_50'] = zscore_vs_ma(df, 50)
     out['zscore_200'] = zscore_vs_ma(df, 200)
+    out['zscore_vs_ma_20'] = out['zscore_20']
 
     # Institutional
     out['accumulation_score'] = accumulation_score(df)
@@ -716,10 +777,12 @@ def compute_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
     # Net liquidity: KWD turnover (preferred) or fallback to shares × close
     # 'turnover_kwd' is the actual exchange-reported KWD value traded per day.
     # 'volume' (shares count) is kept separately above for share-count signals.
-    out['dollar_volume'] = (
+    _turnover_series = (
         df['turnover_kwd'] if 'turnover_kwd' in df.columns
         else df['volume'] * df['close']
     )
+    out['dollar_volume'] = _turnover_series
+    out['avg_20d_turnover_kwd'] = pd.to_numeric(_turnover_series, errors='coerce').rolling(20).mean()
 
     # ── Pattern features (chart structure and activity) ────────────────────
     out['higher_lows_20d'] = (df['low'] > df['low'].shift(1)).rolling(20).sum()
@@ -763,6 +826,9 @@ def compute_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
     out['position_in_60d_range_pct'] = (
         (df['close'] - low_60d) / _range_60d.replace(0, np.nan)
     ) * 100.0
+    trend_ema_bullish = (out['ema_ribbon_aligned'] == 1).astype(float)
+    trend_above_ema50 = (df['close'] > out['ema_50']).astype(float)
+    out['trend_confluence'] = (trend_ema_bullish + trend_above_ema50) / 2.0
 
     if len(df) >= 252:
         high_252d = df['high'].rolling(252).max()
@@ -790,5 +856,279 @@ def compute_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
     out['accumulation_compression_days'] = (
         _is_compressed.groupby(_groups).cumsum().astype(float)
     )
+
+    # ── Capitulation/Reversal features (v10) ────────────────────────────────
+    high_20d = df['high'].rolling(20).max()
+    out['selloff_from_20d_high_pct'] = (
+        (high_20d - df['close']) / high_20d.replace(0, np.nan)
+    ) * 100.0
+    high_60d = df['high'].rolling(60).max()
+    out['selloff_from_60d_high_pct'] = (
+        (high_60d - df['close']) / high_60d.replace(0, np.nan)
+    ) * 100.0
+
+    up_vol = df['volume'].where(df['close'] > df['close'].shift(1), 0.0)
+    down_vol = df['volume'].where(df['close'] < df['close'].shift(1), 0.0)
+    out['up_down_volume_ratio_5d'] = (
+        up_vol.rolling(5).sum() / down_vol.rolling(5).sum().replace(0, np.nan)
+    )
+    out['up_down_volume_ratio_10d'] = (
+        up_vol.rolling(10).sum() / down_vol.rolling(10).sum().replace(0, np.nan)
+    )
+
+    vol_sma_5 = df['volume'].rolling(5).mean()
+    vol_sma_20 = df['volume'].rolling(20).mean().replace(0, np.nan)
+    out['volume_acceleration'] = vol_sma_5 / vol_sma_20
+
+    low_5d = df['low'].rolling(5).min()
+    out['bounce_from_5d_low_pct'] = (
+        (df['close'] / low_5d.replace(0, np.nan) - 1.0) * 100.0
+    )
+    low_10d = df['low'].rolling(10).min()
+    out['bounce_from_10d_low_pct'] = (
+        (df['close'] / low_10d.replace(0, np.nan) - 1.0) * 100.0
+    )
+
+    higher_low_flag = (df['low'] > df['low'].shift(1)).fillna(False).astype(int)
+    hl_groups = (higher_low_flag == 0).cumsum()
+    out['consecutive_higher_lows_5d'] = higher_low_flag.groupby(hl_groups).cumsum().astype(float)
+    out['consecutive_higher_lows'] = out['consecutive_higher_lows_5d']
+
+    out['rsi_velocity_3d'] = out['rsi'] - out['rsi'].shift(3)
+    out['rsi_velocity_5d'] = out['rsi'] - out['rsi'].shift(5)
+    out['macd_hist_velocity_3d'] = out['macd_histogram'] - out['macd_histogram'].shift(3)
+    out['macd_hist_velocity_5d'] = out['macd_histogram'] - out['macd_histogram'].shift(5)
+
+    selloff_component = (out['selloff_from_20d_high_pct'] / 25.0 * 100.0).clip(0, 100).fillna(0)
+    volume_component = ((out['volume_ratio_20d'] - 1.0) * 100.0).clip(0, 100).fillna(0)
+    bounce_component = (out['bounce_from_5d_low_pct'] / 10.0 * 100.0).clip(0, 100).fillna(0)
+    rsi_component = ((35.0 - out['rsi']) / 35.0 * 100.0).clip(0, 100).fillna(0)
+    hl_component = (out['consecutive_higher_lows_5d'] / 5.0 * 100.0).clip(0, 100).fillna(0)
+
+    out['capitulation_reversal_score'] = (
+        0.30 * selloff_component
+        + 0.25 * volume_component
+        + 0.20 * bounce_component
+        + 0.15 * rsi_component
+        + 0.10 * hl_component
+    ).clip(0, 100)
+
+    out['institutional_confluence'] = (out['accumulation_score'] > 30).astype(float)
+    out['overall_confluence'] = (
+        0.30 * out['momentum_confluence']
+        + 0.30 * out['volume_flow_confluence']
+        + 0.20 * out['trend_confluence']
+        + 0.20 * out['institutional_confluence']
+    ).clip(0.0, 1.0)
+    out['flow_momentum_divergence'] = out['volume_flow_confluence'] - out['momentum_confluence']
+
+    # Backward-compatible aliases used by older callers.
+    if 'ema_21' in out.columns:
+        out['ema_fast'] = out['ema_21']
+    if 'ema_200' in out.columns:
+        out['ema_slow'] = out['ema_200']
+
+    # ---------------------------------------------------------------------
+    # Phase 1 curated indicator set (liquidity-first, non-redundant)
+    # ---------------------------------------------------------------------
+    out['sma_50'] = df['close'].rolling(50, min_periods=1).mean()
+    out['sma_200'] = df['close'].rolling(200, min_periods=1).mean()
+    out['stock_close_vs_50sma'] = (df['close'] / out['sma_50'].replace(0, np.nan)) - 1.0
+    out['stock_close_vs_200sma'] = (df['close'] / out['sma_200'].replace(0, np.nan)) - 1.0
+    out['stock_50sma_slope_20d'] = out['sma_50'].rolling(20).apply(
+        lambda y: np.polyfit(np.arange(len(y)), y, 1)[0], raw=True
+    )
+
+    # Market context: use provided premier-market proxy if available; otherwise
+    # fall back to local price series and mark source for observability.
+    if market_close is not None and isinstance(market_close, pd.Series) and len(market_close) > 0:
+        market_aligned = pd.to_numeric(market_close.reindex(df.index), errors='coerce').ffill()
+        out['market_proxy_source'] = 'premier_composite'
+    else:
+        market_aligned = pd.to_numeric(df['close'], errors='coerce')
+        out['market_proxy_source'] = 'self_fallback'
+
+    market_sma_50 = market_aligned.rolling(50, min_periods=1).mean()
+    market_sma_200 = market_aligned.rolling(200, min_periods=1).mean()
+    out['market_close_vs_200sma'] = (market_aligned / market_sma_200.replace(0, np.nan)) - 1.0
+    out['market_50sma_slope_20d'] = market_sma_50.rolling(20).apply(
+        lambda y: np.polyfit(np.arange(len(y)), y, 1)[0], raw=True
+    )
+
+    out['return_3m'] = (df['close'] / df['close'].shift(63)) - 1.0
+    out['return_6m'] = (df['close'] / df['close'].shift(126)) - 1.0
+    market_return_3m = (market_aligned / market_aligned.shift(63)) - 1.0
+    out['relative_strength_3m'] = out['return_3m'] - market_return_3m
+
+    out['rsi_14'] = out['rsi']
+    out['cci_20'] = out['cci']
+    out['macd_histogram_slope_5d'] = out['macd_histogram'].rolling(5).apply(
+        lambda y: np.polyfit(np.arange(len(y)), y, 1)[0], raw=True
+    )
+
+    out['absolute_daily_traded_value'] = pd.to_numeric(df['close'] * df['volume'], errors='coerce')
+    out['avg_traded_value_20d'] = out['absolute_daily_traded_value'].rolling(20).mean()
+    out['traded_value_ratio_20d'] = (
+        out['absolute_daily_traded_value'] / out['avg_traded_value_20d'].replace(0, np.nan)
+    )
+
+    active_threshold = max(2000.0, float(CONFIG.MIN_DAILY_TURNOVER_KWD) * 0.1)
+    out['active_trading_days_ratio_60d'] = (
+        (out['absolute_daily_traded_value'] > active_threshold).astype(float).rolling(60).mean()
+    )
+
+    out['cmf_10'] = cmf(df, 10)
+    # Compatibility alias: many rule/scoring paths still consume cmf_20* keys.
+    if CONFIG.CMF_PERIOD == 10:
+        out['cmf_20'] = out['cmf_10']
+    else:
+        out['cmf_20'] = cmf(df, 20)
+    out['obv_slope_20d'] = out['obv_slope_20']
+
+    prev_close = df['close'].shift(1)
+    up_mask = (df['close'] > prev_close).astype(float)
+    down_mask = (df['close'] < prev_close).astype(float)
+    out['up_day_volume_20d'] = (df['volume'] * up_mask).rolling(20).sum()
+    out['down_day_volume_20d'] = (df['volume'] * down_mask).rolling(20).sum()
+    out['up_down_volume_ratio_20d'] = (
+        out['up_day_volume_20d'] / out['down_day_volume_20d'].replace(0, np.nan)
+    )
+
+    # Recompute CLV in a dedicated field required by the rules engine.
+    out['close_location_value'] = (
+        ((df['close'] - df['low']) - (df['high'] - df['close']))
+        / (df['high'] - df['low']).replace(0, np.nan)
+    ).clip(-1.0, 1.0)
+
+    out['high_volume_weak_close_flag'] = (
+        (out['traded_value_ratio_20d'] > 1.5)
+        & (out['close_location_value'] < 0.0)
+    ).astype(int)
+
+    out['atr_14'] = out['atr']
+    out['atr_percent'] = out['atr_14'] / df['close'].replace(0, np.nan)
+    out['bb_width_20'] = out['bb_bandwidth']
+    out['bb_width_percentile_252d'] = (
+        out['bb_width_20'].rolling(252).apply(
+            lambda x: (x <= x.iloc[-1]).sum() / len(x), raw=False
+        )
+    )
+    out['donchian_breakout_50d'] = (df['close'] > df['high'].shift(1).rolling(50).max()).astype(int)
+
+    sr_lookback = 120
+    nearest_res = df['high'].shift(1).rolling(sr_lookback).max()
+    nearest_sup = df['low'].shift(1).rolling(sr_lookback).min()
+    out['distance_to_major_resistance'] = (
+        (nearest_res - df['close']) / df['close'].replace(0, np.nan)
+    ).clip(lower=0.0)
+    out['distance_to_major_support'] = (
+        (df['close'] - nearest_sup) / df['close'].replace(0, np.nan)
+    ).clip(lower=0.0)
+    out['failed_breakout_flag'] = (
+        (out['donchian_breakout_50d'].shift(1).rolling(3).max().fillna(0) >= 1)
+        & (df['close'] <= df['high'].shift(1).rolling(50).max())
+    ).astype(int)
+
+    def _days_since_last_breakout(x: pd.Series) -> float:
+        arr = x.to_numpy()
+        idx = np.where(arr > 0)[0]
+        if len(idx) == 0:
+            return 60.0
+        return float(min(60, len(arr) - 1 - idx[-1]))
+
+    out['days_since_breakout'] = out['donchian_breakout_50d'].rolling(60).apply(
+        _days_since_last_breakout, raw=False
+    ).fillna(60.0)
+
+    out['price_extension_from_50sma'] = out['stock_close_vs_50sma']
+    out['atr_stop_distance'] = 1.5 * out['atr_14']
+    out['risk_reward_ratio'] = (
+        out['distance_to_major_resistance']
+        / (out['atr_stop_distance'] / df['close'].replace(0, np.nan)).replace(0, np.nan)
+    )
+    out['risk_reward_ratio'] = (
+        out['risk_reward_ratio'].replace([np.inf, -np.inf], np.nan).fillna(0.0).clip(0.0, 10.0)
+    )
+    out['_risk_reward_ratio'] = out['risk_reward_ratio']
+
+    # Kuwait data-quality module + limit-day awareness.
+    daily_ret = (df['close'] / df['close'].shift(1) - 1.0) * 100.0
+    out['limit_day_flag'] = (daily_ret.abs() >= 9.5).astype(int)
+
+    # Exclude potential limit-day distortion from volatility-context fields.
+    non_limit_close = df['close'].where(out['limit_day_flag'] == 0)
+    bb_mid_nl = non_limit_close.rolling(20).mean()
+    bb_std_nl = non_limit_close.rolling(20).std()
+    bb_upper_nl = bb_mid_nl + 2.0 * bb_std_nl
+    bb_lower_nl = bb_mid_nl - 2.0 * bb_std_nl
+    out['bb_width_20'] = (
+        (bb_upper_nl - bb_lower_nl) / bb_mid_nl.replace(0, np.nan)
+    )
+
+    tr = pd.concat([
+        df['high'] - df['low'],
+        (df['high'] - df['close'].shift()).abs(),
+        (df['low'] - df['close'].shift()).abs(),
+    ], axis=1).max(axis=1)
+    tr_filtered = tr.where(out['limit_day_flag'] == 0)
+    out['atr_14'] = tr_filtered.rolling(14).mean()
+    out['atr_percent'] = out['atr_14'] / df['close'].replace(0, np.nan)
+
+    zero_volume_days_60 = (pd.to_numeric(df['volume'], errors='coerce').fillna(0.0) <= 0.0).rolling(60).sum()
+    out['near_zero_volume_flag'] = (
+        pd.to_numeric(df['volume'], errors='coerce').fillna(0.0)
+        < 0.1 * pd.to_numeric(df['volume'], errors='coerce').rolling(20).median().fillna(0.0)
+    ).astype(int)
+
+    gap_suspects_60 = (daily_ret.abs() >= 15.0).rolling(60).sum()
+    recency_days = np.zeros(len(out), dtype=float)
+    try:
+        if len(df.index) > 0:
+            last_bar = pd.Timestamp(df.index[-1]).to_pydatetime().date()
+            recency_days[:] = float((datetime.utcnow().date() - last_bar).days)
+    except Exception:
+        recency_days[:] = 30.0
+    recency_penalty = np.clip(recency_days / 30.0, 0.0, 1.0)
+
+    activity_component = out['active_trading_days_ratio_60d'].fillna(0.0)
+    zero_vol_component = (1.0 - (zero_volume_days_60 / 60.0).clip(0.0, 1.0)).fillna(0.0)
+    corp_action_component = (1.0 - (gap_suspects_60 / 8.0).clip(0.0, 1.0)).fillna(0.0)
+    recency_component = (1.0 - recency_penalty)
+
+    out['data_quality_score'] = (
+        100.0
+        * (
+            0.45 * activity_component
+            + 0.25 * zero_vol_component
+            + 0.20 * corp_action_component
+            + 0.10 * recency_component
+        )
+    ).clip(0.0, 100.0)
+
+    # Keep legacy names in sync where downstream still expects them.
+    out['atr'] = out['atr_14']
+    out['bb_bandwidth'] = out['bb_width_20']
+    out['cmf'] = out['cmf_20']
+
+    # Flow inflection features (detect the turn, not just absolute level).
+    if 'cmf_20' in out.columns:
+        out['cmf_20_change_5d'] = out['cmf_20'] - out['cmf_20'].shift(5)
+        out['cmf_20_change_10d'] = out['cmf_20'] - out['cmf_20'].shift(10)
+
+    if 'obv_slope_20d' in out.columns:
+        out['obv_slope_change_10d'] = out['obv_slope_20d'] - out['obv_slope_20d'].shift(10)
+
+    if 'rsi_14' in out.columns:
+        out['rsi_14_change_5d'] = out['rsi_14'] - out['rsi_14'].shift(5)
+
+    if 'close' in out.columns:
+        up_close = (out['close'] > out['close'].shift(1)).astype(int)
+        up_groups = (up_close == 0).cumsum()
+        out['consecutive_up_closes'] = up_close.groupby(up_groups).cumsum()
+
+        low_60 = out['close'].rolling(60).min()
+        out['pct_above_60d_low'] = (
+            (out['close'] / low_60.replace(0, np.nan) - 1.0) * 100.0
+        )
 
     return out

@@ -5,8 +5,9 @@ Three sequential phases, each independently re-runnable:
 
   Phase 1 — ingest_all_ohlcv()
       Fetch 3 years of daily OHLCV for every KSE stock and store to
-      ee_ohlcv_cache. Incremental: only fetches bars after the most
-      recent cached date, so reruns are fast.
+      ee_ohlcv_cache. Refresh policy is overlap-based: every run re-fetches
+      and overwrites the trailing cached sessions to absorb late exchange
+      corrections, while older history remains untouched.
 
   Phase 2 — build_all_dna()
       Run the forensic pipeline on the cached OHLCV to build
@@ -29,9 +30,14 @@ from __future__ import annotations
 
 import logging
 import math
+import os
 import time
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import List, Optional
+import uuid
+
+import numpy as np
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -56,86 +62,22 @@ def _build_live_feature_vector(feature_row: dict, feature_names: List[str]) -> L
     return vec
 
 
+def predict_confidence(ticker: str, ohlcv_df, as_of: date) -> Optional[float]:
+    """Retired in Phase 1 rebuild (rules-primary pipeline)."""
+    del ticker, ohlcv_df, as_of
+    return None
+
+
 def _predict_ml_signal(ticker: str, ohlcv_df, as_of: date):
-    """Resolve best model and return BUY/HOLD/SELL probabilities."""
-    try:
-        import numpy as np
-        import pandas as pd
-
-        from app.services.eagle_eye.ml.feature_builder import build_inference_row
-        from app.services.eagle_eye.ml.model_store import load_feature_names
-        from app.services.eagle_eye.ml.tier_resolver import resolve_model_for_ticker
-
-        bundle = resolve_model_for_ticker(ticker)
-        if bundle is None or bundle.model is None:
-            return None
-
-        feature_row = build_inference_row(ticker=ticker, ohlcv=ohlcv_df, T=as_of)
-        if feature_row is None:
-            return None
-
-        try:
-            feature_names = load_feature_names(tier=bundle.tier, identifier=bundle.identifier)
-        except Exception:
-            feature_names = list(bundle.feature_list or [])
-
-        if not feature_names:
-            return None
-
-        vector = _build_live_feature_vector(feature_row, feature_names)
-        X_live = pd.DataFrame([vector], columns=feature_names)
-        raw_pred = bundle.model.predict(X_live)
-        pred_arr = np.asarray(raw_pred, dtype=float)
-
-        if pred_arr.ndim == 2 and pred_arr.shape[1] >= 3:
-            proba = pred_arr[0]
-            sell = float(max(0.0, min(1.0, proba[0])))
-            hold = float(max(0.0, min(1.0, proba[1])))
-            buy = float(max(0.0, min(1.0, proba[2])))
-        elif pred_arr.ndim == 1 and pred_arr.size >= 3 and pred_arr.size % 3 == 0:
-            proba = pred_arr.reshape(-1, 3)[0]
-            sell = float(max(0.0, min(1.0, proba[0])))
-            hold = float(max(0.0, min(1.0, proba[1])))
-            buy = float(max(0.0, min(1.0, proba[2])))
-        else:
-            scalar = float(pred_arr.ravel()[0])
-            if bundle.calibrator is not None and 0.0 <= scalar <= 1.0:
-                try:
-                    scalar = float(bundle.calibrator.predict(np.asarray([scalar], dtype=float))[0])
-                except Exception:
-                    pass
-            buy = float(np.clip(scalar if 0.0 <= scalar <= 1.0 else scalar / 100.0, 0.0, 1.0))
-            hold = float(max(0.0, 1.0 - buy))
-            sell = 0.0
-
-        total = buy + hold + sell
-        if total > 0:
-            buy /= total
-            hold /= total
-            sell /= total
-
-        signal_idx = int(np.argmax([sell, hold, buy]))
-        signal = ["SELL", "HOLD", "BUY"][signal_idx]
-        confidence = [sell, hold, buy][signal_idx] * 100.0
-
-        return {
-            "buy": float(round(buy, 6)),
-            "hold": float(round(hold, 6)),
-            "sell": float(round(sell, 6)),
-            "signal": signal,
-            "confidence": float(round(confidence, 2)),
-        }
-    except Exception as exc:
-        logger.debug("ML inference failed for %s: %s", ticker, exc)
-        return None
+    """Retired compatibility wrapper for legacy ML payloads."""
+    del ticker, ohlcv_df, as_of
+    return None
 
 
 def _predict_ml_opportunity_score(ticker: str, ohlcv_df, as_of: date):
-    """Compatibility wrapper: expose BUY probability as 0-100 score."""
-    proba = _predict_ml_signal(ticker, ohlcv_df, as_of)
-    if proba is None:
-        return None
-    return round(float(np.clip(float(proba.get("buy", 0.0)) * 100.0, 0.0, 100.0)), 2)
+    """Retired compatibility wrapper for phase-regression output."""
+    del ticker, ohlcv_df, as_of
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -161,15 +103,19 @@ def ingest_all_ohlcv(verbose: bool = False) -> dict:
     Fetch and cache 3 years of daily OHLCV for every stock returned by
     TickerChartAdapter.list_stocks().
 
-    Incremental: only fetches bars after the latest cached date for each
-    ticker, so repeated calls on the same day are virtually free.
+    Refresh policy: always re-fetch a trailing overlap window per ticker and
+    overwrite those bars in cache, so recent exchange revisions are captured.
 
     Returns a summary dict: {ok, skipped, errors, insufficient, gaps}.
     """
     from app.core.config import get_settings
     from app.services.eagle_eye.adapter import TickerChartAdapter
     from app.services.eagle_eye.store import (
-        ensure_tables, get_latest_ohlcv_date, log_compute, save_ohlcv,
+        ensure_tables,
+        get_latest_ohlcv_date,
+        get_trailing_ohlcv_start_date,
+        log_compute,
+        save_ohlcv,
     )
 
     ensure_tables()
@@ -185,34 +131,47 @@ def ingest_all_ohlcv(verbose: bool = False) -> dict:
 
     adapter = TickerChartAdapter()
     stocks = adapter.list_stocks()
+    total_stocks = len(stocks)
 
     today = date.today()
     history_start = today - timedelta(days=3 * 365 + 60)  # 3 years + buffer
+    trailing_refresh_sessions = 10
+    phase_t0 = time.time()
 
     stats: dict = {"ok": 0, "skipped": 0, "errors": 0, "insufficient": [], "gaps": []}
 
     if verbose:
-        print(f"[EagleEye] Ingesting OHLCV for {len(stocks)} stocks ({history_start} → {today})")
+        print(f"[EagleEye] Ingesting OHLCV for {total_stocks} stocks ({history_start} -> {today})")
         print("=" * 70)
 
-    for stock in stocks:
+    for idx, stock in enumerate(stocks, start=1):
         ticker = stock.ticker
         try:
             last_date = get_latest_ohlcv_date(ticker)
 
-            # Already up to date?
-            if last_date is not None and last_date >= today:
-                stats["skipped"] += 1
-                log_compute("ohlcv_fetch", ticker, "skip", f"up to date: {last_date}")
-                if verbose:
-                    print(f"  [{ticker}] already up to date ({last_date})")
-                continue
+            # Re-fetch trailing sessions every run so late corrections overwrite
+            # stale bars in cache.
+            if last_date:
+                overlap_start = get_trailing_ohlcv_start_date(
+                    ticker,
+                    trailing_sessions=trailing_refresh_sessions,
+                )
+                if overlap_start is None:
+                    overlap_start = last_date - timedelta(days=21)
+                fetch_start = max(history_start, overlap_start)
+            else:
+                fetch_start = history_start
 
-            # Incremental: only request missing bars
-            fetch_start = (last_date + timedelta(days=1)) if last_date else history_start
+            if fetch_start > today:
+                fetch_start = today
 
             if verbose:
-                print(f"  [{ticker}] fetching {fetch_start} → {today} ...", end=" ", flush=True)
+                print(
+                    f"  [{idx}/{total_stocks}] [{ticker}] fetching {fetch_start} -> {today} "
+                    f"(refresh overlap {trailing_refresh_sessions} sessions) ...",
+                    end=" ",
+                    flush=True,
+                )
 
             df = adapter.get_ohlcv_daily(ticker, fetch_start, today)
 
@@ -231,7 +190,7 @@ def ingest_all_ohlcv(verbose: bool = False) -> dict:
             if gaps:
                 stats["gaps"].extend(gaps)
                 if verbose:
-                    print(f"  ⚠  {len(gaps)} gap(s) detected", end=" ")
+                    print(f"  [WARN] {len(gaps)} gap(s) detected", end=" ")
 
             n = save_ohlcv(ticker, df)
             stats["ok"] += 1
@@ -246,6 +205,14 @@ def ingest_all_ohlcv(verbose: bool = False) -> dict:
             log_compute("ohlcv_fetch", ticker, "error", str(exc)[:300])
             if verbose:
                 print(f"  [{ticker}] ERROR: {exc}")
+        finally:
+            if verbose and (idx % 10 == 0 or idx == total_stocks):
+                elapsed = time.time() - phase_t0
+                print(
+                    f"  [progress] ingest {idx}/{total_stocks} complete "
+                    f"(ok={stats['ok']} skipped={stats['skipped']} errors={stats['errors']}) "
+                    f"elapsed={elapsed:.1f}s"
+                )
 
     if verbose:
         print(
@@ -268,7 +235,7 @@ def _detect_gaps(ticker: str, df) -> List[str]:
         gap = (dates[i] - dates[i - 1]).days
         if gap > 7:
             gaps.append(
-                f"{ticker}: {dates[i-1].date()} → {dates[i].date()} ({gap}d gap)"
+                f"{ticker}: {dates[i-1].date()} -> {dates[i].date()} ({gap}d gap)"
             )
     return gaps
 
@@ -498,6 +465,62 @@ def build_dna_for_ticker(ticker: str) -> Optional[dict]:
         log_compute("dna_build", ticker, "error", str(exc)[:300])
         return None
 
+
+def _build_premier_market_proxy(premier_tickers: List[str]) -> Optional[pd.Series]:
+    """Build traded-value weighted close proxy for Premier market regime context."""
+    if not premier_tickers:
+        return None
+
+    from app.core.database import query_all
+
+    placeholders = ", ".join(["?"] * len(premier_tickers))
+    rows = query_all(
+        f"""
+        SELECT bar_date, ticker, close, turnover_kwd
+        FROM ee_ohlcv_cache
+        WHERE ticker IN ({placeholders})
+        ORDER BY bar_date
+        """,
+        tuple(premier_tickers),
+    )
+    if not rows:
+        return None
+
+    normalized_rows = []
+    for row in rows:
+        if hasattr(row, "items"):
+            normalized_rows.append(dict(row.items()))
+        elif isinstance(row, (tuple, list)) and len(row) >= 4:
+            normalized_rows.append(
+                {
+                    "bar_date": row[0],
+                    "ticker": row[1],
+                    "close": row[2],
+                    "turnover_kwd": row[3],
+                }
+            )
+
+    if not normalized_rows:
+        return None
+
+    frame = pd.DataFrame(normalized_rows)
+    if frame.empty or "bar_date" not in frame.columns:
+        return None
+
+    frame["bar_date"] = pd.to_datetime(frame["bar_date"], errors="coerce")
+    frame["close"] = pd.to_numeric(frame["close"], errors="coerce")
+    frame["turnover_kwd"] = pd.to_numeric(frame["turnover_kwd"], errors="coerce").fillna(0.0)
+    frame = frame.dropna(subset=["bar_date", "close"])
+    if frame.empty:
+        return None
+
+    weighted_sum = (frame["close"] * frame["turnover_kwd"]).groupby(frame["bar_date"]).sum()
+    weight_sum = frame["turnover_kwd"].groupby(frame["bar_date"]).sum()
+    simple_mean = frame["close"].groupby(frame["bar_date"]).mean()
+
+    proxy = (weighted_sum / weight_sum.replace(0, np.nan)).where(weight_sum > 0, simple_mean).sort_index()
+    return proxy.astype(float)
+
 def compute_all_ratings(verbose: bool = False) -> dict:
     """
     Rate every stock in ee_ohlcv_cache using the Eagle Eye rating engine.
@@ -510,31 +533,65 @@ def compute_all_ratings(verbose: bool = False) -> dict:
     from app.services.eagle_eye.adapter import TickerChartAdapter
     from app.services.eagle_eye.indicators import compute_all_indicators
     from app.services.eagle_eye.rating_engine import (
-        classify_stage,
-        compute_confidence,
         compute_entry_stop_targets,
-        compute_rating,
-        compute_rating_from_proba,
         compute_support_resistance,
         compute_volume_context,
         generate_thesis,
         is_stock_active,
-        validate_and_adjust_ml_score,
     )
+    from app.services.eagle_eye.scoring.explanation_engine import explain
+    from app.services.eagle_eye.scoring.family_scores import compute_family_scores
+    from app.services.eagle_eye.scoring.recommendation_engine import generate_recommendation
+    from app.services.eagle_eye import stage_classifier as stage_classifier_module
+    from app.services.eagle_eye.stage_classifier import classify_stage_with_confidence
+    from app.core.database import exec_sql
     from app.services.eagle_eye.store import (
         ensure_tables, list_tickers_with_ohlcv, load_ohlcv,
         log_compute, save_rating,
     )
 
     ensure_tables()
-    tickers = list_tickers_with_ohlcv()
-    today_str = date.today().isoformat()
+    run_started = datetime.now().isoformat(timespec="seconds")
+    run_date = run_started[:10]
+    run_id = f"rating_run_{uuid.uuid4().hex[:12]}"
+    try:
+        ingest_mtime = int(os.path.getmtime(__file__))
+    except OSError:
+        ingest_mtime = 0
+    stage_file = getattr(stage_classifier_module, "__file__", None)
+    try:
+        stage_mtime = int(os.path.getmtime(stage_file)) if stage_file else 0
+    except OSError:
+        stage_mtime = 0
+    latest_code_mtime = max(ingest_mtime, stage_mtime)
+    code_fingerprint = (
+        f"ingest:{ingest_mtime};stage_classifier:{stage_mtime};latest:{latest_code_mtime}"
+    )
 
-    # Build ticker → StockMeta map for names/sectors
+    log_compute(
+        "rating_run",
+        None,
+        "start",
+        f"run_id={run_id} run_started={run_started} code={code_fingerprint}",
+    )
+
+    # Full refresh prevents stale rows from previous taxonomy/version runs.
+    exec_sql("DELETE FROM ee_ratings_cache", ())
+    tickers = list_tickers_with_ohlcv()
+    today_str = run_date
+
+    # Build ticker -> StockMeta map for names/sectors
     adapter = TickerChartAdapter()
     stock_meta = {s.ticker: s for s in adapter.list_stocks()}
+    premier_tickers = [
+        t for t, meta in stock_meta.items()
+        if str(getattr(meta, "market_tier", "premier") or "premier").strip().upper() == "PREMIER"
+    ]
+    market_proxy = _build_premier_market_proxy(premier_tickers)
 
     stats: dict = {"ok": 0, "skipped": 0, "errors": 0}
+    total_tickers = len(tickers)
+    phase_t0 = time.time()
 
     def _save_placeholder_rating(symbol: str, reason: str, df=None) -> None:
         meta = stock_meta.get(symbol)
@@ -571,7 +628,8 @@ def compute_all_ratings(verbose: bool = False) -> dict:
             "ticker": symbol.upper(),
             "market_tier": market_tier,
             "stage": stage_map.get(reason, "DATA_ISSUE"),
-            "rating": "INSUFFICIENT_DATA",
+            "rating": "AVOID",
+            "recommendation": "AVOID",
             "confidence": 0.0,
             "ml_score": None,
             "thesis": thesis_map.get(reason, "Data unavailable; kept in scanner as watchlist-only."),
@@ -590,6 +648,26 @@ def compute_all_ratings(verbose: bool = False) -> dict:
                 "tp3_probability": None,
             },
             "indicators": indicators,
+            "family_scores": {
+                "liquidity": 0.0,
+                "trend": 0.0,
+                "momentum": 0.0,
+                "geometry": 0.0,
+                "risk_reward": 0.0,
+                "total_score": 0.0,
+            },
+            "stage_confidence": 0.0,
+            "pattern_match": {
+                "takeoff_similarity": 0.0,
+                "crash_similarity": 0.0,
+                "neutral_similarity": 1.0,
+                "nearest_analogs": [],
+            },
+            "why_supporting": [],
+            "why_conflicting": ["Insufficient data for stage/recommendation computation"],
+            "what_invalidates": [],
+            "veto_reasons": [reason],
+            "data_quality_score": 0.0,
             "volume_context": {
                 "relative_volume": 0.0,
                 "relative_volume_percentile": 0.0,
@@ -599,17 +677,21 @@ def compute_all_ratings(verbose: bool = False) -> dict:
                 "volume_trend_5d": "NEUTRAL",
             },
             "days_of_history": days_of_history,
-            "computed_at": today_str,
+            "computed_at": run_started,
+            "computed_date": run_date,
+            "run_id": run_id,
+            "run_started_at": run_started,
+            "code_fingerprint": code_fingerprint,
         }
 
         save_rating(symbol, name_en, sector, result)
         log_compute("rating_run", symbol, "skip", reason)
 
     if verbose:
-        print(f"[EagleEye] Computing ratings for {len(tickers)} tickers")
+        print(f"[EagleEye] Computing ratings for {total_tickers} tickers")
         print("=" * 70)
 
-    for ticker in tickers:
+    for idx, ticker in enumerate(tickers, start=1):
         try:
             df = load_ohlcv(ticker)
             # Keep this in sync with compute_all_indicators minimum history requirement.
@@ -624,7 +706,7 @@ def compute_all_ratings(verbose: bool = False) -> dict:
                 continue
 
             try:
-                ind_df = compute_all_indicators(df)
+                ind_df = compute_all_indicators(df, market_close=market_proxy)
             except ValueError as exc:
                 if "Need at least 50 bars" in str(exc):
                     stats["skipped"] += 1
@@ -638,70 +720,38 @@ def compute_all_ratings(verbose: bool = False) -> dict:
                 continue
 
             latest = ind_df.iloc[-1].to_dict()
+            family_scores = compute_family_scores(latest)
+            stage, stage_conf = classify_stage_with_confidence(latest, family_scores=family_scores)
 
-            stage = classify_stage(latest)
-            ml_proba = _predict_ml_signal(ticker, df, date.today())
-            ml_score = None
-            if ml_proba is not None:
-                raw_buy_conf = float(ml_proba.get("buy", 0.0)) * 100.0
-                adjusted_buy_conf = validate_and_adjust_ml_score(raw_buy_conf, latest, df, ticker)
-                ml_proba["buy"] = max(0.0, min(1.0, adjusted_buy_conf / 100.0))
-
-                total = float(ml_proba.get("buy", 0.0) + ml_proba.get("hold", 0.0) + ml_proba.get("sell", 0.0))
-                if total > 0:
-                    ml_proba["buy"] = float(ml_proba.get("buy", 0.0) / total)
-                    ml_proba["hold"] = float(ml_proba.get("hold", 0.0) / total)
-                    ml_proba["sell"] = float(ml_proba.get("sell", 0.0) / total)
-
-                ml_score = round(float(ml_proba["buy"] * 100.0), 2)
-
-            confidence = compute_confidence(
-                latest,
-                stage,
-                dna=None,
-                ml_score=ml_score,
-                ml_proba=ml_proba,
-            )
-            _confidence_raw = confidence  # snapshot before vol-context/dampener adjustments
-            _dampener_fired = False
-
-            # ── Volume context + confidence multiplier ───────────────────
+            # Keep volume context for UI/debug visibility.
             volume_context = compute_volume_context(df, stage)
+
+            recommendation_payload = generate_recommendation(
+                latest,
+                family_scores=family_scores,
+                total_score=float(family_scores.get("total_score", 50.0)),
+                stage=stage,
+                stage_conf=stage_conf,
+                pattern_match=None,  # Phase 1: rules primary, no pattern-memory adjustment yet.
+                data_quality=_safe_float(latest.get("data_quality_score")) or 50.0,
+            )
+
+            confidence = float(recommendation_payload["confidence"])
+            rating = str(recommendation_payload["recommendation"])
+            ml_score = None
             tier = volume_context["liquidity_tier"]
-            _LIQUIDITY_MULTIPLIERS = {"ILLIQUID": 0.75, "WATCH_ONLY": 0.85}
-            if tier in _LIQUIDITY_MULTIPLIERS:
-                confidence = confidence * _LIQUIDITY_MULTIPLIERS[tier]
-            elif not volume_context["is_volume_confirmed"]:
-                confidence = confidence * 0.95
-            elif volume_context["relative_volume_percentile"] > 80:
-                confidence = min(confidence * 1.10, 100)
-            confidence = round(min(confidence, 100), 2)
 
-            # ── Thin-volume-on-rise dampener (net liquidity check) ───────
-            if "dollar_volume" in ind_df.columns and len(ind_df) >= 21:
-                _dv = ind_df["dollar_volume"]
-                _median_dv = float(_dv.rolling(20).median().shift(1).iloc[-1])
-                _today_dv = float(_dv.iloc[-1])
-                _rel_liq = _today_dv / _median_dv if _median_dv > 0 else 0.0
-                _today_ret = (
-                    float((df["close"].iloc[-1] / df["close"].iloc[-2]) - 1)
-                    if len(df) >= 2 else 0.0
-                )
-                if _rel_liq < 0.5 and _today_ret > 0.02:
-                    _cap = 60 + 30 * _rel_liq
-                    confidence = min(confidence, _cap)
-                    _dampener_fired = True
-                    log_compute(
-                        "rating_run", ticker, "dampened",
-                        f"thin_volume_on_rise: rel_liq={_rel_liq:.2f} "
-                        f"ret={_today_ret:.3f} conf_capped={_cap:.2f}",
-                    )
-
-            rating = compute_rating_from_proba(ml_proba, confidence)
             sr = compute_support_resistance(df, latest)
             et = compute_entry_stop_targets(df, latest, sr, stage=stage)
+            explanation = explain(recommendation_payload, latest, pattern_match=None)
+            top_supporting = explanation.get("why_supporting", [])[:2]
             thesis = generate_thesis(
-                ticker, rating, stage, latest, dna=None, top_signals_fired=[]
+                ticker,
+                rating,
+                stage,
+                latest,
+                dna=None,
+                top_signals_fired=top_supporting,
             )
 
             meta = stock_meta.get(ticker)
@@ -713,7 +763,9 @@ def compute_all_ratings(verbose: bool = False) -> dict:
                 "ticker": ticker.upper(),
                 "market_tier": market_tier,
                 "stage": stage,
+                "stage_confidence": recommendation_payload.get("stage_confidence"),
                 "rating": rating,
+                "recommendation": rating,
                 "confidence": confidence,
                 "ml_score": ml_score,
                 "thesis": thesis,
@@ -721,9 +773,20 @@ def compute_all_ratings(verbose: bool = False) -> dict:
                 "resistances": sr.get("resistances", []),
                 "entry": et,
                 "indicators": latest,
+                "family_scores": family_scores,
+                "pattern_match": recommendation_payload.get("pattern_match", {}),
+                "why_supporting": explanation.get("why_supporting", []),
+                "why_conflicting": explanation.get("why_conflicting", []),
+                "what_invalidates": explanation.get("what_invalidates", []),
+                "veto_reasons": recommendation_payload.get("veto_reasons", []),
+                "data_quality_score": recommendation_payload.get("data_quality_score"),
                 "volume_context": volume_context,
                 "days_of_history": len(df),
-                "computed_at": today_str,
+                "computed_at": run_started,
+                "computed_date": run_date,
+                "run_id": run_id,
+                "run_started_at": run_started,
+                "code_fingerprint": code_fingerprint,
             }
 
             save_rating(ticker, name_en, sector, result)
@@ -731,18 +794,25 @@ def compute_all_ratings(verbose: bool = False) -> dict:
             # ── Signal logger (observation only — must not block rating) ─────
             try:
                 from app.services.eagle_eye.ml.signal_logger import log_considered_signal as _log_sig
-                from app.services.eagle_eye.config import CONFIG as _cfg
 
-                _entered = rating in ("BUY", "STRONG_BUY")
-                # would_have_entered: True if raw signal crossed threshold,
-                # even if a gate (liquidity/dampener) brought it below.
-                _would_have_entered = _entered or (_confidence_raw >= _cfg.BUY_CONFIDENCE)
+                _entered = rating == "BUY"
+                _would_have_entered = _entered
                 _skip_reason = None
                 if not _entered:
-                    if _dampener_fired or tier in ("ILLIQUID", "WATCH_ONLY"):
-                        _skip_reason = "LIQUIDITY_GATE"
-                    elif stage in ("DISTRIBUTION_TOPPING", "MARKDOWN_DECLINE"):
+                    veto_reasons = recommendation_payload.get("veto_reasons") or []
+                    veto_text = " ".join(str(v).lower() for v in veto_reasons)
+                    if "distribution" in veto_text or "markdown" in veto_text:
                         _skip_reason = "STAGE_NOT_ALLOWED"
+                    elif (
+                        "data quality" in veto_text
+                        or "infrequently" in veto_text
+                        or "near-zero volume" in veto_text
+                    ):
+                        _skip_reason = "LIQUIDITY_GATE"
+                    elif "market bearish" in veto_text:
+                        _skip_reason = "CIRCUIT_BREAKER"
+                    elif veto_reasons:
+                        _skip_reason = "OTHER"
                     else:
                         _skip_reason = "BELOW_CONFIDENCE_THRESHOLD"
 
@@ -758,9 +828,11 @@ def compute_all_ratings(verbose: bool = False) -> dict:
 
                 _feature_snapshot = {
                     "stage": stage,
+                    "recommendation": rating,
                     "tier": tier,
-                    "confidence_pre_adj": float(_confidence_raw),
-                    "dampener_fired": bool(_dampener_fired),
+                    "phase_score": None,
+                    "confidence_pre_adj": float(confidence),
+                    "dampener_fired": False,
                     **{k: _jv(v) for k, v in latest.items()},
                 }
                 _log_sig(
@@ -778,7 +850,7 @@ def compute_all_ratings(verbose: bool = False) -> dict:
             stats["ok"] += 1
             log_compute(
                 "rating_run", ticker, "ok",
-                f"confidence={confidence:.1f} rating={rating}"
+                f"confidence={confidence:.1f} rating={rating} stage={stage}"
             )
 
             if verbose:
@@ -788,12 +860,30 @@ def compute_all_ratings(verbose: bool = False) -> dict:
             logger.exception("[%s] rating computation/persistence failed", ticker)
             stats["errors"] += 1
             log_compute("rating_run", ticker, "error", str(exc)[:300])
+        finally:
+            if verbose and (idx % 10 == 0 or idx == total_tickers):
+                elapsed = time.time() - phase_t0
+                print(
+                    f"  [progress] ratings {idx}/{total_tickers} complete "
+                    f"(ok={stats['ok']} skipped={stats['skipped']} errors={stats['errors']}) "
+                    f"elapsed={elapsed:.1f}s"
+                )
 
     if verbose:
         print(
             f"\n[EagleEye] Ratings done: {stats['ok']} rated, "
             f"{stats['skipped']} skipped, {stats['errors']} errors"
         )
+
+    log_compute(
+        "rating_run",
+        None,
+        "summary",
+        (
+            f"run_id={run_id} run_started={run_started} "
+            f"ok={stats['ok']} skipped={stats['skipped']} errors={stats['errors']}"
+        ),
+    )
 
     return stats
 
@@ -825,24 +915,52 @@ def run_nightly_recompute(dna_refresh: bool = False, verbose: bool = False) -> d
 
     log_compute("nightly_recompute", None, "start", f"dna_refresh={dna_refresh}")
 
+    if verbose:
+        print(f"[EagleEye] Nightly recompute started (dna_refresh={dna_refresh})")
+
+    if verbose:
+        print("[EagleEye] Phase 1/3: ingest_all_ohlcv ...")
+    phase_t0 = time.time()
+
     try:
         ohlcv_stats = ingest_all_ohlcv(verbose=verbose)
     except Exception as exc:
         logger.error("Eagle Eye OHLCV ingest failed: %s", exc)
         ohlcv_stats = {"error": str(exc)}
+    if verbose:
+        print(
+            f"[EagleEye] Phase 1/3 done in {time.time() - phase_t0:.1f}s: "
+            f"{ohlcv_stats}"
+        )
 
     if dna_refresh:
+        if verbose:
+            print("[EagleEye] Phase 2/3: build_all_dna ...")
+        phase_t0 = time.time()
         try:
             dna_stats = build_all_dna(verbose=verbose)
         except Exception as exc:
             logger.error("Eagle Eye DNA build failed: %s", exc)
             dna_stats = {"error": str(exc)}
+        if verbose:
+            print(
+                f"[EagleEye] Phase 2/3 done in {time.time() - phase_t0:.1f}s: "
+                f"{dna_stats}"
+            )
 
+    if verbose:
+        print("[EagleEye] Phase 3/3: compute_all_ratings ...")
+    phase_t0 = time.time()
     try:
         rating_stats = compute_all_ratings(verbose=verbose)
     except Exception as exc:
         logger.error("Eagle Eye rating run failed: %s", exc)
         rating_stats = {"error": str(exc)}
+    if verbose:
+        print(
+            f"[EagleEye] Phase 3/3 done in {time.time() - phase_t0:.1f}s: "
+            f"{rating_stats}"
+        )
 
     elapsed = round(time.time() - t0, 1)
     cache_rows = int(query_val("SELECT COUNT(*) FROM ee_ratings_cache", ()) or 0)
@@ -863,6 +981,10 @@ def run_nightly_recompute(dna_refresh: bool = False, verbose: bool = False) -> d
     else:
         logger.info("Eagle Eye nightly recompute finished in %.1fs (%s)", elapsed, summary)
         log_compute("nightly_recompute", None, "ok", summary)
+
+    if verbose:
+        print(f"[EagleEye] Nightly recompute complete in {elapsed:.1f}s")
+        print(f"[EagleEye] Summary: {summary}")
 
     return {
         "elapsed_sec": elapsed,

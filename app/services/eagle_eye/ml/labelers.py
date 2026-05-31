@@ -49,18 +49,130 @@ def _as_int(value: Any) -> Optional[int]:
     return v
 
 
+def label_phases(df: pd.DataFrame) -> pd.Series:
+    """
+    Label each bar by forward-looking phase outcome on a 20-60 day horizon.
+
+    Phase labels:
+      4 = STRONG_ACCUMULATION
+      3 = ACCUMULATION
+      2 = EARLY_MARKUP
+      1 = HOLD_NEUTRAL
+      0 = DISTRIBUTION
+     -1 = STRONG_DISTRIBUTION
+    """
+    n = len(df)
+    labels = pd.Series(1, index=df.index, dtype=int)
+
+    if n < 80:
+        return labels
+    if not {"close", "high", "low", "volume"}.issubset(set(df.columns)):
+        return labels
+
+    close = pd.to_numeric(df["close"], errors="coerce").to_numpy(dtype=float)
+    high = pd.to_numeric(df["high"], errors="coerce").to_numpy(dtype=float)
+    low = pd.to_numeric(df["low"], errors="coerce").to_numpy(dtype=float)
+    volume = pd.to_numeric(df["volume"], errors="coerce").to_numpy(dtype=float)
+
+    label_arr = np.full(n, 1, dtype=int)
+    priority = {-1: 5, 0: 3, 1: 0, 2: 3, 3: 4, 4: 5}
+
+    def _assign_zone(center: int, value: int, radius: int) -> None:
+        start = max(0, center - radius)
+        end = min(n, center + radius + 1)
+        new_pr = priority.get(value, 0)
+        for j in range(start, end):
+            cur = int(label_arr[j])
+            if new_pr >= priority.get(cur, 0):
+                label_arr[j] = value
+
+    for i in range(n - 20):
+        current_price = close[i]
+        if not np.isfinite(current_price) or current_price <= 0:
+            continue
+
+        forward_end = min(i + 60, n)
+        if forward_end <= i + 1:
+            continue
+
+        forward_close = close[i + 1 : forward_end]
+        finite_forward = forward_close[np.isfinite(forward_close)]
+        if finite_forward.size < 10:
+            continue
+
+        max_future = float(finite_forward.max())
+        min_future = float(finite_forward.min())
+        max_gain = (max_future / current_price - 1.0) * 100.0
+        max_drop = (1.0 - min_future / current_price) * 100.0
+
+        lookback_start = max(0, i - 60)
+        recent_high_slice = high[lookback_start : i + 1]
+        recent_low_slice = low[lookback_start : i + 1]
+
+        finite_high = recent_high_slice[np.isfinite(recent_high_slice)]
+        finite_low = recent_low_slice[np.isfinite(recent_low_slice)]
+        if finite_high.size == 0 or finite_low.size == 0:
+            position_in_range = 0.5
+        else:
+            recent_high = float(finite_high.max())
+            recent_low = float(finite_low.min())
+            if recent_high > recent_low:
+                position_in_range = (current_price - recent_low) / (recent_high - recent_low)
+            else:
+                position_in_range = 0.5
+
+        if i >= 10:
+            close_window = close[i - 10 : i + 1]
+            vol_window = volume[i - 9 : i + 1]
+            diffs = np.diff(close_window)
+            if diffs.size == vol_window.size:
+                obv_slice = np.sign(diffs) * vol_window
+                obv_change = float(np.nansum(obv_slice))
+            else:
+                obv_change = 0.0
+        else:
+            obv_change = 0.0
+
+        up_vol = 0.0
+        down_vol = 0.0
+        for j in range(max(1, i - 9), i + 1):
+            cj = close[j]
+            cjm1 = close[j - 1]
+            vj = volume[j]
+            if not np.isfinite(cj) or not np.isfinite(cjm1) or not np.isfinite(vj):
+                continue
+            if cj > cjm1:
+                up_vol += float(vj)
+            elif cj < cjm1:
+                down_vol += float(vj)
+
+        if max_gain >= 15.0 and position_in_range < 0.35 and max_gain > (max_drop * 2.0):
+            _assign_zone(i, 4, radius=2)
+        elif max_gain >= 5.0 and position_in_range < 0.45 and max_gain > (max_drop * 1.5):
+            _assign_zone(i, 3, radius=2)
+        elif max_gain >= 5.0 and obv_change > 0 and up_vol > (down_vol * 1.2):
+            _assign_zone(i, 2, radius=1)
+        elif max_drop >= 15.0 and position_in_range > 0.65 and max_drop > (max_gain * 2.0):
+            _assign_zone(i, -1, radius=2)
+        elif max_drop >= 5.0 and position_in_range > 0.55 and max_drop > (max_gain * 1.5):
+            _assign_zone(i, 0, radius=2)
+
+    labels[:] = label_arr
+    return labels.astype(int)
+
+
 def detect_buy_sell_points(
     df: pd.DataFrame,
-    min_gain_pct: float = 10.0,
-    min_drop_pct: float = 5.0,
-    smoothing_window: int = 5,
-    extrema_order: int = 10,
+    min_gain_pct: float = 5.0,
+    min_drop_pct: float = 3.0,
+    smoothing_window: int = 3,
+    extrema_order: int = 7,
 ) -> pd.Series:
     """
     Label each bar as BUY (1), SELL (-1), or HOLD (0) from realized turning points.
 
-    BUY bars are local troughs followed by >= ``min_gain_pct`` rise.
-    SELL bars are local peaks followed by >= ``min_drop_pct`` decline.
+    BUY bars are local trough zones followed by >= ``min_gain_pct`` rise.
+    SELL bars are local peak zones followed by >= ``min_drop_pct`` decline.
     """
     n = len(df)
     labels = pd.Series(0, index=df.index, dtype=int)
@@ -103,7 +215,11 @@ def detect_buy_sell_points(
 
         gain_pct = (finite.max() / trough_price - 1.0) * 100.0
         if gain_pct >= min_gain_pct:
-            labels.iloc[idx] = 1
+            zone_start = max(0, idx - 2)
+            zone_end = min(n, idx + 3)
+            for zone_idx in range(zone_start, zone_end):
+                if labels.iloc[zone_idx] != -1:
+                    labels.iloc[zone_idx] = 1
 
     for idx in peak_indices:
         if idx >= n - 10:
@@ -123,7 +239,11 @@ def detect_buy_sell_points(
 
         drop_pct = (1.0 - finite.min() / peak_price) * 100.0
         if drop_pct >= min_drop_pct:
-            labels.iloc[idx] = -1
+            zone_start = max(0, idx - 2)
+            zone_end = min(n, idx + 3)
+            for zone_idx in range(zone_start, zone_end):
+                if labels.iloc[zone_idx] != 1:
+                    labels.iloc[zone_idx] = -1
 
     # Resolve tight BUY/SELL conflicts in a ±3-bar neighborhood.
     for i in range(1, n - 1):
@@ -209,6 +329,67 @@ def compute_opportunity_score(row: dict) -> float:
     best_gain = max(0.0, best_gain)
     best_gain = min(100.0, best_gain)
     return round(best_gain, 2)
+
+
+def compute_training_target(df: pd.DataFrame, i: int, forward_days: int = 40) -> float:
+    """
+    Compute a direct 0-100 target from forward risk-adjusted return.
+
+    The target rewards setups with strong forward upside relative to maximum
+    forward drawdown and penalizes weak/asymmetric setups.
+    """
+    n = len(df)
+    if i >= n - 10:
+        return 50.0
+
+    close_now = _as_float(df["close"].iloc[i])
+    if math.isnan(close_now) or close_now <= 0:
+        return 50.0
+
+    end = min(i + forward_days, n)
+    forward_highs = pd.to_numeric(df["high"].iloc[i + 1 : end], errors="coerce")
+    forward_lows = pd.to_numeric(df["low"].iloc[i + 1 : end], errors="coerce")
+
+    if len(forward_highs.dropna()) < 5 or len(forward_lows.dropna()) < 5:
+        return 50.0
+
+    max_high = _as_float(forward_highs.max())
+    min_low = _as_float(forward_lows.min())
+    if math.isnan(max_high) or math.isnan(min_low):
+        return 50.0
+
+    max_gain = (max_high / close_now - 1.0) * 100.0
+    max_drop = (1.0 - min_low / close_now) * 100.0
+
+    if max_gain <= 0:
+        raw_score = max(0.0, 30.0 - max_drop * 2.0)
+    else:
+        reward_risk = max_gain / max(max_drop, 0.5)
+        if reward_risk >= 5.0:
+            raw_score = 90.0 + min(10.0, (reward_risk - 5.0) * 2.0)
+        elif reward_risk >= 3.0:
+            raw_score = 75.0 + (reward_risk - 3.0) * 7.5
+        elif reward_risk >= 2.0:
+            raw_score = 60.0 + (reward_risk - 2.0) * 15.0
+        elif reward_risk >= 1.0:
+            raw_score = 45.0 + (reward_risk - 1.0) * 15.0
+        elif reward_risk >= 0.5:
+            raw_score = 30.0 + (reward_risk - 0.5) * 30.0
+        else:
+            raw_score = max(5.0, reward_risk * 60.0)
+
+    # Setup-position adjustment: reward setups near local lows, penalize chase entries.
+    lb_start = max(0, i - 60)
+    recent_high = _as_float(pd.to_numeric(df["high"].iloc[lb_start : i + 1], errors="coerce").max())
+    recent_low = _as_float(pd.to_numeric(df["low"].iloc[lb_start : i + 1], errors="coerce").min())
+    if not math.isnan(recent_high) and not math.isnan(recent_low) and recent_high > recent_low:
+        pos = (close_now - recent_low) / (recent_high - recent_low)
+        if pos <= 0.25:
+            raw_score += (0.25 - pos) / 0.25 * 4.0
+        elif pos >= 0.75:
+            raw_score -= (pos - 0.75) / 0.25 * 12.0
+
+    return round(min(100.0, max(0.0, raw_score)), 2)
 
 
 # ---------------------------------------------------------------------------

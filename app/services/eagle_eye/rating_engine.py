@@ -31,7 +31,10 @@ __all__ = [
     "compute_position_size",
     "is_stock_active",
     "validate_and_adjust_ml_score",
+    "compute_final_confidence",
     "compute_confidence",
+    "compute_confidence_from_phase",
+    "compute_rating_from_phase_score",
     "compute_rating",
     "generate_thesis",
     "compute_volume_context",
@@ -113,8 +116,8 @@ def compute_volume_context(df: pd.DataFrame, stage: str) -> Dict[str, Any]:
     else:
         tier = "ILLIQUID"
 
-    # Signal confirmation: EARLY_BREAKOUT needs 1.5× volume; others 0.8×
-    if stage == "EARLY_BREAKOUT":
+    # Signal confirmation: EARLY_MARKUP needs 1.5x volume; others 0.8x.
+    if stage in ("EARLY_MARKUP", "EARLY_BREAKOUT"):
         is_confirmed = bool(relative_volume >= 1.5)
     else:
         is_confirmed = bool(relative_volume >= 0.8)
@@ -293,7 +296,7 @@ def validate_and_adjust_ml_score(
 
 
 def _apply_universal_safety_clamp(confidence: float, indicators: IndicatorsRow) -> float:
-    """Apply hard extension/overbought caps regardless of scoring method."""
+    """Apply caps only for extreme extension/overbought regimes."""
     clamped = _safe_numeric(confidence)
     if clamped is None:
         clamped = 0.0
@@ -306,42 +309,116 @@ def _apply_universal_safety_clamp(confidence: float, indicators: IndicatorsRow) 
 
     ext_20 = _get("price_extension_from_20d_low_pct")
     if ext_20 is not None:
-        if ext_20 >= 50.0:
-            clamped = min(clamped, 10.0)
-        elif ext_20 >= 30.0:
+        if ext_20 >= 80.0:
             clamped = min(clamped, 25.0)
-        elif ext_20 >= 20.0:
-            clamped = min(clamped, 40.0)
+        elif ext_20 >= 60.0:
+            clamped = min(clamped, 35.0)
 
     ext_60 = _get("price_extension_from_60d_low_pct")
     if ext_60 is not None:
-        if ext_60 >= 80.0:
-            clamped = min(clamped, 10.0)
-        elif ext_60 >= 50.0:
-            clamped = min(clamped, 25.0)
+        if ext_60 >= 120.0:
+            clamped = min(clamped, 20.0)
+        elif ext_60 >= 90.0:
+            clamped = min(clamped, 35.0)
 
     ext_120 = _get("price_extension_from_120d_low_pct")
     if ext_120 is not None:
-        if ext_120 >= 100.0:
-            clamped = min(clamped, 10.0)
-        elif ext_120 >= 60.0:
-            clamped = min(clamped, 25.0)
-
-    range_pos = _get("position_in_60d_range_pct")
-    if range_pos is not None:
-        if range_pos >= 90.0:
+        if ext_120 >= 170.0:
             clamped = min(clamped, 20.0)
-        elif range_pos >= 75.0:
-            clamped = min(clamped, 45.0)
+        elif ext_120 >= 120.0:
+            clamped = min(clamped, 35.0)
 
     rsi = _get("rsi")
     if rsi is not None:
-        if rsi >= 80.0:
-            clamped = min(clamped, 25.0)
-        elif rsi >= 75.0:
+        if rsi >= 88.0:
+            clamped = min(clamped, 30.0)
+        elif rsi >= 82.0:
             clamped = min(clamped, 45.0)
 
     return float(np.clip(clamped, 0.0, 100.0))
+
+
+def compute_final_confidence(
+    ml_score: float,
+    indicators: IndicatorsRow,
+    stage: str,
+) -> Tuple[float, str]:
+    """
+    v14 confidence path: model score -> safety clamp -> stage cap -> rating.
+    """
+    conf = _safe_numeric(ml_score)
+    confidence = float(conf if conf is not None else 0.0)
+
+    confidence = _apply_universal_safety_clamp(confidence, indicators)
+
+    # Volume reality gate: enforce hard caps for dead/illiquid names.
+    volume_cap = 100.0
+    vol_ratio = _safe_numeric(indicators.get("volume_ratio_20d"))
+    if vol_ratio is None:
+        vol_ratio = _safe_numeric(indicators.get("rel_volume"))
+    if vol_ratio is not None:
+        if vol_ratio < 0.3:
+            volume_cap = min(volume_cap, 35.0)
+        elif vol_ratio < 0.5:
+            volume_cap = min(volume_cap, 50.0)
+
+    avg_turnover = _safe_numeric(indicators.get("avg_20d_turnover_kwd"))
+    if avg_turnover is not None and avg_turnover < 2000.0:
+        volume_cap = min(volume_cap, 40.0)
+
+    if stage in ("MARKDOWN_DECLINE", "DISTRIBUTION_TOPPING"):
+        confidence = min(confidence, 40.0)
+
+    # Dormant-stage sanity rails keep weak basing names from overstating conviction,
+    # while preserving a minimum floor for rare strong-confluence accumulation setups.
+    if stage == "DORMANT":
+        trend_conf = _safe_numeric(indicators.get("trend_confluence"))
+        momentum_conf = _safe_numeric(indicators.get("momentum_confluence"))
+        overall_conf = _safe_numeric(indicators.get("overall_confluence"))
+        volume_flow_conf = _safe_numeric(indicators.get("volume_flow_confluence"))
+        range_pos = _safe_numeric(indicators.get("position_in_60d_range_pct"))
+
+        if (
+            trend_conf is not None
+            and momentum_conf is not None
+            and overall_conf is not None
+            and trend_conf <= 0.05
+            and momentum_conf <= 0.05
+            and overall_conf <= 0.55
+        ):
+            confidence = min(confidence, 34.0)
+
+        if range_pos is not None and range_pos >= 85.0:
+            confidence = min(confidence, 65.0)
+
+        if (
+            overall_conf is not None
+            and volume_flow_conf is not None
+            and momentum_conf is not None
+            and trend_conf is not None
+            and overall_conf >= 0.85
+            and volume_flow_conf >= 0.90
+            and momentum_conf >= 0.80
+            and trend_conf >= 0.40
+        ):
+            confidence = max(confidence, 62.0)
+
+    confidence = min(confidence, volume_cap)
+
+    confidence = round(float(np.clip(confidence, 0.0, 100.0)), 1)
+
+    if confidence >= 80.0:
+        rating = "STRONG_BUY"
+    elif confidence >= 60.0:
+        rating = "BUY"
+    elif confidence >= 40.0:
+        rating = "HOLD"
+    elif confidence >= 25.0:
+        rating = "SELL"
+    else:
+        rating = "STRONG_SELL"
+
+    return confidence, rating
 
 
 # ---------------------------------------------------------------------------
@@ -799,6 +876,12 @@ def compute_entry_stop_targets(
     # Resistance is used only if it falls within [floor, cap]; otherwise the floor
     # is used as a synthetic ATR-distance profit target.
     STAGE_TP1_ATR_FLOORS = {
+        "ACCUMULATION":          1.8,
+        "EARLY_MARKUP":          1.0,
+        "MARKUP":                1.0,
+        "DISTRIBUTION":          1.5,
+        "MARKDOWN":              1.5,
+        "NEUTRAL_AMBIGUOUS":     1.5,
         "DORMANT":                 2.0,
         "STEALTH_ACCUMULATION":    1.8,
         "EARLY_BREAKOUT":          1.0,
@@ -809,6 +892,12 @@ def compute_entry_stop_targets(
         "CAPITULATION_EXHAUSTION": 1.0,
     }
     STAGE_TP1_ATR_CAPS = {
+        "EARLY_MARKUP":          2.5,
+        "MARKUP":                2.5,
+        "ACCUMULATION":          8.0,
+        "DISTRIBUTION":          20.0,
+        "MARKDOWN":              20.0,
+        "NEUTRAL_AMBIGUOUS":     20.0,
         # Tight caps only for active bullish stages — these have confidence 50-90+
         # and need TP1 to be achievable within the 20-day horizon.
         "EARLY_BREAKOUT":          2.5,   # floor=1.0, cap=2.5  → max ~2.5% from close
@@ -982,6 +1071,60 @@ def compute_position_size(
 # 4. Confidence Score
 # ---------------------------------------------------------------------------
 
+def compute_confidence_from_phase(
+    phase_score: float,
+    indicators: IndicatorsRow,
+) -> Tuple[float, str]:
+    """
+    Translate a phase-regression score to confidence and rating.
+
+    Phase score interpretation:
+      4.0 = STRONG_ACCUMULATION
+      3.0 = ACCUMULATION
+      2.0 = EARLY_MARKUP
+      1.0 = HOLD_NEUTRAL
+      0.0 = DISTRIBUTION
+     -1.0 = STRONG_DISTRIBUTION
+    """
+    p = _safe_numeric(phase_score)
+    if p is None:
+        p = 1.0
+
+    if p >= 3.5:
+        confidence = 85.0 + (p - 3.5) * 20.0
+        rating = "STRONG_BUY"
+    elif p >= 2.5:
+        confidence = 70.0 + (p - 2.5) * 15.0
+        rating = "BUY"
+    elif p >= 1.8:
+        confidence = 55.0 + (p - 1.8) * 21.0
+        rating = "BUY"
+    elif p >= 1.2:
+        confidence = 40.0 + (p - 1.2) * 25.0
+        rating = "HOLD"
+    elif p >= 0.5:
+        confidence = 30.0 + (p - 0.5) * 14.0
+        rating = "HOLD"
+    elif p >= -0.3:
+        confidence = 20.0 + (p + 0.3) * 12.0
+        rating = "SELL"
+    else:
+        confidence = max(5.0, 20.0 + p * 10.0)
+        rating = "STRONG_SELL"
+
+    confidence = _apply_universal_safety_clamp(confidence, indicators)
+    return round(float(np.clip(confidence, 0.0, 100.0)), 1), rating
+
+
+def compute_rating_from_phase_score(
+    phase_score: float,
+    confidence: Optional[float] = None,
+) -> str:
+    """Return rating tier from phase score (confidence kept for API symmetry)."""
+    del confidence
+    _, rating = compute_confidence_from_phase(phase_score, indicators={})
+    return rating
+
 def compute_confidence(
     indicators: IndicatorsRow,
     stage: str,
@@ -1005,6 +1148,11 @@ def compute_confidence(
     """
     if ml_proba is not None:
         try:
+            phase_score = _safe_numeric(ml_proba.get("phase_score"))
+            if phase_score is not None:
+                conf, _ = compute_confidence_from_phase(phase_score, indicators)
+                return conf
+
             p_buy = float(ml_proba.get("buy", 0.0))
             p_sell = float(ml_proba.get("sell", 0.0))
             p_hold = float(ml_proba.get("hold", 0.0))
@@ -1316,6 +1464,13 @@ def compute_rating(confidence: float, dna: Optional[Any] = None) -> str:
 
 # Template sentences by stage
 _STAGE_INTRO: Dict[str, str] = {
+    "ACCUMULATION":         "{ticker} is basing in accumulation",
+    "EARLY_MARKUP":         "{ticker} is attempting an early markup breakout",
+    "MARKUP":               "{ticker} is in an established markup trend",
+    "DISTRIBUTION":         "{ticker} is showing distribution/topping behaviour",
+    "MARKDOWN":             "{ticker} is in a markdown decline regime",
+    "NEUTRAL_AMBIGUOUS":    "{ticker} has a mixed/ambiguous structure",
+    # Legacy stage labels preserved for backward compatibility.
     "EARLY_BREAKOUT":          "{ticker} is staging an early breakout",
     "STEALTH_ACCUMULATION":    "{ticker} is in stealth accumulation",
     "MARKUP_TRENDING":         "{ticker} is in an established uptrend",
@@ -1332,6 +1487,10 @@ _RATING_TAIL: Dict[str, str] = {
     "HOLD":              "warranting a hold stance.",
     "SELL":              "suggesting reducing exposure.",
     "STRONG_SELL":       "indicating a strong sell signal.",
+    "REDUCE":            "suggesting exposure should be reduced.",
+    "WATCHLIST":         "worth monitoring for confirmation before entry.",
+    "AVOID":             "best avoided until structure improves.",
+    "NEUTRAL":           "not offering a strong directional edge.",
     "INSUFFICIENT_DATA": "but data is insufficient for a firm recommendation.",
 }
 

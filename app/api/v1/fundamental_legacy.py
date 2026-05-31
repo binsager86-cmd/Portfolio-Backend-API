@@ -1046,6 +1046,153 @@ async def delete_stock(
 # FINANCIAL STATEMENTS & LINE ITEMS
 # ════════════════════════════════════════════════════════════════════
 
+_LATEST_STATEMENT_CACHE_TTL_SEC = 10 * 60
+_LATEST_STATEMENT_CACHE: Dict[Tuple[int, str, int, str, int], Tuple[float, Dict[str, Any]]] = {}
+
+
+def _parse_fiscal_quarter(raw_quarter: Any) -> Optional[int]:
+    """Normalize quarter values like 1, "Q1", or "1" to int 1..4."""
+    if raw_quarter is None:
+        return None
+    if isinstance(raw_quarter, (int, float)):
+        # pandas can materialize NULL SQLite integers as NaN floats.
+        if isinstance(raw_quarter, float) and (math.isnan(raw_quarter) or math.isinf(raw_quarter)):
+            return None
+        q = int(raw_quarter)
+        return q if 1 <= q <= 4 else None
+
+    txt = str(raw_quarter).strip().upper()
+    if not txt or txt in {"NAN", "NONE", "NULL"}:
+        return None
+    if txt.startswith("Q"):
+        txt = txt[1:]
+    if txt.isdigit():
+        q = int(txt)
+        if 1 <= q <= 4:
+            return q
+    return None
+
+
+def _latest_statement_cache_key(
+    stock_id: int,
+    statement_type: Optional[str],
+    statements: List[Dict[str, Any]],
+) -> Tuple[int, str, int, str, int]:
+    max_period = ""
+    max_created = 0
+    for stmt in statements:
+        ped = str(stmt.get("period_end_date") or "")
+        if ped > max_period:
+            max_period = ped
+        try:
+            created_at = int(stmt.get("created_at") or 0)
+        except (TypeError, ValueError):
+            created_at = 0
+        if created_at > max_created:
+            max_created = created_at
+    return (stock_id, statement_type or "__all__", len(statements), max_period, max_created)
+
+
+def _select_latest_preferred_statement(statements: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Pick preferred period: current-year TTM quarter, otherwise latest year-end."""
+    if not statements:
+        return None
+
+    def _sort_key(stmt: Dict[str, Any]) -> Tuple[str, int]:
+        ped = str(stmt.get("period_end_date") or "")
+        try:
+            sid = int(stmt.get("id") or 0)
+        except (TypeError, ValueError):
+            sid = 0
+        return ped, sid
+
+    def _period_year(stmt: Dict[str, Any]) -> Optional[int]:
+        ped = str(stmt.get("period_end_date") or "")
+        if len(ped) < 4:
+            return None
+        year_txt = ped[:4]
+        if not year_txt.isdigit():
+            return None
+        return int(year_txt)
+
+    current_year = date.today().year
+    annuals: List[Tuple[Dict[str, Any], Optional[int]]] = []
+    current_year_quarters: List[Tuple[Dict[str, Any], int]] = []
+
+    for stmt in statements:
+        stmt_year = _period_year(stmt)
+        quarter = _parse_fiscal_quarter(stmt.get("fiscal_quarter"))
+
+        if quarter in (1, 2, 3):
+            if stmt_year == current_year:
+                current_year_quarters.append((stmt, quarter))
+        elif quarter == 4 or quarter is None:
+            annuals.append((stmt, quarter))
+
+    current_year_annuals = [candidate for candidate in annuals if _period_year(candidate[0]) == current_year]
+    if current_year_annuals:
+        selected_stmt, _ = max(current_year_annuals, key=lambda x: _sort_key(x[0]))
+        return {
+            "period_end_date": selected_stmt.get("period_end_date"),
+            "fiscal_year": selected_stmt.get("fiscal_year"),
+            "fiscal_quarter": None,
+            "resolution": "latest_year_end",
+        }
+
+    if current_year_quarters:
+        selected_stmt, selected_quarter = max(current_year_quarters, key=lambda x: _sort_key(x[0]))
+        return {
+            "period_end_date": selected_stmt.get("period_end_date"),
+            "fiscal_year": selected_stmt.get("fiscal_year"),
+            "fiscal_quarter": selected_quarter,
+            "resolution": "latest_quarter",
+        }
+
+    if annuals:
+        selected_stmt, _ = max(annuals, key=lambda x: _sort_key(x[0]))
+        return {
+            "period_end_date": selected_stmt.get("period_end_date"),
+            "fiscal_year": selected_stmt.get("fiscal_year"),
+            "fiscal_quarter": None,
+            "resolution": "latest_year_end",
+        }
+
+    selected_stmt = max(statements, key=_sort_key)
+    return {
+        "period_end_date": selected_stmt.get("period_end_date"),
+        "fiscal_year": selected_stmt.get("fiscal_year"),
+        "fiscal_quarter": _parse_fiscal_quarter(selected_stmt.get("fiscal_quarter")),
+        "resolution": "latest_available",
+    }
+
+
+def _get_cached_latest_preferred_statement(
+    stock_id: int,
+    statement_type: Optional[str],
+    statements: List[Dict[str, Any]],
+) -> Tuple[Optional[Dict[str, Any]], bool]:
+    if not statements:
+        return None, False
+
+    key = _latest_statement_cache_key(stock_id, statement_type, statements)
+    now_ts = time.time()
+
+    cached_entry = _LATEST_STATEMENT_CACHE.get(key)
+    if cached_entry and cached_entry[0] > now_ts:
+        return dict(cached_entry[1]), True
+
+    latest = _select_latest_preferred_statement(statements)
+    if latest:
+        _LATEST_STATEMENT_CACHE[key] = (now_ts + _LATEST_STATEMENT_CACHE_TTL_SEC, dict(latest))
+
+    if len(_LATEST_STATEMENT_CACHE) > 1024:
+        for cache_key in list(_LATEST_STATEMENT_CACHE.keys()):
+            expires_at, _ = _LATEST_STATEMENT_CACHE[cache_key]
+            if expires_at <= now_ts:
+                _LATEST_STATEMENT_CACHE.pop(cache_key, None)
+
+    return latest, False
+
 @router.get("/stocks/{stock_id}/statements")
 async def list_statements(
     stock_id: int,
@@ -1075,6 +1222,7 @@ async def list_statements(
 
     # Attach line items to each statement
     for stmt in statements:
+        stmt["fiscal_quarter"] = _parse_fiscal_quarter(stmt.get("fiscal_quarter"))
         items_df = query_df(
             """SELECT * FROM financial_line_items
                WHERE statement_id = ?
@@ -1083,7 +1231,27 @@ async def list_statements(
         )
         stmt["line_items"] = items_df.to_dict(orient="records") if not items_df.empty else []
 
-    return {"status": "ok", "data": {"statements": statements, "count": len(statements)}}
+    latest_preferred, latest_cached = _get_cached_latest_preferred_statement(
+        stock_id,
+        statement_type,
+        statements,
+    )
+
+    latest_payload = None
+    if latest_preferred:
+        latest_payload = {
+            **latest_preferred,
+            "cached": latest_cached,
+        }
+
+    return {
+        "status": "ok",
+        "data": {
+            "statements": statements,
+            "count": len(statements),
+            "latest_preferred": latest_payload,
+        },
+    }
 
 
 @router.post("/stocks/{stock_id}/statements", status_code=201)
@@ -1387,6 +1555,9 @@ _MT_STMT_MAP = {
 # Maximum years to fetch from macrotrends (user requested 10)
 _MT_MAX_YEARS = 10
 
+# Maximum quarterly periods to fetch from StockAnalysis (latest Q1-Q3 history)
+_SA_MAX_QUARTERS = 12
+
 
 def _mt_resolve_slug(symbol: str, client: Any) -> Optional[str]:
     """Get the macrotrends company slug by following the redirect.
@@ -1465,147 +1636,169 @@ def _fetch_us_statements(stock_id: int, symbol: str, user_id: int) -> dict:
 
     # US stocks use /stocks/{sym}/ on stockanalysis.com
     us_stmt_map = {
-        "income":   (f"https://stockanalysis.com/stocks/{base.lower()}/financials/", _SA_FIELD_MAP_INCOME),
-        "balance":  (f"https://stockanalysis.com/stocks/{base.lower()}/financials/balance-sheet/", _SA_FIELD_MAP_BALANCE),
-        "cashflow": (f"https://stockanalysis.com/stocks/{base.lower()}/financials/cash-flow-statement/", _SA_FIELD_MAP_CASHFLOW),
+        "income": _SA_FIELD_MAP_INCOME,
+        "balance": _SA_FIELD_MAP_BALANCE,
+        "cashflow": _SA_FIELD_MAP_CASHFLOW,
     }
 
-    for stmt_type, (url, field_map) in us_stmt_map.items():
-        try:
-            resp = _httpx.get(url, headers=headers, timeout=20, follow_redirects=True)
-            if resp.status_code != 200:
-                logger.warning("stockanalysis.com %s returned %s for US/%s", stmt_type, resp.status_code, base)
-                continue
-        except Exception as exc:
-            logger.warning("stockanalysis.com fetch error for US/%s/%s: %s", base, stmt_type, exc)
-            continue
-
-        data = _sa_parse_financial_data(resp.text)
-        if not data:
-            logger.warning("stockanalysis.com: no financialData for US/%s/%s", base, stmt_type)
-            continue
-
-        datekeys = data.get("datekey", [])
-        fiscal_years = data.get("fiscalYear", [])
-
-        # Process each period (skip TTM), limit to 10 years
+    for stmt_type, field_map in us_stmt_map.items():
+        annual_url, quarterly_url = _build_sa_us_statement_urls(base, stmt_type)
         periods_saved = 0
-        for idx, dk in enumerate(datekeys):
-            if dk == "TTM":
-                continue
-            if periods_saved >= _MT_MAX_YEARS:
-                break
+        annual_periods_saved = 0
+        quarterly_periods_saved = 0
 
-            period_end_date = dk  # e.g. "2024-12-31"
+        for is_quarterly in (False, True):
+            url = quarterly_url if is_quarterly else annual_url
             try:
-                fy = int(fiscal_years[idx])
-            except (IndexError, ValueError):
+                resp = _httpx.get(url, headers=headers, timeout=20, follow_redirects=True)
+                if resp.status_code != 200:
+                    logger.warning("stockanalysis.com %s returned %s for US/%s", stmt_type, resp.status_code, base)
+                    continue
+            except Exception as exc:
+                logger.warning("stockanalysis.com fetch error for US/%s/%s: %s", base, stmt_type, exc)
                 continue
 
-            # Collect line items for this period
-            line_items = []
-            seen_codes = set()
-            order = 1
-            for sa_key, (canonical_code, display_name) in field_map.items():
-                if sa_key not in data:
-                    continue
-                if canonical_code in seen_codes:
-                    continue
-                vals = data[sa_key]
-                if idx >= len(vals) or vals[idx] is None:
-                    continue
-                seen_codes.add(canonical_code)
-                line_items.append({
-                    "code": canonical_code,
-                    "name": display_name,
-                    "amount": vals[idx],
-                    "currency": "USD",
-                    "order": order,
-                    "is_total": canonical_code in (
-                        "total_assets", "total_equity", "total_liabilities",
-                        "total_current_assets", "total_current_liabilities",
-                        "total_liabilities_equity", "total_operating_expenses",
-                        "total_common_equity",
-                    ),
-                })
-                order += 1
-
-            # ── Include ALL remaining fields not in field_map ────────
-            mapped_sa_keys = set(field_map.keys())
-            for extra_key, vals in data.items():
-                if extra_key in _SA_METADATA_KEYS:
-                    continue
-                if extra_key in _SA_RATIO_KEYS:
-                    continue
-                if extra_key in mapped_sa_keys:
-                    continue
-                if not isinstance(vals, list):
-                    continue
-                if extra_key in seen_codes:
-                    continue
-                if idx >= len(vals) or vals[idx] is None:
-                    continue
-                seen_codes.add(extra_key)
-                line_items.append({
-                    "code": extra_key,
-                    "name": _camel_to_display(extra_key),
-                    "amount": vals[idx],
-                    "currency": "USD",
-                    "order": order,
-                    "is_total": False,
-                })
-                order += 1
-
-            if not line_items:
+            data = _sa_parse_financial_data(resp.text)
+            if not data:
+                logger.warning("stockanalysis.com: no financialData for US/%s/%s", base, stmt_type)
                 continue
 
-            # Upsert: check existing statement
-            existing = query_one(
-                """SELECT id FROM financial_statements
-                   WHERE stock_id = ? AND statement_type = ? AND period_end_date = ?""",
-                (stock_id, stmt_type, period_end_date),
-            )
+            datekeys = data.get("datekey", [])
+            fiscal_years = data.get("fiscalYear", [])
+            fiscal_quarters = data.get("fiscalQuarter", [])
 
-            source_label = f"stockanalysis.com/stocks/{base.lower()}"
+            for idx, dk in enumerate(datekeys):
+                if dk == "TTM":
+                    continue
+                if not is_quarterly and annual_periods_saved >= _MT_MAX_YEARS:
+                    break
+                if is_quarterly and quarterly_periods_saved >= _SA_MAX_QUARTERS:
+                    break
 
-            with get_connection() as conn:
-                cur = conn.cursor()
-                if existing:
-                    stmt_id = existing["id"] if isinstance(existing, dict) else existing[0]
-                    cur.execute(
-                        """UPDATE financial_statements
-                           SET fiscal_year=?, extracted_by=?, source_file=?,
-                               confidence_score=?, notes=?, created_at=?
-                           WHERE id=?""",
-                        (fy, "stockanalysis.com", source_label,
-                         1.0, "Fetched from stockanalysis.com", now, stmt_id),
-                    )
-                    cur.execute("DELETE FROM financial_line_items WHERE statement_id = ?", (stmt_id,))
+                period_end_date = dk  # e.g. "2024-12-31"
+                try:
+                    fy = int(fiscal_years[idx])
+                except (IndexError, ValueError):
+                    continue
+
+                fq_raw = fiscal_quarters[idx] if idx < len(fiscal_quarters) else None
+                fq = _parse_fiscal_quarter(fq_raw)
+                if is_quarterly:
+                    # Keep Q1-Q3 quarterly periods. Skip Q4 to preserve annual year-end rows.
+                    if fq is None or fq == 4:
+                        continue
                 else:
-                    cur.execute(
-                        """INSERT INTO financial_statements
-                           (stock_id, statement_type, fiscal_year, fiscal_quarter,
-                            period_end_date, source_file, extracted_by,
-                            confidence_score, notes, created_at)
-                           VALUES (?,?,?,?,?,?,?,?,?,?)""",
-                        (stock_id, stmt_type, fy, None, period_end_date,
-                         source_label, "stockanalysis.com",
-                         1.0, "Fetched from stockanalysis.com", now),
-                    )
-                    stmt_id = cur.lastrowid
+                    fq = None
 
-                for item in line_items:
-                    cur.execute(
-                        """INSERT INTO financial_line_items
-                           (statement_id, line_item_code, line_item_name,
-                            amount, currency, order_index, is_total)
-                           VALUES (?,?,?,?,?,?,?)""",
-                        (stmt_id, item["code"], item["name"],
-                         item["amount"], item["currency"],
-                         item["order"], item["is_total"]),
-                    )
-                conn.commit()
-            periods_saved += 1
+                # Collect line items for this period
+                line_items = []
+                seen_codes = set()
+                order = 1
+                for sa_key, (canonical_code, display_name) in field_map.items():
+                    if sa_key not in data:
+                        continue
+                    if canonical_code in seen_codes:
+                        continue
+                    vals = data[sa_key]
+                    if idx >= len(vals) or vals[idx] is None:
+                        continue
+                    seen_codes.add(canonical_code)
+                    line_items.append({
+                        "code": canonical_code,
+                        "name": display_name,
+                        "amount": vals[idx],
+                        "currency": "USD",
+                        "order": order,
+                        "is_total": canonical_code in (
+                            "total_assets", "total_equity", "total_liabilities",
+                            "total_current_assets", "total_current_liabilities",
+                            "total_liabilities_equity", "total_operating_expenses",
+                            "total_common_equity",
+                        ),
+                    })
+                    order += 1
+
+                # ── Include ALL remaining fields not in field_map ────────
+                mapped_sa_keys = set(field_map.keys())
+                for extra_key, vals in data.items():
+                    if extra_key in _SA_METADATA_KEYS:
+                        continue
+                    if extra_key in _SA_RATIO_KEYS:
+                        continue
+                    if extra_key in mapped_sa_keys:
+                        continue
+                    if not isinstance(vals, list):
+                        continue
+                    if extra_key in seen_codes:
+                        continue
+                    if idx >= len(vals) or vals[idx] is None:
+                        continue
+                    seen_codes.add(extra_key)
+                    line_items.append({
+                        "code": extra_key,
+                        "name": _camel_to_display(extra_key),
+                        "amount": vals[idx],
+                        "currency": "USD",
+                        "order": order,
+                        "is_total": False,
+                    })
+                    order += 1
+
+                if not line_items:
+                    continue
+
+                # Upsert: check existing statement
+                existing = query_one(
+                    """SELECT id FROM financial_statements
+                       WHERE stock_id = ? AND statement_type = ? AND period_end_date = ?""",
+                    (stock_id, stmt_type, period_end_date),
+                )
+
+                source_label = url
+
+                with get_connection() as conn:
+                    cur = conn.cursor()
+                    if existing:
+                        stmt_id = existing["id"] if isinstance(existing, dict) else existing[0]
+                        cur.execute(
+                            """UPDATE financial_statements
+                               SET fiscal_year=?, fiscal_quarter=?, extracted_by=?, source_file=?,
+                                   confidence_score=?, notes=?, created_at=?
+                               WHERE id=?""",
+                            (fy, fq, "stockanalysis.com", source_label,
+                             1.0, "Fetched from stockanalysis.com", now, stmt_id),
+                        )
+                        cur.execute("DELETE FROM financial_line_items WHERE statement_id = ?", (stmt_id,))
+                    else:
+                        cur.execute(
+                            """INSERT INTO financial_statements
+                               (stock_id, statement_type, fiscal_year, fiscal_quarter,
+                                period_end_date, source_file, extracted_by,
+                                confidence_score, notes, created_at)
+                               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                            (stock_id, stmt_type, fy, fq, period_end_date,
+                             source_label, "stockanalysis.com",
+                             1.0, "Fetched from stockanalysis.com", now),
+                        )
+                        stmt_id = cur.lastrowid
+
+                    for item in line_items:
+                        cur.execute(
+                            """INSERT INTO financial_line_items
+                               (statement_id, line_item_code, line_item_name,
+                                amount, currency, order_index, is_total)
+                               VALUES (?,?,?,?,?,?,?)""",
+                            (stmt_id, item["code"], item["name"],
+                             item["amount"], item["currency"],
+                             item["order"], item["is_total"]),
+                        )
+                    conn.commit()
+
+                periods_saved += 1
+                if is_quarterly:
+                    quarterly_periods_saved += 1
+                else:
+                    annual_periods_saved += 1
 
         if periods_saved > 0:
             saved_summary.append({
@@ -2001,6 +2194,30 @@ _SA_STMT_MAP = {
     "cashflow": ("https://stockanalysis.com/quote/kwse/{sym}/financials/cash-flow-statement/", _SA_FIELD_MAP_CASHFLOW),
 }
 
+_SA_STATEMENT_PATHS = {
+    "income": "financials/",
+    "balance": "financials/balance-sheet/",
+    "cashflow": "financials/cash-flow-statement/",
+}
+
+
+def _build_sa_kwse_statement_urls(symbol: str, statement_type: str) -> Tuple[str, str]:
+    """Build stockanalysis.com annual/quarterly URLs for Kuwait statements."""
+    path = _SA_STATEMENT_PATHS.get(statement_type)
+    if not path:
+        raise BadRequestError(f"Unsupported statement type: {statement_type}")
+    annual_url = f"https://stockanalysis.com/quote/kwse/{symbol.upper()}/{path}"
+    return annual_url, f"{annual_url}?p=quarterly"
+
+
+def _build_sa_us_statement_urls(symbol: str, statement_type: str) -> Tuple[str, str]:
+    """Build stockanalysis.com annual/quarterly URLs for US statements."""
+    path = _SA_STATEMENT_PATHS.get(statement_type)
+    if not path:
+        raise BadRequestError(f"Unsupported statement type: {statement_type}")
+    annual_url = f"https://stockanalysis.com/stocks/{symbol.lower()}/{path}"
+    return annual_url, f"{annual_url}?p=quarterly"
+
 
 def _sa_parse_financial_data(html: str) -> Optional[Dict]:
     """Extract the financialData object from stockanalysis.com SvelteKit page."""
@@ -2022,6 +2239,10 @@ def _sa_parse_financial_data(html: str) -> Optional[Dict]:
     fy = _re.search(r'fiscalYear:\[([^\]]+)\]', raw)
     if fy:
         result["fiscalYear"] = [s.strip().strip('"') for s in fy.group(1).split(",")]
+
+    fq = _re.search(r'fiscalQuarter:\[([^\]]+)\]', raw)
+    if fq:
+        result["fiscalQuarter"] = [s.strip().strip('"') for s in fq.group(1).split(",")]
 
     for fm in _re.finditer(r'(\w+):\[([^\]]*)\]', raw):
         name = fm.group(1)
@@ -2083,140 +2304,165 @@ async def fetch_statements_online(
     now = int(time.time())
     saved_summary = []
 
-    for stmt_type, (url_tpl, field_map) in _SA_STMT_MAP.items():
-        url = url_tpl.format(sym=base)
-        try:
-            resp = _httpx.get(url, headers=headers, timeout=20, follow_redirects=True)
-            if resp.status_code != 200:
-                logger.warning("stockanalysis.com %s returned %s for %s", stmt_type, resp.status_code, base)
-                continue
-        except Exception as exc:
-            logger.warning("stockanalysis.com fetch error for %s/%s: %s", base, stmt_type, exc)
-            continue
-
-        data = _sa_parse_financial_data(resp.text)
-        if not data:
-            logger.warning("stockanalysis.com: no financialData for %s/%s", base, stmt_type)
-            continue
-
-        datekeys = data.get("datekey", [])
-        fiscal_years = data.get("fiscalYear", [])
-
-        # Process each period (skip TTM)
+    for stmt_type, (_url_tpl, field_map) in _SA_STMT_MAP.items():
+        annual_url, quarterly_url = _build_sa_kwse_statement_urls(base, stmt_type)
         periods_saved = 0
-        for idx, dk in enumerate(datekeys):
-            if dk == "TTM":
-                continue
+        annual_periods_saved = 0
+        quarterly_periods_saved = 0
 
-            period_end_date = dk  # e.g. "2024-12-31"
+        for is_quarterly in (False, True):
+            url = quarterly_url if is_quarterly else annual_url
             try:
-                fy = int(fiscal_years[idx])
-            except (IndexError, ValueError):
+                resp = _httpx.get(url, headers=headers, timeout=20, follow_redirects=True)
+                if resp.status_code != 200:
+                    logger.warning("stockanalysis.com %s returned %s for %s", stmt_type, resp.status_code, base)
+                    continue
+            except Exception as exc:
+                logger.warning("stockanalysis.com fetch error for %s/%s: %s", base, stmt_type, exc)
                 continue
 
-            # Collect line items for this period
-            line_items = []
-            seen_codes = set()
-            order = 1
-            for sa_key, (canonical_code, display_name) in field_map.items():
-                if sa_key not in data:
-                    continue
-                # Skip duplicate canonical codes (e.g. revenue vs revenueRE)
-                if canonical_code in seen_codes:
-                    continue
-                vals = data[sa_key]
-                if idx >= len(vals) or vals[idx] is None:
-                    continue
-                seen_codes.add(canonical_code)
-                line_items.append({
-                    "code": canonical_code,
-                    "name": display_name,
-                    "amount": vals[idx],
-                    "currency": "KWD",
-                    "order": order,
-                    "is_total": canonical_code in (
-                        "total_assets", "total_equity", "total_liabilities",
-                        "total_current_assets", "total_current_liabilities",
-                        "total_liabilities_equity", "total_operating_expenses",
-                        "total_common_equity",
-                    ),
-                })
-                order += 1
-
-            # ── Include ALL remaining fields not in field_map ────────
-            mapped_sa_keys = set(field_map.keys())
-            for extra_key, vals in data.items():
-                if extra_key in _SA_METADATA_KEYS:
-                    continue
-                if extra_key in _SA_RATIO_KEYS:
-                    continue
-                if extra_key in mapped_sa_keys:
-                    continue
-                if not isinstance(vals, list):
-                    continue
-                if extra_key in seen_codes:
-                    continue
-                if idx >= len(vals) or vals[idx] is None:
-                    continue
-                seen_codes.add(extra_key)
-                line_items.append({
-                    "code": extra_key,
-                    "name": _camel_to_display(extra_key),
-                    "amount": vals[idx],
-                    "currency": "KWD",
-                    "order": order,
-                    "is_total": False,
-                })
-                order += 1
-
-            if not line_items:
+            data = _sa_parse_financial_data(resp.text)
+            if not data:
+                logger.warning("stockanalysis.com: no financialData for %s/%s", base, stmt_type)
                 continue
 
-            # Upsert: check existing statement
-            existing = query_one(
-                """SELECT id FROM financial_statements
-                   WHERE stock_id = ? AND statement_type = ? AND period_end_date = ?""",
-                (stock_id, stmt_type, period_end_date),
-            )
+            datekeys = data.get("datekey", [])
+            fiscal_years = data.get("fiscalYear", [])
+            fiscal_quarters = data.get("fiscalQuarter", [])
 
-            with get_connection() as conn:
-                cur = conn.cursor()
-                if existing:
-                    stmt_id = existing["id"] if isinstance(existing, dict) else existing[0]
-                    cur.execute(
-                        """UPDATE financial_statements
-                           SET fiscal_year=?, extracted_by=?, source_file=?,
-                               confidence_score=?, notes=?, created_at=?
-                           WHERE id=?""",
-                        (fy, "stockanalysis.com", f"stockanalysis.com/kwse/{base}",
-                         1.0, "Fetched from stockanalysis.com", now, stmt_id),
-                    )
-                    cur.execute("DELETE FROM financial_line_items WHERE statement_id = ?", (stmt_id,))
+            for idx, dk in enumerate(datekeys):
+                if dk == "TTM":
+                    continue
+                if not is_quarterly and annual_periods_saved >= _MT_MAX_YEARS:
+                    break
+                if is_quarterly and quarterly_periods_saved >= _SA_MAX_QUARTERS:
+                    break
+
+                period_end_date = dk  # e.g. "2024-12-31"
+                try:
+                    fy = int(fiscal_years[idx])
+                except (IndexError, ValueError):
+                    continue
+
+                fq_raw = fiscal_quarters[idx] if idx < len(fiscal_quarters) else None
+                fq = _parse_fiscal_quarter(fq_raw)
+                if is_quarterly:
+                    # Keep Q1-Q3 quarterly periods. Skip Q4 to preserve annual year-end rows.
+                    if fq is None or fq == 4:
+                        continue
                 else:
-                    cur.execute(
-                        """INSERT INTO financial_statements
-                           (stock_id, statement_type, fiscal_year, fiscal_quarter,
-                            period_end_date, source_file, extracted_by,
-                            confidence_score, notes, created_at)
-                           VALUES (?,?,?,?,?,?,?,?,?,?)""",
-                        (stock_id, stmt_type, fy, None, period_end_date,
-                         f"stockanalysis.com/kwse/{base}", "stockanalysis.com",
-                         1.0, "Fetched from stockanalysis.com", now),
-                    )
-                    stmt_id = cur.lastrowid
+                    fq = None
 
-                for item in line_items:
-                    cur.execute(
-                        """INSERT INTO financial_line_items
-                           (statement_id, line_item_code, line_item_name,
-                            amount, currency, order_index, is_total)
-                           VALUES (?,?,?,?,?,?,?)""",
-                        (stmt_id, item["code"], item["name"],
-                         item["amount"], item["currency"],
-                         item["order"], item["is_total"]),
-                    )
-                conn.commit()
-            periods_saved += 1
+                # Collect line items for this period
+                line_items = []
+                seen_codes = set()
+                order = 1
+                for sa_key, (canonical_code, display_name) in field_map.items():
+                    if sa_key not in data:
+                        continue
+                    # Skip duplicate canonical codes (e.g. revenue vs revenueRE)
+                    if canonical_code in seen_codes:
+                        continue
+                    vals = data[sa_key]
+                    if idx >= len(vals) or vals[idx] is None:
+                        continue
+                    seen_codes.add(canonical_code)
+                    line_items.append({
+                        "code": canonical_code,
+                        "name": display_name,
+                        "amount": vals[idx],
+                        "currency": "KWD",
+                        "order": order,
+                        "is_total": canonical_code in (
+                            "total_assets", "total_equity", "total_liabilities",
+                            "total_current_assets", "total_current_liabilities",
+                            "total_liabilities_equity", "total_operating_expenses",
+                            "total_common_equity",
+                        ),
+                    })
+                    order += 1
+
+                # ── Include ALL remaining fields not in field_map ────────
+                mapped_sa_keys = set(field_map.keys())
+                for extra_key, vals in data.items():
+                    if extra_key in _SA_METADATA_KEYS:
+                        continue
+                    if extra_key in _SA_RATIO_KEYS:
+                        continue
+                    if extra_key in mapped_sa_keys:
+                        continue
+                    if not isinstance(vals, list):
+                        continue
+                    if extra_key in seen_codes:
+                        continue
+                    if idx >= len(vals) or vals[idx] is None:
+                        continue
+                    seen_codes.add(extra_key)
+                    line_items.append({
+                        "code": extra_key,
+                        "name": _camel_to_display(extra_key),
+                        "amount": vals[idx],
+                        "currency": "KWD",
+                        "order": order,
+                        "is_total": False,
+                    })
+                    order += 1
+
+                if not line_items:
+                    continue
+
+                # Upsert: check existing statement
+                existing = query_one(
+                    """SELECT id FROM financial_statements
+                       WHERE stock_id = ? AND statement_type = ? AND period_end_date = ?""",
+                    (stock_id, stmt_type, period_end_date),
+                )
+
+                source_label = url
+
+                with get_connection() as conn:
+                    cur = conn.cursor()
+                    if existing:
+                        stmt_id = existing["id"] if isinstance(existing, dict) else existing[0]
+                        cur.execute(
+                            """UPDATE financial_statements
+                               SET fiscal_year=?, fiscal_quarter=?, extracted_by=?, source_file=?,
+                                   confidence_score=?, notes=?, created_at=?
+                               WHERE id=?""",
+                            (fy, fq, "stockanalysis.com", source_label,
+                             1.0, "Fetched from stockanalysis.com", now, stmt_id),
+                        )
+                        cur.execute("DELETE FROM financial_line_items WHERE statement_id = ?", (stmt_id,))
+                    else:
+                        cur.execute(
+                            """INSERT INTO financial_statements
+                               (stock_id, statement_type, fiscal_year, fiscal_quarter,
+                                period_end_date, source_file, extracted_by,
+                                confidence_score, notes, created_at)
+                               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                            (stock_id, stmt_type, fy, fq, period_end_date,
+                             source_label, "stockanalysis.com",
+                             1.0, "Fetched from stockanalysis.com", now),
+                        )
+                        stmt_id = cur.lastrowid
+
+                    for item in line_items:
+                        cur.execute(
+                            """INSERT INTO financial_line_items
+                               (statement_id, line_item_code, line_item_name,
+                                amount, currency, order_index, is_total)
+                               VALUES (?,?,?,?,?,?,?)""",
+                            (stmt_id, item["code"], item["name"],
+                             item["amount"], item["currency"],
+                             item["order"], item["is_total"]),
+                        )
+                    conn.commit()
+
+                periods_saved += 1
+                if is_quarterly:
+                    quarterly_periods_saved += 1
+                else:
+                    annual_periods_saved += 1
 
         if periods_saved > 0:
             saved_summary.append({

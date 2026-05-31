@@ -35,7 +35,6 @@ def _configure_logging(models_root: Path | str | None) -> Path:
 
 def _print_summary(summary: dict) -> None:
     per_stock = summary.get("per_stock", {})
-    per_sector = summary.get("per_sector", {})
     global_tier = summary.get("global", {})
 
     print("\n=== Eagle Eye ML Training Summary ===")
@@ -45,18 +44,12 @@ def _print_summary(summary: dict) -> None:
         f"{per_stock.get('rejected', 0)} rejected (Spearman < 0.30)"
     )
     print(
-        "Per-sector tier: "
-        f"{per_sector.get('trained', 0)} models trained"
-    )
-    print(
         "Global tier: "
         f"{global_tier.get('trained', 0)} model trained"
     )
     print(f"Mean Spearman per-stock (accepted): {per_stock.get('mean_spearman')}")
-    print(f"Mean Spearman per-sector (accepted): {per_sector.get('mean_spearman')}")
     print(f"Mean Spearman global: {global_tier.get('mean_spearman')}")
     print(f"Mean MAE per-stock (accepted): {per_stock.get('mean_mae')}")
-    print(f"Mean MAE per-sector (accepted): {per_sector.get('mean_mae')}")
     print(f"Mean MAE global: {global_tier.get('mean_mae')}")
     print(f"Runtime (sec): {summary.get('runtime_sec')}")
 
@@ -65,7 +58,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Eagle Eye Phase 2A ML trainer")
     parser.add_argument(
         "--tier",
-        choices=["per_stock", "per_sector", "global", "all"],
+        choices=["per_stock", "global", "all"],
         default="all",
         help="Training tier scope",
     )

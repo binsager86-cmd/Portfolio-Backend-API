@@ -65,21 +65,17 @@ def resolve_model_for_ticker(
 
     Tier policy:
       1) per_stock if >=100 events and accepted model exists
-      2) per_sector if >=30 events and accepted sector model exists
-      3) global baseline if accepted model exists
-      4) None -> caller falls back to rules
+            2) global baseline if accepted model exists
+            3) rejected global baseline only if explicitly marked fallback_eligible
+            4) None -> caller falls back to rules
     """
     symbol = ticker.upper().strip()
     index = _load_event_index(models_root=models_root)
 
     event_counts = {k.upper(): int(v) for k, v in index.get("event_counts_by_ticker", {}).items()}
-    sector_map = {k.upper(): str(v) for k, v in index.get("ticker_sector_map", {}).items()}
-
     event_count = event_counts.get(symbol)
     if event_count is None:
         event_count = _load_event_count_from_db(symbol)
-
-    sector = sector_map.get(symbol, "holding_misc")
 
     if event_count >= 100:
         if model_exists("per_stock", symbol, models_root=models_root) and not model_is_rejected("per_stock", symbol, models_root=models_root):
@@ -89,19 +85,20 @@ def resolve_model_for_ticker(
                 bundle.metadata["resolved_event_count"] = event_count
                 return bundle
 
-    if event_count >= 30:
-        if model_exists("per_sector", sector, models_root=models_root) and not model_is_rejected("per_sector", sector, models_root=models_root):
-            bundle = load_model_bundle(tier="per_sector", identifier=sector, version="current", models_root=models_root)
-            if bundle is not None:
-                bundle.metadata["resolved_tier"] = "per_sector"
-                bundle.metadata["resolved_event_count"] = event_count
-                return bundle
-
     if model_exists("global", "baseline", models_root=models_root) and not model_is_rejected("global", "baseline", models_root=models_root):
         bundle = load_model_bundle(tier="global", identifier="baseline", version="current", models_root=models_root)
         if bundle is not None:
             bundle.metadata["resolved_tier"] = "global"
             bundle.metadata["resolved_event_count"] = event_count
             return bundle
+
+    if model_exists("global", "baseline", models_root=models_root):
+        bundle = load_model_bundle(tier="global", identifier="baseline", version="current", models_root=models_root)
+        if bundle is not None:
+            fallback_ok = bool(bundle.metadata.get("fallback_eligible")) and bundle.model is not None
+            if fallback_ok:
+                bundle.metadata["resolved_tier"] = "global_fallback"
+                bundle.metadata["resolved_event_count"] = event_count
+                return bundle
 
     return None

@@ -464,92 +464,22 @@ def _build_live_feature_vector(feature_row: Dict[str, object], feature_names: Li
     return out
 
 
+def predict_confidence(ticker: str, ohlcv_df, as_of: date) -> Optional[float]:
+    """Retired in the Phase 1 rules-primary rebuild."""
+    del ticker, ohlcv_df, as_of
+    return None
+
+
 def _predict_ml_signal(ticker: str, ohlcv_df, as_of: date) -> Optional[Dict[str, float]]:
-    """Resolve best model tier and return BUY/HOLD/SELL probabilities.
-
-    Returns payload:
-      {"buy": 0.0-1.0, "hold": 0.0-1.0, "sell": 0.0-1.0,
-       "signal": "BUY|HOLD|SELL", "confidence": 0.0-100.0}
-    """
-    try:
-        import pandas as pd
-
-        from app.services.eagle_eye.ml.feature_builder import build_inference_row
-        from app.services.eagle_eye.ml.model_store import load_feature_names
-        from app.services.eagle_eye.ml.tier_resolver import resolve_model_for_ticker
-
-        bundle = resolve_model_for_ticker(ticker)
-        if bundle is None or bundle.model is None:
-            return None
-
-        feature_row = build_inference_row(ticker=ticker, ohlcv=ohlcv_df, T=as_of)
-        if feature_row is None:
-            return None
-
-        try:
-            feature_names = load_feature_names(tier=bundle.tier, identifier=bundle.identifier)
-        except Exception:
-            feature_names = list(bundle.feature_list or [])
-
-        if not feature_names:
-            return None
-
-        vector = _build_live_feature_vector(feature_row, feature_names)
-        X_live = pd.DataFrame([vector], columns=feature_names)
-        raw_pred = bundle.model.predict(X_live)
-        pred_arr = np.asarray(raw_pred, dtype=float)
-
-        # Multiclass model output: [P(SELL), P(HOLD), P(BUY)]
-        if pred_arr.ndim == 2 and pred_arr.shape[1] >= 3:
-            proba = pred_arr[0]
-            sell = float(max(0.0, min(1.0, proba[0])))
-            hold = float(max(0.0, min(1.0, proba[1])))
-            buy = float(max(0.0, min(1.0, proba[2])))
-        elif pred_arr.ndim == 1 and pred_arr.size >= 3 and pred_arr.size % 3 == 0:
-            proba = pred_arr.reshape(-1, 3)[0]
-            sell = float(max(0.0, min(1.0, proba[0])))
-            hold = float(max(0.0, min(1.0, proba[1])))
-            buy = float(max(0.0, min(1.0, proba[2])))
-        else:
-            # Compatibility path for legacy scalar bundles.
-            scalar = float(pred_arr.ravel()[0])
-            if bundle.calibrator is not None and 0.0 <= scalar <= 1.0:
-                try:
-                    scalar = float(bundle.calibrator.predict(np.asarray([scalar], dtype=float))[0])
-                except Exception:
-                    pass
-            buy = float(np.clip(scalar if 0.0 <= scalar <= 1.0 else scalar / 100.0, 0.0, 1.0))
-            hold = float(max(0.0, 1.0 - buy))
-            sell = 0.0
-
-        total = buy + hold + sell
-        if total > 0:
-            buy /= total
-            hold /= total
-            sell /= total
-
-        signal_idx = int(np.argmax([sell, hold, buy]))
-        signal = ["SELL", "HOLD", "BUY"][signal_idx]
-        confidence = [sell, hold, buy][signal_idx] * 100.0
-
-        return {
-            "buy": float(round(buy, 6)),
-            "hold": float(round(hold, 6)),
-            "sell": float(round(sell, 6)),
-            "signal": signal,
-            "confidence": float(round(confidence, 2)),
-        }
-    except Exception as exc:
-        logger.debug("ML inference failed for %s: %s", ticker, exc)
-        return None
+    """Retired compatibility wrapper for legacy ML payloads."""
+    del ticker, ohlcv_df, as_of
+    return None
 
 
 def _predict_ml_opportunity_score(ticker: str, ohlcv_df, as_of: date) -> Optional[float]:
-    """Compatibility wrapper: expose BUY probability as 0-100 score."""
-    proba = _predict_ml_signal(ticker, ohlcv_df, as_of)
-    if proba is None:
-        return None
-    return round(float(np.clip(float(proba.get("buy", 0.0)) * 100.0, 0.0, 100.0)), 2)
+    """Retired compatibility wrapper for phase-regression output."""
+    del ticker, ohlcv_df, as_of
+    return None
 
 
 def _build_threshold_profile_response(
@@ -730,10 +660,7 @@ def _run_analysis(ticker: str) -> Optional[dict]:
     # ── DB fast path: today's pre-computed rating ──
     try:
         from app.services.eagle_eye.rating_engine import (
-            compute_confidence,
-            compute_rating,
             is_stock_active,
-            validate_and_adjust_ml_score,
         )
         from app.services.eagle_eye.store import load_ohlcv, load_rating
 
@@ -752,25 +679,6 @@ def _run_analysis(ticker: str) -> Optional[dict]:
 
             if not isinstance(indicators, dict):
                 indicators = {}
-
-            cached_ml_score = _safe_float(cached_row.get("ml_score"))
-            if cached_ml_score is not None:
-                adjusted_ml = validate_and_adjust_ml_score(
-                    cached_ml_score,
-                    indicators,
-                    ohlcv_cached,
-                    ticker,
-                )
-                confidence_cap = compute_confidence(
-                    indicators,
-                    str(cached_row.get("stage") or "DORMANT"),
-                    dna=None,
-                    ml_score=adjusted_ml,
-                )
-                cached_conf = _safe_float(cached_row.get("confidence")) or 0.0
-                cached_row["ml_score"] = adjusted_ml
-                cached_row["confidence"] = round(min(cached_conf, confidence_cap), 2)
-                cached_row["rating"] = compute_rating(float(cached_row["confidence"]))
 
             supports = cached_row.get("supports_json") or []
             resistances = cached_row.get("resistances_json") or []
@@ -832,17 +740,16 @@ def _run_analysis(ticker: str) -> Optional[dict]:
         from app.services.eagle_eye.adapter import TickerChartAdapter
         from app.services.eagle_eye.indicators import compute_all_indicators
         from app.services.eagle_eye.rating_engine import (
-            classify_stage,
-            compute_confidence,
             compute_entry_stop_targets,
-            compute_rating,
-            compute_rating_from_proba,
             compute_support_resistance,
             compute_volume_context,
             generate_thesis,
             is_stock_active,
-            validate_and_adjust_ml_score,
         )
+        from app.services.eagle_eye.scoring.explanation_engine import explain
+        from app.services.eagle_eye.scoring.family_scores import compute_family_scores
+        from app.services.eagle_eye.scoring.recommendation_engine import generate_recommendation
+        from app.services.eagle_eye.stage_classifier import classify_stage_with_confidence
 
         adapter = TickerChartAdapter()
         end_d = date.today()
@@ -860,51 +767,39 @@ def _run_analysis(ticker: str) -> Optional[dict]:
 
         latest = indicators_df.iloc[-1].to_dict()
 
-        stage = classify_stage(latest)
-        ml_proba = _predict_ml_signal(ticker, df, end_d)
-        ml_score = None
-        if ml_proba is not None:
-            raw_buy_conf = float(ml_proba.get("buy", 0.0)) * 100.0
-            adjusted_buy_conf = validate_and_adjust_ml_score(raw_buy_conf, latest, df, ticker)
-            ml_proba["buy"] = max(0.0, min(1.0, adjusted_buy_conf / 100.0))
+        family_scores = compute_family_scores(latest)
+        stage, stage_conf = classify_stage_with_confidence(latest, family_scores=family_scores)
 
-            total = float(ml_proba.get("buy", 0.0) + ml_proba.get("hold", 0.0) + ml_proba.get("sell", 0.0))
-            if total > 0:
-                ml_proba["buy"] = float(ml_proba.get("buy", 0.0) / total)
-                ml_proba["hold"] = float(ml_proba.get("hold", 0.0) / total)
-                ml_proba["sell"] = float(ml_proba.get("sell", 0.0) / total)
-
-            ml_score = round(float(ml_proba["buy"] * 100.0), 2)
-
-        confidence = compute_confidence(
+        recommendation_payload = generate_recommendation(
             latest,
-            stage,
-            dna=None,
-            ml_score=ml_score,
-            ml_proba=ml_proba,
+            family_scores=family_scores,
+            total_score=float(family_scores.get("total_score", 50.0)),
+            stage=stage,
+            stage_conf=stage_conf,
+            pattern_match=None,
+            data_quality=_safe_float(latest.get("data_quality_score")) or 50.0,
         )
 
-        # Volume context + confidence multiplier
-        volume_context = compute_volume_context(df, stage)
-        _tier = volume_context["liquidity_tier"]
-        _LMUL = {"ILLIQUID": 0.75, "WATCH_ONLY": 0.85}
-        if _tier in _LMUL:
-            confidence = confidence * _LMUL[_tier]
-        elif not volume_context["is_volume_confirmed"]:
-            confidence = confidence * 0.95
-        elif volume_context["relative_volume_percentile"] > 80:
-            confidence = min(confidence * 1.10, 100)
-        confidence = round(min(confidence, 100), 2)
+        confidence = float(recommendation_payload["confidence"])
+        rating = str(recommendation_payload["recommendation"])
+        ml_score = None
+        ml_proba = None
 
-        rating = compute_rating_from_proba(ml_proba, confidence)
+        # Keep volume context for display only (no post-model multipliers).
+        volume_context = compute_volume_context(df, stage)
+
         sr = compute_support_resistance(df, latest)
         et = compute_entry_stop_targets(df, latest, sr, stage=stage)
-        thesis = generate_thesis(ticker, rating, stage, latest, dna=None, top_signals_fired=[])
+        explanation = explain(recommendation_payload, latest, pattern_match=None)
+        top_signals = explanation.get("why_supporting", [])[:2]
+        thesis = generate_thesis(ticker, rating, stage, latest, dna=None, top_signals_fired=top_signals)
 
         result = {
             "ticker": ticker.upper(),
             "stage": stage,
+            "stage_confidence": recommendation_payload.get("stage_confidence"),
             "rating": rating,
+            "recommendation": rating,
             "confidence": confidence,
             "ml_score": ml_score,
             "ml_proba": ml_proba,
@@ -913,6 +808,11 @@ def _run_analysis(ticker: str) -> Optional[dict]:
             "resistances": sr.get("resistances", []),
             "entry": et,
             "indicators": latest,
+            "family_scores": family_scores,
+            "why_supporting": explanation.get("why_supporting", []),
+            "why_conflicting": explanation.get("why_conflicting", []),
+            "what_invalidates": explanation.get("what_invalidates", []),
+            "veto_reasons": recommendation_payload.get("veto_reasons", []),
             "volume_context": volume_context,
             "days_of_history": len(df),
             "computed_at": datetime.utcnow().date().isoformat(),

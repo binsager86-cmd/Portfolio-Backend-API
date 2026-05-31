@@ -14,7 +14,7 @@ from app.core.config import get_settings
 from app.services.eagle_eye.adapter import StockMeta, TickerChartAdapter
 from app.services.eagle_eye.config import STAGES
 from app.services.eagle_eye.indicators import compute_all_indicators
-from app.services.eagle_eye.ml.labelers import detect_buy_sell_points
+from app.services.eagle_eye.ml.labelers import compute_training_target, label_phases
 from app.services.eagle_eye.move_detector import detect_fakeouts, detect_moves
 from app.services.eagle_eye.recorder import SIGNAL_DEFS
 from app.services.eagle_eye.stage_classifier import classify_stage
@@ -81,6 +81,7 @@ NON_FEATURE_COLUMNS = {
     "ticker",
     "date",
     "bar_index",
+    "target_score",
     "label",
     "event_id",
     "event_date",
@@ -129,6 +130,65 @@ NON_FEATURE_PREFIXES = (
     "stage_before_",
 )
 
+CURATED_FEATURES: Dict[str, str] = {
+    # Momentum
+    "rsi": "RSI value 0-100",
+    "rsi_velocity_5d": "RSI change over 5 bars",
+    "macd_histogram": "MACD histogram value",
+    "macd_hist_velocity_5d": "MACD histogram change over 5 bars",
+    "adx": "ADX trend strength",
+    "stochastic_k": "Stochastic %K",
+    "momentum_confluence": "Momentum confluence score",
+    # Flow / volume
+    "cmf": "Chaikin Money Flow",
+    "cmf_change_5d": "CMF change over 5 bars",
+    "obv_change_10d": "OBV change over 10 bars",
+    "obv_change_20d": "OBV change over 20 bars",
+    "volume_ratio_20d": "Volume vs 20-day average",
+    "volume_acceleration": "5-day volume SMA divided by 20-day SMA",
+    "green_red_volume_ratio_10d": "Up-volume/down-volume ratio over 10 bars",
+    "volume_flow_confluence": "Flow confluence score",
+    # Trend
+    "ema_ribbon_aligned": "EMA ribbon alignment",
+    "di_spread": "+DI minus -DI",
+    "trend_confluence": "Trend confluence score",
+    # Position
+    "price_extension_from_20d_low_pct": "Distance above 20-day low",
+    "position_in_60d_range_pct": "Position in 60-day range",
+    "selloff_from_60d_high_pct": "Distance below 60-day high",
+    "bounce_from_10d_low_pct": "Recovery from 10-day low",
+    "consecutive_higher_lows": "Consecutive higher lows",
+    # Institutional
+    "accumulation_score": "Accumulation composite",
+    "institutional_confluence": "Institutional confluence score",
+    # Composite
+    "overall_confluence": "Weighted confluence across categories",
+    "flow_momentum_divergence": "Flow confluence minus momentum confluence",
+    "capitulation_reversal_score": "Capitulation reversal composite",
+    # Context
+    "stage_encoded": "Encoded lifecycle stage",
+}
+
+CURATED_FEATURE_ORDER: Tuple[str, ...] = tuple(CURATED_FEATURES.keys())
+
+STAGE_ENCODING: Dict[str, float] = {
+    "DORMANT": 0.0,
+    "STEALTH_ACCUMULATION": 2.0,
+    "EARLY_BREAKOUT": 3.0,
+    "MARKUP_TRENDING": 4.0,
+    "ACCELERATION_CLIMAX": 5.0,
+    "DISTRIBUTION_TOPPING": 6.0,
+    "MARKDOWN_DECLINE": 7.0,
+    "CAPITULATION_EXHAUSTION": 1.0,
+}
+
+CURATED_FALLBACKS: Dict[str, Tuple[str, ...]] = {
+    "stochastic_k": ("stoch_k",),
+    "di_spread": ("plus_di_minus_di_diff",),
+    "volume_ratio_20d": ("rel_volume",),
+    "consecutive_higher_lows": ("consecutive_higher_lows_5d",),
+}
+
 
 @dataclass
 class FeatureBuildResult:
@@ -155,6 +215,68 @@ def _log1p_or_nan(value: Any) -> float:
     if math.isnan(v) or v < 0:
         return float("nan")
     return float(math.log1p(v))
+
+
+def build_curated_feature_row(indicators_dict: Mapping[str, Any]) -> Dict[str, float]:
+    """
+    Extract only the curated v14 feature set from an indicator snapshot.
+    """
+    snapshot = dict(indicators_dict or {})
+    stage_name = str(snapshot.get("stage") or classify_stage(snapshot))
+    stage_code = STAGE_ENCODING.get(stage_name, 0.0)
+
+    row: Dict[str, float] = {}
+    for feature_name in CURATED_FEATURE_ORDER:
+        if feature_name == "stage_encoded":
+            row[feature_name] = float(stage_code)
+            continue
+
+        val = snapshot.get(feature_name)
+        if val is None:
+            for alias in CURATED_FALLBACKS.get(feature_name, ()):  # pragma: no branch
+                val = snapshot.get(alias)
+                if val is not None:
+                    break
+
+        fval = _safe_float(val)
+        row[feature_name] = float("nan") if math.isnan(fval) else float(fval)
+
+    return row
+
+
+def build_training_dataset(
+    ticker: str,
+    df: pd.DataFrame,
+    indicators: pd.DataFrame,
+) -> Tuple[pd.DataFrame, List[str]]:
+    """
+    Build one row per bar using curated features and direct 0-100 target score.
+    """
+    if df is None or df.empty or indicators is None or indicators.empty:
+        return pd.DataFrame(), []
+
+    n = min(len(df), len(indicators))
+    if n < 120:
+        return pd.DataFrame(), []
+
+    rows: List[Dict[str, Any]] = []
+    records = indicators.to_dict("records")
+    idx = indicators.index
+
+    for i in range(60, n - 40):
+        feature_row = build_curated_feature_row(records[i])
+        feature_row["target_score"] = compute_training_target(df, i, forward_days=40)
+        feature_row["ticker"] = ticker.upper()
+        feature_row["bar_index"] = int(i)
+        bar_ts = pd.Timestamp(idx[i]).normalize()
+        feature_row["date"] = bar_ts.date().isoformat()
+        feature_row["event_date"] = feature_row["date"]
+        feature_row["event_id"] = f"{ticker.upper()}_{feature_row['date']}_{i}"
+        rows.append(feature_row)
+
+    result = pd.DataFrame(rows)
+    metadata_cols = [c for c in result.columns if c not in CURATED_FEATURE_ORDER and c != "target_score"]
+    return result, metadata_cols
 
 
 def _is_ramadan_period(dt: date) -> int:
@@ -1465,7 +1587,7 @@ def build_labeled_training_data(
     market_df: Optional[pd.DataFrame] = None,
 ) -> pd.DataFrame:
     """
-    Build training rows from labeled bars (BUY/SELL/HOLD) instead of event anchors.
+    Build training rows from phase-labeled bars instead of event anchors.
     """
     del ticker, df
 
@@ -1473,27 +1595,26 @@ def build_labeled_training_data(
     if n < 30 or len(indicator_records) != n:
         return pd.DataFrame()
 
-    aligned_labels = labels.reindex(indicators.index).fillna(0).astype(int)
+    aligned_labels = labels.reindex(indicators.index).fillna(1).astype(int)
     label_arr = aligned_labels.to_numpy(dtype=int)
 
-    buy_positions = [i for i, v in enumerate(label_arr) if v == 1]
-    sell_positions = [i for i, v in enumerate(label_arr) if v == -1]
-    hold_positions = [i for i, v in enumerate(label_arr) if v == 0]
+    non_neutral_positions = [i for i, v in enumerate(label_arr) if v != 1]
+    neutral_positions = [i for i, v in enumerate(label_arr) if v == 1]
 
-    n_signal = len(buy_positions) + len(sell_positions)
+    n_signal = len(non_neutral_positions)
     if n_signal == 0:
         return pd.DataFrame()
 
-    max_hold = n_signal * 3
-    if len(hold_positions) > max_hold:
+    max_neutral = n_signal * 1
+    if len(neutral_positions) > max_neutral:
         rng = np.random.default_rng(42)
-        hold_positions = sorted(int(v) for v in rng.choice(hold_positions, size=max_hold, replace=False))
+        neutral_positions = sorted(int(v) for v in rng.choice(neutral_positions, size=max_neutral, replace=False))
 
-    all_positions = sorted(buy_positions + sell_positions + hold_positions)
+    all_positions = sorted(non_neutral_positions + neutral_positions)
 
     lookback_columns = [
-        "rsi", "adx", "macd_histogram", "plus_di", "minus_di",
-        "volume_ratio_20d", "obv_trajectory_slope",
+        "rsi", "adx", "macd_histogram", "cmf", "plus_di", "minus_di",
+        "plus_di_minus_di_diff", "volume_ratio_20d", "obv_trajectory_slope",
         "price_extension_from_20d_low_pct",
         "accumulation_compression_days",
     ]
@@ -1537,6 +1658,10 @@ def build_labeled_training_data(
             row[f"delta3_{col}"] = (t0_val - t3_val) if np.isfinite(t0_val) and np.isfinite(t3_val) else float("nan")
             row[f"delta1_{col}"] = (t0_val - t1_val) if np.isfinite(t0_val) and np.isfinite(t1_val) else float("nan")
 
+        # Canonical aliases used by diagnostics and model reviews.
+        row["delta3_obv_slope"] = row.get("delta3_obv_trajectory_slope", float("nan"))
+        row["delta5_obv_slope"] = row.get("delta5_obv_trajectory_slope", float("nan"))
+
         _compute_signal_pattern_features(row, pos, signal_matrix, n)
         _compute_price_structure_features(row, pos, indicator_records, n)
         _add_market_context(row, market_df, bar_ts)
@@ -1552,27 +1677,12 @@ def build_labeled_rows_from_ohlcv_cache(
     logger: Optional[logging.Logger] = None,
 ) -> List[Dict[str, Any]]:
     """
-    Build supervised rows from all cached OHLCV bars using peak/trough labels.
+    Build supervised rows from all cached OHLCV bars using curated v14 features.
     """
     log = logger or LOGGER
-    meta_map = _build_stock_meta_map()
 
     if tickers is None:
         tickers = list_tickers_with_ohlcv()
-
-    market_df: Optional[pd.DataFrame] = None
-    try:
-        adapter = TickerChartAdapter()
-        end = date.today()
-        start = date(max(2000, end.year - 6), end.month, min(end.day, 28))
-        raw_market = adapter.get_market_index("BKA", start, end)
-        if raw_market is not None and not raw_market.empty:
-            market_df = compute_all_indicators(raw_market)
-            market_df.index = pd.to_datetime(market_df.index).normalize()
-            market_df = market_df[~market_df.index.duplicated(keep="last")]
-    except Exception as exc:
-        log.debug("Market context unavailable for labeled rows: %s", exc)
-        market_df = None
 
     all_rows: List[Dict[str, Any]] = []
     n_tickers = len(tickers)
@@ -1586,45 +1696,14 @@ def build_labeled_rows_from_ohlcv_cache(
             if indicators is None or indicators.empty:
                 continue
 
-            labels = detect_buy_sell_points(ohlcv)
-            signal_matrix, indicator_records = _precompute_signal_matrix(indicators)
-            frame = build_labeled_training_data(
-                ticker=ticker,
-                df=ohlcv,
-                indicators=indicators,
-                labels=labels,
-                signal_matrix=signal_matrix,
-                indicator_records=indicator_records,
-                market_df=market_df,
-            )
+            frame, _ = build_training_dataset(ticker=ticker, df=ohlcv, indicators=indicators)
             if frame.empty:
                 continue
-
-            meta = meta_map.get(ticker.upper())
-            name_en = meta.name_en if meta else ticker
-            sector = _normalize_sector(name_en, meta.sector if meta else None, ticker)
-            market_tier = (meta.market_tier if meta and meta.market_tier else "premier").lower()
-
-            frame["ticker"] = ticker.upper()
-            frame["sector"] = sector
-            frame["market_tier"] = market_tier
-            frame["sector_raw"] = sector
-            frame["market_tier_raw"] = market_tier
-
-            evt_dt = pd.to_datetime(frame["event_date"], errors="coerce")
-            frame["day_of_week"] = evt_dt.dt.weekday.astype(float)
-            frame["month"] = evt_dt.dt.month.astype(float)
-            frame["day_of_week_raw"] = frame["day_of_week"]
-            frame["month_raw"] = frame["month"]
-            frame["event_id"] = frame.apply(
-                lambda r: f"{ticker.upper()}_{r['event_date']}_{int(r['bar_index'])}",
-                axis=1,
-            )
 
             rows = frame.to_dict(orient="records")
             all_rows.extend(rows)
             log.info(
-                "[%d/%d] %s -> %d labeled rows (running total %d)",
+                "[%d/%d] %s -> %d curated rows (running total %d)",
                 idx,
                 n_tickers,
                 ticker,
@@ -1648,33 +1727,24 @@ def build_feature_matrix(
     df = pd.DataFrame(events).copy()
     total_before = len(df)
 
-    df["event_date"] = pd.to_datetime(df["event_date"], errors="coerce")
-    if "is_fakeout" not in df.columns:
-        df["is_fakeout"] = 0
+    for col in CURATED_FEATURE_ORDER:
+        if col not in df.columns:
+            df[col] = float("nan")
+    if "target_score" not in df.columns:
+        df["target_score"] = float("nan")
 
-    # before_anchor_dedupe = len(df)
-    # df = df.sort_values(["ticker", "event_date", "is_fakeout", "threshold_pct", "gain_pct"], ascending=[True, True, True, False, False])
-    # df = df.drop_duplicates(subset=["ticker", "event_date", "is_fakeout"], keep="first")
-    # dropped = before_anchor_dedupe - len(df)
-    # if dropped > 0:
-    #     log.info("Dropped %d duplicate anchor rows (same ticker/event_date/fakeout)", dropped)
+    if "event_date" in df.columns:
+        df["event_date"] = pd.to_datetime(df["event_date"], errors="coerce")
+    elif "date" in df.columns:
+        df["event_date"] = pd.to_datetime(df["date"], errors="coerce")
+    else:
+        df["event_date"] = pd.NaT
 
-    df = df.sort_values(["ticker", "event_date"]).reset_index(drop=True)
+    if "ticker" not in df.columns:
+        df["ticker"] = "UNKNOWN"
 
-    df["sector_raw"] = df.get("sector", "unknown").fillna("unknown").astype(str)
-    df["market_tier_raw"] = df.get("market_tier", "unknown").fillna("unknown").astype(str)
-    df["day_of_week_raw"] = df.get("day_of_week")
-    df["month_raw"] = df.get("month")
-
-    df = pd.get_dummies(
-        df,
-        columns=["sector", "market_tier", "day_of_week", "month"],
-        prefix=["sector", "tier", "dow", "month"],
-        dummy_na=False,
-    )
-
-    feature_cols = get_feature_columns(df)
-    for col in feature_cols:
+    feature_cols = list(CURATED_FEATURE_ORDER)
+    for col in feature_cols + ["target_score"]:
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
     missing_ratio = df[feature_cols].isna().mean(axis=1)
@@ -1683,15 +1753,15 @@ def build_feature_matrix(
 
     if rejected_counts:
         for tk, n in sorted(rejected_counts.items()):
-            log.info("Rejected %d events for %s due to >30%% NaN feature ratio", n, tk)
+            log.info("Rejected %d rows for %s due to >30%% NaN curated-feature ratio", n, tk)
 
     df = df.loc[~reject_mask].copy()
+    df = df.loc[df["target_score"].notna()].copy()
 
     if df.empty:
         return FeatureBuildResult(frame=df, rejected_counts=rejected_counts, total_before=total_before, total_after=0)
 
-    # Category-aware imputation: forward-fill within ticker, then ticker median, then global median.
-    df = df.sort_values(["ticker", "event_date"]).reset_index(drop=True)
+    df = df.sort_values(["ticker", "event_date", "bar_index"], na_position="last").reset_index(drop=True)
     df[feature_cols] = df.groupby("ticker", dropna=False)[feature_cols].ffill()
 
     ticker_medians = df.groupby("ticker", dropna=False)[feature_cols].transform("median")
@@ -1699,12 +1769,8 @@ def build_feature_matrix(
 
     global_median = df[feature_cols].median(numeric_only=True)
     df[feature_cols] = df[feature_cols].fillna(global_median)
-
-    one_hot_cols = [c for c in feature_cols if c.startswith(("sector_", "tier_", "dow_", "month_", "regime_", "current_stage_", "stage_before_"))]
-    if one_hot_cols:
-        df[one_hot_cols] = df[one_hot_cols].fillna(0.0)
-
     df[feature_cols] = df[feature_cols].fillna(0.0)
+    df["target_score"] = df["target_score"].clip(0.0, 100.0)
 
     total_after = len(df)
     return FeatureBuildResult(
@@ -1716,6 +1782,9 @@ def build_feature_matrix(
 
 
 def get_feature_columns(frame: pd.DataFrame) -> List[str]:
+    curated = [c for c in CURATED_FEATURE_ORDER if c in frame.columns]
+    if curated:
+        return curated
     return [
         c
         for c in frame.columns
@@ -1736,126 +1805,31 @@ def build_inference_row(
     regime_frame: Optional[pd.DataFrame] = None,
 ) -> Optional[Dict[str, Any]]:
     """
-    Build one feature dict for inference at date T (default: last trading day).
+    Build one curated v14 feature dict for inference at date T.
 
-    Uses the identical feature pipeline as training so that the resulting dict
-    is directly usable with model.predict() after selecting bundle.feature_list
-    columns and filling NaN.
-
-    Returns None when there is insufficient OHLCV history (< 120 bars).
+    The returned row contains only the curated feature schema used at train
+    time, preserving strict train/inference parity.
     """
-    if ohlcv is None or ohlcv.empty or len(ohlcv) < 120:
+    del ticker, regime_frame
+
+    if ohlcv is None or ohlcv.empty or len(ohlcv) < 60:
         return None
 
     indicators = compute_all_indicators(ohlcv)
-    if indicators.empty:
+    if indicators is None or indicators.empty:
         return None
 
     if T is None:
         pred_pos = len(indicators) - 1
     else:
         t_ts = pd.Timestamp(T).normalize()
-        # find closest position at-or-before T
         pred_pos = int(indicators.index.searchsorted(t_ts, side="right")) - 1
         if pred_pos < 0:
             return None
 
-    if pred_pos < 1:
+    if pred_pos < 0:
         return None
 
-    pred_ts = pd.Timestamp(indicators.index[pred_pos]).normalize()
-    today = pred_ts.date()
-
-    signal_matrix, indicator_records = _precompute_signal_matrix(indicators)
-
-    # ── Signal features ────────────────────────────────────────────────────
-    row: Dict[str, Any] = {}
-    row.update(_extract_signal_features_asof(indicators, pred_pos, signal_matrix))
-    row.update(
-        _compute_signal_pattern_features_asof(
-            pred_pos=pred_pos,
-            signal_matrix=signal_matrix,
-            indicator_records=indicator_records,
-        )
-    )
-
-    # ── Regime ────────────────────────────────────────────────────────────
-    rf = regime_frame if regime_frame is not None else pd.DataFrame()
-    regime_name, pmi_trend, brent_trend = _lookup_regime(rf, pred_ts)
-    row["pmi_50w_trend"] = pmi_trend
-    row["brent_30d_trend"] = brent_trend
-    for regime in REGIMES:
-        row[f"regime_{regime.lower()}"] = 1.0 if regime_name == regime else 0.0
-
-    # ── Calendar / seasonality ────────────────────────────────────────────
-    row["is_ramadan_period"] = float(_is_ramadan_period(today))
-    row["is_earnings_window"] = float(_is_earnings_window(today))
-    row["day_of_week"] = float(pred_ts.weekday())
-    row["month"] = float(pred_ts.month)
-
-    # ── Metadata stubs (unknown at inference) ─────────────────────────────
-    row["log_market_cap"] = float("nan")
-    row["avg_daily_turnover_log"] = _log1p_or_nan(
-        ohlcv["turnover_kwd"].iloc[max(0, pred_pos - 60):pred_pos].mean()
-        if "turnover_kwd" in ohlcv.columns
-        else None
-    )
-
-    # ── Entry quality features (explicit, non-prefixed) ──────────────────
-    pred_row = indicators.iloc[pred_pos]
-    row["price_extension_from_20d_low_pct"] = _safe_float(pred_row.get("price_extension_from_20d_low_pct"))
-    row["price_extension_from_60d_low_pct"] = _safe_float(pred_row.get("price_extension_from_60d_low_pct"))
-    row["price_extension_from_120d_low_pct"] = _safe_float(pred_row.get("price_extension_from_120d_low_pct"))
-    row["position_in_60d_range_pct"] = _safe_float(pred_row.get("position_in_60d_range_pct"))
-    row["distance_from_52w_high_pct"] = _safe_float(pred_row.get("distance_from_52w_high_pct"))
-    row["accumulation_compression_days"] = _safe_float(pred_row.get("accumulation_compression_days"))
-
-    # ── t0 indicator snapshot ─────────────────────────────────────────────
-    for col in indicators.columns:
-        if col in LEAKY_INDICATOR_COLUMNS:
-            continue
-        val = indicators.iloc[pred_pos].get(col)
-        if col == "wyckoff_phase":
-            row[f"t0_{col}_code"] = _encode_wyckoff(val)
-        else:
-            row[f"t0_{col}"] = _safe_float(val)
-
-    # ── Velocity (3-bar) ──────────────────────────────────────────────────
-    for col in CORE_VELOCITY_COLUMNS:
-        row[f"{col}_velocity"] = _velocity(indicators, pred_pos, col, 3)
-
-    # ── Trajectory slopes ─────────────────────────────────────────────────
-    row["obv_trajectory_slope"] = _trajectory_slope(indicators, pred_pos, "obv", TRAJECTORY_OFFSETS)
-    row["accumulation_trajectory_slope"] = _trajectory_slope(indicators, pred_pos, "accumulation_score", TRAJECTORY_OFFSETS)
-    row["bb_bandwidth_trajectory"] = _trajectory_slope(indicators, pred_pos, "bb_bandwidth", TRAJECTORY_OFFSETS)
-
-    # ── Context lookbacks ─────────────────────────────────────────────────
-    for lookback in CONTEXT_LOOKBACKS:
-        for col in CONTEXT_COLUMNS:
-            row[f"t{lookback}_{col}"] = _value_at_offset(indicators, pred_pos, col, lookback)
-
-    # ── One-hot dummies: stage ─────────────────────────────────────────────
-    stage_series = indicators.apply(lambda r: classify_stage(r.to_dict()), axis=1)
-    stage_now = stage_series.iloc[pred_pos]
-    stage_before = "UNKNOWN"
-    for i in range(pred_pos - 1, -1, -1):
-        if stage_series.iloc[i] != stage_now:
-            stage_before = stage_series.iloc[i]
-            break
-
-    for stage_name in STAGES:
-        sk = stage_name.lower()
-        row[f"current_stage_{sk}"] = 1.0 if stage_now == stage_name else 0.0
-        row[f"stage_before_{sk}"] = 1.0 if stage_before == stage_name else 0.0
-
-    # ── One-hot dummies: sector / tier / dow / month ───────────────────────
-    # We emit all possible one-hot columns; the model will select from feature_list.
-    # Values for unknown sector/tier are 0 (no column fires).
-    dow_float = float(pred_ts.weekday())
-    month_float = float(pred_ts.month)
-    for d in (0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0):
-        row[f"dow_{d}"] = 1.0 if dow_float == d else 0.0
-    for m in range(1, 13):
-        row[f"month_{float(m)}"] = 1.0 if month_float == float(m) else 0.0
-
-    return row
+    latest = indicators.iloc[pred_pos].to_dict()
+    latest["stage"] = classify_stage(latest)
+    return build_curated_feature_row(latest)

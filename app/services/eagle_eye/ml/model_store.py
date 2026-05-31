@@ -9,6 +9,37 @@ from typing import Any, Dict, List, Optional
 
 import joblib
 import lightgbm as lgb
+import numpy as np
+
+
+class BoosterAdapter:
+    """Compatibility wrapper that exposes predict_proba for LightGBM Booster."""
+
+    def __init__(self, booster: lgb.Booster):
+        self._booster = booster
+
+    def predict(self, *args: Any, **kwargs: Any) -> Any:
+        return self._booster.predict(*args, **kwargs)
+
+    def predict_proba(self, data: Any, *args: Any, **kwargs: Any) -> np.ndarray:
+        pred = self._booster.predict(data, *args, **kwargs)
+        arr = np.asarray(pred, dtype=float)
+        if arr.ndim == 2:
+            return arr
+
+        if arr.ndim == 1:
+            num_class = int(self._booster.num_model_per_iteration() or 1)
+            if num_class > 1 and arr.size % num_class == 0:
+                return arr.reshape(-1, num_class)
+
+            # Binary fallback where Booster returns positive-class probability.
+            pos = np.clip(arr, 0.0, 1.0)
+            return np.column_stack([1.0 - pos, pos])
+
+        return np.asarray(pred, dtype=float)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._booster, name)
 
 
 @dataclass
@@ -16,11 +47,23 @@ class ModelBundle:
     tier: str
     identifier: str
     version: str
-    model: Optional[lgb.Booster]
+    model: Optional[Any]
     calibrator: Any
     feature_list: List[str]
     metadata: Dict[str, Any]
     path: Path
+
+    @property
+    def task(self) -> str:
+        task = str(self.metadata.get("task") or "").strip().lower()
+        if task:
+            return task
+        objective = str(self.metadata.get("objective") or "").strip().lower()
+        if "class" in objective:
+            return "classification"
+        if objective:
+            return "regression"
+        return "unknown"
 
 
 def get_models_root(root: Optional[Path | str] = None) -> Path:
@@ -154,7 +197,8 @@ def load_model_bundle(
     elif names_path.exists():
         feature_list = json.loads(names_path.read_text(encoding="utf-8"))
 
-    model = lgb.Booster(model_file=str(model_path)) if model_path.exists() else None
+    raw_model = lgb.Booster(model_file=str(model_path)) if model_path.exists() else None
+    model = BoosterAdapter(raw_model) if raw_model is not None else None
     calibrator = joblib.load(cal_path) if cal_path.exists() else None
 
     return ModelBundle(

@@ -26,18 +26,21 @@ class EngineConfig:
     # --- Indicator parameters ---
     EMA_PERIODS: tuple = (8, 21, 50, 100, 200)
     RSI_PERIOD: int = 14
-    MACD_FAST: int = 12
-    MACD_SLOW: int = 26
+    # TickerChart stack uses MACD(15,10,9).
+    # compute_all_indicators normalizes these into short-vs-long EMA math.
+    MACD_FAST: int = 15
+    MACD_SLOW: int = 10
     MACD_SIGNAL: int = 9
     ATR_PERIOD: int = 14
     BB_PERIOD: int = 20
     BB_STDDEV: float = 2.0
-    ADX_PERIOD: int = 14
+    ADX_PERIOD: int = 19
+    STOCH_SMOOTH_K: int = 3
     STOCH_K: int = 14
     STOCH_D: int = 3
     CCI_PERIOD: int = 20
     MFI_PERIOD: int = 14
-    CMF_PERIOD: int = 20
+    CMF_PERIOD: int = 10
     OBV_SLOPE_PERIOD: int = 20
     VOLUME_AVG_PERIOD: int = 20
     DONCHIAN_PERIOD: int = 20

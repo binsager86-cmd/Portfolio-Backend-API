@@ -10,6 +10,7 @@ Signature algorithm (recovered via runtime BCryptHashData hook):
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
@@ -25,6 +26,13 @@ import httpx
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
+
+# Network guardrails for outbound TickerChart calls used by recompute paths.
+# Keep finite connect/read timeouts and bounded retries so one slow symbol
+# cannot stall the full nightly pipeline.
+_TC_HTTP_TIMEOUT = httpx.Timeout(connect=10.0, read=20.0, write=10.0, pool=20.0)
+_TC_FETCH_MAX_ATTEMPTS = 2
+_TC_FETCH_RETRY_BACKOFF_SEC = 0.4
 
 # ── Constants recovered from TickerChart Live 4.8.7.31 ──────────────
 _VERSION = "4.8.7.31"
@@ -853,7 +861,7 @@ async def fetch_ohlcv(
 ) -> list[dict]:
     """Return list of EODHD-shaped rows: {date, open, high, low, close, volume}.
 
-    Re-logs in once if the cached token is rejected.
+    Re-tries transient failures with finite bounded attempts.
     """
     host = _MARKET_HOST.get(market_abb)
     if host is None:
@@ -872,12 +880,32 @@ async def fetch_ohlcv(
     ] + _common_params()
     final_qs, _ = _sign(path, qs_pairs)
     url = f"https://{host}{path}?{final_qs}"
-    async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
-        resp = await client.get(
-            url,
-            headers={"User-Agent": _USER_AGENT},
-        )
-    resp.raise_for_status()
+
+    resp: Optional[httpx.Response] = None
+    for attempt in range(1, _TC_FETCH_MAX_ATTEMPTS + 1):
+        try:
+            async with httpx.AsyncClient(timeout=_TC_HTTP_TIMEOUT, follow_redirects=True) as client:
+                resp = await client.get(
+                    url,
+                    headers={"User-Agent": _USER_AGENT},
+                )
+            resp.raise_for_status()
+            break
+        except (httpx.TimeoutException, httpx.TransportError, httpx.HTTPStatusError) as exc:
+            if attempt >= _TC_FETCH_MAX_ATTEMPTS:
+                raise
+            logger.warning(
+                "TickerChart OHLCV retry %s/%s for %s.%s: %s",
+                attempt,
+                _TC_FETCH_MAX_ATTEMPTS,
+                base_symbol,
+                market_abb,
+                exc,
+            )
+            await asyncio.sleep(_TC_FETCH_RETRY_BACKOFF_SEC * attempt)
+
+    if resp is None:
+        return []
 
     rows = _parse_ondemand_csv(resp.text)
     # Apply requested date window (TickerChart returns whole period buckets)

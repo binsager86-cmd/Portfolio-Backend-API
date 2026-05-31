@@ -21,7 +21,7 @@ import json
 import logging
 import math
 import time
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -103,6 +103,10 @@ def ensure_tables() -> None:
             indicators_json      TEXT,
             days_of_history      INTEGER,
             computed_at          TEXT,
+            computed_date        TEXT,
+            run_id               TEXT,
+            run_started_at       TEXT,
+            code_fingerprint     TEXT,
             updated_at           INTEGER
         )
         """,
@@ -114,6 +118,10 @@ def ensure_tables() -> None:
     _acim("ee_ratings_cache", "market_tier", "TEXT")
     _acim("ee_ratings_cache", "volume_context_json", "TEXT")
     _acim("ee_ratings_cache", "ml_score", "REAL")
+    _acim("ee_ratings_cache", "computed_date", "TEXT")
+    _acim("ee_ratings_cache", "run_id", "TEXT")
+    _acim("ee_ratings_cache", "run_started_at", "TEXT")
+    _acim("ee_ratings_cache", "code_fingerprint", "TEXT")
 
     exec_sql(
         """
@@ -304,6 +312,45 @@ def get_latest_ohlcv_date(ticker: str) -> Optional[date]:
         return None
 
 
+def get_trailing_ohlcv_start_date(ticker: str, trailing_sessions: int = 10) -> Optional[date]:
+    """
+    Return the earliest date within the trailing *trailing_sessions* cached bars
+    for *ticker*.
+
+    This is used by ingestion to re-fetch and overwrite recent bars on each run,
+    capturing late exchange corrections without re-downloading full history.
+    """
+    from app.core.database import query_all
+
+    n = max(1, int(trailing_sessions))
+    rows = query_all(
+        f"""
+        SELECT bar_date
+        FROM ee_ohlcv_cache
+        WHERE ticker = ?
+        ORDER BY bar_date DESC
+        LIMIT {n}
+        """,
+        (ticker.upper(),),
+    )
+    if not rows:
+        return None
+
+    dates: List[date] = []
+    for row in rows:
+        raw = row.get("bar_date") if hasattr(row, "get") else row["bar_date"]
+        if not raw:
+            continue
+        try:
+            dates.append(date.fromisoformat(str(raw)))
+        except Exception:
+            continue
+
+    if not dates:
+        return None
+    return min(dates)
+
+
 def list_tickers_with_ohlcv() -> List[str]:
     """Return all distinct tickers that have data in ee_ohlcv_cache."""
     from app.core.database import query_all
@@ -397,6 +444,12 @@ def save_rating(
 
     et = result.get("entry") or {}
     ind = result.get("indicators") or {}
+    computed_at = result.get("computed_at")
+    if not computed_at:
+        computed_at = datetime.now().isoformat(timespec="seconds")
+    computed_date = result.get("computed_date")
+    if not computed_date:
+        computed_date = str(computed_at)[:10]
 
     exec_sql(
         """
@@ -405,8 +458,9 @@ def save_rating(
             entry_primary, entry_aggressive, entry_conservative,
             stop_loss, tp1, tp1_probability, tp2, tp2_probability, tp3, tp3_probability,
             last_price, supports_json, resistances_json, signals_json, indicators_json,
-            days_of_history, computed_at, updated_at, volume_context_json
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            days_of_history, computed_at, computed_date, run_id, run_started_at, code_fingerprint,
+            updated_at, volume_context_json
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT (ticker) DO UPDATE SET
             name_en = excluded.name_en,
             sector = excluded.sector,
@@ -433,6 +487,10 @@ def save_rating(
             indicators_json = excluded.indicators_json,
             days_of_history = excluded.days_of_history,
             computed_at = excluded.computed_at,
+            computed_date = excluded.computed_date,
+            run_id = excluded.run_id,
+            run_started_at = excluded.run_started_at,
+            code_fingerprint = excluded.code_fingerprint,
             updated_at = excluded.updated_at,
             volume_context_json = excluded.volume_context_json
         """,
@@ -462,7 +520,11 @@ def save_rating(
             json.dumps([]),
             json.dumps({k: _j(v) for k, v in ind.items()}),
             result.get("days_of_history"),
-            result.get("computed_at", date.today().isoformat()),
+            computed_at,
+            computed_date,
+            result.get("run_id"),
+            result.get("run_started_at"),
+            result.get("code_fingerprint"),
             int(time.time()),
             json.dumps(result.get("volume_context") or {}),
         ),
@@ -485,18 +547,21 @@ def load_all_ratings(
     from app.core.database import query_all
 
     target_date = computed_at or date.today().isoformat()
+    if "T" in target_date:
+        target_date = target_date[:10]
 
     rows = query_all(
         """
          SELECT ticker, name_en, sector, market_tier, stage, rating, confidence, ml_score, thesis,
-               entry_primary, stop_loss, tp1, last_price, computed_at,
+               entry_primary, stop_loss, tp1, last_price, computed_at, computed_date,
                volume_context_json
         FROM   ee_ratings_cache
-        WHERE  confidence >= ? AND computed_at = ?
+        WHERE  confidence >= ?
+          AND  (computed_date = ? OR computed_at = ? OR computed_at LIKE ?)
         ORDER  BY confidence DESC
         LIMIT  ?
         """,
-        (float(min_confidence), target_date, int(limit)),
+        (float(min_confidence), target_date, target_date, f"{target_date}%", int(limit)),
     )
     if not rows:
         return []

@@ -78,6 +78,12 @@ class TickerChartAdapter(DataAdapter):
     imports it directly. All TickerChart-specific logic stays here.
     """
 
+    # Some legacy symbols in local universes map to different symbols on
+    # TickerChart historical endpoints.
+    _SYMBOL_FALLBACKS = {
+        "BKIKWT": "BKI",
+    }
+
     # Stocks in the KSE universe are looked up from the analysis_stocks
     # table (exchange = 'KW' or currency = 'KWD') to enrich names/metadata.
     # The scanner universe itself is always seeded from the hardcoded
@@ -182,6 +188,16 @@ class TickerChartAdapter(DataAdapter):
         except Exception as exc:
             logger.warning("TickerChart fetch failed for %s: %s", ticker, exc)
             return pd.DataFrame(columns=["open", "high", "low", "close", "volume", "turnover_kwd"])
+
+        if not rows:
+            fallback = self._SYMBOL_FALLBACKS.get(str(ticker).upper())
+            if fallback:
+                try:
+                    rows = _run_in_new_loop(tc.fetch_ohlcv(fallback, "KSE", from_d=start, to_d=end))
+                    if rows:
+                        logger.info("TickerChart symbol fallback used: %s -> %s", ticker, fallback)
+                except Exception as exc:
+                    logger.warning("TickerChart fallback fetch failed for %s->%s: %s", ticker, fallback, exc)
 
         if not rows:
             return pd.DataFrame(columns=["open", "high", "low", "close", "volume", "turnover_kwd"])

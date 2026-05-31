@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import re
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
@@ -25,10 +26,16 @@ logger = logging.getLogger(__name__)
 MIN_TRADE_SIZE_KWD = 100.0      # ignore positions smaller than this
 MAX_OPEN_POSITIONS = 10         # per strategy
 SECTOR_CAP_PCT = 35.0           # max sector exposure %
-TIME_STOP_TRADING_DAYS = 30     # close after 30 trading days if no exit hit
 SCALE_OUT_FRACTION = 0.33       # fraction of remaining shares to close at TP1/TP2
 ADTV_LOOKBACK_DAYS = 20         # rolling lookback for liquidity cap
 MAX_PARTICIPATION_RATE = 0.10   # max 10% of average daily traded value
+
+# v9 ML decision thresholds
+ML_MIN_CONFIDENCE = 55.0
+ML_EXIT_CONFIDENCE_FLOOR = 25.0
+ML_STOP_LOSS_PCT = 8.0
+ML_PARTIAL_TAKE_PROFIT_PCT = 20.0
+ML_PARTIAL_TAKE_PROFIT_FRACTION = 0.50
 
 KUWAIT_TRADING_WEEKDAYS = {6, 0, 1, 2, 3}  # Sun-Thu using Python weekday()
 
@@ -348,68 +355,69 @@ class SimulatorEngine:
             h = float(ohlcv["high"] or 0)
             l = float(ohlcv["low"] or 0)
             c = float(ohlcv["close"] or 0)
-            stop = float(pos["planned_stop_loss"] or 0)
-            tp1 = float(pos["planned_tp1"] or 0)
-            tp2 = float(pos["planned_tp2"] or 0)
-            tp3 = float(pos["planned_tp3"] or 0)
-            tp1_hit = bool(pos.get("tp1_hit"))
-            tp2_hit = bool(pos.get("tp2_hit"))
+            entry_price = float(pos.get("entry_price") or 0)
 
             days_held = _trading_days_between(pos["entry_date"] or date_str, date_str)
 
             # Update MAE/MFE while still open
             self._update_excursion(pos, h, l)
 
-            exit_triggered = False
-
-            # 1. Stop loss
-            #    Exception to next-day-open fills: if the bar traded through the stop,
-            #    we fill at the stop price on the same bar.
-            if stop > 0 and l <= stop:
-                self._close_position(pos, portfolio, stop, "STOP_HIT", date_str, days_held)
-                closed.append({"ticker": pos["ticker"], "reason": "STOP_HIT"})
-                exit_triggered = True
-
-            # 2. TP3 (full close next day open)
-            elif tp3 > 0 and h >= tp3:
-                scheduled_date = _next_trading_day(date_str)
-                self._queue_exit_order(pos, 1.0, "TP3_HIT", date_str, scheduled_date)
-                closed.append({"ticker": pos["ticker"], "reason": "TP3_HIT", "scheduled_date": scheduled_date})
-                exit_triggered = True
-
-            # 3. TP2 (scale out 33% next day open)
-            elif tp2 > 0 and h >= tp2 and not tp2_hit:
-                scheduled_date = _next_trading_day(date_str)
-                self._queue_exit_order(pos, SCALE_OUT_FRACTION, "TP2_HIT", date_str, scheduled_date)
-                closed.append({"ticker": pos["ticker"], "reason": "TP2_HIT_PARTIAL", "scheduled_date": scheduled_date})
-                exit_triggered = True
-
-            # 4. TP1 (scale out 33% next day open)
-            elif tp1 > 0 and h >= tp1 and not tp1_hit:
-                scheduled_date = _next_trading_day(date_str)
-                self._queue_exit_order(pos, SCALE_OUT_FRACTION, "TP1_HIT", date_str, scheduled_date)
-                closed.append({"ticker": pos["ticker"], "reason": "TP1_HIT_PARTIAL", "scheduled_date": scheduled_date})
-                exit_triggered = True
-
-            if exit_triggered:
+            if entry_price <= 0:
                 continue
 
-            # 5. Stage transition to bearish
-            if not exit_triggered:
-                current_rating = self._get_current_rating(pos["ticker"], date_str)
-                if (current_rating
-                        and current_rating.get("stage") in BEARISH_STAGES
-                        and pos.get("entry_stage") in {"EARLY_BREAKOUT", "MARKUP_TRENDING"}):
-                    scheduled_date = _next_trading_day(date_str)
-                    self._queue_exit_order(pos, 1.0, "STAGE_TRANSITION", date_str, scheduled_date)
-                    closed.append({"ticker": pos["ticker"], "reason": "STAGE_TRANSITION", "scheduled_date": scheduled_date})
-                    exit_triggered = True
+            # 1) Hard stop-loss: close immediately if intraday low breaches -8%.
+            stop_price = entry_price * (1.0 - (ML_STOP_LOSS_PCT / 100.0))
+            if l <= stop_price:
+                self._close_position(pos, portfolio, stop_price, "ML_STOP_LOSS_8", date_str, days_held)
+                closed.append({"ticker": pos["ticker"], "reason": "ML_STOP_LOSS_8"})
+                continue
 
-            # 6. Time stop
-            if not exit_triggered and days_held >= TIME_STOP_TRADING_DAYS:
-                scheduled_date = _next_trading_day(date_str)
-                self._queue_exit_order(pos, 1.0, "TIME_STOP", date_str, scheduled_date)
-                closed.append({"ticker": pos["ticker"], "reason": "TIME_STOP", "scheduled_date": scheduled_date})
+            # 2) ML-based exits from current rating cache.
+            current_rating = self._get_current_rating(pos["ticker"], date_str)
+            if current_rating:
+                current_label = str(current_rating.get("rating") or "").upper()
+                current_confidence = float(current_rating.get("confidence") or 0)
+
+                if current_label in {"SELL", "STRONG_SELL"}:
+                    scheduled_date = _next_trading_day(date_str)
+                    self._queue_exit_order(pos, 1.0, "ML_SELL_SIGNAL", date_str, scheduled_date)
+                    closed.append(
+                        {"ticker": pos["ticker"], "reason": "ML_SELL_SIGNAL", "scheduled_date": scheduled_date}
+                    )
+                    continue
+
+                if current_confidence < ML_EXIT_CONFIDENCE_FLOOR:
+                    scheduled_date = _next_trading_day(date_str)
+                    self._queue_exit_order(pos, 1.0, "ML_CONFIDENCE_BREAK", date_str, scheduled_date)
+                    closed.append(
+                        {
+                            "ticker": pos["ticker"],
+                            "reason": "ML_CONFIDENCE_BREAK",
+                            "scheduled_date": scheduled_date,
+                        }
+                    )
+                    continue
+
+            # 3) Optional partial take-profit at +20% (one-time 50% scale-out).
+            if not bool(pos.get("tp1_hit")) and c > 0:
+                pnl_pct = (c / entry_price - 1.0) * 100.0
+                if pnl_pct >= ML_PARTIAL_TAKE_PROFIT_PCT:
+                    scheduled_date = _next_trading_day(date_str)
+                    self._queue_exit_order(
+                        pos,
+                        ML_PARTIAL_TAKE_PROFIT_FRACTION,
+                        "ML_TAKE_PROFIT_20",
+                        date_str,
+                        scheduled_date,
+                    )
+                    closed.append(
+                        {
+                            "ticker": pos["ticker"],
+                            "reason": "ML_TAKE_PROFIT_20_PARTIAL",
+                            "scheduled_date": scheduled_date,
+                        }
+                    )
+                    continue
 
         return closed
 
@@ -430,7 +438,10 @@ class SimulatorEngine:
                 self._log_considered(strategy.portfolio_id, date_str, rating, decision.skip_reason)
                 self._try_log_ml_signal(
                     (rating.get("ticker") or "").upper(), date_str, rating,
-                    would_have_entered=(decision.skip_reason != "CONFIDENCE_BELOW_THRESHOLD"),
+                    would_have_entered=(
+                        decision.skip_reason
+                        not in {"CONFIDENCE_BELOW_THRESHOLD", "RATING_NOT_BUY", "ML_SCORE_MISSING"}
+                    ),
                     skip_reason=decision.skip_reason,
                 )
                 continue
@@ -537,13 +548,23 @@ class SimulatorEngine:
     ) -> EntryDecision:
         confidence = float(rating.get("confidence") or 0)
         stage = rating.get("stage") or ""
+        rating_label = str(rating.get("rating") or "HOLD").upper()
+        ml_score = rating.get("ml_score")
         ticker = rating.get("ticker") or ""
         sector = rating.get("sector") or "UNKNOWN"
 
-        if confidence < strategy.min_confidence:
+        required_confidence = max(ML_MIN_CONFIDENCE, float(strategy.min_confidence))
+        if rating_label not in {"BUY", "STRONG_BUY"}:
+            return _skip("RATING_NOT_BUY")
+        if confidence < required_confidence:
             return _skip("CONFIDENCE_BELOW_THRESHOLD")
-        if stage not in strategy.allowed_stages:
-            return _skip("STAGE_NOT_ALLOWED")
+        if ml_score is None:
+            return _skip("ML_SCORE_MISSING")
+        try:
+            float(ml_score)
+        except (TypeError, ValueError):
+            return _skip("ML_SCORE_MISSING")
+
         if self._already_holding(strategy.portfolio_id, ticker):
             return _skip("ALREADY_HOLDING")
         if self._has_pending_entry(strategy.portfolio_id, ticker):
@@ -867,7 +888,7 @@ class SimulatorEngine:
         new_remaining = shares_remaining - shares_to_close
 
         # Mark TP hit flag
-        tp_flag_col = "tp1_hit" if reason == "TP1_HIT" else "tp2_hit"
+        tp_flag_col = "tp1_hit" if reason in {"TP1_HIT", "ML_TAKE_PROFIT_20"} else "tp2_hit"
         _exec(
             f"""
             UPDATE simulator_positions SET
@@ -1352,7 +1373,7 @@ class SimulatorEngine:
     def _get_current_rating(self, ticker: str, date_str: Optional[str] = None) -> Optional[dict]:
         self._assert_live_forward_date(date_str)
         row = _query_one(
-            "SELECT stage, rating, confidence, market_tier FROM ee_ratings_cache WHERE ticker = ?",
+            "SELECT stage, rating, confidence, ml_score, last_price, market_tier FROM ee_ratings_cache WHERE ticker = ?",
             (ticker.upper(),),
         )
         return dict(row.items()) if row else None
@@ -1361,7 +1382,7 @@ class SimulatorEngine:
         """Load all rated stocks for live-forward trading on the current date only."""
         self._assert_live_forward_date(date_str)
         rows = _query_all(
-            """SELECT ticker, name_en, sector, stage, rating, confidence, thesis,
+            """SELECT ticker, name_en, sector, stage, rating, confidence, ml_score, thesis,
                       entry_primary, stop_loss, tp1, tp2, tp3, last_price,
                       market_tier,
                       signals_json, indicators_json, volume_context_json, computed_at
@@ -1404,12 +1425,141 @@ class SimulatorEngine:
     # Mapping from simulator internal skip reasons to ML signal-logger vocabulary.
     _SKIP_TO_ML: Dict[str, str] = {
         "CONFIDENCE_BELOW_THRESHOLD": "BELOW_CONFIDENCE_THRESHOLD",
+        "RATING_NOT_BUY": "OTHER",
+        "ML_SCORE_MISSING": "OTHER",
         "STAGE_NOT_ALLOWED": "STAGE_NOT_ALLOWED",
         "SECTOR_CAP_REACHED": "SECTOR_CAP_REACHED",
         "ILLIQUID_STOCK": "LIQUIDITY_GATE",
         "BREAKOUT_WITHOUT_VOLUME_CONFIRMATION": "LIQUIDITY_GATE",
         "EXTREMELY_LOW_VOLUME_DAY": "LIQUIDITY_GATE",
     }
+
+    def reset_all(self, reset_date: Optional[date | str] = None) -> dict:
+        """Clear simulator state and restart all portfolios from today."""
+        self._ensure_simulator_tables()
+        date_str = self._assert_live_forward_date(reset_date)
+
+        from app.core.config import get_settings
+
+        settings = get_settings()
+        if settings.use_postgres:
+            table_rows = _query_all(
+                """SELECT table_name AS name
+                     FROM information_schema.tables
+                    WHERE table_schema = current_schema()
+                      AND table_type = 'BASE TABLE'
+                      AND table_name LIKE 'simulator_%'
+                    ORDER BY table_name""",
+                (),
+            )
+        else:
+            table_rows = _query_all(
+                """SELECT name
+                     FROM sqlite_master
+                    WHERE type = 'table' AND name LIKE 'simulator_%'
+                    ORDER BY name""",
+                (),
+            )
+
+        simulator_tables = []
+        for row in table_rows:
+            table_name = str(row.get("name") or "").strip()
+            if re.fullmatch(r"simulator_[a-z0-9_]+", table_name):
+                simulator_tables.append(table_name)
+
+        cleared_rows: dict[str, int] = {}
+        for table_name in simulator_tables:
+            if table_name == "simulator_portfolios":
+                continue
+
+            count_row = _query_one(f"SELECT COUNT(*) AS n FROM {table_name}", ())
+            count_val = int(dict(count_row.items()).get("n") or 0) if count_row else 0
+            _exec(f"DELETE FROM {table_name}", ())
+            cleared_rows[table_name] = count_val
+
+        now_ts = _now_ts()
+        portfolio_summaries = []
+
+        for strategy in STRATEGIES:
+            existing = _get_portfolio(strategy.portfolio_id)
+            starting_capital = float(existing.get("starting_capital_kwd") or 10000.0) if existing else 10000.0
+
+            if existing:
+                _exec(
+                    """UPDATE simulator_portfolios
+                          SET strategy_name = ?,
+                              starting_capital_kwd = ?,
+                              cash_balance_kwd = ?,
+                              total_value_kwd = ?,
+                              updated_at = ?
+                        WHERE id = ?""",
+                    (
+                        strategy.name,
+                        round(starting_capital, 4),
+                        round(starting_capital, 4),
+                        round(starting_capital, 4),
+                        now_ts,
+                        strategy.portfolio_id,
+                    ),
+                )
+            else:
+                _exec(
+                    """INSERT INTO simulator_portfolios (
+                           id, strategy_name, starting_capital_kwd,
+                           cash_balance_kwd, total_value_kwd, created_at, updated_at
+                       ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        strategy.portfolio_id,
+                        strategy.name,
+                        round(starting_capital, 4),
+                        round(starting_capital, 4),
+                        round(starting_capital, 4),
+                        now_ts,
+                        now_ts,
+                    ),
+                )
+
+            _exec(
+                """INSERT INTO simulator_daily_snapshots (
+                       portfolio_id, date, cash_balance_kwd, open_positions_value_kwd,
+                       total_value_kwd, daily_pnl_kwd, cumulative_return_pct,
+                       drawdown_from_peak_pct, open_position_count
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(portfolio_id, date) DO UPDATE SET
+                       cash_balance_kwd = excluded.cash_balance_kwd,
+                       open_positions_value_kwd = excluded.open_positions_value_kwd,
+                       total_value_kwd = excluded.total_value_kwd,
+                       daily_pnl_kwd = excluded.daily_pnl_kwd,
+                       cumulative_return_pct = excluded.cumulative_return_pct,
+                       drawdown_from_peak_pct = excluded.drawdown_from_peak_pct,
+                       open_position_count = excluded.open_position_count""",
+                (
+                    strategy.portfolio_id,
+                    date_str,
+                    round(starting_capital, 4),
+                    0.0,
+                    round(starting_capital, 4),
+                    0.0,
+                    0.0,
+                    0.0,
+                    0,
+                ),
+            )
+
+            portfolio_summaries.append(
+                {
+                    "portfolio_id": strategy.portfolio_id,
+                    "strategy_name": strategy.name,
+                    "starting_capital_kwd": round(starting_capital, 4),
+                }
+            )
+
+        return {
+            "date": date_str,
+            "tables_found": simulator_tables,
+            "cleared_rows": cleared_rows,
+            "portfolios": portfolio_summaries,
+        }
 
     def _try_log_ml_signal(
         self,
@@ -1584,3 +1734,15 @@ _engine = SimulatorEngine()
 
 def get_engine() -> SimulatorEngine:
     return _engine
+
+
+def run_daily_simulation(date_str: Optional[str] = None) -> Dict[str, Any]:
+    """Public wrapper used by scripts/tests to run one live-forward simulation day."""
+    if date_str:
+        return _engine.run_daily(date.fromisoformat(date_str))
+    return _engine.run_daily()
+
+
+def reset_simulator_data(date_str: Optional[str] = None) -> dict:
+    """Public wrapper used by scripts/admin routes to reset simulator state."""
+    return _engine.reset_all(date_str)
