@@ -146,16 +146,22 @@ def split_symbol(symbol: str, exchange: Optional[str], country: Optional[str]) -
 
 def _market_info_cache_candidates() -> list[Path]:
     candidates: list[Path] = []
+    settings = get_settings()
 
-    env_path = os.getenv("TICKERCHART_MARKET_INFO_PATH", "").strip()
+    env_path = (
+        (settings.TICKERCHART_MARKET_INFO_PATH or "").strip()
+        or os.getenv("TICKERCHART_MARKET_INFO_PATH", "").strip()
+    )
     if env_path:
         candidates.append(Path(env_path))
 
-    local_appdata = os.getenv("LOCALAPPDATA", "").strip()
-    if local_appdata:
-        candidates.append(Path(local_appdata) / "UniTicker" / "TCLive" / "Cache" / "MarketInfo.json")
-
-    candidates.append(Path.home() / "AppData" / "Local" / "UniTicker" / "TCLive" / "Cache" / "MarketInfo.json")
+    if os.name == "nt":
+        local_appdata = os.getenv("LOCALAPPDATA", "").strip()
+        if local_appdata:
+            candidates.append(Path(local_appdata) / "UniTicker" / "TCLive" / "Cache" / "MarketInfo.json")
+        candidates.append(Path.home() / "AppData" / "Local" / "UniTicker" / "TCLive" / "Cache" / "MarketInfo.json")
+    else:
+        candidates.append(Path("/var/lib/tickerchart/cache/MarketInfo.json"))
 
     deduped: list[Path] = []
     seen: set[str] = set()
@@ -475,12 +481,27 @@ _PE_FLATFILES_PARENT_DIRS = [
 ]
 _PE_FLATFILES_SUBDIR = "320800594fe439050088"
 
-_TC_FLATFILES_BASE = Path(
-    os.environ.get(
-        "TC_FLATFILES_PATH",
-        r"C:\Users\Sager\AppData\Local\UniTicker\TCLive\FlatFiles",
+def _resolve_flatfiles_base() -> Path:
+    settings = get_settings()
+    configured_path = (
+        (settings.TICKERCHART_FLATFILES_PATH or "").strip()
+        or os.getenv("TC_FLATFILES_PATH", "").strip()
+        or os.getenv("TICKERCHART_FLATFILES_PATH", "").strip()
     )
-)
+    if configured_path:
+        return Path(configured_path)
+
+    if os.name == "nt":
+        local_appdata = os.getenv("LOCALAPPDATA", "").strip()
+        if local_appdata:
+            return Path(local_appdata) / "UniTicker" / "TCLive" / "FlatFiles"
+        return Path.home() / "AppData" / "Local" / "UniTicker" / "TCLive" / "FlatFiles"
+
+    # Linux/macOS default. Override with TICKERCHART_FLATFILES_PATH or TC_FLATFILES_PATH.
+    return Path("/var/lib/tickerchart/flatfiles")
+
+
+_TC_FLATFILES_BASE = _resolve_flatfiles_base()
 
 
 def _ole_date_to_python(ole_val: float) -> Optional[date]:

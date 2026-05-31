@@ -135,3 +135,22 @@ phase1_*.log
 *_audit_*.txt
 *_audit_*.json
 indicator_source_audit_*.json
+
+# ─────────────────────────────────────────────
+# Forensic captures (never commit)
+# ─────────────────────────────────────────────
+frida_*
+*_capture*.txt
+*_spawn_*.txt
+frida_spawn_output.txt
+scripts/_frida_tmp.js
+scripts/check_conflicts.py
+scripts/decode_pe_format.py
+scripts/find_factset_ids.py
+scripts/find_ooredoo.py
+scripts/find_pe_stride.py
+scripts/scan_pe_files.py
+scripts/watch_flatfiles.py
+app/services/eagle_eye/ml/phase1_*.md
+eagle_eye_reference/kuwait_engine/output/phase1_*.json
+reports/*_audit_*.md

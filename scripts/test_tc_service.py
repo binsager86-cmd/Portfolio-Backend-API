@@ -1,6 +1,7 @@
 """Quick smoke test for the updated tickerchart_service.fetch_ohlcv."""
 import asyncio
 import hashlib
+import os
 import random
 import ssl
 import sys
@@ -21,6 +22,7 @@ MARKET_HOST = {
 }
 
 KSE_INDEX_CANDIDATES = [("Boursa Kuwait Index", "BKI", "KSE")]
+TC_USER = os.getenv("TICKERCHART_USERNAME", "").strip()
 
 
 def _sign(path: str, qs: str) -> str:
@@ -47,6 +49,8 @@ def _pick_period(from_d, to_d) -> str:
 
 
 def fetch_ohlcv_sync(symbol: str, market: str, from_d=None, to_d=None, interval="day") -> list:
+    if not TC_USER:
+        raise RuntimeError("Set TICKERCHART_USERNAME in environment before running test_tc_service.py")
     host = MARKET_HOST.get(market)
     assert host, f"No host for market {market}"
     period = _pick_period(from_d, to_d)
@@ -54,7 +58,7 @@ def fetch_ohlcv_sync(symbol: str, market: str, from_d=None, to_d=None, interval=
     rand = random.randint(100_000_000, 2_000_000_000)
     today_str = date.today().isoformat()
     qs = (
-        f"user_name=sager123&language=ENGLISH&symbol={symbol}.{market}"
+        f"user_name={TC_USER}&language=ENGLISH&symbol={symbol}.{market}"
         f"&interval={interval}&period={period}&version=4.8.7.33&rand={rand}&t={today_str}"
     )
     h = _sign(path, qs)

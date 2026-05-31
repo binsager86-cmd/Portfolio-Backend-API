@@ -96,7 +96,7 @@ All Eagle Eye and core code uses `?` placeholders. `app/core/database.py` alread
 
 | Finding | Severity | Details |
 |---------|----------|---------|
-| `.env` exists locally with `TICKERCHART_USERNAME=sager123`, `TICKERCHART_PASSWORD=sager949`, `EODHD_API_TOKEN=682cc20d36b014...` | INFO | `.env` is gitignored. **NOT committed to git.** Local dev only. No action required but rotate if this becomes a shared repo. |
+| `.env` exists locally with TickerChart/EODHD credential values set | INFO | `.env` is gitignored. **NOT committed to git.** Local dev only. No action required but rotate if this becomes a shared repo. |
 | `.env.production` is committed to git | INFO | Contains **placeholders only** (`CHANGE_ME_TO_A_RANDOM_64_CHAR_HEX_STRING`, empty API keys). No real credentials exposed. Template is safe to commit. |
 | SMTP_USER `binsager.86@gmail.com` in local `.env` | INFO | Local `.env`, not committed. Dev email, not production credential. |
 

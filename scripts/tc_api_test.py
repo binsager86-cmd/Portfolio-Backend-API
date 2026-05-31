@@ -1,4 +1,4 @@
-import hashlib, urllib.request, ssl, random, json
+import hashlib, urllib.request, ssl, random, json, os
 
 ctx = ssl.create_default_context()
 ctx.check_hostname = False
@@ -34,7 +34,9 @@ def call_plain(url):
 
 rand = random.randint(100000000, 2000000000)
 t = '2026-05-18'
-u = 'sager123'
+u = os.getenv('TICKERCHART_USERNAME', '').strip()
+if not u:
+    raise RuntimeError('Set TICKERCHART_USERNAME in environment before running tc_api_test.py')
 bp = 'user_name=' + u + '&language=ENGLISH&version=4.8.7.33&rand=' + str(rand) + '&t=' + t
 
 # 1. Get full streamers to find HISTORICAL_PRICES_PATH per market
