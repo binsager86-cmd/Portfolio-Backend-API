@@ -659,12 +659,10 @@ def compute_all_indicators(
     out['ema_30'] = _ema(df['close'], 30)
     out['sma_200'] = df['close'].rolling(200, min_periods=1).mean()
     out['ema_ribbon_aligned'] = ema_ribbon_aligned(df, CONFIG.EMA_PERIODS)
-    macd_short = min(int(CONFIG.MACD_FAST), int(CONFIG.MACD_SLOW))
-    macd_long = max(int(CONFIG.MACD_FAST), int(CONFIG.MACD_SLOW))
     m, s, h = macd(
         df,
-        fast=macd_short,
-        slow=macd_long,
+        fast=int(CONFIG.MACD_FAST),
+        slow=int(CONFIG.MACD_SLOW),
         signal=CONFIG.MACD_SIGNAL,
     )
     out['macd_line'] = m; out['macd_signal'] = s; out['macd_histogram'] = h

@@ -165,6 +165,25 @@ def risk_reward_score(ind: Mapping[str, object]) -> float:
     elif ext > 0.10:
         score -= 12.0
 
+    # Cheap-vs-buying gate: high R:R only counts when buyers are actually showing up.
+    cmf = _indicator(ind, "cmf_20", 0.0)
+    obv_slope = _indicator(ind, "obv_slope_20d", 0.0)
+    plus_di = _indicator(ind, "plus_di", 0.0)
+    minus_di = _indicator(ind, "minus_di", 0.0)
+
+    support = 0
+    if cmf > 0:
+        support += 1
+    if obv_slope > 0:
+        support += 1
+    if plus_di > minus_di:
+        support += 1
+
+    if support == 0:
+        score = min(score, 30.0)
+    elif support == 1:
+        score = min(score, 55.0)
+
     return _clip(score)
 
 

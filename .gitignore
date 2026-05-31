@@ -123,3 +123,15 @@ verification_script.py
 calib_analysis.py
 net_liq_verify.py
 reset_ckpt.py
+
+# ─────────────────────────────────────────────
+# Eagle Eye diagnostics / one-off outputs
+# ─────────────────────────────────────────────
+_tmp_*.py
+.tmp_*.py
+_current_eagle_eye_core_snapshot_*.txt
+phase1_*.txt
+phase1_*.log
+*_audit_*.txt
+*_audit_*.json
+indicator_source_audit_*.json

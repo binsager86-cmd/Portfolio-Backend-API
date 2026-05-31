@@ -32,6 +32,7 @@ import logging
 import math
 import os
 import time
+import warnings
 from datetime import date, datetime, timedelta
 from typing import List, Optional
 import uuid
@@ -40,6 +41,15 @@ import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
+
+try:
+    _LOOKBACK_BARS = int(os.getenv("EE_RATINGS_LOOKBACK_BARS", "320"))
+except (TypeError, ValueError):
+    _LOOKBACK_BARS = 320
+
+# Keep enough warmup for long-horizon rolling/EMA indicators while avoiding
+# full-history recompute cost on every ticker.
+RATINGS_INDICATOR_LOOKBACK_BARS = max(50, _LOOKBACK_BARS)
 
 
 def _safe_float(v) -> Optional[float]:
@@ -592,6 +602,7 @@ def compute_all_ratings(verbose: bool = False) -> dict:
     stats: dict = {"ok": 0, "skipped": 0, "errors": 0}
     total_tickers = len(tickers)
     phase_t0 = time.time()
+    verbose_per_ticker = os.getenv("EE_VERBOSE_PER_TICKER", "0").strip() == "1"
 
     def _save_placeholder_rating(symbol: str, reason: str, df=None) -> None:
         meta = stock_meta.get(symbol)
@@ -689,6 +700,14 @@ def compute_all_ratings(verbose: bool = False) -> dict:
 
     if verbose:
         print(f"[EagleEye] Computing ratings for {total_tickers} tickers")
+        print(
+            f"[EagleEye] Indicator compute window: "
+            f"last {RATINGS_INDICATOR_LOOKBACK_BARS} bars per ticker"
+        )
+        if verbose_per_ticker:
+            print("[EagleEye] Verbose detail: per-ticker lines enabled")
+        else:
+            print("[EagleEye] Verbose detail: progress-only (set EE_VERBOSE_PER_TICKER=1 for per-ticker lines)")
         print("=" * 70)
 
     for idx, ticker in enumerate(tickers, start=1):
@@ -705,8 +724,16 @@ def compute_all_ratings(verbose: bool = False) -> dict:
                 _save_placeholder_rating(ticker, "inactive_or_delisted", df)
                 continue
 
+            indicator_input = (
+                df.tail(RATINGS_INDICATOR_LOOKBACK_BARS)
+                if len(df) > RATINGS_INDICATOR_LOOKBACK_BARS
+                else df
+            )
+
             try:
-                ind_df = compute_all_indicators(df, market_close=market_proxy)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=pd.errors.PerformanceWarning)
+                    ind_df = compute_all_indicators(indicator_input, market_close=market_proxy)
             except ValueError as exc:
                 if "Need at least 50 bars" in str(exc):
                     stats["skipped"] += 1
@@ -853,7 +880,7 @@ def compute_all_ratings(verbose: bool = False) -> dict:
                 f"confidence={confidence:.1f} rating={rating} stage={stage}"
             )
 
-            if verbose:
+            if verbose and verbose_per_ticker:
                 print(f"  [{ticker}] {rating} (conf={confidence:.0f}%) stage={stage}")
 
         except Exception as exc:
