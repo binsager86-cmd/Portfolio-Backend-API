@@ -21,7 +21,7 @@ import threading
 import time
 import uuid
 from datetime import date, datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -68,6 +68,19 @@ _DNA_BUILD_IN_PROGRESS: set[str] = set()
 _RECOMPUTE_LOCK = threading.Lock()
 _RECOMPUTE_IN_PROGRESS = False
 _RECOMPUTE_LAST_ATTEMPT_AT = 0.0
+_RECOMPUTE_PROGRESS_LOCK = threading.Lock()
+_RECOMPUTE_PROGRESS: Dict[str, Any] = {
+    "phase": "idle",
+    "phase_label": "Idle",
+    "message": "Idle",
+    "current": 0,
+    "total": 0,
+    "percent": 0,
+    "in_progress": False,
+    "started_at": None,
+    "updated_at": None,
+    "last_error": None,
+}
 
 _LOOKBACK_YEARS = 5
 _RECOMPUTE_COOLDOWN_SEC = 300
@@ -87,6 +100,11 @@ _FUNDAMENTALS_MAP_CACHE: Optional[Dict[str, Dict[str, Optional[float]]]] = None
 _FUNDAMENTALS_MAP_CACHE_AT: float = 0.0
 _FUNDAMENTALS_MAP_TTL_SEC: float = 600.0  # 10 minutes
 
+# Scanner PE guardrails: KSE prices are typically in fils, while EPS is KWD/share.
+_KSE_PRICE_DIVISOR: float = 1000.0
+_PE_RATIO_MAX_REASONABLE: float = 1000.0
+_PE_EPS_DRIFT_REFRESH_THRESHOLD: float = 0.35
+
 # Scanner response cache: assembled List[RatedStock] held for 30 s so
 # rapid re-fetches (focus events, filter clicks) return instantly.
 _SCANNER_RESP_CACHE: Optional[list] = None
@@ -98,6 +116,82 @@ _SCANNER_RESP_TTL_SEC: float = 30.0  # 30 seconds
 _REGIME_RESP_CACHE: Optional[dict] = None
 _REGIME_RESP_CACHE_AT: float = 0.0
 _REGIME_RESP_TTL_SEC: float = 600.0  # 10 minutes
+
+
+def _set_recompute_progress(
+    *,
+    phase: Optional[str] = None,
+    phase_label: Optional[str] = None,
+    message: Optional[str] = None,
+    current: Optional[int] = None,
+    total: Optional[int] = None,
+    percent: Optional[int] = None,
+    in_progress: Optional[bool] = None,
+    mark_started: bool = False,
+    clear_error: bool = False,
+    last_error: Optional[str] = None,
+) -> None:
+    now_iso = datetime.utcnow().isoformat(timespec="seconds")
+    with _RECOMPUTE_PROGRESS_LOCK:
+        if mark_started:
+            _RECOMPUTE_PROGRESS["started_at"] = now_iso
+        _RECOMPUTE_PROGRESS["updated_at"] = now_iso
+
+        if phase is not None:
+            _RECOMPUTE_PROGRESS["phase"] = phase
+        if phase_label is not None:
+            _RECOMPUTE_PROGRESS["phase_label"] = phase_label
+        if message is not None:
+            _RECOMPUTE_PROGRESS["message"] = message
+        if current is not None:
+            _RECOMPUTE_PROGRESS["current"] = max(0, int(current))
+        if total is not None:
+            _RECOMPUTE_PROGRESS["total"] = max(0, int(total))
+        if percent is not None:
+            pct = max(0, min(100, int(percent)))
+            _RECOMPUTE_PROGRESS["percent"] = pct
+        if in_progress is not None:
+            _RECOMPUTE_PROGRESS["in_progress"] = bool(in_progress)
+
+        if clear_error:
+            _RECOMPUTE_PROGRESS["last_error"] = None
+        if last_error is not None:
+            _RECOMPUTE_PROGRESS["last_error"] = last_error
+
+
+def _get_recompute_progress_snapshot() -> Dict[str, Any]:
+    with _RECOMPUTE_PROGRESS_LOCK:
+        return dict(_RECOMPUTE_PROGRESS)
+
+
+def _scanner_progress_fields(status: str, count: int) -> Dict[str, Any]:
+    if status == "ok":
+        return {
+            "progress_phase": "ready",
+            "progress_message": "Scanner cache ready",
+            "progress_current": count,
+            "progress_total": count,
+            "progress_percent": 100,
+        }
+
+    snap = _get_recompute_progress_snapshot()
+    current = int(snap.get("current") or 0)
+    total = int(snap.get("total") or 0)
+    percent = int(snap.get("percent") or 0)
+    message = str(snap.get("message") or "Preparing scanner cache")
+    phase = str(snap.get("phase") or "warming_up")
+    if status == "warming_up" and percent >= 100:
+        percent = 99
+    if status == "error" and snap.get("last_error"):
+        message = f"Warmup error: {snap.get('last_error')}"
+
+    return {
+        "progress_phase": phase,
+        "progress_message": message,
+        "progress_current": current,
+        "progress_total": total,
+        "progress_percent": max(0, min(100, percent)),
+    }
 
 
 def _get_meta_map() -> Dict[str, object]:
@@ -123,6 +217,18 @@ def _normalize_symbol(raw: object) -> str:
     if sym.endswith(".KW"):
         sym = sym[:-3]
     return sym
+
+
+def _sanitize_pe_ratio(v) -> Optional[float]:
+    """Return a scanner-safe PE ratio value or None for invalid/outlier inputs."""
+    pe = _safe_float(v)
+    if pe is None:
+        return None
+    if pe <= 0:
+        return None
+    if pe > _PE_RATIO_MAX_REASONABLE:
+        return None
+    return pe
 
 
 def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
@@ -168,9 +274,9 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
             )
 
             try:
-                pe_val = _safe_float(tc.read_quotes_snapshot_pe(ticker, "KSE"))
-                eps_val = _safe_float(tc.read_quotes_snapshot_ltm_eps(ticker, "KSE", price_divisor=1000.0))
-                bvps_val = _safe_float(tc.read_quotes_snapshot_bvps(ticker, "KSE", price_divisor=1000.0))
+                pe_val = _sanitize_pe_ratio(tc.read_quotes_snapshot_pe(ticker, "KSE"))
+                eps_val = _safe_float(tc.read_quotes_snapshot_ltm_eps(ticker, "KSE", price_divisor=_KSE_PRICE_DIVISOR))
+                bvps_val = _safe_float(tc.read_quotes_snapshot_bvps(ticker, "KSE", price_divisor=_KSE_PRICE_DIVISOR))
             except Exception as exc:
                 logger.debug("TickerChart snapshot fundamentals unavailable for %s: %s", ticker, exc)
                 continue
@@ -200,7 +306,7 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
                         "eps": None,
                     },
                 )
-                pe_val = _safe_float(r.get("pe_ratio"))
+                pe_val = _sanitize_pe_ratio(r.get("pe_ratio"))
                 if fmap[ticker].get("pe_ratio") is None and pe_val is not None:
                     fmap[ticker]["pe_ratio"] = pe_val
 
@@ -403,7 +509,7 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
                         },
                     )
 
-                    pe_val = _safe_float(r.get("pe_ratio"))
+                    pe_val = _sanitize_pe_ratio(r.get("pe_ratio"))
                     eps_val = _safe_float(r.get("eps"))
                     bvps_val = _safe_float(r.get("book_value_per_share"))
 
@@ -570,22 +676,123 @@ def _trigger_eagle_eye_recompute(reason: str, *, force: bool = False) -> bool:
     now = time.time()
     with _RECOMPUTE_LOCK:
         if _RECOMPUTE_IN_PROGRESS:
+            _set_recompute_progress(
+                phase="warming_up",
+                phase_label="Warming up",
+                message="Recompute already running",
+                in_progress=True,
+            )
             logger.info("Eagle Eye recompute already in progress; skip trigger (%s)", reason)
             return False
         if not force and (now - _RECOMPUTE_LAST_ATTEMPT_AT) < _RECOMPUTE_COOLDOWN_SEC:
+            _set_recompute_progress(
+                phase="cooldown",
+                phase_label="Cooldown",
+                message="Recent recompute attempt is in cooldown",
+                in_progress=False,
+            )
             logger.info("Eagle Eye recompute cooldown active; skip trigger (%s)", reason)
             return False
         _RECOMPUTE_IN_PROGRESS = True
         _RECOMPUTE_LAST_ATTEMPT_AT = now
 
+    _set_recompute_progress(
+        phase="queued",
+        phase_label="Queued",
+        message="Queued background recompute",
+        current=0,
+        total=1,
+        percent=1,
+        in_progress=True,
+        mark_started=True,
+        clear_error=True,
+    )
+
     def _runner() -> None:
         global _RECOMPUTE_IN_PROGRESS
+        phase_counts = {
+            "ohlcv_current": 0,
+            "ohlcv_total": 0,
+            "ratings_current": 0,
+            "ratings_total": 0,
+        }
+
+        def _derive_percent(phase: str) -> int:
+            if phase in {"done", "ready"}:
+                return 100
+
+            o_current = max(0, int(phase_counts["ohlcv_current"]))
+            o_total = max(0, int(phase_counts["ohlcv_total"]))
+            r_current = max(0, int(phase_counts["ratings_current"]))
+            r_total = max(0, int(phase_counts["ratings_total"]))
+
+            if o_total > 0 and r_total > 0:
+                done_steps = min(o_current, o_total) + min(r_current, r_total)
+                total_steps = o_total + r_total
+                pct = int(round((done_steps / max(total_steps, 1)) * 99.0))
+                return max(1, min(99, pct))
+
+            if o_total > 0:
+                pct = int(round((min(o_current, o_total) / max(o_total, 1)) * 49.0))
+                return max(1, min(49, pct))
+
+            if r_total > 0:
+                pct = 50 + int(round((min(r_current, r_total) / max(r_total, 1)) * 49.0))
+                return max(50, min(99, pct))
+
+            return 1
+
+        def _on_progress(payload: Dict[str, Any]) -> None:
+            phase = str(payload.get("phase") or "warming_up")
+            phase_label = str(payload.get("phase_label") or phase.replace("_", " ").title())
+            current = int(payload.get("current") or 0)
+            total = int(payload.get("total") or 0)
+
+            if phase == "ohlcv":
+                phase_counts["ohlcv_current"] = current
+                phase_counts["ohlcv_total"] = total
+            elif phase == "ratings":
+                phase_counts["ratings_current"] = current
+                phase_counts["ratings_total"] = total
+
+            message = str(payload.get("message") or f"{phase_label}...")
+            _set_recompute_progress(
+                phase=phase,
+                phase_label=phase_label,
+                message=message,
+                current=current,
+                total=total,
+                percent=_derive_percent(phase),
+                in_progress=phase not in {"done", "ready", "error"},
+            )
+
         try:
             from app.services.eagle_eye.ingest import run_nightly_recompute
 
-            result = run_nightly_recompute(dna_refresh=False, verbose=False)
+            result = run_nightly_recompute(
+                dna_refresh=False,
+                verbose=False,
+                progress_callback=_on_progress,
+            )
+            cache_rows = int(result.get("cache_rows") or 0)
+            _set_recompute_progress(
+                phase="ready",
+                phase_label="Ready",
+                message="Scanner cache refreshed",
+                current=cache_rows,
+                total=cache_rows,
+                percent=100,
+                in_progress=False,
+            )
             logger.info("Eagle Eye background recompute finished (%s): %s", reason, result)
-        except Exception:
+        except Exception as exc:
+            _set_recompute_progress(
+                phase="error",
+                phase_label="Error",
+                message="Background recompute failed",
+                in_progress=False,
+                last_error=str(exc),
+            )
             logger.exception("Eagle Eye background recompute failed (%s)", reason)
         finally:
             with _RECOMPUTE_LOCK:
@@ -603,6 +810,12 @@ def _trigger_eagle_eye_recompute(reason: str, *, force: bool = False) -> bool:
     except Exception:
         with _RECOMPUTE_LOCK:
             _RECOMPUTE_IN_PROGRESS = False
+        _set_recompute_progress(
+            phase="error",
+            phase_label="Error",
+            message="Could not start background recompute",
+            in_progress=False,
+        )
         logger.exception("Could not start Eagle Eye background recompute (%s)", reason)
         return False
 
@@ -863,7 +1076,12 @@ async def get_scanner(
     )
     if use_resp_cache:
         cached = _SCANNER_RESP_CACHE
-        return ScannerResponse(status="ok", count=len(cached), stocks=cached)
+        return ScannerResponse(
+            status="ok",
+            count=len(cached),
+            stocks=cached,
+            **_scanner_progress_fields("ok", len(cached)),
+        )
 
     # ── DB fast path: read pre-computed ratings ──────────────────────────────
     # NOTE: Live compute fallback removed — it fetched OHLCV for 100+ stocks
@@ -871,6 +1089,7 @@ async def get_scanner(
     # The background warmup (started at app startup) populates ee_ratings_cache.
     # Return warming_up immediately when cache is cold so the UI stays responsive.
     try:
+        from app.services import tickerchart_service as tc
         from app.services.eagle_eye.rating_engine import is_stock_active
         from app.services.eagle_eye.store import load_all_ratings, load_ohlcv
 
@@ -879,7 +1098,12 @@ async def get_scanner(
             # Cache is cold — retrigger a best-effort background warmup and respond immediately.
             _trigger_eagle_eye_recompute("scanner_cache_cold")
             logger.info("Eagle Eye scanner: cache cold, returning warming_up status")
-            return ScannerResponse(status="warming_up", count=0, stocks=[])
+            return ScannerResponse(
+                status="warming_up",
+                count=0,
+                stocks=[],
+                **_scanner_progress_fields("warming_up", 0),
+            )
 
         # ── Use cached meta map (rebuilt at most every 10 min) ───────────────
         meta_map = _get_meta_map()
@@ -927,14 +1151,43 @@ async def get_scanner(
 
             fmeta = fundamentals_map.get(t, {})
             bvps = _safe_float(fmeta.get("book_value_per_share"))
-            pe_ratio = _safe_float(fmeta.get("pe_ratio"))
+            pe_ratio = None
 
-            # Derive P/E from latest scanner price and EPS when direct PE is missing.
+            # Primary PE path: use TTM EPS with the latest scanner price so PE
+            # moves with daily/intraday price changes.
+            eps_latest = _safe_float(fmeta.get("eps"))
+            last_price = _safe_float(row.get("last_price"))
+
+            # If local snapshot PE diverges sharply from the scanner-price/TTM-EPS
+            # equation, refresh EPS from TickerChart FactSet feed (cacheserver path).
+            snapshot_pe = _sanitize_pe_ratio(fmeta.get("pe_ratio"))
+            if last_price is not None:
+                should_refresh_eps = eps_latest is None or eps_latest <= 0
+                if (
+                    not should_refresh_eps
+                    and snapshot_pe is not None
+                    and eps_latest is not None
+                    and eps_latest > 0
+                ):
+                    pe_from_eps = _sanitize_pe_ratio((last_price / _KSE_PRICE_DIVISOR) / eps_latest)
+                    if pe_from_eps is not None:
+                        drift = abs(pe_from_eps - snapshot_pe) / max(snapshot_pe, 1.0)
+                        should_refresh_eps = drift >= _PE_EPS_DRIFT_REFRESH_THRESHOLD
+
+                if should_refresh_eps:
+                    try:
+                        eps_live = _safe_float(tc.fetch_factset_ltm_eps(t, "KSE"))
+                        if eps_live is not None and eps_live > 0:
+                            eps_latest = eps_live
+                    except Exception as exc:
+                        logger.debug("FactSet EPS refresh skipped for %s: %s", t, exc)
+
+            if eps_latest is not None and eps_latest > 0 and last_price is not None:
+                pe_ratio = _sanitize_pe_ratio((last_price / _KSE_PRICE_DIVISOR) / eps_latest)
+
+            # Fallback only when TTM EPS is unavailable.
             if pe_ratio is None:
-                eps_latest = _safe_float(fmeta.get("eps"))
-                last_price = _safe_float(row.get("last_price"))
-                if eps_latest is not None and eps_latest > 0 and last_price is not None:
-                    pe_ratio = last_price / eps_latest
+                pe_ratio = snapshot_pe
 
             results.append(RatedStock(
                 ticker=t,
@@ -959,11 +1212,21 @@ async def get_scanner(
             _SCANNER_RESP_CACHE = results
             _SCANNER_RESP_CACHE_AT = now
 
-        return ScannerResponse(status="ok", count=len(results), stocks=results)
+        return ScannerResponse(
+            status="ok",
+            count=len(results),
+            stocks=results,
+            **_scanner_progress_fields("ok", len(results)),
+        )
 
     except Exception as exc:
         logger.warning("DB scanner failed: %s", exc)
-        return ScannerResponse(status="error", count=0, stocks=[])
+        return ScannerResponse(
+            status="error",
+            count=0,
+            stocks=[],
+            **_scanner_progress_fields("error", 0),
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1354,6 +1617,11 @@ async def refresh_stocks(
 
     Returns a job_id and estimated_minutes (0.5 min per ticker as a rough guide).
     """
+    global _SCANNER_RESP_CACHE, _SCANNER_RESP_CACHE_AT
+
+    _SCANNER_RESP_CACHE = None
+    _SCANNER_RESP_CACHE_AT = 0.0
+
     invalidated = 0
     for ticker in body.tickers:
         t = ticker.upper().strip()
@@ -1870,15 +2138,6 @@ async def run_simulator_now(
     except Exception as exc:
         logger.exception("Manual simulator run failed: %s", exc)
         raise HTTPException(status_code=500, detail=str(exc))
-
-    job_id = str(uuid.uuid4())
-    est_minutes = round(len(body.tickers) * 0.5, 1)
-    return RefreshResponse(
-        status="ok",
-        job_id=job_id,
-        tickers_queued=len(body.tickers),
-        estimated_minutes=est_minutes,
-    )
 
 
 # ---------------------------------------------------------------------------
