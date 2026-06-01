@@ -853,11 +853,18 @@ def register_pe_flatfiles_mapping(base_symbol: str, market_abb: str, factset_id:
 
 
 # ── OHLCV ────────────────────────────────────────────────────────────
-def _pick_period(from_d: Optional[date], to_d: Optional[date]) -> str:
-    """Pick the smallest TickerChart `period` that covers the requested range."""
+def _pick_period(from_d: Optional[date], to_d: Optional[date], interval: str = "day") -> str:
+    """Pick a TickerChart `period` that preserves enough candles for the use case."""
     if from_d is None or to_d is None:
         return "5years"
     days = (to_d - from_d).days
+
+    # TickerChart's `period=1week` can collapse day-interval responses to a
+    # single candle, which breaks day-over-day calculations (change, movers).
+    # Use at least a monthly bucket for short day-range requests.
+    if interval == "day" and days <= 7:
+        return "1month"
+
     if days <= 1:
         return "1day"
     if days <= 7:
@@ -888,7 +895,7 @@ async def fetch_ohlcv(
     if host is None:
         raise ValueError(f"Unsupported market: {market_abb}")
 
-    period = _pick_period(from_d, to_d)
+    period = _pick_period(from_d, to_d, interval=interval)
     path = "/tcdata/ondemandDataLoader.php"
     user_name = (get_settings().TICKERCHART_USERNAME or "").strip()
 
