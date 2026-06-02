@@ -34,7 +34,7 @@ import os
 import time
 import warnings
 from datetime import date, datetime, timedelta
-from typing import List, Optional
+from typing import Any, Callable, Dict, List, Optional
 import uuid
 
 import numpy as np
@@ -50,6 +50,21 @@ except (TypeError, ValueError):
 # Keep enough warmup for long-horizon rolling/EMA indicators while avoiding
 # full-history recompute cost on every ticker.
 RATINGS_INDICATOR_LOOKBACK_BARS = max(50, _LOOKBACK_BARS)
+
+ProgressPayload = Dict[str, Any]
+ProgressCallback = Callable[[ProgressPayload], None]
+
+
+def _emit_progress(
+    progress_callback: Optional[ProgressCallback],
+    payload: ProgressPayload,
+) -> None:
+    if not progress_callback:
+        return
+    try:
+        progress_callback(payload)
+    except Exception as exc:
+        logger.debug("Eagle Eye progress callback failed: %s", exc)
 
 
 def _safe_float(v) -> Optional[float]:
@@ -108,7 +123,10 @@ def init_schema() -> None:
 # Phase 1 — OHLCV ingestion
 # ---------------------------------------------------------------------------
 
-def ingest_all_ohlcv(verbose: bool = False) -> dict:
+def ingest_all_ohlcv(
+    verbose: bool = False,
+    progress_callback: Optional[ProgressCallback] = None,
+) -> dict:
     """
     Fetch and cache 3 years of daily OHLCV for every stock returned by
     TickerChartAdapter.list_stocks().
@@ -147,6 +165,17 @@ def ingest_all_ohlcv(verbose: bool = False) -> dict:
     history_start = today - timedelta(days=3 * 365 + 60)  # 3 years + buffer
     trailing_refresh_sessions = 10
     phase_t0 = time.time()
+
+    _emit_progress(
+        progress_callback,
+        {
+            "phase": "ohlcv",
+            "phase_label": "Refreshing price history",
+            "current": 0,
+            "total": total_stocks,
+            "message": "Preparing OHLCV ingest",
+        },
+    )
 
     stats: dict = {"ok": 0, "skipped": 0, "errors": 0, "insufficient": [], "gaps": []}
 
@@ -216,6 +245,19 @@ def ingest_all_ohlcv(verbose: bool = False) -> dict:
             if verbose:
                 print(f"  [{ticker}] ERROR: {exc}")
         finally:
+            _emit_progress(
+                progress_callback,
+                {
+                    "phase": "ohlcv",
+                    "phase_label": "Refreshing price history",
+                    "current": idx,
+                    "total": total_stocks,
+                    "message": f"OHLCV {idx}/{total_stocks}",
+                    "ok": stats["ok"],
+                    "skipped": stats["skipped"],
+                    "errors": stats["errors"],
+                },
+            )
             if verbose and (idx % 10 == 0 or idx == total_stocks):
                 elapsed = time.time() - phase_t0
                 print(
@@ -223,6 +265,20 @@ def ingest_all_ohlcv(verbose: bool = False) -> dict:
                     f"(ok={stats['ok']} skipped={stats['skipped']} errors={stats['errors']}) "
                     f"elapsed={elapsed:.1f}s"
                 )
+
+    _emit_progress(
+        progress_callback,
+        {
+            "phase": "ohlcv",
+            "phase_label": "Refreshing price history",
+            "current": total_stocks,
+            "total": total_stocks,
+            "message": "OHLCV ingest complete",
+            "ok": stats["ok"],
+            "skipped": stats["skipped"],
+            "errors": stats["errors"],
+        },
+    )
 
     if verbose:
         print(
@@ -531,7 +587,10 @@ def _build_premier_market_proxy(premier_tickers: List[str]) -> Optional[pd.Serie
     proxy = (weighted_sum / weight_sum.replace(0, np.nan)).where(weight_sum > 0, simple_mean).sort_index()
     return proxy.astype(float)
 
-def compute_all_ratings(verbose: bool = False) -> dict:
+def compute_all_ratings(
+    verbose: bool = False,
+    progress_callback: Optional[ProgressCallback] = None,
+) -> dict:
     """
     Rate every stock in ee_ohlcv_cache using the Eagle Eye rating engine.
 
@@ -603,6 +662,17 @@ def compute_all_ratings(verbose: bool = False) -> dict:
     total_tickers = len(tickers)
     phase_t0 = time.time()
     verbose_per_ticker = os.getenv("EE_VERBOSE_PER_TICKER", "0").strip() == "1"
+
+    _emit_progress(
+        progress_callback,
+        {
+            "phase": "ratings",
+            "phase_label": "Scoring stocks",
+            "current": 0,
+            "total": total_tickers,
+            "message": "Preparing rating engine",
+        },
+    )
 
     def _save_placeholder_rating(symbol: str, reason: str, df=None) -> None:
         meta = stock_meta.get(symbol)
@@ -888,6 +958,19 @@ def compute_all_ratings(verbose: bool = False) -> dict:
             stats["errors"] += 1
             log_compute("rating_run", ticker, "error", str(exc)[:300])
         finally:
+            _emit_progress(
+                progress_callback,
+                {
+                    "phase": "ratings",
+                    "phase_label": "Scoring stocks",
+                    "current": idx,
+                    "total": total_tickers,
+                    "message": f"Ratings {idx}/{total_tickers}",
+                    "ok": stats["ok"],
+                    "skipped": stats["skipped"],
+                    "errors": stats["errors"],
+                },
+            )
             if verbose and (idx % 10 == 0 or idx == total_tickers):
                 elapsed = time.time() - phase_t0
                 print(
@@ -895,6 +978,20 @@ def compute_all_ratings(verbose: bool = False) -> dict:
                     f"(ok={stats['ok']} skipped={stats['skipped']} errors={stats['errors']}) "
                     f"elapsed={elapsed:.1f}s"
                 )
+
+    _emit_progress(
+        progress_callback,
+        {
+            "phase": "ratings",
+            "phase_label": "Scoring stocks",
+            "current": total_tickers,
+            "total": total_tickers,
+            "message": "Ratings complete",
+            "ok": stats["ok"],
+            "skipped": stats["skipped"],
+            "errors": stats["errors"],
+        },
+    )
 
     if verbose:
         print(
@@ -919,7 +1016,11 @@ def compute_all_ratings(verbose: bool = False) -> dict:
 # Nightly orchestrator — entry point for the APScheduler job
 # ---------------------------------------------------------------------------
 
-def run_nightly_recompute(dna_refresh: bool = False, verbose: bool = False) -> dict:
+def run_nightly_recompute(
+    dna_refresh: bool = False,
+    verbose: bool = False,
+    progress_callback: Optional[ProgressCallback] = None,
+) -> dict:
     """
     Nightly pipeline orchestrator called by the background scheduler.
 
@@ -945,12 +1046,23 @@ def run_nightly_recompute(dna_refresh: bool = False, verbose: bool = False) -> d
     if verbose:
         print(f"[EagleEye] Nightly recompute started (dna_refresh={dna_refresh})")
 
+    _emit_progress(
+        progress_callback,
+        {
+            "phase": "startup",
+            "phase_label": "Starting",
+            "current": 0,
+            "total": 1,
+            "message": "Starting Eagle Eye recompute",
+        },
+    )
+
     if verbose:
         print("[EagleEye] Phase 1/3: ingest_all_ohlcv ...")
     phase_t0 = time.time()
 
     try:
-        ohlcv_stats = ingest_all_ohlcv(verbose=verbose)
+        ohlcv_stats = ingest_all_ohlcv(verbose=verbose, progress_callback=progress_callback)
     except Exception as exc:
         logger.error("Eagle Eye OHLCV ingest failed: %s", exc)
         ohlcv_stats = {"error": str(exc)}
@@ -979,7 +1091,7 @@ def run_nightly_recompute(dna_refresh: bool = False, verbose: bool = False) -> d
         print("[EagleEye] Phase 3/3: compute_all_ratings ...")
     phase_t0 = time.time()
     try:
-        rating_stats = compute_all_ratings(verbose=verbose)
+        rating_stats = compute_all_ratings(verbose=verbose, progress_callback=progress_callback)
     except Exception as exc:
         logger.error("Eagle Eye rating run failed: %s", exc)
         rating_stats = {"error": str(exc)}
@@ -1012,6 +1124,19 @@ def run_nightly_recompute(dna_refresh: bool = False, verbose: bool = False) -> d
     if verbose:
         print(f"[EagleEye] Nightly recompute complete in {elapsed:.1f}s")
         print(f"[EagleEye] Summary: {summary}")
+
+    _emit_progress(
+        progress_callback,
+        {
+            "phase": "done",
+            "phase_label": "Complete",
+            "current": 1,
+            "total": 1,
+            "message": f"Recompute complete in {elapsed:.1f}s",
+            "elapsed_sec": elapsed,
+            "cache_rows": cache_rows,
+        },
+    )
 
     return {
         "elapsed_sec": elapsed,

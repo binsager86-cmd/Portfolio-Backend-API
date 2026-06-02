@@ -60,6 +60,11 @@ class ScannerResponse(BaseModel):
     status: str = "ok"
     count: int
     stocks: List[RatedStock]
+    progress_phase: Optional[str] = None
+    progress_message: Optional[str] = None
+    progress_current: Optional[int] = None
+    progress_total: Optional[int] = None
+    progress_percent: Optional[int] = None
 
 
 # ---------------------------------------------------------------------------
