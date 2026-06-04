@@ -183,7 +183,7 @@ def _scanner_progress_fields(status: str, count: int) -> Dict[str, Any]:
     if status == "warming_up" and percent >= 100:
         percent = 99
     if status == "error" and snap.get("last_error"):
-        message = f"Warmup error: {snap.get('last_error')}"
+        message = "Warmup encountered an internal error. Please retry shortly."
 
     return {
         "progress_phase": phase,
@@ -1361,7 +1361,7 @@ async def get_stock_dna(
             status_code=200,
             content={
                 "status": "error",
-                "message": f"Failed to build DNA response for {t}: {exc}",
+                "message": f"Failed to build DNA response for {t}. Please retry shortly.",
                 "ticker": t,
             },
         )
@@ -1599,7 +1599,10 @@ async def get_stock_events(
         raise
     except Exception as exc:
         logger.exception("Events detection failed for %s", t)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to fetch historical events right now.",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1609,7 +1612,7 @@ async def get_stock_events(
 @router.post("/refresh", response_model=RefreshResponse, summary="Queue background recompute")
 async def refresh_stocks(
     body: RefreshRequest,
-    _user: TokenData = Depends(get_current_user),
+    _admin: TokenData = Depends(require_admin),
 ):
     """
     Invalidate the in-memory cache for the specified tickers and queue a
@@ -2044,7 +2047,7 @@ async def get_simulator_performance(
 async def close_simulator_position(
     position_id: int,
     body: dict,
-    user: TokenData = Depends(get_current_user),
+    _admin: TokenData = Depends(require_admin),
 ):
     """Close an open simulator position at the provided price (manual override)."""
     current_price = body.get("current_price")
@@ -2055,11 +2058,14 @@ async def close_simulator_position(
         from app.services.eagle_eye.simulator import get_engine
         result = get_engine().manual_override_close(position_id, float(current_price))
         return {"status": "ok", **result}
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Position not found.")
     except Exception as exc:
         logger.exception("Simulator manual close failed: %s", exc)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to close simulator position right now.",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -2120,7 +2126,10 @@ async def reset_simulator_now(
         return {"status": "ok", "result": result}
     except Exception as exc:
         logger.exception("Simulator reset failed: %s", exc)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to reset simulator right now.",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -2129,7 +2138,7 @@ async def reset_simulator_now(
 
 @router.post("/simulator/run", summary="Manually trigger simulator daily run")
 async def run_simulator_now(
-    user: TokenData = Depends(get_current_user),
+    _admin: TokenData = Depends(require_admin),
 ):
     try:
         from app.services.eagle_eye.simulator import get_engine
@@ -2137,7 +2146,10 @@ async def run_simulator_now(
         return {"status": "ok", "result": result}
     except Exception as exc:
         logger.exception("Manual simulator run failed: %s", exc)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to run simulator right now.",
+        )
 
 
 # ---------------------------------------------------------------------------
