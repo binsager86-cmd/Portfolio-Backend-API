@@ -784,6 +784,9 @@ def compute_all_indicators(
     out['dollar_volume'] = _turnover_series
     out['avg_20d_turnover_kwd'] = pd.to_numeric(_turnover_series, errors='coerce').rolling(20).mean()
 
+    # Prevent highly fragmented DataFrame blocks after many column inserts.
+    out = out.copy()
+
     # ── Pattern features (chart structure and activity) ────────────────────
     out['higher_lows_20d'] = (df['low'] > df['low'].shift(1)).rolling(20).sum()
     out['higher_highs_20d'] = (df['high'] > df['high'].shift(1)).rolling(20).sum()
@@ -928,6 +931,9 @@ def compute_all_indicators(
     if 'ema_200' in out.columns:
         out['ema_slow'] = out['ema_200']
 
+    # Consolidate blocks before the large curated feature assignment block.
+    out = out.copy()
+
     # ---------------------------------------------------------------------
     # Phase 1 curated indicator set (liquidity-first, non-redundant)
     # ---------------------------------------------------------------------
@@ -962,6 +968,7 @@ def compute_all_indicators(
 
     out['rsi_14'] = out['rsi']
     out['cci_20'] = out['cci']
+    out['cci_change_5d'] = out['cci_20'] - out['cci_20'].shift(5)
     out['macd_histogram_slope_5d'] = out['macd_histogram'].rolling(5).apply(
         lambda y: np.polyfit(np.arange(len(y)), y, 1)[0], raw=True
     )
@@ -1050,6 +1057,9 @@ def compute_all_indicators(
         out['risk_reward_ratio'].replace([np.inf, -np.inf], np.nan).fillna(0.0).clip(0.0, 10.0)
     )
     out['_risk_reward_ratio'] = out['risk_reward_ratio']
+
+    # Consolidate again before data-quality and flow-inflection tail features.
+    out = out.copy()
 
     # Kuwait data-quality module + limit-day awareness.
     daily_ret = (df['close'] / df['close'].shift(1) - 1.0) * 100.0
