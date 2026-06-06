@@ -17,6 +17,23 @@ def _safe_float(v: object, default: float = 0.0) -> float:
     return f
 
 
+def _is_early_markup_breakout(ind: Mapping[str, object]) -> bool:
+    """Infer breakout-origin EARLY_MARKUP from indicator gates used in stage classification."""
+
+    donchian_breakout = int(_safe_float(ind.get("donchian_breakout_50d"), 0.0)) == 1
+    traded_value_ratio_20d = _safe_float(ind.get("traded_value_ratio_20d"), 0.0)
+    cmf_20 = _safe_float(ind.get("cmf_20"), 0.0)
+    close_location_value = _safe_float(ind.get("close_location_value"), 0.0)
+    rsi_14 = _safe_float(ind.get("rsi_14"), 50.0)
+    return (
+        donchian_breakout
+        and traded_value_ratio_20d > 1.5
+        and cmf_20 > 0.0
+        and close_location_value > 0.5
+        and 50.0 <= rsi_14 <= 75.0
+    )
+
+
 def compute_continue_rising(
     ind: Mapping[str, object],
     stage: str,
@@ -114,12 +131,22 @@ def generate_recommendation(
 
     buy_allowed = len(veto_reasons) == 0
 
+    cmf_20 = _safe_float(ind.get("cmf_20"), 0.0)
+    macd_histogram = _safe_float(ind.get("macd_histogram"), 0.0)
+    confirmed_early = cmf_20 > 0.0 and macd_histogram >= 0.0
+    early_breakout = _is_early_markup_breakout(ind)
+
     if stage == "MARKDOWN":
         base_rec = "SELL"
     elif stage == "DISTRIBUTION":
         base_rec = "REDUCE"
     elif stage == "EARLY_MARKUP":
-        base_rec = "BUY" if buy_allowed else "WATCHLIST"
+        if not buy_allowed:
+            base_rec = "WATCHLIST"
+        elif early_breakout:
+            base_rec = "BUY"
+        else:
+            base_rec = "BUY" if confirmed_early else "WATCHLIST"
     elif stage == "MARKUP":
         base_rec = "HOLD"
     elif stage == "ACCUMULATION":
