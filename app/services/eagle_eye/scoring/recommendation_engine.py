@@ -42,8 +42,8 @@ def compute_continue_rising(
     exhaustion_signals: List[str] = []
     if volume_ratio_20d < 1.0:
         exhaustion_signals.append("volume_slowing")
-    if close < ema_20 and close <= (ema_30 * 1.01):
-        exhaustion_signals.append("lost_ema20_near_ema30")
+    if close < ema_30:
+        exhaustion_signals.append("broke_below_ema30")
     if macd_hist_slope < 0.0:
         exhaustion_signals.append("macd_histogram_slope_negative")
 
