@@ -1,9 +1,9 @@
 """
 Daily TickerChart fundamentals updater.
 
-Persists one point-in-time row per ticker/day into ``ml_fundamentals`` so
-scanner fallback data is refreshed automatically even when historical sources
-are sparse.
+Persists one point-in-time row per ticker/day into ``ml_fundamentals``.
+EPS is refreshed from the TickerChart FactSet LTM feed daily (with
+QuotesSnapShot EPS fallback when live EPS is unavailable).
 """
 
 from __future__ import annotations
@@ -39,12 +39,15 @@ def _round_or_none(value: float | None, digits: int) -> float | None:
 
 
 def run_tickerchart_fundamentals_update() -> dict:
-    """Refresh today's PE/BVPS/EPS snapshot for the Eagle Eye universe."""
+    """Refresh today's PE/BVPS/EPS values for the Eagle Eye universe."""
     started_at = time.time()
     disclosure_date = _today_kuwait_iso()
     source = "tickerchart_snapshot_daily"
 
-    logger.info("📘 Daily fundamentals refresh starting (date=%s)", disclosure_date)
+    logger.info(
+        "📘 Daily fundamentals refresh starting (date=%s, eps=FactSet LTM with snapshot fallback)",
+        disclosure_date,
+    )
 
     try:
         universe = TickerChartAdapter().list_stocks()
@@ -62,6 +65,9 @@ def run_tickerchart_fundamentals_update() -> dict:
     upserted = 0
     no_data = 0
     failed = 0
+    eps_from_factset = 0
+    eps_from_snapshot = 0
+    eps_missing = 0
 
     for meta in universe:
         ticker = str(getattr(meta, "ticker", "") or "").upper().strip()
@@ -71,12 +77,24 @@ def run_tickerchart_fundamentals_update() -> dict:
 
         try:
             pe_ratio = _round_or_none(tc.read_quotes_snapshot_pe(ticker, "KSE"), 4)
-            eps = _round_or_none(tc.read_quotes_snapshot_ltm_eps(ticker, "KSE", price_divisor=1000.0), 6)
+            eps_snapshot = _round_or_none(
+                tc.read_quotes_snapshot_ltm_eps(ticker, "KSE", price_divisor=1000.0),
+                6,
+            )
+            eps_factset = _round_or_none(tc.fetch_factset_ltm_eps(ticker, "KSE"), 6)
             bvps = _round_or_none(tc.read_quotes_snapshot_bvps(ticker, "KSE", price_divisor=1000.0), 6)
         except Exception as exc:
             failed += 1
             logger.debug("TickerChart snapshot read failed for %s: %s", ticker, exc)
             continue
+
+        eps = eps_factset if eps_factset is not None else eps_snapshot
+        if eps_factset is not None:
+            eps_from_factset += 1
+        elif eps_snapshot is not None:
+            eps_from_snapshot += 1
+        else:
+            eps_missing += 1
 
         if pe_ratio is None and eps is None and bvps is None:
             no_data += 1
@@ -127,15 +145,24 @@ def run_tickerchart_fundamentals_update() -> dict:
         "upserted": upserted,
         "no_data": no_data,
         "failed": failed,
+        "eps_from_factset": eps_from_factset,
+        "eps_from_snapshot": eps_from_snapshot,
+        "eps_missing": eps_missing,
         "elapsed_sec": round(time.time() - started_at, 2),
     }
     _last_run.update(run_info)
 
     logger.info(
-        "📘 Daily fundamentals refresh done: upserted=%d no_data=%d failed=%d elapsed=%.2fs",
+        (
+            "📘 Daily fundamentals refresh done: upserted=%d no_data=%d failed=%d "
+            "eps_factset=%d eps_snapshot=%d eps_missing=%d elapsed=%.2fs"
+        ),
         upserted,
         no_data,
         failed,
+        eps_from_factset,
+        eps_from_snapshot,
+        eps_missing,
         run_info["elapsed_sec"],
     )
     return run_info

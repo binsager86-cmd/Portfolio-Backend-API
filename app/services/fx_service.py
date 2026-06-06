@@ -39,13 +39,18 @@ def _get_cached_rate() -> Optional[float]:
     entry = _fx_cache.get(_cache_key())
     if entry is None:
         return None
-    if time.time() - entry["ts"] > _settings.FX_CACHE_TTL:
+    ttl = float(entry.get("ttl", _settings.FX_CACHE_TTL))
+    if time.time() - entry["ts"] > ttl:
         return None  # expired
     return entry["rate"]
 
 
-def _set_cached_rate(rate: float) -> None:
-    _fx_cache[_cache_key()] = {"rate": rate, "ts": time.time()}
+def _set_cached_rate(rate: float, ttl: Optional[float] = None) -> None:
+    _fx_cache[_cache_key()] = {
+        "rate": rate,
+        "ts": time.time(),
+        "ttl": float(ttl) if ttl is not None else float(_settings.FX_CACHE_TTL),
+    }
 
 
 # ── Public API ──────────────────────────────────────────────────────
@@ -66,6 +71,7 @@ def fetch_usd_kwd_rate(max_retries: int = 3) -> float:
         import yfinance as yf
     except ImportError:
         logger.warning("yfinance not installed – using fallback USD/KWD rate")
+        _set_cached_rate(DEFAULT_USD_TO_KWD)
         return DEFAULT_USD_TO_KWD
 
     for attempt in range(1, max_retries + 1):
@@ -81,10 +87,11 @@ def fetch_usd_kwd_rate(max_retries: int = 3) -> float:
         except Exception as exc:
             logger.debug(f"USD/KWD fetch attempt {attempt} failed: {exc}")
             if attempt < max_retries:
-                wait = (2 ** attempt) + random.uniform(0.3, 1.0)
+                wait = 0.2 + random.uniform(0.1, 0.4)
                 time.sleep(wait)
 
     logger.warning("All USD/KWD fetch attempts failed – using fallback rate")
+    _set_cached_rate(DEFAULT_USD_TO_KWD)
     return DEFAULT_USD_TO_KWD
 
 

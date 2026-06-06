@@ -261,6 +261,32 @@ def start_scheduler() -> None:
         )
     else:
         logger.info("⏸  Price scheduler disabled (PRICE_UPDATE_ENABLED=False)")
+        # Keep fundamentals (including daily TTM EPS refresh) running even when
+        # price/snapshot automation is disabled.
+        try:
+            from app.cron.fundamentals_updater import run_tickerchart_fundamentals_update
+
+            fundamentals_trigger = CronTrigger(
+                hour=settings.PRICE_UPDATE_HOUR,
+                minute=settings.PRICE_UPDATE_MINUTE,
+                timezone="Asia/Kuwait",
+            )
+            _scheduler.add_job(
+                run_tickerchart_fundamentals_update,
+                trigger=fundamentals_trigger,
+                id="daily_fundamentals_refresh",
+                name="Daily fundamentals refresh",
+                replace_existing=True,
+                coalesce=True,
+                max_instances=1,
+            )
+            logger.info(
+                "📘 Daily fundamentals refresh scheduled — daily at %02d:%02d Asia/Kuwait",
+                settings.PRICE_UPDATE_HOUR,
+                settings.PRICE_UPDATE_MINUTE,
+            )
+        except Exception as exc:
+            logger.warning("Could not schedule daily fundamentals refresh: %s", exc)
 
     # ── Nightly data-retention sweep (03:00 Asia/Kuwait) ────────
     try:

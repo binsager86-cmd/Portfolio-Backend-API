@@ -97,6 +97,14 @@ async def trigger_price_update(
 @router.get("/status")
 async def cron_status():
     """Return the last price-update and snapshot run info (no auth required)."""
+    last_fundamentals_run = None
+    try:
+        from app.cron.fundamentals_updater import get_last_run as get_fundamentals_last_run
+
+        last_fundamentals_run = get_fundamentals_last_run() or None
+    except Exception:
+        last_fundamentals_run = None
+
     return {
         "status": "ok",
         "cron_key_configured": bool(settings.CRON_SECRET_KEY),
@@ -104,6 +112,7 @@ async def cron_status():
         "schedule": f"{settings.PRICE_UPDATE_HOUR:02d}:{settings.PRICE_UPDATE_MINUTE:02d} Asia/Kuwait",
         "last_price_update": _last_run if _last_run else None,
         "last_snapshot_save": _last_snapshot_run if _last_snapshot_run else None,
+        "last_fundamentals_refresh": last_fundamentals_run,
     }
 
 
@@ -165,7 +174,10 @@ async def trigger_price_update_and_snapshot(
     """
     _verify_cron_key(x_cron_key, key)
 
+    from app.cron.fundamentals_updater import run_tickerchart_fundamentals_update
     from app.cron.snapshot_saver import run_snapshot_save
+
+    fundamentals_result = run_tickerchart_fundamentals_update()
 
     user_ids = _resolve_user_ids(user_id)
     logger.info("🚀 Price update + snapshot triggered via API for user_ids=%s", user_ids)
@@ -197,8 +209,12 @@ async def trigger_price_update_and_snapshot(
 
     return {
         "status": "ok",
-        "message": f"Prices updated ({total_updated}/{total_found}), snapshots saved for {len(user_ids)} user(s)",
+        "message": (
+            f"Fundamentals refreshed, prices updated ({total_updated}/{total_found}), "
+            f"snapshots saved for {len(user_ids)} user(s)"
+        ),
         "data": {
+            "fundamentals": fundamentals_result,
             "prices": all_price_results,
             "snapshots": all_snapshot_results,
         },

@@ -35,6 +35,10 @@ from app.services.fx_service import (
 
 logger = logging.getLogger(__name__)
 
+_PE_CACHE_TTL_SEC = 30 * 60
+_PE_CACHE_NEGATIVE_TTL_SEC = 5 * 60
+_pe_lookup_cache: Dict[Tuple[str, str], Tuple[Optional[float], float]] = {}
+
 
 # ── Helpers ──────────────────────────────────────────────────────────
 
@@ -76,6 +80,32 @@ def _resolve_position_metric_key(mapping: Dict[Tuple[str, str], float], sym: str
     if len(symbol_matches) == 1:
         return symbol_matches[0]
     return None
+
+
+def _convert_to_kwd_with_rate(amount: Any, ccy: Any, usd_kwd_rate: float) -> float:
+    """Convert using a request-scoped USD/KWD rate to avoid repeated FX lookups."""
+    amt = safe_float(amount, 0.0)
+    currency = str(ccy or "KWD").strip().upper()
+    if currency == "USD":
+        rate = safe_float(usd_kwd_rate, DEFAULT_USD_TO_KWD)
+        if rate <= 0:
+            rate = DEFAULT_USD_TO_KWD
+        return amt * rate
+    return amt
+
+
+def _fetch_pe_from_stockanalysis_cached(symbol: str, currency: str) -> Optional[float]:
+    """Cache StockAnalysis P/E lookups so repeated calls do not block requests."""
+    key = (_normalize_position_symbol(symbol), (currency or "KWD").strip().upper())
+    now = time.time()
+    cached = _pe_lookup_cache.get(key)
+    if cached and cached[1] > now:
+        return cached[0]
+
+    pe_value = _fetch_pe_from_stockanalysis(symbol, currency)
+    ttl = _PE_CACHE_TTL_SEC if pe_value is not None else _PE_CACHE_NEGATIVE_TTL_SEC
+    _pe_lookup_cache[key] = (pe_value, now + ttl)
+    return pe_value
 
 def _parse_stockanalysis_pe(page_text: str) -> Optional[float]:
     """Extract P/E ratio from StockAnalysis statistics page HTML payload."""
@@ -291,7 +321,7 @@ class PortfolioService:
     #  Build portfolio table (per-portfolio)
     # ------------------------------------------------------------------
 
-    def build_portfolio_table(self, portfolio_name: str) -> pd.DataFrame:
+    def build_portfolio_table(self, portfolio_name: str, fetch_missing_pe: bool = True) -> pd.DataFrame:
         """
         Build the full holdings table for *portfolio_name*.
 
@@ -300,6 +330,9 @@ class PortfolioService:
           2. Fetch stock metadata (price, name, currency)
           3. Run WAC engine per symbol
           4. Calculate unrealized P&L, total P&L, weights
+
+                Set ``fetch_missing_pe=False`` on latency-sensitive routes (Overview,
+                Holdings) so we do not block the response on external PE scraping.
 
         Returns DataFrame with 22+ columns per holding.
         """
@@ -410,10 +443,10 @@ class PortfolioService:
 
             display_name = meta.get("name") or sym
 
-            # P/E ratio from stocks table. If missing, fetch from StockAnalysis and persist.
+            # P/E ratio from stocks table. Optional lazy backfill from StockAnalysis.
             pe_ratio = meta.get("pe_ratio")
-            if pe_ratio is None:
-                fetched_pe = _fetch_pe_from_stockanalysis(sym, currency)
+            if pe_ratio is None and fetch_missing_pe:
+                fetched_pe = _fetch_pe_from_stockanalysis_cached(sym, currency)
                 if fetched_pe is not None:
                     pe_ratio = fetched_pe
                     try:
@@ -902,6 +935,7 @@ class PortfolioService:
         try:
             conn = get_conn()
             cur = conn.cursor()
+            usd_kwd_rate = get_usd_kwd_rate()
 
             # --- Deposits per portfolio (from cash_deposits) ---
             dep_sql = """
@@ -984,12 +1018,12 @@ class PortfolioService:
                     "realized_pnl_kwd": 0.0,
                 }
 
-                result["total_deposits"] += convert_to_kwd(deposits, ccy)
-                result["total_withdrawals"] += convert_to_kwd(withdrawals, ccy)
-                result["total_invested"] += convert_to_kwd(invested, ccy)
-                result["total_divested"] += convert_to_kwd(divested, ccy)
-                result["total_dividends"] += convert_to_kwd(dividends, ccy)
-                result["total_fees"] += convert_to_kwd(fees, ccy)
+                result["total_deposits"] += _convert_to_kwd_with_rate(deposits, ccy, usd_kwd_rate)
+                result["total_withdrawals"] += _convert_to_kwd_with_rate(withdrawals, ccy, usd_kwd_rate)
+                result["total_invested"] += _convert_to_kwd_with_rate(invested, ccy, usd_kwd_rate)
+                result["total_divested"] += _convert_to_kwd_with_rate(divested, ccy, usd_kwd_rate)
+                result["total_dividends"] += _convert_to_kwd_with_rate(dividends, ccy, usd_kwd_rate)
+                result["total_fees"] += _convert_to_kwd_with_rate(fees, ccy, usd_kwd_rate)
                 result["transaction_count"] += txn_count
 
             result["net_deposits"] = (
@@ -1007,18 +1041,22 @@ class PortfolioService:
     #  Portfolio market value
     # ------------------------------------------------------------------
 
-    def get_portfolio_value(self) -> dict:
-        """Current market value of all portfolios, with KWD totals."""
+    def _collect_portfolio_tables(self, fetch_missing_pe: bool = True) -> Dict[str, pd.DataFrame]:
+        """Build portfolio tables once so callers can reuse the same snapshot."""
+        tables: Dict[str, pd.DataFrame] = {}
+        for pname in PORTFOLIO_CCY:
+            tables[pname] = self.build_portfolio_table(pname, fetch_missing_pe=fetch_missing_pe)
+        return tables
+
+    def _summarize_portfolio_market_value(self, tables: Dict[str, pd.DataFrame]) -> dict:
+        """Aggregate market value totals from precomputed portfolio tables."""
         result: dict = {"total_value_kwd": 0.0, "by_portfolio": {}}
 
-        for pname in PORTFOLIO_CCY:
-            df = self.build_portfolio_table(pname)
+        for pname, df in tables.items():
             if df.empty:
                 continue
             ccy = PORTFOLIO_CCY.get(pname, "KWD")
-            port_value = float(
-                df.loc[df["shares_qty"] > 0, "market_value"].sum()
-            )
+            port_value = float(df.loc[df["shares_qty"] > 0, "market_value"].sum())
             holding_count = int((df["shares_qty"] > 0.001).sum())
             result["by_portfolio"][pname] = {
                 "currency": ccy,
@@ -1030,11 +1068,25 @@ class PortfolioService:
 
         return result
 
+    def get_portfolio_value(
+        self,
+        fetch_missing_pe: bool = True,
+        tables: Optional[Dict[str, pd.DataFrame]] = None,
+    ) -> dict:
+        """Current market value of all portfolios, with KWD totals."""
+        if tables is None:
+            tables = self._collect_portfolio_tables(fetch_missing_pe=fetch_missing_pe)
+        return self._summarize_portfolio_market_value(tables)
+
     # ------------------------------------------------------------------
     #  Total portfolio value — SINGLE SOURCE OF TRUTH
     # ------------------------------------------------------------------
 
-    def get_total_portfolio_value(self) -> dict:
+    def get_total_portfolio_value(
+        self,
+        fetch_missing_pe: bool = True,
+        portfolio_values: Optional[dict] = None,
+    ) -> dict:
         """Calculate the total portfolio value (stocks + cash) in KWD.
 
         This is the **canonical** function used by Overview, Holdings,
@@ -1050,7 +1102,9 @@ class PortfolioService:
         ``cash_kwd``, ``by_portfolio`` (stock breakdown), and
         ``accounts`` (cash breakdown).
         """
-        values = self.get_portfolio_value()   # stocks only
+        values = portfolio_values if portfolio_values is not None else self.get_portfolio_value(
+            fetch_missing_pe=fetch_missing_pe,
+        )
         accounts = self.get_account_balances()  # cash only
 
         stocks_kwd = values["total_value_kwd"]
@@ -1155,7 +1209,18 @@ class PortfolioService:
         so that Overview, Holdings, and Snapshot always agree.
         """
         overview = self.get_portfolio_overview()
-        unified = self.get_total_portfolio_value()
+
+        # Build holdings tables once with non-blocking PE behavior.
+        portfolio_tables = self._collect_portfolio_tables(fetch_missing_pe=False)
+        values = self._summarize_portfolio_market_value(portfolio_tables)
+        accounts = self.get_account_balances()
+        unified = {
+            "total_value_kwd": round(values["total_value_kwd"] + accounts["total_cash_kwd"], 3),
+            "stocks_kwd": round(values["total_value_kwd"], 3),
+            "cash_kwd": round(accounts["total_cash_kwd"], 3),
+            "by_portfolio": values["by_portfolio"],
+            "accounts": accounts["accounts"],
+        }
 
         net_deposits = overview["net_deposits"]
         portfolio_value = unified["stocks_kwd"]
@@ -1170,8 +1235,8 @@ class PortfolioService:
         # Enrich by_portfolio with P&L from build_portfolio_table
         for pname in list(overview["by_portfolio"].keys()):
             ccy = PORTFOLIO_CCY.get(pname, "KWD")
-            df = self.build_portfolio_table(pname)
-            if not df.empty:
+            df = portfolio_tables.get(pname)
+            if df is not None and not df.empty:
                 unrealized = float(df["unrealized_pnl"].sum())
                 realized = float(df["realized_pnl"].sum()) if "realized_pnl" in df.columns else 0.0
                 dividends = float(df["cash_dividends"].sum()) if "cash_dividends" in df.columns else 0.0
@@ -1261,7 +1326,7 @@ class PortfolioService:
             # CAGR inputs: first deposit amount and date
             **self._calc_cagr_inputs(total_value),
             # MWRR (IRR) — calculated inline so the overview always has it
-            "mwrr_percent": self._safe_mwrr(),
+            "mwrr_percent": self._safe_mwrr(total_value),
         }
 
     # ------------------------------------------------------------------
@@ -1355,10 +1420,10 @@ class PortfolioService:
     #  Safe MWRR wrapper for overview (never raises)
     # ------------------------------------------------------------------
 
-    def _safe_mwrr(self) -> Optional[float]:
+    def _safe_mwrr(self, terminal_value_kwd: Optional[float] = None) -> Optional[float]:
         """Compute MWRR for the overview response; returns None on any error."""
         try:
-            return self.calculate_mwrr()
+            return self.calculate_mwrr(terminal_value_kwd=terminal_value_kwd)
         except Exception as exc:
             logger.warning("_safe_mwrr: %s", exc)
             return None
@@ -1620,6 +1685,7 @@ class PortfolioService:
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,
         portfolio: Optional[str] = None,
+        terminal_value_kwd: Optional[float] = None,
     ) -> Optional[float]:
         """
         Money-Weighted Rate of Return (XIRR) — CFA Level III compliant.
@@ -1649,12 +1715,13 @@ class PortfolioService:
         # ── 1. Terminal value ────────────────────────────────────────
         # CFA-compliant: use LIVE portfolio value (mark-to-market).
         # Fall back to the latest snapshot if live is unavailable.
-        current_value = 0.0
-        try:
-            live = self.get_total_portfolio_value()
-            current_value = live.get("total_value_kwd", 0.0)
-        except Exception as exc:
-            logger.warning("MWRR: live portfolio value failed: %s", exc)
+        current_value = safe_float(terminal_value_kwd, 0.0)
+        if current_value <= 0:
+            try:
+                live = self.get_total_portfolio_value(fetch_missing_pe=False)
+                current_value = live.get("total_value_kwd", 0.0)
+            except Exception as exc:
+                logger.warning("MWRR: live portfolio value failed: %s", exc)
 
         if current_value <= 0:
             # Fallback: latest snapshot portfolio_value
@@ -2069,8 +2136,15 @@ def get_current_holdings(
     return PortfolioService(user_id).get_current_holdings(portfolio, include_closed)
 
 
-def build_portfolio_table(portfolio_name: str, user_id: int) -> pd.DataFrame:
-    return PortfolioService(user_id).build_portfolio_table(portfolio_name)
+def build_portfolio_table(
+    portfolio_name: str,
+    user_id: int,
+    fetch_missing_pe: bool = True,
+) -> pd.DataFrame:
+    return PortfolioService(user_id).build_portfolio_table(
+        portfolio_name,
+        fetch_missing_pe=fetch_missing_pe,
+    )
 
 
 def get_portfolio_overview(user_id: int, portfolio_id: Optional[int] = None) -> dict:

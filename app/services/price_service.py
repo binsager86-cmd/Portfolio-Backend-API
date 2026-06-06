@@ -319,11 +319,15 @@ def update_all_prices(
     cur = conn.cursor()
 
     try:
+        # Ensure additive columns exist across SQLite/PostgreSQL before reads
+        add_column_if_missing("stocks", "pe_ratio", "REAL")
+        add_column_if_missing("stocks", "previous_close", "REAL")
+
         # ── Fetch eligible stocks ────────────────────────────────────
         if only_with_holdings:
             cur.execute(
                 """
-                SELECT s.id, s.symbol, s.currency, s.yf_ticker,
+                SELECT s.id, s.symbol, s.currency, s.yf_ticker, s.pe_ratio,
                     COALESCE(
                         SUM(CASE WHEN t.txn_type = 'Buy'  THEN t.shares ELSE 0 END) -
                         SUM(CASE WHEN t.txn_type = 'Sell' THEN t.shares ELSE 0 END),
@@ -333,7 +337,7 @@ def update_all_prices(
                     ON s.symbol = t.stock_symbol AND s.user_id = t.user_id
                 WHERE s.user_id = ?
                   AND s.symbol IS NOT NULL AND s.symbol != ''
-                GROUP BY s.id, s.symbol, s.currency, s.yf_ticker
+                                GROUP BY s.id, s.symbol, s.currency, s.yf_ticker, s.pe_ratio
                 HAVING COALESCE(
                         SUM(CASE WHEN t.txn_type = 'Buy'  THEN t.shares ELSE 0 END) -
                         SUM(CASE WHEN t.txn_type = 'Sell' THEN t.shares ELSE 0 END),
@@ -344,7 +348,7 @@ def update_all_prices(
         else:
             cur.execute(
                 """
-                SELECT s.id, s.symbol, s.currency, s.yf_ticker, 0 AS net_shares
+                SELECT s.id, s.symbol, s.currency, s.yf_ticker, s.pe_ratio, 0 AS net_shares
                 FROM stocks s
                 WHERE s.user_id = ?
                   AND s.symbol IS NOT NULL AND s.symbol != ''
@@ -356,12 +360,8 @@ def update_all_prices(
         result.stocks_found = len(stocks)
         logger.info("Price updater: found %d stocks to update", len(stocks))
 
-        # Ensure additive columns exist across SQLite/PostgreSQL
-        add_column_if_missing("stocks", "pe_ratio", "REAL")
-        add_column_if_missing("stocks", "previous_close", "REAL")
-
         # ── Fetch & write prices ─────────────────────────────────────
-        for stock_id, symbol, currency, stored_yf_ticker, _ in stocks:
+        for stock_id, symbol, currency, stored_yf_ticker, existing_pe_ratio, _ in stocks:
             try:
                 # Prefer stored yf_ticker if available, else derive from symbol+currency
                 yahoo_sym = stored_yf_ticker if stored_yf_ticker else _yahoo_symbol(symbol, currency)
@@ -371,7 +371,11 @@ def update_all_prices(
                 if cached_data is not None:
                     price = cached_data["price"]
                     previous_close = cached_data["previous_close"]
-                    pe_ratio = cached_data["pe_ratio"]
+                    pe_ratio = (
+                        cached_data.get("pe_ratio")
+                        if cached_data.get("pe_ratio") is not None
+                        else existing_pe_ratio
+                    )
                 else:
                     ticker = yf.Ticker(yahoo_sym)
 
@@ -395,15 +399,16 @@ def update_all_prices(
                     if len(closes) >= 2:
                         previous_close = _normalise_kwd_price(float(closes.iloc[-2]), currency)
 
-                    # Fetch P/E ratio from ticker info
-                    pe_ratio = None
-                    try:
-                        info = ticker.info
-                        pe_val = info.get("trailingPE") or info.get("forwardPE")
-                        if pe_val is not None:
-                            pe_ratio = round(float(pe_val), 2)
-                    except Exception as pe_exc:
-                        logger.debug("P/E fetch failed for %s: %s", yahoo_sym, pe_exc)
+                    # Keep stored P/E when available; fetch only when missing.
+                    pe_ratio = existing_pe_ratio
+                    if pe_ratio is None:
+                        try:
+                            info = ticker.info
+                            pe_val = info.get("trailingPE") or info.get("forwardPE")
+                            if pe_val is not None:
+                                pe_ratio = round(float(pe_val), 2)
+                        except Exception as pe_exc:
+                            logger.debug("P/E fetch failed for %s: %s", yahoo_sym, pe_exc)
 
                     # Cache result for 5 minutes (TTL set on price_cache instance)
                     set_cached(price_cache, yahoo_sym, {
@@ -424,7 +429,6 @@ def update_all_prices(
                     """,
                     (round(price, 6), int(time.time()), pe_ratio, previous_close, stock_id, user_id),
                 )
-                conn.commit()
 
                 result.updated += 1
                 result.details.append({
@@ -440,6 +444,8 @@ def update_all_prices(
                 result.failed += 1
                 result.errors.append({"symbol": symbol, "error": str(exc)})
                 logger.warning("❌ %s: %s", symbol, exc)
+
+        conn.commit()
 
     finally:
         conn.close()

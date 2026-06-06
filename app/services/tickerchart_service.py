@@ -90,6 +90,9 @@ _quotes_snapshot_cache: dict[str, object] = {
     "mtime": None,
     "expires": 0.0,
 }
+_factset_eps_cache: dict[tuple[str, str], dict[str, object]] = {}
+_FACTSET_EPS_TTL_SEC = 6 * 3600.0
+_FACTSET_EPS_MISS_TTL_SEC = 300.0
 
 # L3 signal cache stores the Kuwait market tier classification per symbol.
 _KSE_MARKET_TIER_CACHE_DIR = Path(__file__).resolve().parents[2] / "cache" / "l3_signals"
@@ -312,6 +315,147 @@ async def resolve_company_id(base_symbol: str, market_abb: str) -> Optional[int]
 
     mapping = await _get_company_map()
     return mapping.get((base, market))
+
+
+def _resolve_company_id_sync(base_symbol: str, market_abb: str) -> Optional[int]:
+    """Resolve company id without requiring an async context."""
+    base = (base_symbol or "").strip().upper()
+    market = (market_abb or "").strip().upper()
+    if not base or not market:
+        return None
+
+    now = time.time()
+    cached_entries = _company_id_cache.get("entries")
+    if not isinstance(cached_entries, dict) or float(_company_id_cache.get("expires", 0.0)) <= now:
+        entries = _load_company_map_from_disk()
+        _company_id_cache["entries"] = entries
+        _company_id_cache["expires"] = now + (12 * 3600 if entries else 300)
+        cached_entries = entries
+
+    if not isinstance(cached_entries, dict):
+        return None
+
+    company_id = cached_entries.get((base, market))
+    try:
+        return int(company_id) if company_id is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _extract_latest_factset_eps(payload: Any) -> Optional[float]:
+    """Extract latest positive EPS value from FactSet payload shapes."""
+    if isinstance(payload, dict):
+        best_dt: Optional[date] = None
+        best_val: Optional[float] = None
+
+        for raw_dt, raw_val in payload.items():
+            val = _coerce_float(raw_val)
+            if val is None or val <= 0:
+                continue
+
+            dt: Optional[date] = None
+            try:
+                dt = datetime.fromisoformat(str(raw_dt)).date()
+            except (TypeError, ValueError):
+                dt = None
+
+            if best_val is None:
+                best_val = val
+                best_dt = dt
+                continue
+
+            if dt is not None and (best_dt is None or dt > best_dt):
+                best_val = val
+                best_dt = dt
+
+        return best_val
+
+    if isinstance(payload, list):
+        # Defensive parser for list/object payload variants.
+        best_dt: Optional[date] = None
+        best_val: Optional[float] = None
+        for row in payload:
+            if not isinstance(row, dict):
+                continue
+            fields = row.get("fields")
+            if not isinstance(fields, dict):
+                continue
+            val = _coerce_float(fields.get("ff_eps_basic"))
+            if val is None or val <= 0:
+                continue
+
+            dt: Optional[date] = None
+            raw_dt = row.get("date")
+            try:
+                dt = datetime.fromisoformat(str(raw_dt)).date()
+            except (TypeError, ValueError):
+                dt = None
+
+            if best_val is None:
+                best_val = val
+                best_dt = dt
+                continue
+
+            if dt is not None and (best_dt is None or dt > best_dt):
+                best_val = val
+                best_dt = dt
+
+        return best_val
+
+    return None
+
+
+def fetch_factset_ltm_eps(base_symbol: str, market_abb: str, period: int = 25) -> Optional[float]:
+    """Fetch latest TTM EPS from TickerChart FactSet feed through cacheserver."""
+    sym = (base_symbol or "").strip().upper()
+    mkt = (market_abb or "").strip().upper()
+    if not sym or not mkt:
+        return None
+
+    cache_key = (sym, mkt)
+    now = time.time()
+    cached = _factset_eps_cache.get(cache_key)
+    if isinstance(cached, dict) and float(cached.get("expires", 0.0)) > now:
+        val = _coerce_float(cached.get("value"))
+        return val if val is not None and val > 0 else None
+
+    company_id = _resolve_company_id_sync(sym, mkt)
+    if company_id is None:
+        _factset_eps_cache[cache_key] = {"value": None, "expires": now + _FACTSET_EPS_MISS_TTL_SEC}
+        return None
+
+    path = f"/factset-feed/financial-field/company/{company_id}"
+    query_pairs = [
+        ("field", "ff_eps_basic"),
+        ("period-type", "ltm"),
+        ("period", str(max(1, int(period)))),
+    ] + _common_params()
+    final_qs, _ = _sign(path, query_pairs)
+
+    factset_url = f"https://factset.tickerchart.net{path}?{final_qs}"
+    cache_url = "https://cacheserver.tickerchart.net/"
+
+    eps_val: Optional[float] = None
+    try:
+        resp = httpx.get(
+            cache_url,
+            params={"url": factset_url},
+            headers={
+                "Accept": "application/json, text/json, text/x-json, text/javascript, application/xml, text/xml",
+                "User-Agent": _USER_AGENT,
+            },
+            timeout=20.0,
+        )
+        resp.raise_for_status()
+        eps_val = _extract_latest_factset_eps(resp.json())
+    except Exception as exc:
+        logger.debug("FactSet LTM EPS fetch failed for %s.%s: %s", sym, mkt, exc)
+
+    _factset_eps_cache[cache_key] = {
+        "value": eps_val,
+        "expires": now + (_FACTSET_EPS_TTL_SEC if eps_val is not None else _FACTSET_EPS_MISS_TTL_SEC),
+    }
+    return eps_val
 
 
 def _extract_indicator_values(payload: Any) -> list[float]:

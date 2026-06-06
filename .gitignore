@@ -127,6 +127,9 @@ reset_ckpt.py
 # ─────────────────────────────────────────────
 # Eagle Eye diagnostics / one-off outputs
 # ─────────────────────────────────────────────
+_tmp_*
+*_ml_diagnostic_*.txt
+technical_source_mapping_*.md
 _tmp_*.py
 .tmp_*.py
 _current_eagle_eye_core_snapshot_*.txt
