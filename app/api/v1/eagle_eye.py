@@ -878,7 +878,9 @@ def _run_analysis(ticker: str) -> Optional[dict]:
         from app.services.eagle_eye.store import load_ohlcv, load_rating
 
         cached_row = load_rating(ticker)
-        if cached_row and cached_row.get("computed_at") == date.today().isoformat():
+        cached_at = cached_row.get("computed_at") if cached_row else None
+        cached_date = str(cached_at)[:10] if cached_at else None
+        if cached_row and cached_date == date.today().isoformat():
             ohlcv_cached = load_ohlcv(ticker)
             if ohlcv_cached is None or len(ohlcv_cached) == 0:
                 raise ValueError(f"Missing cached OHLCV for {ticker}")
