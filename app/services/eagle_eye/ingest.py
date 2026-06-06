@@ -613,7 +613,6 @@ def compute_all_ratings(
     from app.services.eagle_eye.scoring.recommendation_engine import generate_recommendation
     from app.services.eagle_eye import stage_classifier as stage_classifier_module
     from app.services.eagle_eye.stage_classifier import classify_stage_with_confidence
-    from app.core.database import exec_sql
     from app.services.eagle_eye.store import (
         ensure_tables, list_tickers_with_ohlcv, load_ohlcv,
         log_compute, save_rating,
@@ -644,8 +643,9 @@ def compute_all_ratings(
         f"run_id={run_id} run_started={run_started} code={code_fingerprint}",
     )
 
-    # Full refresh prevents stale rows from previous taxonomy/version runs.
-    exec_sql("DELETE FROM ee_ratings_cache", ())
+    # Do not clear ee_ratings_cache up front. If a run is interrupted
+    # (dev reload, process restart), preserving prior rows avoids collapsing
+    # the scanner to a partial universe.
     tickers = list_tickers_with_ohlcv()
     today_str = run_date
 
@@ -877,6 +877,12 @@ def compute_all_ratings(
                 "what_invalidates": explanation.get("what_invalidates", []),
                 "veto_reasons": recommendation_payload.get("veto_reasons", []),
                 "data_quality_score": recommendation_payload.get("data_quality_score"),
+                "continue_rising": recommendation_payload.get("continue_rising", False),
+                "continue_rising_badge": recommendation_payload.get("continue_rising_badge"),
+                "continue_rising_label": recommendation_payload.get("continue_rising_label"),
+                "continue_rising_reason": recommendation_payload.get("continue_rising_reason"),
+                "continue_rising_exhaustion_count": recommendation_payload.get("continue_rising_exhaustion_count", 0),
+                "continue_rising_exhaustion_signals": recommendation_payload.get("continue_rising_exhaustion_signals", []),
                 "volume_context": volume_context,
                 "days_of_history": len(df),
                 "computed_at": run_started,

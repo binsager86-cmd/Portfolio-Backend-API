@@ -542,37 +542,59 @@ def load_all_ratings(
     min_confidence and limit are pushed to SQL so the DB does the work
     instead of loading every row and filtering in Python.
 
-    Fast path for the scanner endpoint.
+    By default, this returns the latest row per ticker regardless of date.
+    This keeps the scanner populated even if an in-progress recompute is
+    interrupted before all tickers are refreshed. When *computed_at* is
+    provided, rows are pinned to that date for explicit historical/day views.
     """
     from app.core.database import query_all
 
-    target_date = computed_at or date.today().isoformat()
-    if "T" in target_date:
-        target_date = target_date[:10]
-
-    rows = query_all(
-        """
-         SELECT ticker, name_en, sector, market_tier, stage, rating, confidence, ml_score, thesis,
+    sql = """
+           SELECT ticker, name_en, sector, market_tier, stage, rating, confidence, ml_score, thesis,
                entry_primary, stop_loss, tp1, last_price, computed_at, computed_date,
-               volume_context_json
+               volume_context_json, indicators_json
         FROM   ee_ratings_cache
         WHERE  confidence >= ?
+    """
+    params: List[object] = [float(min_confidence)]
+
+    if computed_at:
+        target_date = computed_at
+        if "T" in target_date:
+            target_date = target_date[:10]
+        sql += """
           AND  (computed_date = ? OR computed_at = ? OR computed_at LIKE ?)
+        """
+        params.extend([target_date, target_date, f"{target_date}%"])
+
+    sql += """
         ORDER  BY confidence DESC
         LIMIT  ?
-        """,
-        (float(min_confidence), target_date, target_date, f"{target_date}%", int(limit)),
-    )
+    """
+    params.append(int(limit))
+
+    rows = query_all(sql, tuple(params))
     if not rows:
         return []
     result = []
     for r in rows:
         d = dict(r.items())
         vc_raw = d.pop("volume_context_json", None)
+        indicators_raw = d.pop("indicators_json", None)
         try:
             d["volume_context"] = json.loads(vc_raw) if vc_raw else {}
         except Exception:
             d["volume_context"] = {}
+        indicators = {}
+        if indicators_raw:
+            try:
+                indicators = json.loads(indicators_raw)
+            except Exception:
+                indicators = {}
+        if isinstance(indicators, dict):
+            from app.services.eagle_eye.scoring.recommendation_engine import compute_continue_rising
+
+            d.update(compute_continue_rising(indicators, str(d.get("stage") or "")))
         result.append(d)
     return result
 
@@ -603,6 +625,11 @@ def load_rating(ticker: str) -> Optional[dict]:
                 d[key] = json.loads(d[key])
             except Exception:
                 d[key] = []
+    indicators = d.get("indicators_json")
+    if isinstance(indicators, dict):
+        from app.services.eagle_eye.scoring.recommendation_engine import compute_continue_rising
+
+        d.update(compute_continue_rising(indicators, str(d.get("stage") or "")))
     return d
 
 

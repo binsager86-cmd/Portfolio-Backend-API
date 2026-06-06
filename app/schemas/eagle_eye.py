@@ -54,6 +54,12 @@ class RatedStock(BaseModel):
     pe_ratio: Optional[float] = None
     computed_at: Optional[str] = None   # ISO date string
     volume_context: Optional[VolumeContextSummary] = None
+    continue_rising: bool = False
+    continue_rising_badge: Optional[str] = None
+    continue_rising_label: Optional[str] = None
+    continue_rising_reason: Optional[str] = None
+    continue_rising_exhaustion_count: int = 0
+    continue_rising_exhaustion_signals: List[str] = []
 
 
 class ScannerResponse(BaseModel):
@@ -81,6 +87,12 @@ class FullStockAnalysis(BaseModel):
     rating: str
     confidence: float
     thesis: str
+    continue_rising: bool = False
+    continue_rising_badge: Optional[str] = None
+    continue_rising_label: Optional[str] = None
+    continue_rising_reason: Optional[str] = None
+    continue_rising_exhaustion_count: int = 0
+    continue_rising_exhaustion_signals: List[str] = []
 
     # SR levels
     supports: List[SupportResistanceLevel] = []
