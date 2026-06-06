@@ -150,6 +150,16 @@ def geometry_score(ind: Mapping[str, object]) -> float:
 
 def risk_reward_score(ind: Mapping[str, object]) -> float:
     rr = _indicator(ind, "risk_reward_ratio", 0.0)
+
+    dist_res = _indicator(ind, "distance_to_major_resistance", 0.0)
+    advancing = (
+        _indicator(ind, "stock_close_vs_50sma", 0.0) > 0
+        and _indicator(ind, "plus_di", 0.0) > _indicator(ind, "minus_di", 0.0)
+        and _indicator(ind, "stock_50sma_slope_20d", 0.0) > 0
+    )
+    if dist_res <= 0.0:
+        rr = max(rr, 3.0) if advancing else min(rr, 1.0)
+
     if rr >= 3.0:
         score = 90.0
     elif rr >= 2.0:

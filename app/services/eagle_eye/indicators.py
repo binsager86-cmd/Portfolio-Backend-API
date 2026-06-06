@@ -1047,13 +1047,26 @@ def compute_all_indicators(
 
     out['price_extension_from_50sma'] = out['stock_close_vs_50sma']
     out['atr_stop_distance'] = 1.5 * out['atr_14']
-    out['risk_reward_ratio'] = (
+    rr_raw = (
         out['distance_to_major_resistance']
         / (out['atr_stop_distance'] / df['close'].replace(0, np.nan)).replace(0, np.nan)
     )
-    out['risk_reward_ratio'] = (
-        out['risk_reward_ratio'].replace([np.inf, -np.inf], np.nan).fillna(0.0).clip(0.0, 10.0)
+    rr_base = rr_raw.replace([np.inf, -np.inf], np.nan).fillna(0.0)
+
+    # Fresh-high handling: when there is no overhead resistance, do not force
+    # strong breakouts to 0 R:R. Only assign strong upside when trend direction
+    # confirms an advancing setup.
+    no_overhead = out['distance_to_major_resistance'] <= 1e-9
+    advancing = (
+        (out['stock_close_vs_50sma'] > 0)
+        & (out['plus_di'] > out['minus_di'])
+        & (out['stock_50sma_slope_20d'] > 0)
     )
+
+    rr_base = rr_base.where(~(no_overhead & advancing), 3.0)
+    rr_base = rr_base.where(~(no_overhead & ~advancing), 1.0)
+
+    out['risk_reward_ratio'] = rr_base.clip(0.0, 10.0)
     out['_risk_reward_ratio'] = out['risk_reward_ratio']
 
     # Consolidate again before data-quality and flow-inflection tail features.
