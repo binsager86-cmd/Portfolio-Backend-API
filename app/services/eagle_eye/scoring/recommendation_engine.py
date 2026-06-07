@@ -149,9 +149,6 @@ def generate_recommendation(
     if stage == "DISTRIBUTION":
         veto_reasons.append("Stock in distribution/topping")
 
-    if _safe_float(ind.get("market_close_vs_200sma"), 0.0) < -0.05 and stage != "EARLY_MARKUP":
-        veto_reasons.append("Broad market bearish (below 200 SMA)")
-
     buy_allowed = len(veto_reasons) == 0
 
     continue_rising = compute_continue_rising(ind, stage)
