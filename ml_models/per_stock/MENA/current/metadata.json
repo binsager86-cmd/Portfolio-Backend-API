@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.2289991577802247,
-  "mae": 3.9509860234154566,
-  "rmse": 4.90228367202569,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": -0.12034132599752845,
+  "mae": 23.74946887112477,
+  "rmse": 27.19912885236073,
+  "auc": -0.12034132599752845,
+  "mean_auc": -0.12034132599752845,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 304,
+  "n_train_events": 467,
   "train_date_range": {
-    "start": "2024-04-30",
-    "end": "2026-04-20"
+    "start": "2024-05-07",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_0.2290",
+  "rejected_reason": "spearman_below_threshold_-0.1203",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.6365535589166457,
-      "mae": 2.531100733534324,
-      "rmse": 3.1006951148831625,
+      "spearman": -0.6403029153701278,
+      "mae": 22.31840589528048,
+      "rmse": 26.841870670744967,
       "fold": 1,
-      "train_size": 196,
-      "test_size": 17,
-      "best_iteration": 78
+      "train_size": 280,
+      "test_size": 46,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.3250593287417371,
-      "mae": 6.1177438323504365,
-      "rmse": 6.362796443952837,
+      "spearman": -0.42487664620035137,
+      "mae": 17.256315701656217,
+      "rmse": 19.437308854923238,
       "fold": 2,
-      "train_size": 213,
-      "test_size": 20,
-      "best_iteration": 34
+      "train_size": 326,
+      "test_size": 47,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.9984917035155826,
-      "mae": 3.204113504361609,
-      "rmse": 5.243359457241072,
+      "spearman": -0.16743895288617008,
+      "mae": 24.9334147349141,
+      "rmse": 29.87956810799176,
+      "fold": 3,
+      "train_size": 373,
+      "test_size": 47,
+      "best_iteration": 2
+    },
+    {
+      "spearman": 0.007936570425498158,
+      "mae": 23.84856395381075,
+      "rmse": 26.849946747185708,
+      "fold": 4,
+      "train_size": 420,
+      "test_size": 23,
+      "best_iteration": 74
+    },
+    {
+      "spearman": 0.6229753140435089,
+      "mae": 30.390644069962292,
+      "rmse": 32.98694988095796,
       "fold": 5,
-      "train_size": 254,
-      "test_size": 50,
-      "best_iteration": 9
+      "train_size": 443,
+      "test_size": 24,
+      "best_iteration": 7
     }
   ],
   "tier": "per_stock",
   "identifier": "MENA",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

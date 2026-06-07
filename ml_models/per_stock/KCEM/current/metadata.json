@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.5071540601954566,
-  "mae": 8.494514040015428,
-  "rmse": 10.893326071319938,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.22553595630089487,
+  "mae": 26.76821051080434,
+  "rmse": 30.669491666057013,
+  "auc": 0.22553595630089487,
+  "mean_auc": 0.22553595630089487,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 732,
+  "n_train_events": 672,
   "train_date_range": {
-    "start": "2023-04-26",
-    "end": "2026-04-22"
+    "start": "2023-06-13",
+    "end": "2026-03-29"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.2255",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.0,
-      "mae": 17.75445572300391,
-      "rmse": 19.397743371957386,
+      "spearman": -0.7201050268400382,
+      "mae": 38.11639681508253,
+      "rmse": 41.333958639868314,
       "fold": 1,
-      "train_size": 475,
-      "test_size": 75,
+      "train_size": 403,
+      "test_size": 67,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.3050110550590761,
+      "mae": 26.48201617529764,
+      "rmse": 31.72349022320096,
+      "fold": 2,
+      "train_size": 470,
+      "test_size": 67,
+      "best_iteration": 89
+    },
+    {
+      "spearman": 0.6658214189535908,
+      "mae": 20.061095451826642,
+      "rmse": 24.309241457965406,
+      "fold": 3,
+      "train_size": 537,
+      "test_size": 67,
+      "best_iteration": 107
+    },
+    {
+      "spearman": 0.21798304215406852,
+      "mae": 35.8908212712572,
+      "rmse": 38.87186375310226,
+      "fold": 4,
+      "train_size": 604,
+      "test_size": 34,
       "best_iteration": 5
     },
     {
-      "spearman": 0.7843145094021856,
-      "mae": 5.7144771413692945,
-      "rmse": 8.03922175528254,
-      "fold": 3,
-      "train_size": 578,
-      "test_size": 95,
-      "best_iteration": 29
-    },
-    {
-      "spearman": 0.7371476711841841,
-      "mae": 2.0146092556730784,
-      "rmse": 5.243013086719888,
+      "spearman": 0.6589692921777771,
+      "mae": 13.290722840557692,
+      "rmse": 17.1089042561481,
       "fold": 5,
-      "train_size": 687,
-      "test_size": 45,
-      "best_iteration": 123
+      "train_size": 638,
+      "test_size": 34,
+      "best_iteration": 17
     }
   ],
   "tier": "per_stock",
   "identifier": "KCEM",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

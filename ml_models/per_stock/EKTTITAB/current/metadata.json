@@ -1,57 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.4636308184665035,
-  "mae": 31.169020956848225,
-  "rmse": 33.84842282504332,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": -0.19507993808210075,
+  "mae": 31.636948409804926,
+  "rmse": 34.6924416529609,
+  "auc": -0.19507993808210075,
+  "mean_auc": -0.19507993808210075,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 445,
+  "n_train_events": 599,
   "train_date_range": {
-    "start": "2023-04-30",
-    "end": "2026-04-26"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_-0.1951",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.604292068173073,
-      "mae": 66.65520344988299,
-      "rmse": 67.26567281963797,
+      "spearman": -0.1795824703604695,
+      "mae": 38.5363842451176,
+      "rmse": 41.83164281630156,
       "fold": 1,
-      "train_size": 169,
-      "test_size": 175,
-      "best_iteration": 10
+      "train_size": 359,
+      "test_size": 60,
+      "best_iteration": 2
     },
     {
-      "spearman": 0.2749325479732263,
-      "mae": 23.628005748372196,
-      "rmse": 30.411826389873006,
+      "spearman": 0.1661189308508088,
+      "mae": 32.200019467127994,
+      "rmse": 36.12420507045555,
       "fold": 2,
-      "train_size": 344,
-      "test_size": 49,
+      "train_size": 419,
+      "test_size": 60,
       "best_iteration": 1
     },
     {
-      "spearman": 0.7776379194790097,
-      "mae": 28.644468507696637,
-      "rmse": 30.890437208190182,
+      "spearman": -0.6407564082751398,
+      "mae": 42.27611580759985,
+      "rmse": 43.848993152675604,
       "fold": 3,
-      "train_size": 393,
-      "test_size": 25,
-      "best_iteration": 345
+      "train_size": 479,
+      "test_size": 60,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.1976607382407049,
-      "mae": 5.748406121441079,
-      "rmse": 6.825754882472127,
+      "spearman": 0.15784545346624176,
+      "mae": 22.54914846444603,
+      "rmse": 25.45614731004861,
+      "fold": 4,
+      "train_size": 539,
+      "test_size": 30,
+      "best_iteration": 1
+    },
+    {
+      "spearman": -0.4790251960919451,
+      "mae": 22.623074064733185,
+      "rmse": 26.20121991532319,
       "fold": 5,
-      "train_size": 424,
-      "test_size": 21,
-      "best_iteration": 42
+      "train_size": 569,
+      "test_size": 30,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "EKTTITAB",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

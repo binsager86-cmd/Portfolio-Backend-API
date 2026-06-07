@@ -1,57 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 1.0,
-  "mae": 21.126658229733966,
-  "rmse": 23.072664981045936,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.17429808691204357,
+  "mae": 33.47397287814009,
+  "rmse": 35.613809443517006,
+  "auc": 0.17429808691204357,
+  "mean_auc": 0.17429808691204357,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 315,
+  "n_train_events": 362,
   "train_date_range": {
-    "start": "2024-08-22",
-    "end": "2026-04-05"
+    "start": "2024-07-01",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.1743",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": NaN,
-      "mae": 29.452075421315307,
-      "rmse": 30.780093690169565,
+      "spearman": 0.8394039005805982,
+      "mae": 18.859949761422808,
+      "rmse": 22.14755633584705,
       "fold": 1,
-      "train_size": 94,
-      "test_size": 53,
-      "best_iteration": 1
+      "train_size": 217,
+      "test_size": 36,
+      "best_iteration": 90
     },
     {
-      "spearman": NaN,
-      "mae": 24.014475008413758,
-      "rmse": 27.225032793945257,
+      "spearman": 0.4896659388795579,
+      "mae": 45.88162668806327,
+      "rmse": 47.23702615534422,
       "fold": 2,
-      "train_size": 147,
-      "test_size": 39,
-      "best_iteration": 1
+      "train_size": 253,
+      "test_size": 36,
+      "best_iteration": 3
     },
     {
-      "spearman": 1.0,
-      "mae": 9.183825191764132,
-      "rmse": 11.597258499867117,
+      "spearman": 0.3403644352378102,
+      "mae": 38.1953890723112,
+      "rmse": 40.840246779942944,
+      "fold": 3,
+      "train_size": 289,
+      "test_size": 36,
+      "best_iteration": 8
+    },
+    {
+      "spearman": -0.42198194272809053,
+      "mae": 23.769659696448805,
+      "rmse": 26.843623874488173,
       "fold": 4,
-      "train_size": 190,
-      "test_size": 122,
-      "best_iteration": 20
+      "train_size": 325,
+      "test_size": 18,
+      "best_iteration": 280
     },
     {
-      "spearman": 1.0,
-      "mae": 21.85625729744267,
-      "rmse": 22.68827494020179,
+      "spearman": -0.3759618974096578,
+      "mae": 40.66323917245438,
+      "rmse": 41.00059407196264,
       "fold": 5,
-      "train_size": 312,
-      "test_size": 3,
-      "best_iteration": 295
+      "train_size": 343,
+      "test_size": 19,
+      "best_iteration": 7
     }
   ],
   "tier": "per_stock",
   "identifier": "THURAYA",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

@@ -1,66 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.4629980996724335,
-  "mae": 11.980608708460604,
-  "rmse": 15.422063703939434,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.13340996245074016,
+  "mae": 27.208348460631186,
+  "rmse": 31.916028383469733,
+  "auc": 0.13340996245074016,
+  "mean_auc": 0.13340996245074016,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 427,
+  "n_train_events": 614,
   "train_date_range": {
-    "start": "2023-10-09",
-    "end": "2026-04-20"
+    "start": "2023-08-30",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.1334",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.7658126619621463,
-      "mae": 10.040198743183854,
-      "rmse": 15.685507163896842,
+      "spearman": 0.7356129006657289,
+      "mae": 21.136092653302978,
+      "rmse": 26.013261739877958,
       "fold": 1,
-      "train_size": 280,
-      "test_size": 42,
-      "best_iteration": 500
+      "train_size": 368,
+      "test_size": 61,
+      "best_iteration": 60
     },
     {
-      "spearman": 0.5424280402775195,
-      "mae": 5.4565021332973185,
-      "rmse": 7.161260958703714,
+      "spearman": 0.6556130437886821,
+      "mae": 15.784403480593923,
+      "rmse": 19.93172398472972,
       "fold": 2,
-      "train_size": 322,
-      "test_size": 36,
-      "best_iteration": 125
+      "train_size": 429,
+      "test_size": 62,
+      "best_iteration": 31
     },
     {
-      "spearman": -0.4850712500726659,
-      "mae": 9.086325551602597,
-      "rmse": 15.274813779147356,
+      "spearman": 0.6026020400498834,
+      "mae": 45.23447854526447,
+      "rmse": 47.9461479901101,
       "fold": 3,
-      "train_size": 358,
-      "test_size": 15,
-      "best_iteration": 84
+      "train_size": 491,
+      "test_size": 61,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.993042049238722,
-      "mae": 25.073721794728275,
-      "rmse": 27.55663855808103,
+      "spearman": -0.848956560934535,
+      "mae": 26.01890295719368,
+      "rmse": 31.621685975634993,
       "fold": 4,
-      "train_size": 373,
-      "test_size": 20,
-      "best_iteration": 88
+      "train_size": 552,
+      "test_size": 31,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.49877899695644573,
-      "mae": 10.246295319490985,
-      "rmse": 11.432098059868224,
+      "spearman": -0.4778216113160587,
+      "mae": 27.867864666800862,
+      "rmse": 34.06732222699593,
       "fold": 5,
-      "train_size": 393,
-      "test_size": 34,
-      "best_iteration": 74
+      "train_size": 583,
+      "test_size": 31,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "UNICAP",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

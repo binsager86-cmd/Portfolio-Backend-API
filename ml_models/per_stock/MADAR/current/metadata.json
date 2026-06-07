@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.3636577384039384,
-  "mae": 4.3346860533256875,
-  "rmse": 6.179375303884047,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.1584886077745108,
+  "mae": 29.09627759063544,
+  "rmse": 32.68093352738785,
+  "auc": 0.1584886077745108,
+  "mean_auc": 0.1584886077745108,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 339,
+  "n_train_events": 469,
   "train_date_range": {
-    "start": "2024-03-03",
-    "end": "2026-04-22"
+    "start": "2024-01-10",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.1585",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.0,
-      "mae": 4.782286378246646,
-      "rmse": 7.033512347546002,
+      "spearman": 0.4194950376998831,
+      "mae": 22.979639436638884,
+      "rmse": 27.032276108648247,
       "fold": 1,
-      "train_size": 247,
-      "test_size": 7,
-      "best_iteration": 87
+      "train_size": 281,
+      "test_size": 47,
+      "best_iteration": 14
     },
     {
-      "spearman": 0.7577895264801126,
-      "mae": 6.817190027064277,
-      "rmse": 7.661847171568634,
+      "spearman": -0.2438616212929171,
+      "mae": 41.87370738199172,
+      "rmse": 44.714626045431,
+      "fold": 2,
+      "train_size": 328,
+      "test_size": 47,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.3675914015956639,
+      "mae": 24.27999797760103,
+      "rmse": 29.632648401984945,
       "fold": 3,
-      "train_size": 262,
-      "test_size": 17,
-      "best_iteration": 50
+      "train_size": 375,
+      "test_size": 47,
+      "best_iteration": 183
     },
     {
-      "spearman": 0.3331836887317027,
-      "mae": 1.4045817546661377,
-      "rmse": 3.842766392537506,
+      "spearman": 0.1503090648248542,
+      "mae": 18.518769735028954,
+      "rmse": 22.867483374451457,
+      "fold": 4,
+      "train_size": 422,
+      "test_size": 23,
+      "best_iteration": 166
+    },
+    {
+      "spearman": 0.0989091560450699,
+      "mae": 37.829273421916625,
+      "rmse": 39.15763370642363,
       "fold": 5,
-      "train_size": 283,
-      "test_size": 56,
-      "best_iteration": 41
+      "train_size": 445,
+      "test_size": 24,
+      "best_iteration": 2
     }
   ],
   "tier": "per_stock",
   "identifier": "MADAR",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

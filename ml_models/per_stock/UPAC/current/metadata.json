@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.09209626959183853,
-  "mae": 25.815401065599403,
-  "rmse": 26.965998819684334,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.45612593033200877,
+  "mae": 24.445629307205884,
+  "rmse": 27.5087909167327,
+  "auc": 0.45612593033200877,
+  "mean_auc": 0.45612593033200877,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 503,
+  "n_train_events": 553,
   "train_date_range": {
-    "start": "2023-06-15",
-    "end": "2026-04-22"
+    "start": "2023-07-31",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_0.0921",
+  "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": NaN,
-      "mae": 55.893087131651086,
-      "rmse": 56.25993324949963,
+      "spearman": 0.7356854782851909,
+      "mae": 34.381970296991874,
+      "rmse": 37.21311798501234,
+      "fold": 1,
+      "train_size": 331,
+      "test_size": 56,
+      "best_iteration": 52
+    },
+    {
+      "spearman": -0.3685574624782713,
+      "mae": 21.43258004938867,
+      "rmse": 27.11509456434682,
       "fold": 2,
-      "train_size": 237,
-      "test_size": 54,
-      "best_iteration": 1
+      "train_size": 387,
+      "test_size": 55,
+      "best_iteration": 7
     },
     {
-      "spearman": -0.3157223906328063,
-      "mae": 1.5382458885682142,
-      "rmse": 4.290901406537319,
+      "spearman": 0.4538612221096367,
+      "mae": 24.092797301078292,
+      "rmse": 26.343505143495516,
       "fold": 3,
-      "train_size": 291,
-      "test_size": 90,
-      "best_iteration": 153
+      "train_size": 442,
+      "test_size": 55,
+      "best_iteration": 79
     },
     {
-      "spearman": 0.4999149298164834,
-      "mae": 20.014870176578906,
-      "rmse": 20.347161803016046,
+      "spearman": 0.8123541600213126,
+      "mae": 30.221773829403485,
+      "rmse": 32.03927184109926,
+      "fold": 4,
+      "train_size": 497,
+      "test_size": 28,
+      "best_iteration": 17
+    },
+    {
+      "spearman": 0.6472862537221752,
+      "mae": 12.099025059167106,
+      "rmse": 14.832965049709532,
       "fold": 5,
-      "train_size": 386,
-      "test_size": 117,
-      "best_iteration": 1
+      "train_size": 525,
+      "test_size": 28,
+      "best_iteration": 86
     }
   ],
   "tier": "per_stock",
   "identifier": "UPAC",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

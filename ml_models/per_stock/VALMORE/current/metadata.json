@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.6530758439822518,
-  "mae": 4.949061437628621,
-  "rmse": 5.595557444186199,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.5105186943940381,
+  "mae": 22.042084648001143,
+  "rmse": 25.449791549792007,
+  "auc": 0.5105186943940381,
+  "mean_auc": 0.5105186943940381,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 495,
+  "n_train_events": 671,
   "train_date_range": {
-    "start": "2023-08-02",
-    "end": "2026-04-26"
+    "start": "2023-05-28",
+    "end": "2026-03-30"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.8923966042372543,
-      "mae": 8.318197485368216,
-      "rmse": 9.051431627374596,
-      "fold": 2,
-      "train_size": 326,
-      "test_size": 83,
+      "spearman": 0.5337119158105671,
+      "mae": 29.731631998488627,
+      "rmse": 30.947547133408026,
+      "fold": 1,
+      "train_size": 402,
+      "test_size": 67,
       "best_iteration": 1
     },
     {
-      "spearman": 0.5242592200329815,
-      "mae": 4.361337956429556,
-      "rmse": 4.408097641562293,
-      "fold": 3,
-      "train_size": 409,
-      "test_size": 44,
-      "best_iteration": 2
+      "spearman": 0.24039960064735602,
+      "mae": 36.44369979164083,
+      "rmse": 42.109304100369634,
+      "fold": 2,
+      "train_size": 469,
+      "test_size": 67,
+      "best_iteration": 10
     },
     {
-      "spearman": 0.5425717076765194,
-      "mae": 2.1676488710880917,
-      "rmse": 3.327143063621711,
+      "spearman": 0.7673203468838801,
+      "mae": 15.945118177638793,
+      "rmse": 19.44462974935095,
+      "fold": 3,
+      "train_size": 536,
+      "test_size": 67,
+      "best_iteration": 150
+    },
+    {
+      "spearman": 0.5191131100180844,
+      "mae": 9.282048983862786,
+      "rmse": 11.206709836094047,
+      "fold": 4,
+      "train_size": 603,
+      "test_size": 34,
+      "best_iteration": 47
+    },
+    {
+      "spearman": 0.4920484986103028,
+      "mae": 18.807924288374682,
+      "rmse": 23.540766929737366,
       "fold": 5,
-      "train_size": 469,
-      "test_size": 26,
-      "best_iteration": 19
+      "train_size": 637,
+      "test_size": 34,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "VALMORE",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

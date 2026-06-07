@@ -1,30 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.6172133998483676,
-  "mae": 22.265783205109255,
-  "rmse": 22.92107017494872,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.49632088440220173,
+  "mae": 32.54318422096888,
+  "rmse": 35.625253635778634,
+  "auc": 0.49632088440220173,
+  "mean_auc": 0.49632088440220173,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 171,
+  "n_train_events": 338,
   "train_date_range": {
-    "start": "2023-07-12",
-    "end": "2026-04-20"
+    "start": "2023-08-02",
+    "end": "2026-03-18"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.6172133998483676,
-      "mae": 22.265783205109255,
-      "rmse": 22.92107017494872,
+      "spearman": 0.503607224664593,
+      "mae": 14.138647204389004,
+      "rmse": 20.86266888737541,
+      "fold": 1,
+      "train_size": 202,
+      "test_size": 34,
+      "best_iteration": 44
+    },
+    {
+      "spearman": 0.7249956798621315,
+      "mae": 53.07344626475122,
+      "rmse": 54.31383966467985,
+      "fold": 2,
+      "train_size": 236,
+      "test_size": 34,
+      "best_iteration": 4
+    },
+    {
+      "spearman": 0.09637648157559826,
+      "mae": 33.51650162977521,
+      "rmse": 36.76333986765146,
       "fold": 3,
-      "train_size": 124,
-      "test_size": 39,
+      "train_size": 270,
+      "test_size": 34,
       "best_iteration": 1
+    },
+    {
+      "spearman": 0.24375685575797865,
+      "mae": 31.339220616331325,
+      "rmse": 33.676831351110394,
+      "fold": 4,
+      "train_size": 304,
+      "test_size": 17,
+      "best_iteration": 2
+    },
+    {
+      "spearman": 0.9128681801507074,
+      "mae": 30.648105389597685,
+      "rmse": 32.50958840807607,
+      "fold": 5,
+      "train_size": 321,
+      "test_size": 17,
+      "best_iteration": 3
     }
   ],
   "tier": "per_stock",
   "identifier": "KCIN",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

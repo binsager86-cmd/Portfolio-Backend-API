@@ -1,39 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.38941601469018955,
-  "mae": 3.4242155104637924,
-  "rmse": 3.787368284663231,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.3622433624925117,
+  "mae": 29.595104442810317,
+  "rmse": 33.01560054710875,
+  "auc": 0.3622433624925117,
+  "mean_auc": 0.3622433624925117,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 516,
+  "n_train_events": 630,
   "train_date_range": {
-    "start": "2023-07-23",
-    "end": "2026-04-01"
+    "start": "2023-07-17",
+    "end": "2026-03-30"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.9965014770128385,
-      "mae": 1.3873083690428865,
-      "rmse": 1.5809145157048154,
-      "fold": 3,
-      "train_size": 324,
-      "test_size": 133,
-      "best_iteration": 185
+      "spearman": -0.34626790064447244,
+      "mae": 30.75320455227947,
+      "rmse": 33.73201260527208,
+      "fold": 1,
+      "train_size": 378,
+      "test_size": 63,
+      "best_iteration": 1
     },
     {
-      "spearman": -0.21766944763245946,
-      "mae": 5.461122651884698,
-      "rmse": 5.993822053621646,
-      "fold": 5,
-      "train_size": 468,
-      "test_size": 48,
+      "spearman": 0.7153080026475552,
+      "mae": 29.365428601553127,
+      "rmse": 33.06304764137739,
+      "fold": 2,
+      "train_size": 441,
+      "test_size": 63,
       "best_iteration": 1
+    },
+    {
+      "spearman": 0.3996517354278141,
+      "mae": 40.35359167854276,
+      "rmse": 44.2596827724515,
+      "fold": 3,
+      "train_size": 504,
+      "test_size": 63,
+      "best_iteration": 35
+    },
+    {
+      "spearman": 0.5481496448156568,
+      "mae": 17.040393003120734,
+      "rmse": 20.163677762855183,
+      "fold": 4,
+      "train_size": 567,
+      "test_size": 31,
+      "best_iteration": 24
+    },
+    {
+      "spearman": 0.4943753302160051,
+      "mae": 30.4629043785555,
+      "rmse": 33.859581953587586,
+      "fold": 5,
+      "train_size": 598,
+      "test_size": 32,
+      "best_iteration": 2
     }
   ],
   "tier": "per_stock",
   "identifier": "CATTL",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

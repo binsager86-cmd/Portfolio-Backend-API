@@ -1,57 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.32297789036583413,
-  "mae": 13.23390915848955,
-  "rmse": 14.410383823769319,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.11484676687694897,
+  "mae": 30.495132162137185,
+  "rmse": 33.31237082270367,
+  "auc": 0.11484676687694897,
+  "mean_auc": 0.11484676687694897,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 560,
+  "n_train_events": 664,
   "train_date_range": {
-    "start": "2023-06-18",
-    "end": "2026-04-16"
+    "start": "2023-07-04",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.1148",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.664640684561822,
-      "mae": 22.005981529464396,
-      "rmse": 22.17874967521689,
+      "spearman": 0.452897754789498,
+      "mae": 23.226165897390032,
+      "rmse": 28.244289931218397,
       "fold": 1,
-      "train_size": 387,
-      "test_size": 55,
-      "best_iteration": 10
+      "train_size": 398,
+      "test_size": 66,
+      "best_iteration": 4
     },
     {
-      "spearman": 0.7896438282514466,
-      "mae": 12.102853256273793,
-      "rmse": 12.475764978568405,
+      "spearman": -0.6575373872331856,
+      "mae": 30.18497443775884,
+      "rmse": 34.013502490857284,
       "fold": 2,
-      "train_size": 442,
-      "test_size": 31,
-      "best_iteration": 28
+      "train_size": 464,
+      "test_size": 67,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.8249918573752774,
-      "mae": 3.6797309013318293,
-      "rmse": 7.32385819004638,
+      "spearman": -0.23589941354923646,
+      "mae": 39.143540400954556,
+      "rmse": 41.010626598531836,
       "fold": 3,
-      "train_size": 473,
-      "test_size": 28,
-      "best_iteration": 252
+      "train_size": 531,
+      "test_size": 66,
+      "best_iteration": 1
     },
     {
-      "spearman": -0.9873648087252093,
-      "mae": 15.147070946888181,
-      "rmse": 15.663162451245606,
+      "spearman": 0.38315369972633945,
+      "mae": 44.5015585966469,
+      "rmse": 44.835133917326566,
+      "fold": 4,
+      "train_size": 597,
+      "test_size": 33,
+      "best_iteration": 6
+    },
+    {
+      "spearman": 0.6316191806513295,
+      "mae": 15.419421477935611,
+      "rmse": 18.45830117558425,
       "fold": 5,
-      "train_size": 511,
-      "test_size": 49,
-      "best_iteration": 3
+      "train_size": 630,
+      "test_size": 34,
+      "best_iteration": 100
     }
   ],
   "tier": "per_stock",
   "identifier": "ABAR",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

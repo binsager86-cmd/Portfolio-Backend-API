@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.9134312930806536,
-  "mae": 11.958234756713624,
-  "rmse": 12.814180224896432,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.09344279706107943,
+  "mae": 30.641302576897964,
+  "rmse": 34.81254828269298,
+  "auc": 0.09344279706107943,
+  "mean_auc": 0.09344279706107943,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 526,
+  "n_train_events": 635,
   "train_date_range": {
-    "start": "2023-06-05",
-    "end": "2026-04-26"
+    "start": "2023-06-15",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.0934",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.8587104601870661,
-      "mae": 19.61153989572824,
-      "rmse": 21.883396438468733,
+      "spearman": 0.05351001325649564,
+      "mae": 24.250628486207592,
+      "rmse": 29.205464844786743,
       "fold": 1,
-      "train_size": 290,
-      "test_size": 55,
-      "best_iteration": 3
+      "train_size": 381,
+      "test_size": 63,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.8906745168400203,
-      "mae": 8.434297598616274,
-      "rmse": 8.515831345953606,
+      "spearman": 0.368978888729481,
+      "mae": 17.62568174210763,
+      "rmse": 23.130839577929162,
+      "fold": 2,
+      "train_size": 444,
+      "test_size": 64,
+      "best_iteration": 68
+    },
+    {
+      "spearman": 0.32672833524240874,
+      "mae": 31.62090658218493,
+      "rmse": 36.25902631985531,
       "fold": 3,
-      "train_size": 373,
-      "test_size": 77,
-      "best_iteration": 9
+      "train_size": 508,
+      "test_size": 63,
+      "best_iteration": 17
     },
     {
-      "spearman": 0.9909089022148746,
-      "mae": 7.828866775796366,
-      "rmse": 8.043312890266963,
+      "spearman": -0.1395119840902951,
+      "mae": 44.40027684516211,
+      "rmse": 46.620119040914325,
+      "fold": 4,
+      "train_size": 571,
+      "test_size": 32,
+      "best_iteration": 1
+    },
+    {
+      "spearman": -0.14249126783269314,
+      "mae": 35.309019228827566,
+      "rmse": 38.84729162997935,
       "fold": 5,
-      "train_size": 464,
-      "test_size": 62,
-      "best_iteration": 20
+      "train_size": 603,
+      "test_size": 32,
+      "best_iteration": 5
     }
   ],
   "tier": "per_stock",
   "identifier": "MUBARRAD",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

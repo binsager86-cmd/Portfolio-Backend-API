@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.09023244743270072,
-  "mae": 6.263465829095536,
-  "rmse": 6.728551300031907,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.11804716915505478,
+  "mae": 31.176807980144197,
+  "rmse": 34.90466531066645,
+  "auc": 0.11804716915505478,
+  "mean_auc": 0.11804716915505478,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 651,
+  "n_train_events": 685,
   "train_date_range": {
-    "start": "2023-07-12",
-    "end": "2026-05-05"
+    "start": "2023-06-08",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_0.0902",
+  "rejected_reason": "spearman_below_threshold_0.1180",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.8556694377594898,
-      "mae": 10.068351798533628,
-      "rmse": 10.176533840817223,
-      "fold": 2,
-      "train_size": 407,
-      "test_size": 125,
+      "spearman": 0.07148236927653634,
+      "mae": 28.988891091677758,
+      "rmse": 33.9104299104428,
+      "fold": 1,
+      "train_size": 411,
+      "test_size": 68,
       "best_iteration": 1
     },
     {
-      "spearman": 0.13929437815107287,
-      "mae": 5.577794159958644,
-      "rmse": 6.624937758440958,
-      "fold": 3,
-      "train_size": 532,
-      "test_size": 42,
-      "best_iteration": 38
+      "spearman": 0.13624028740667016,
+      "mae": 38.380882017342685,
+      "rmse": 41.46881267831835,
+      "fold": 2,
+      "train_size": 479,
+      "test_size": 69,
+      "best_iteration": 2
     },
     {
-      "spearman": 0.987072401906519,
-      "mae": 3.1442515287943356,
-      "rmse": 3.38418230083754,
+      "spearman": 0.06207684036232834,
+      "mae": 30.384630680434164,
+      "rmse": 34.136034061853785,
+      "fold": 3,
+      "train_size": 548,
+      "test_size": 68,
+      "best_iteration": 5
+    },
+    {
+      "spearman": 0.42421466065206537,
+      "mae": 25.198025183525598,
+      "rmse": 28.577647268378623,
+      "fold": 4,
+      "train_size": 616,
+      "test_size": 34,
+      "best_iteration": 20
+    },
+    {
+      "spearman": -0.10377831192232638,
+      "mae": 32.931610927740756,
+      "rmse": 36.43040263433869,
       "fold": 5,
-      "train_size": 591,
-      "test_size": 60,
-      "best_iteration": 47
+      "train_size": 650,
+      "test_size": 35,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "COAST",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

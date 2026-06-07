@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.7874618234733644,
-  "mae": 4.182697321588871,
-  "rmse": 4.9616818783041685,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.16146304752264096,
+  "mae": 22.30676794944309,
+  "rmse": 26.600730115039664,
+  "auc": 0.16146304752264096,
+  "mean_auc": 0.16146304752264096,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 587,
+  "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-06-11",
-    "end": "2026-05-03"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.1615",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.7023630603990636,
-      "mae": 0.42239079937740015,
-      "rmse": 0.6964827372643531,
-      "fold": 2,
-      "train_size": 402,
-      "test_size": 66,
-      "best_iteration": 139
+      "spearman": 0.5241956912686713,
+      "mae": 19.030308771690148,
+      "rmse": 23.59657607399757,
+      "fold": 1,
+      "train_size": 409,
+      "test_size": 69,
+      "best_iteration": 9
     },
     {
-      "spearman": NaN,
-      "mae": 5.487536532447941,
-      "rmse": 5.769162167990678,
-      "fold": 4,
-      "train_size": 509,
-      "test_size": 44,
+      "spearman": -0.24008822417642353,
+      "mae": 19.78652992236906,
+      "rmse": 25.660320943642162,
+      "fold": 2,
+      "train_size": 478,
+      "test_size": 68,
       "best_iteration": 1
     },
     {
-      "spearman": 0.8725605865476651,
-      "mae": 6.638164632941271,
-      "rmse": 8.419400729657475,
-      "fold": 5,
-      "train_size": 553,
+      "spearman": 0.32111584946050575,
+      "mae": 31.047725015380284,
+      "rmse": 34.45284508735908,
+      "fold": 3,
+      "train_size": 546,
+      "test_size": 68,
+      "best_iteration": 17
+    },
+    {
+      "spearman": -0.5245696123087249,
+      "mae": 25.899330643341294,
+      "rmse": 29.513737680678062,
+      "fold": 4,
+      "train_size": 614,
       "test_size": 34,
-      "best_iteration": 10
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.7266615333691762,
+      "mae": 15.769945394434636,
+      "rmse": 19.780170789521435,
+      "fold": 5,
+      "train_size": 648,
+      "test_size": 35,
+      "best_iteration": 100
     }
   ],
   "tier": "per_stock",
   "identifier": "KPROJ",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

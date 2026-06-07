@@ -1,30 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": -0.34709833316486544,
-  "mae": 1.1037092820464127,
-  "rmse": 1.4770557999952663,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.303895443517772,
+  "mae": 27.43405530289245,
+  "rmse": 30.31056726632054,
+  "auc": 0.303895443517772,
+  "mean_auc": 0.303895443517772,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 635,
+  "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-08-02",
-    "end": "2026-04-26"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_-0.3471",
+  "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.34709833316486544,
-      "mae": 1.1037092820464127,
-      "rmse": 1.4770557999952663,
-      "fold": 2,
-      "train_size": 459,
+      "spearman": 0.41620072260547114,
+      "mae": 17.312527973749347,
+      "rmse": 21.30524771129998,
+      "fold": 1,
+      "train_size": 409,
       "test_size": 69,
-      "best_iteration": 46
+      "best_iteration": 77
+    },
+    {
+      "spearman": 0.055914047578425,
+      "mae": 25.456606697006972,
+      "rmse": 31.407651508268543,
+      "fold": 2,
+      "train_size": 478,
+      "test_size": 68,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.5210156062686642,
+      "mae": 32.403895029942454,
+      "rmse": 34.97631604675103,
+      "fold": 3,
+      "train_size": 546,
+      "test_size": 68,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.2939929393749817,
+      "mae": 32.616967379942324,
+      "rmse": 33.30346127452861,
+      "fold": 4,
+      "train_size": 614,
+      "test_size": 34,
+      "best_iteration": 50
+    },
+    {
+      "spearman": 0.23235390176131798,
+      "mae": 29.38027943382115,
+      "rmse": 30.560159790754497,
+      "fold": 5,
+      "train_size": 648,
+      "test_size": 35,
+      "best_iteration": 5
     }
   ],
   "tier": "per_stock",
   "identifier": "NBK",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

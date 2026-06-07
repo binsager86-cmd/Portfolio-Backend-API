@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.8471751666046492,
-  "mae": 8.402141663535232,
-  "rmse": 10.188187236307012,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.4292306880293644,
+  "mae": 28.72434878276298,
+  "rmse": 32.66816877563995,
+  "auc": 0.4292306880293644,
+  "mean_auc": 0.4292306880293644,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 807,
+  "n_train_events": 694,
   "train_date_range": {
-    "start": "2023-05-04",
-    "end": "2026-04-26"
+    "start": "2023-05-28",
+    "end": "2026-03-30"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.8655838919516214,
-      "mae": 9.791493062882587,
-      "rmse": 10.683303518212561,
+      "spearman": 0.1465416805885703,
+      "mae": 35.44841701597994,
+      "rmse": 39.71456074941964,
       "fold": 1,
-      "train_size": 531,
-      "test_size": 104,
-      "best_iteration": 15
+      "train_size": 416,
+      "test_size": 69,
+      "best_iteration": 7
     },
     {
-      "spearman": 0.8873291980791853,
-      "mae": 8.58394317291473,
-      "rmse": 8.618111451052693,
+      "spearman": 0.6880592085001501,
+      "mae": 20.642551463316547,
+      "rmse": 26.06493738449092,
       "fold": 2,
-      "train_size": 635,
-      "test_size": 67,
-      "best_iteration": 25
+      "train_size": 485,
+      "test_size": 70,
+      "best_iteration": 297
     },
     {
-      "spearman": 0.7886124097831411,
-      "mae": 6.8309887548083825,
-      "rmse": 11.263146739655785,
+      "spearman": 0.6831604437770574,
+      "mae": 16.78643201277538,
+      "rmse": 20.45856228002336,
       "fold": 3,
-      "train_size": 702,
-      "test_size": 65,
-      "best_iteration": 94
+      "train_size": 555,
+      "test_size": 69,
+      "best_iteration": 68
+    },
+    {
+      "spearman": 0.6538653777461417,
+      "mae": 20.746875683331133,
+      "rmse": 25.412063748337086,
+      "fold": 4,
+      "train_size": 624,
+      "test_size": 35,
+      "best_iteration": 164
+    },
+    {
+      "spearman": -0.025473270465097234,
+      "mae": 49.99746773841189,
+      "rmse": 51.690719715928715,
+      "fold": 5,
+      "train_size": 659,
+      "test_size": 35,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "ALTIJARIA",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

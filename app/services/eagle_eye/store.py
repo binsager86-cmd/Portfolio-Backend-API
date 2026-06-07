@@ -122,6 +122,7 @@ def ensure_tables() -> None:
     _acim("ee_ratings_cache", "run_id", "TEXT")
     _acim("ee_ratings_cache", "run_started_at", "TEXT")
     _acim("ee_ratings_cache", "code_fingerprint", "TEXT")
+    _acim("ee_ratings_cache", "risky_near_resistance", "INTEGER")
 
     exec_sql(
         """
@@ -459,8 +460,8 @@ def save_rating(
             stop_loss, tp1, tp1_probability, tp2, tp2_probability, tp3, tp3_probability,
             last_price, supports_json, resistances_json, signals_json, indicators_json,
             days_of_history, computed_at, computed_date, run_id, run_started_at, code_fingerprint,
-            updated_at, volume_context_json
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            updated_at, volume_context_json, risky_near_resistance
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT (ticker) DO UPDATE SET
             name_en = excluded.name_en,
             sector = excluded.sector,
@@ -492,7 +493,8 @@ def save_rating(
             run_started_at = excluded.run_started_at,
             code_fingerprint = excluded.code_fingerprint,
             updated_at = excluded.updated_at,
-            volume_context_json = excluded.volume_context_json
+            volume_context_json = excluded.volume_context_json,
+            risky_near_resistance = excluded.risky_near_resistance
         """,
         (
             ticker.upper(),
@@ -527,6 +529,7 @@ def save_rating(
             result.get("code_fingerprint"),
             int(time.time()),
             json.dumps(result.get("volume_context") or {}),
+            int(result.get("risky_near_resistance", False)),
         ),
     )
 
@@ -552,7 +555,7 @@ def load_all_ratings(
     sql = """
            SELECT ticker, name_en, sector, market_tier, stage, rating, confidence, ml_score, thesis,
                entry_primary, stop_loss, tp1, last_price, computed_at, computed_date,
-               volume_context_json, indicators_json
+               volume_context_json, indicators_json, risky_near_resistance
         FROM   ee_ratings_cache
         WHERE  confidence >= ?
     """
@@ -576,6 +579,16 @@ def load_all_ratings(
     rows = query_all(sql, tuple(params))
     if not rows:
         return []
+
+    def _safe_float(v):
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            return None
+        if math.isnan(f) or math.isinf(f):
+            return None
+        return f
+
     result = []
     for r in rows:
         d = dict(r.items())
@@ -595,6 +608,38 @@ def load_all_ratings(
             from app.services.eagle_eye.scoring.recommendation_engine import compute_continue_rising
 
             d.update(compute_continue_rising(indicators, str(d.get("stage") or "")))
+
+            close = _safe_float(indicators.get("close") or indicators.get("last_price"))
+            ema_10 = _safe_float(indicators.get("ema_10"))
+            ema_20 = _safe_float(indicators.get("ema_20"))
+            ema_30 = _safe_float(indicators.get("ema_30"))
+            plus_di = _safe_float(indicators.get("plus_di"))
+            minus_di = _safe_float(indicators.get("minus_di"))
+            slope_50 = _safe_float(indicators.get("stock_50sma_slope_20d"))
+            cmf_20 = _safe_float(indicators.get("cmf_20"))
+            rr = _safe_float(indicators.get("risk_reward_ratio"))
+
+            advancing = bool(
+                close is not None
+                and ema_10 is not None
+                and ema_20 is not None
+                and ema_30 is not None
+                and plus_di is not None
+                and minus_di is not None
+                and slope_50 is not None
+                and cmf_20 is not None
+                and close > ema_10
+                and close > ema_20
+                and close > ema_30
+                and (plus_di - minus_di) > 0.0
+                and slope_50 > 0.0
+                and cmf_20 > 0.0
+            )
+            d["risk_reward_ratio"] = rr
+            d["risky_near_resistance"] = bool(advancing and rr is not None and rr < 2.0)
+        else:
+            d["risk_reward_ratio"] = None
+            d["risky_near_resistance"] = False
         result.append(d)
     return result
 

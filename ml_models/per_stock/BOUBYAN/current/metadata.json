@@ -1,39 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.3685220843571215,
-  "mae": 1.5723137239247964,
-  "rmse": 2.1255538116671753,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.06822141587239929,
+  "mae": 28.016287741262346,
+  "rmse": 32.2680749655328,
+  "auc": 0.06822141587239929,
+  "mean_auc": 0.06822141587239929,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 612,
+  "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-08-03",
-    "end": "2026-04-26"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.0682",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.5584231379345056,
-      "mae": 2.7919944864172126,
-      "rmse": 3.3647550741238605,
+      "spearman": -0.42997884095883193,
+      "mae": 25.377749689294088,
+      "rmse": 32.45614838627593,
       "fold": 1,
-      "train_size": 389,
-      "test_size": 66,
-      "best_iteration": 18
+      "train_size": 409,
+      "test_size": 69,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.17862103077973748,
-      "mae": 0.3526329614323802,
-      "rmse": 0.8863525492104904,
+      "spearman": 0.5388935331841822,
+      "mae": 24.40849234636301,
+      "rmse": 29.979752545941555,
       "fold": 2,
-      "train_size": 455,
-      "test_size": 53,
-      "best_iteration": 83
+      "train_size": 478,
+      "test_size": 68,
+      "best_iteration": 5
+    },
+    {
+      "spearman": 0.15589603693439796,
+      "mae": 27.226379587048065,
+      "rmse": 31.820161910532708,
+      "fold": 3,
+      "train_size": 546,
+      "test_size": 68,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.09548915220844482,
+      "mae": 33.396569424811524,
+      "rmse": 35.43046297177021,
+      "fold": 4,
+      "train_size": 614,
+      "test_size": 34,
+      "best_iteration": 46
+    },
+    {
+      "spearman": -0.019192802006196667,
+      "mae": 29.672247658795044,
+      "rmse": 31.653849013143606,
+      "fold": 5,
+      "train_size": 648,
+      "test_size": 35,
+      "best_iteration": 8
     }
   ],
   "tier": "per_stock",
   "identifier": "BOUBYAN",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

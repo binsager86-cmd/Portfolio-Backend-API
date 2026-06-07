@@ -1,57 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": -0.193323593425991,
-  "mae": 8.594454062991833,
-  "rmse": 10.566338209459605,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.5116858706315256,
+  "mae": 22.06502512077095,
+  "rmse": 25.31185296560764,
+  "auc": 0.5116858706315256,
+  "mean_auc": 0.5116858706315256,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 465,
+  "n_train_events": 588,
   "train_date_range": {
-    "start": "2023-09-12",
-    "end": "2026-04-15"
+    "start": "2023-07-11",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_-0.1933",
+  "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.7950335041387466,
-      "mae": 14.944074869707071,
-      "rmse": 18.649251339764685,
+      "spearman": 0.3850043617860366,
+      "mae": 35.94768943603113,
+      "rmse": 36.9082015193784,
       "fold": 1,
-      "train_size": 336,
-      "test_size": 40,
-      "best_iteration": 88
+      "train_size": 352,
+      "test_size": 59,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.0,
-      "mae": 2.768080371099941,
-      "rmse": 4.623794680879698,
+      "spearman": 0.30098067162894937,
+      "mae": 22.676155945905872,
+      "rmse": 27.907016016521524,
       "fold": 2,
-      "train_size": 376,
-      "test_size": 10,
-      "best_iteration": 498
+      "train_size": 411,
+      "test_size": 59,
+      "best_iteration": 84
     },
     {
-      "spearman": 0.0,
-      "mae": 4.39749643511724,
-      "rmse": 6.488221023464886,
+      "spearman": 0.7736287744442364,
+      "mae": 16.21175919875061,
+      "rmse": 19.51634208192519,
       "fold": 3,
-      "train_size": 386,
-      "test_size": 29,
-      "best_iteration": 115
+      "train_size": 470,
+      "test_size": 59,
+      "best_iteration": 202
     },
     {
-      "spearman": 0.02173913043478261,
-      "mae": 12.268164576043084,
-      "rmse": 12.50408579372915,
+      "spearman": 0.46802155164697307,
+      "mae": 24.386138563737,
+      "rmse": 28.468292459837212,
+      "fold": 4,
+      "train_size": 529,
+      "test_size": 29,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.6307939936514326,
+      "mae": 11.103382459430152,
+      "rmse": 13.759412750375855,
       "fold": 5,
-      "train_size": 418,
-      "test_size": 47,
-      "best_iteration": 125
+      "train_size": 558,
+      "test_size": 30,
+      "best_iteration": 50
     }
   ],
   "tier": "per_stock",
   "identifier": "TAHSSILAT",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

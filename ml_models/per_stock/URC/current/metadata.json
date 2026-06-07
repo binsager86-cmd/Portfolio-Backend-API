@@ -1,66 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.015668529159904743,
-  "mae": 26.544898423390872,
-  "rmse": 29.328840596474883,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.16756924461053974,
+  "mae": 26.875267565012706,
+  "rmse": 30.82277851506791,
+  "auc": 0.16756924461053974,
+  "mean_auc": 0.16756924461053974,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 578,
+  "n_train_events": 682,
   "train_date_range": {
-    "start": "2023-08-03",
-    "end": "2026-04-23"
+    "start": "2023-06-14",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_0.0157",
+  "rejected_reason": "spearman_below_threshold_0.1676",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.4810207105373128,
-      "mae": 66.03850226599027,
-      "rmse": 67.73086033798283,
+      "spearman": -0.5344036490386787,
+      "mae": 24.241473962037315,
+      "rmse": 28.856713495751965,
       "fold": 1,
-      "train_size": 250,
-      "test_size": 127,
-      "best_iteration": 1
-    },
-    {
-      "spearman": NaN,
-      "mae": 42.040913324306985,
-      "rmse": 46.4583652014218,
-      "fold": 2,
-      "train_size": 377,
+      "train_size": 409,
       "test_size": 68,
       "best_iteration": 1
     },
     {
-      "spearman": 0.9712403115512411,
-      "mae": 12.699964226691854,
-      "rmse": 13.729499888184753,
+      "spearman": 0.21397541161024863,
+      "mae": 27.237950967037396,
+      "rmse": 31.532498135029652,
+      "fold": 2,
+      "train_size": 477,
+      "test_size": 68,
+      "best_iteration": 65
+    },
+    {
+      "spearman": 0.7220609857429828,
+      "mae": 24.03461286259788,
+      "rmse": 26.916233871474557,
       "fold": 3,
-      "train_size": 445,
-      "test_size": 61,
-      "best_iteration": 40
+      "train_size": 545,
+      "test_size": 68,
+      "best_iteration": 16
     },
     {
-      "spearman": -0.2143447680186989,
-      "mae": 6.789781264347295,
-      "rmse": 11.954546637809717,
+      "spearman": 0.7870817944358692,
+      "mae": 21.659606782451846,
+      "rmse": 25.93173736892346,
       "fold": 4,
-      "train_size": 506,
-      "test_size": 57,
-      "best_iteration": 20
+      "train_size": 613,
+      "test_size": 34,
+      "best_iteration": 29
     },
     {
-      "spearman": -0.21320071635561044,
-      "mae": 5.155331035617948,
-      "rmse": 6.770930916975318,
+      "spearman": -0.3508683196977234,
+      "mae": 37.20269325093909,
+      "rmse": 40.876709704159914,
       "fold": 5,
-      "train_size": 563,
-      "test_size": 15,
-      "best_iteration": 350
+      "train_size": 647,
+      "test_size": 35,
+      "best_iteration": 10
     }
   ],
   "tier": "per_stock",
   "identifier": "URC",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

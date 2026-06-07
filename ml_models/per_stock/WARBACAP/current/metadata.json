@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": -0.021026936376691147,
-  "mae": 17.033261114087107,
-  "rmse": 17.496056666286897,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.038053351013495364,
+  "mae": 29.233963245308637,
+  "rmse": 33.228896821076134,
+  "auc": 0.038053351013495364,
+  "mean_auc": 0.038053351013495364,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 545,
+  "n_train_events": 659,
   "train_date_range": {
-    "start": "2023-05-30",
-    "end": "2026-04-15"
+    "start": "2023-06-26",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_-0.0210",
+  "rejected_reason": "spearman_below_threshold_0.0381",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.15696479190502696,
-      "mae": 41.74405438445445,
-      "rmse": 42.12889922617608,
+      "spearman": 0.2520983056984939,
+      "mae": 45.28044371621972,
+      "rmse": 47.39578172359039,
       "fold": 1,
-      "train_size": 353,
-      "test_size": 128,
+      "train_size": 395,
+      "test_size": 66,
       "best_iteration": 1
     },
     {
-      "spearman": 0.38263969661337205,
-      "mae": 1.0915736099449063,
-      "rmse": 1.7246006013634163,
-      "fold": 3,
-      "train_size": 510,
-      "test_size": 14,
-      "best_iteration": 75
+      "spearman": 0.6047541728169449,
+      "mae": 24.266389658087846,
+      "rmse": 26.95664463030068,
+      "fold": 2,
+      "train_size": 461,
+      "test_size": 66,
+      "best_iteration": 16
     },
     {
-      "spearman": -0.2887557138384185,
-      "mae": 8.26415534786196,
-      "rmse": 8.634670171321197,
+      "spearman": 0.16183209337271093,
+      "mae": 19.947939365486985,
+      "rmse": 25.509565007008774,
+      "fold": 3,
+      "train_size": 527,
+      "test_size": 66,
+      "best_iteration": 47
+    },
+    {
+      "spearman": -0.36131086304029486,
+      "mae": 27.94292285976765,
+      "rmse": 31.54122643935412,
+      "fold": 4,
+      "train_size": 593,
+      "test_size": 33,
+      "best_iteration": 25
+    },
+    {
+      "spearman": -0.46710695378037803,
+      "mae": 28.73212062698099,
+      "rmse": 34.741266305126715,
       "fold": 5,
-      "train_size": 531,
-      "test_size": 14,
-      "best_iteration": 38
+      "train_size": 626,
+      "test_size": 33,
+      "best_iteration": 299
     }
   ],
   "tier": "per_stock",
   "identifier": "WARBACAP",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

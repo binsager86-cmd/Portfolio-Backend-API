@@ -1,39 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": -1.0,
-  "mae": 3.9458637665955143,
-  "rmse": 7.51350005600206,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.625372011302819,
+  "mae": 17.548689765511476,
+  "rmse": 20.016035425382334,
+  "auc": 0.625372011302819,
+  "mean_auc": 0.625372011302819,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 260,
+  "n_train_events": 307,
   "train_date_range": {
-    "start": "2023-11-29",
-    "end": "2026-04-12"
+    "start": "2023-10-10",
+    "end": "2026-02-10"
   },
-  "rejected_reason": "spearman_below_threshold_-1.0000",
+  "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": NaN,
-      "mae": 6.764768366395061,
-      "rmse": 12.415697163933014,
-      "fold": 2,
-      "train_size": 187,
-      "test_size": 44,
-      "best_iteration": 12
+      "spearman": 0.6073892872452358,
+      "mae": 23.701207114527612,
+      "rmse": 28.469552326569172,
+      "fold": 1,
+      "train_size": 184,
+      "test_size": 30,
+      "best_iteration": 61
     },
     {
-      "spearman": -1.0,
-      "mae": 1.1269591667959677,
-      "rmse": 2.611302948071107,
-      "fold": 5,
-      "train_size": 236,
-      "test_size": 24,
+      "spearman": 0.1307110840132448,
+      "mae": 22.49680633847109,
+      "rmse": 24.87234700602688,
+      "fold": 2,
+      "train_size": 214,
+      "test_size": 31,
+      "best_iteration": 16
+    },
+    {
+      "spearman": 0.8017461456688273,
+      "mae": 20.76793704592228,
+      "rmse": 22.688204006976925,
+      "fold": 3,
+      "train_size": 245,
+      "test_size": 31,
+      "best_iteration": 14
+    },
+    {
+      "spearman": 0.8364614600125809,
+      "mae": 5.96728539521719,
+      "rmse": 7.9230919495494705,
+      "fold": 4,
+      "train_size": 276,
+      "test_size": 15,
       "best_iteration": 63
+    },
+    {
+      "spearman": 0.7505520795742068,
+      "mae": 14.81021293341919,
+      "rmse": 16.126981837789238,
+      "fold": 5,
+      "train_size": 291,
+      "test_size": 16,
+      "best_iteration": 33
     }
   ],
   "tier": "per_stock",
   "identifier": "GFC",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

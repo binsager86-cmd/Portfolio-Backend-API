@@ -1,57 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": -0.21414141414141416,
-  "mae": 31.977151151037965,
-  "rmse": 34.82549139625981,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.24155081888098984,
+  "mae": 25.877882494355834,
+  "rmse": 29.135219675265404,
+  "auc": 0.24155081888098984,
+  "mean_auc": 0.24155081888098984,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 438,
+  "n_train_events": 526,
   "train_date_range": {
-    "start": "2023-08-24",
-    "end": "2026-04-20"
+    "start": "2023-08-01",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_-0.2141",
+  "rejected_reason": "spearman_below_threshold_0.2416",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": NaN,
-      "mae": 28.614170829030627,
-      "rmse": 30.57975720633619,
+      "spearman": 0.6443326548914524,
+      "mae": 24.69779099248855,
+      "rmse": 28.691196192499618,
       "fold": 1,
-      "train_size": 214,
-      "test_size": 112,
+      "train_size": 315,
+      "test_size": 53,
+      "best_iteration": 2
+    },
+    {
+      "spearman": 0.5249827814820646,
+      "mae": 33.132749571641966,
+      "rmse": 33.33377097926856,
+      "fold": 2,
+      "train_size": 368,
+      "test_size": 52,
       "best_iteration": 1
     },
     {
-      "spearman": 0.0,
-      "mae": 16.8192766041559,
-      "rmse": 24.67387928625552,
-      "fold": 2,
-      "train_size": 326,
-      "test_size": 46,
-      "best_iteration": 20
+      "spearman": 0.626932084208593,
+      "mae": 29.307601769030708,
+      "rmse": 32.92890579863414,
+      "fold": 3,
+      "train_size": 420,
+      "test_size": 53,
+      "best_iteration": 97
     },
     {
-      "spearman": -1.0,
-      "mae": 64.91679489601671,
-      "rmse": 65.80326111172579,
+      "spearman": -0.3708736886422329,
+      "mae": 24.11098779081796,
+      "rmse": 28.019527030803626,
       "fold": 4,
-      "train_size": 379,
-      "test_size": 3,
-      "best_iteration": 11
+      "train_size": 473,
+      "test_size": 26,
+      "best_iteration": 68
     },
     {
-      "spearman": 0.35757575757575755,
-      "mae": 17.558362274948625,
-      "rmse": 18.245067980721725,
+      "spearman": -0.2176197375349279,
+      "mae": 18.140282347799968,
+      "rmse": 22.702698375121077,
       "fold": 5,
-      "train_size": 382,
-      "test_size": 56,
-      "best_iteration": 68
+      "train_size": 499,
+      "test_size": 27,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "EQUIPMENT",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

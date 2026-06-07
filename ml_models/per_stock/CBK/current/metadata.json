@@ -1,30 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": -0.40766908894348125,
-  "mae": 12.018016014125354,
-  "rmse": 12.74588875415519,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.21531316609660708,
+  "mae": 28.924144849999674,
+  "rmse": 32.22159807770754,
+  "auc": 0.21531316609660708,
+  "mean_auc": 0.21531316609660708,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 557,
+  "n_train_events": 591,
   "train_date_range": {
-    "start": "2023-08-08",
-    "end": "2026-04-14"
+    "start": "2023-07-26",
+    "end": "2026-03-16"
   },
-  "rejected_reason": "spearman_below_threshold_-0.4077",
+  "rejected_reason": "spearman_below_threshold_0.2153",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.40766908894348125,
-      "mae": 12.018016014125354,
-      "rmse": 12.74588875415519,
+      "spearman": 0.505542564087536,
+      "mae": 33.25882101582834,
+      "rmse": 38.02628288774533,
       "fold": 1,
-      "train_size": 391,
-      "test_size": 81,
-      "best_iteration": 10
+      "train_size": 354,
+      "test_size": 59,
+      "best_iteration": 21
+    },
+    {
+      "spearman": 0.3170607711503705,
+      "mae": 26.117462311674633,
+      "rmse": 29.11156011746553,
+      "fold": 2,
+      "train_size": 413,
+      "test_size": 59,
+      "best_iteration": 20
+    },
+    {
+      "spearman": 0.3246579614212501,
+      "mae": 24.49043796146101,
+      "rmse": 29.894459254147733,
+      "fold": 3,
+      "train_size": 472,
+      "test_size": 59,
+      "best_iteration": 198
+    },
+    {
+      "spearman": -0.35345408686577634,
+      "mae": 28.82553530870191,
+      "rmse": 30.46794347935329,
+      "fold": 4,
+      "train_size": 531,
+      "test_size": 30,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.2827586206896551,
+      "mae": 31.928467652332465,
+      "rmse": 33.6077446498258,
+      "fold": 5,
+      "train_size": 561,
+      "test_size": 30,
+      "best_iteration": 56
     }
   ],
   "tier": "per_stock",
   "identifier": "CBK",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

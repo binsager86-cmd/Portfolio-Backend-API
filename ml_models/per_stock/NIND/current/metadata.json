@@ -1,57 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.2846487454450823,
-  "mae": 3.851161473996853,
-  "rmse": 4.796616885445561,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": -0.07475412065170167,
+  "mae": 34.34898324323352,
+  "rmse": 37.84483039894814,
+  "auc": -0.07475412065170167,
+  "mean_auc": -0.07475412065170167,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 645,
+  "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-07-04",
-    "end": "2026-04-26"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_0.2846",
+  "rejected_reason": "spearman_below_threshold_-0.0748",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.7402725163550842,
-      "mae": 0.8979118573170989,
-      "rmse": 1.6199946094943152,
+      "spearman": 0.11862152047481922,
+      "mae": 38.57380689084437,
+      "rmse": 41.55113773863254,
       "fold": 1,
-      "train_size": 414,
-      "test_size": 55,
-      "best_iteration": 85
+      "train_size": 409,
+      "test_size": 69,
+      "best_iteration": 4
     },
     {
-      "spearman": 0.6088035427540124,
-      "mae": 4.894410166182527,
-      "rmse": 7.24269902452501,
+      "spearman": -0.42722440282137886,
+      "mae": 35.278692629538966,
+      "rmse": 40.07629190359521,
       "fold": 2,
-      "train_size": 469,
-      "test_size": 77,
-      "best_iteration": 64
+      "train_size": 478,
+      "test_size": 68,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.1514726744230451,
-      "mae": 6.474998578728729,
-      "rmse": 6.840428081740677,
+      "spearman": 0.08265512476975151,
+      "mae": 21.927343831219783,
+      "rmse": 26.950779646985854,
       "fold": 3,
       "train_size": 546,
-      "test_size": 46,
-      "best_iteration": 7
+      "test_size": 68,
+      "best_iteration": 1
     },
     {
-      "spearman": -0.3619537517518124,
-      "mae": 3.1373252937590568,
-      "rmse": 3.4833458260222403,
-      "fold": 5,
+      "spearman": -0.03685580741650362,
+      "mae": 44.42657988113942,
+      "rmse": 45.7372288289223,
+      "fold": 4,
       "train_size": 614,
-      "test_size": 31,
-      "best_iteration": 23
+      "test_size": 34,
+      "best_iteration": 29
+    },
+    {
+      "spearman": -0.11096703826519659,
+      "mae": 31.53849298342504,
+      "rmse": 34.90871387660483,
+      "fold": 5,
+      "train_size": 648,
+      "test_size": 35,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "NIND",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

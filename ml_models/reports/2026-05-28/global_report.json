@@ -1,0 +1,232 @@
+[
+  {
+    "tier": "global",
+    "identifier": "baseline",
+    "task": "regression",
+    "training_set": {
+      "n_events": 82758,
+      "date_range": {
+        "start": "2023-05-28",
+        "end": "2026-03-30"
+      },
+      "target_col": "target_score",
+      "target_mean": 52.12635116846709,
+      "target_min": 0.0,
+      "target_max": 100.0
+    },
+    "walk_forward_cv": {
+      "folds": [
+        {
+          "spearman": 0.22916381357749002,
+          "mae": 29.582895326698164,
+          "rmse": 33.698466648184095,
+          "fold": 1,
+          "train_size": 46828,
+          "test_size": 8842,
+          "best_iteration": 69
+        },
+        {
+          "spearman": 0.25493542865860436,
+          "mae": 30.215302304202964,
+          "rmse": 34.29006070277961,
+          "fold": 2,
+          "train_size": 55670,
+          "test_size": 9226,
+          "best_iteration": 34
+        },
+        {
+          "spearman": 0.08761729708571665,
+          "mae": 31.155478046873014,
+          "rmse": 34.83390667902809,
+          "fold": 3,
+          "train_size": 64896,
+          "test_size": 9028,
+          "best_iteration": 10
+        },
+        {
+          "spearman": 0.04133675283328921,
+          "mae": 33.903626600265845,
+          "rmse": 37.25770971211972,
+          "fold": 4,
+          "train_size": 73924,
+          "test_size": 4497,
+          "best_iteration": 1
+        },
+        {
+          "spearman": 0.3041250759641957,
+          "mae": 27.49094295929901,
+          "rmse": 31.609637513251016,
+          "fold": 5,
+          "train_size": 78421,
+          "test_size": 4337,
+          "best_iteration": 284
+        }
+      ],
+      "mean_spearman": 0.18343567362385918,
+      "std_spearman": 0.10113602143960872,
+      "mean_mae": 30.4696490474678,
+      "mean_rmse": 34.337956251072505
+    },
+    "calibration": {
+      "fitted": false,
+      "warning": false,
+      "max_error": NaN,
+      "mean_error": NaN,
+      "reliability": []
+    },
+    "top_features": [
+      {
+        "feature": "selloff_from_60d_high_pct",
+        "gain": 8374310.754394531
+      },
+      {
+        "feature": "obv_change_20d",
+        "gain": 6104753.456298828
+      },
+      {
+        "feature": "position_in_60d_range_pct",
+        "gain": 6094775.623046875
+      },
+      {
+        "feature": "macd_histogram",
+        "gain": 5785455.392333984
+      },
+      {
+        "feature": "macd_hist_velocity_5d",
+        "gain": 5737377.1875
+      },
+      {
+        "feature": "accumulation_score",
+        "gain": 5285358.0068359375
+      },
+      {
+        "feature": "volume_acceleration",
+        "gain": 4537526.233154297
+      },
+      {
+        "feature": "obv_change_10d",
+        "gain": 3692945.0700683594
+      },
+      {
+        "feature": "adx",
+        "gain": 3682139.029296875
+      },
+      {
+        "feature": "price_extension_from_20d_low_pct",
+        "gain": 3668460.1186523438
+      },
+      {
+        "feature": "cmf",
+        "gain": 3186222.987060547
+      },
+      {
+        "feature": "di_spread",
+        "gain": 3156735.466796875
+      },
+      {
+        "feature": "rsi",
+        "gain": 2259887.9345703125
+      },
+      {
+        "feature": "green_red_volume_ratio_10d",
+        "gain": 2259878.533203125
+      },
+      {
+        "feature": "volume_ratio_20d",
+        "gain": 2222882.7055664062
+      }
+    ],
+    "failure_cases": [
+      {
+        "ticker": "CATTL",
+        "event_id": "CATTL_2026-02-23_670",
+        "event_date": "2026-02-23 00:00:00",
+        "actual": 0.0,
+        "predicted": 78.84803950119196,
+        "abs_error": 78.84803950119196,
+        "outcome_category": ""
+      },
+      {
+        "ticker": "ARKAN",
+        "event_id": "ARKAN_2026-02-19_542",
+        "event_date": "2026-02-19 00:00:00",
+        "actual": 6.55,
+        "predicted": 80.17792665938907,
+        "abs_error": 73.62792665938908,
+        "outcome_category": ""
+      },
+      {
+        "ticker": "ACICO",
+        "event_id": "ACICO_2026-02-05_417",
+        "event_date": "2026-02-05 00:00:00",
+        "actual": 100.0,
+        "predicted": 27.51845239964592,
+        "abs_error": 72.48154760035408,
+        "outcome_category": ""
+      },
+      {
+        "ticker": "DIGITUS",
+        "event_id": "DIGITUS_2026-03-24_519",
+        "event_date": "2026-03-24 00:00:00",
+        "actual": 100.0,
+        "predicted": 27.705883831922236,
+        "abs_error": 72.29411616807776,
+        "outcome_category": ""
+      },
+      {
+        "ticker": "ENERGYH",
+        "event_id": "ENERGYH_2026-02-16_632",
+        "event_date": "2026-02-16 00:00:00",
+        "actual": 0.0,
+        "predicted": 71.7063331421209,
+        "abs_error": 71.7063331421209,
+        "outcome_category": ""
+      },
+      {
+        "ticker": "HUMANSOFT",
+        "event_id": "HUMANSOFT_2026-02-10_714",
+        "event_date": "2026-02-10 00:00:00",
+        "actual": 3.32,
+        "predicted": 74.44308915700033,
+        "abs_error": 71.12308915700034,
+        "outcome_category": ""
+      },
+      {
+        "ticker": "ABAR",
+        "event_id": "ABAR_2025-03-03_459",
+        "event_date": "2025-03-03 00:00:00",
+        "actual": 0.0,
+        "predicted": 70.73925726733249,
+        "abs_error": 70.73925726733249,
+        "outcome_category": ""
+      },
+      {
+        "ticker": "JTC",
+        "event_id": "JTC_2026-03-26_698",
+        "event_date": "2026-03-26 00:00:00",
+        "actual": 100.0,
+        "predicted": 29.650571084460317,
+        "abs_error": 70.34942891553968,
+        "outcome_category": ""
+      },
+      {
+        "ticker": "VALMORE",
+        "event_id": "VALMORE_2025-04-29_504",
+        "event_date": "2025-04-29 00:00:00",
+        "actual": 4.43,
+        "predicted": 74.61340480794445,
+        "abs_error": 70.18340480794444,
+        "outcome_category": ""
+      },
+      {
+        "ticker": "MAZAYA",
+        "event_id": "MAZAYA_2026-03-09_730",
+        "event_date": "2026-03-09 00:00:00",
+        "actual": 100.0,
+        "predicted": 30.272769921311,
+        "abs_error": 69.727230078689,
+        "outcome_category": ""
+      }
+    ]
+  }
+]

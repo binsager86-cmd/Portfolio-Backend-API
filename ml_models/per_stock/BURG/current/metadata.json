@@ -1,39 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": -0.04786212776964971,
-  "mae": 4.8332756309985125,
-  "rmse": 5.075268838339089,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.3067606941106327,
+  "mae": 28.24788746329463,
+  "rmse": 32.026573314412204,
+  "auc": 0.3067606941106327,
+  "mean_auc": 0.3067606941106327,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 665,
+  "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-06-18",
-    "end": "2026-04-26"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_-0.0479",
+  "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.3620930918579043,
-      "mae": 9.10410199601519,
-      "rmse": 9.449886172032588,
+      "spearman": 0.6261010370240403,
+      "mae": 27.24071120063167,
+      "rmse": 32.59226384020468,
       "fold": 1,
-      "train_size": 462,
-      "test_size": 61,
-      "best_iteration": 12
+      "train_size": 409,
+      "test_size": 69,
+      "best_iteration": 90
     },
     {
-      "spearman": 0.26636883631860486,
-      "mae": 0.5624492659818354,
-      "rmse": 0.7006515046455897,
+      "spearman": 0.29901904179346733,
+      "mae": 35.35573948448993,
+      "rmse": 37.979299374295394,
+      "fold": 2,
+      "train_size": 478,
+      "test_size": 68,
+      "best_iteration": 6
+    },
+    {
+      "spearman": -0.046407264524556756,
+      "mae": 34.202440596793906,
+      "rmse": 35.4025852599805,
+      "fold": 3,
+      "train_size": 546,
+      "test_size": 68,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.6144885281657049,
+      "mae": 27.501049813784284,
+      "rmse": 31.003453864633265,
+      "fold": 4,
+      "train_size": 614,
+      "test_size": 34,
+      "best_iteration": 4
+    },
+    {
+      "spearman": 0.040602128094508,
+      "mae": 16.939496220773382,
+      "rmse": 23.15526423294717,
       "fold": 5,
-      "train_size": 640,
-      "test_size": 25,
-      "best_iteration": 95
+      "train_size": 648,
+      "test_size": 35,
+      "best_iteration": 2
     }
   ],
   "tier": "per_stock",
   "identifier": "BURG",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

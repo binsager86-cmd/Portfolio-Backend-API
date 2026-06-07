@@ -1,30 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.9532271373123208,
-  "mae": 21.994743317482186,
-  "rmse": 23.816171259380248,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.6917352140162285,
+  "mae": 25.74214552780836,
+  "rmse": 27.953432605564053,
+  "auc": 0.6917352140162285,
+  "mean_auc": 0.6917352140162285,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 216,
+  "n_train_events": 178,
   "train_date_range": {
-    "start": "2024-11-19",
-    "end": "2026-05-20"
+    "start": "2024-12-04",
+    "end": "2026-02-22"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.9532271373123208,
-      "mae": 21.994743317482186,
-      "rmse": 23.816171259380248,
+      "spearman": 0.6184073115339093,
+      "mae": 34.39183127157343,
+      "rmse": 36.469739172813796,
+      "fold": 1,
+      "train_size": 106,
+      "test_size": 18,
+      "best_iteration": 121
+    },
+    {
+      "spearman": 0.5963681467308535,
+      "mae": 32.778750434213435,
+      "rmse": 34.66103096429142,
+      "fold": 2,
+      "train_size": 124,
+      "test_size": 18,
+      "best_iteration": 40
+    },
+    {
+      "spearman": 0.8743351967080158,
+      "mae": 30.48705090701721,
+      "rmse": 32.23591256504681,
+      "fold": 3,
+      "train_size": 142,
+      "test_size": 18,
+      "best_iteration": 295
+    },
+    {
+      "spearman": 0.6778302010921357,
+      "mae": 9.44813521884523,
+      "rmse": 10.828574407210224,
+      "fold": 4,
+      "train_size": 160,
+      "test_size": 9,
+      "best_iteration": 209
+    },
+    {
+      "spearman": NaN,
+      "mae": 21.60495980739251,
+      "rmse": 25.571905918458025,
       "fold": 5,
-      "train_size": 170,
-      "test_size": 46,
-      "best_iteration": 457
+      "train_size": 169,
+      "test_size": 9,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "ALKOUT",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

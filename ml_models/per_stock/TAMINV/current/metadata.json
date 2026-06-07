@@ -1,39 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.4803844614152614,
-  "mae": 19.923357373879327,
-  "rmse": 25.314046402258874,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.3175565116746891,
+  "mae": 16.264725213864597,
+  "rmse": 19.209896152584705,
+  "auc": 0.3175565116746891,
+  "mean_auc": 0.3175565116746891,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 215,
+  "n_train_events": 219,
   "train_date_range": {
-    "start": "2024-03-04",
-    "end": "2026-01-15"
+    "start": "2024-03-07",
+    "end": "2025-12-08"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.4803844614152614,
-      "mae": 19.727830275359178,
-      "rmse": 24.44963237465483,
-      "fold": 2,
-      "train_size": 191,
-      "test_size": 10,
-      "best_iteration": 55
+      "spearman": 0.37786585153598323,
+      "mae": 19.000425058981843,
+      "rmse": 22.026942379637653,
+      "fold": 1,
+      "train_size": 131,
+      "test_size": 22,
+      "best_iteration": 52
     },
     {
-      "spearman": NaN,
-      "mae": 20.118884472399476,
-      "rmse": 26.17846042986292,
+      "spearman": 0.2621187787648866,
+      "mae": 22.93781863494832,
+      "rmse": 27.181722873096472,
+      "fold": 2,
+      "train_size": 153,
+      "test_size": 22,
+      "best_iteration": 40
+    },
+    {
+      "spearman": 0.20706711576836295,
+      "mae": 11.103895328104118,
+      "rmse": 12.818178301616728,
+      "fold": 3,
+      "train_size": 175,
+      "test_size": 22,
+      "best_iteration": 300
+    },
+    {
+      "spearman": 0.809363211011873,
+      "mae": 7.8985202818506535,
+      "rmse": 9.673418067849735,
       "fold": 4,
-      "train_size": 206,
-      "test_size": 6,
+      "train_size": 197,
+      "test_size": 11,
+      "best_iteration": 57
+    },
+    {
+      "spearman": -0.06863239870766008,
+      "mae": 20.382966765438056,
+      "rmse": 24.349219140722933,
+      "fold": 5,
+      "train_size": 208,
+      "test_size": 11,
       "best_iteration": 4
     }
   ],
   "tier": "per_stock",
   "identifier": "TAMINV",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

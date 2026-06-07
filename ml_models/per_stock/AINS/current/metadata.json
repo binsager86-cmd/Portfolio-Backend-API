@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": -0.2558226312840311,
-  "mae": 4.626292653124126,
-  "rmse": 4.76436938772661,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.33206915265617487,
+  "mae": 29.492137307670237,
+  "rmse": 32.795973956646414,
+  "auc": 0.33206915265617487,
+  "mean_auc": 0.33206915265617487,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 282,
+  "n_train_events": 408,
   "train_date_range": {
-    "start": "2023-12-27",
-    "end": "2026-05-21"
+    "start": "2023-11-13",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_-0.2558",
+  "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.2668614844309536,
-      "mae": 4.106500058542907,
-      "rmse": 4.368679116927782,
+      "spearman": 0.22263288710320384,
+      "mae": 39.3926156334635,
+      "rmse": 39.90623113845873,
       "fold": 1,
-      "train_size": 191,
-      "test_size": 36,
-      "best_iteration": 85
+      "train_size": 244,
+      "test_size": 41,
+      "best_iteration": 1
     },
     {
-      "spearman": -0.2597327090415637,
-      "mae": 4.0561868067484514,
-      "rmse": 4.163861615023613,
+      "spearman": 0.6347184366563565,
+      "mae": 23.585465266506194,
+      "rmse": 26.68081656258433,
+      "fold": 2,
+      "train_size": 285,
+      "test_size": 41,
+      "best_iteration": 50
+    },
+    {
+      "spearman": 0.4308136186757394,
+      "mae": 32.1258827240397,
+      "rmse": 38.08325635566506,
       "fold": 3,
-      "train_size": 240,
-      "test_size": 26,
-      "best_iteration": 32
+      "train_size": 326,
+      "test_size": 41,
+      "best_iteration": 49
     },
     {
-      "spearman": -0.7745966692414833,
-      "mae": 5.716191094081017,
-      "rmse": 5.760567431228434,
+      "spearman": 0.13755656325490814,
+      "mae": 40.59198475830608,
+      "rmse": 44.902480389121834,
+      "fold": 4,
+      "train_size": 367,
+      "test_size": 20,
+      "best_iteration": 110
+    },
+    {
+      "spearman": 0.2346242575906665,
+      "mae": 11.764738156035731,
+      "rmse": 14.407085337402133,
       "fold": 5,
-      "train_size": 272,
-      "test_size": 10,
-      "best_iteration": 30
+      "train_size": 387,
+      "test_size": 21,
+      "best_iteration": 36
     }
   ],
   "tier": "per_stock",
   "identifier": "AINS",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

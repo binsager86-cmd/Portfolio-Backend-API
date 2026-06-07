@@ -1,39 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.9489985619589472,
-  "mae": 4.090437365636167,
-  "rmse": 5.137020196110848,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.24579138969470846,
+  "mae": 30.819785075171485,
+  "rmse": 34.56417287920252,
+  "auc": 0.24579138969470846,
+  "mean_auc": 0.24579138969470846,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 597,
+  "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-04-20",
-    "end": "2026-04-26"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.2458",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.9233413152610743,
-      "mae": 4.940151384479174,
-      "rmse": 5.58762446038244,
-      "fold": 2,
-      "train_size": 396,
-      "test_size": 95,
-      "best_iteration": 23
+      "spearman": 0.47560554526805954,
+      "mae": 26.765592078451565,
+      "rmse": 32.736889106608636,
+      "fold": 1,
+      "train_size": 409,
+      "test_size": 69,
+      "best_iteration": 131
     },
     {
-      "spearman": 0.9746558086568201,
-      "mae": 3.2407233467931604,
-      "rmse": 4.6864159318392575,
+      "spearman": -0.456498293278156,
+      "mae": 31.677376045672343,
+      "rmse": 36.231635256654336,
+      "fold": 2,
+      "train_size": 478,
+      "test_size": 68,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.5937604091384898,
+      "mae": 28.781536830624567,
+      "rmse": 32.09948015980118,
+      "fold": 3,
+      "train_size": 546,
+      "test_size": 68,
+      "best_iteration": 70
+    },
+    {
+      "spearman": -0.12784565195677733,
+      "mae": 47.395901768093545,
+      "rmse": 47.52757787407588,
+      "fold": 4,
+      "train_size": 614,
+      "test_size": 34,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.7439349393019262,
+      "mae": 19.478518653015396,
+      "rmse": 24.22528199887257,
       "fold": 5,
-      "train_size": 545,
-      "test_size": 52,
-      "best_iteration": 16
+      "train_size": 648,
+      "test_size": 35,
+      "best_iteration": 24
     }
   ],
   "tier": "per_stock",
   "identifier": "IFA",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

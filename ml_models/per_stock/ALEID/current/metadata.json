@@ -1,39 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.0975512207825989,
-  "mae": 0.2904188466408242,
-  "rmse": 0.42041394131428556,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.36286403066205086,
+  "mae": 24.80211721410567,
+  "rmse": 28.354493730899243,
+  "auc": 0.36286403066205086,
+  "mean_auc": 0.36286403066205086,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 514,
+  "n_train_events": 532,
   "train_date_range": {
-    "start": "2023-08-02",
-    "end": "2025-09-15"
+    "start": "2023-06-13",
+    "end": "2025-08-18"
   },
-  "rejected_reason": "spearman_below_threshold_0.0976",
+  "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.4065633043686422,
-      "mae": 0.10693760564056337,
-      "rmse": 0.16822540868370167,
-      "fold": 3,
-      "train_size": 442,
-      "test_size": 36,
-      "best_iteration": 156
+      "spearman": 0.7353489946779165,
+      "mae": 14.743488621356287,
+      "rmse": 16.712538202710878,
+      "fold": 1,
+      "train_size": 319,
+      "test_size": 53,
+      "best_iteration": 46
     },
     {
-      "spearman": -0.2114608628034444,
-      "mae": 0.47390008764108493,
-      "rmse": 0.6726024739448695,
+      "spearman": -0.4046116592356978,
+      "mae": 31.831050818041472,
+      "rmse": 37.27439504765949,
+      "fold": 2,
+      "train_size": 372,
+      "test_size": 53,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.23321835477758845,
+      "mae": 29.71119270670906,
+      "rmse": 32.39177261581657,
+      "fold": 3,
+      "train_size": 425,
+      "test_size": 53,
+      "best_iteration": 8
+    },
+    {
+      "spearman": 0.5718227462488831,
+      "mae": 28.52283609388897,
+      "rmse": 32.04956042088243,
+      "fold": 4,
+      "train_size": 478,
+      "test_size": 27,
+      "best_iteration": 17
+    },
+    {
+      "spearman": 0.6785417168415642,
+      "mae": 19.202017830532554,
+      "rmse": 23.34420236742684,
       "fold": 5,
-      "train_size": 496,
-      "test_size": 18,
-      "best_iteration": 306
+      "train_size": 505,
+      "test_size": 27,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "ALEID",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

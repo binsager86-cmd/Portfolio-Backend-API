@@ -1,57 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.3929409093755609,
-  "mae": 35.605227058815856,
-  "rmse": 40.6617987112555,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": -0.01713620965653015,
+  "mae": 36.90055685934172,
+  "rmse": 39.71007230929597,
+  "auc": -0.01713620965653015,
+  "mean_auc": -0.01713620965653015,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 591,
+  "n_train_events": 667,
   "train_date_range": {
-    "start": "2023-06-13",
-    "end": "2026-04-23"
+    "start": "2023-06-18",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_-0.0171",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.6149838438569978,
-      "mae": 24.46980521415442,
-      "rmse": 26.468625189217608,
+      "spearman": -0.15649840033406434,
+      "mae": 30.29608790097384,
+      "rmse": 33.84383196077503,
       "fold": 1,
-      "train_size": 311,
-      "test_size": 59,
-      "best_iteration": 401
+      "train_size": 400,
+      "test_size": 66,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.6339843690990498,
-      "mae": 35.70003180654983,
-      "rmse": 43.09910084715001,
+      "spearman": 0.3416520425103149,
+      "mae": 40.423270216280194,
+      "rmse": 42.068025860555714,
       "fold": 2,
-      "train_size": 370,
-      "test_size": 68,
-      "best_iteration": 56
+      "train_size": 466,
+      "test_size": 67,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.8068514837131964,
-      "mae": 13.866802430614994,
-      "rmse": 21.32468728481949,
+      "spearman": -0.41070440088895765,
+      "mae": 28.58008897664638,
+      "rmse": 33.30612874517827,
       "fold": 3,
-      "train_size": 438,
-      "test_size": 43,
-      "best_iteration": 48
+      "train_size": 533,
+      "test_size": 67,
+      "best_iteration": 1
     },
     {
-      "spearman": -0.48405605916699995,
-      "mae": 68.3842687839442,
-      "rmse": 71.75478152383488,
+      "spearman": 0.05345803419712351,
+      "mae": 47.78281305509351,
+      "rmse": 49.413050940340945,
+      "fold": 4,
+      "train_size": 600,
+      "test_size": 33,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.08641167623293286,
+      "mae": 37.42052414771467,
+      "rmse": 39.91932403962988,
       "fold": 5,
-      "train_size": 496,
-      "test_size": 95,
+      "train_size": 633,
+      "test_size": 34,
       "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "TIJARA",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

@@ -676,7 +676,7 @@ async def kuwait_signal(
     if wins is not None and total_trades is not None and total_trades > 0:
         recent_performance = {"wins": wins, "total": total_trades}
 
-    signal = generate_kuwait_signal(
+    signal = await generate_kuwait_signal(
         rows=rows,
         stock_code=base,
         segment=segment.upper(),

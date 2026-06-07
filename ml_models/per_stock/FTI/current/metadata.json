@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.5534979636701403,
-  "mae": 3.6818433361904366,
-  "rmse": 4.996175897842331,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.08854173136397823,
+  "mae": 31.07248817463803,
+  "rmse": 34.12054351301389,
+  "auc": 0.08854173136397823,
+  "mean_auc": 0.08854173136397823,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 426,
+  "n_train_events": 557,
   "train_date_range": {
-    "start": "2023-11-21",
-    "end": "2026-05-06"
+    "start": "2023-11-20",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.0885",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.992458414233044,
-      "mae": 3.8708264577969267,
-      "rmse": 4.5137733173208066,
+      "spearman": 0.5237123934305586,
+      "mae": 17.842901759526303,
+      "rmse": 22.04623313955373,
+      "fold": 1,
+      "train_size": 334,
+      "test_size": 55,
+      "best_iteration": 98
+    },
+    {
+      "spearman": -0.3260457301678728,
+      "mae": 33.10375513739651,
+      "rmse": 35.805263381803826,
       "fold": 2,
-      "train_size": 307,
-      "test_size": 24,
-      "best_iteration": 129
+      "train_size": 389,
+      "test_size": 56,
+      "best_iteration": 1
     },
     {
-      "spearman": -0.3314814671524769,
-      "mae": 2.631309880481598,
-      "rmse": 3.651300538473854,
+      "spearman": 0.12045439593815767,
+      "mae": 45.17116334679515,
+      "rmse": 46.2126438553975,
+      "fold": 3,
+      "train_size": 445,
+      "test_size": 56,
+      "best_iteration": 1
+    },
+    {
+      "spearman": -0.4986482207734019,
+      "mae": 32.72867735071075,
+      "rmse": 36.0899379083319,
       "fold": 4,
-      "train_size": 338,
-      "test_size": 17,
-      "best_iteration": 52
+      "train_size": 501,
+      "test_size": 28,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.9995169439298536,
-      "mae": 4.543393670292785,
-      "rmse": 6.823453837732333,
+      "spearman": 0.6232358183924496,
+      "mae": 26.51594327876142,
+      "rmse": 30.4486392799825,
       "fold": 5,
-      "train_size": 355,
-      "test_size": 71,
-      "best_iteration": 14
+      "train_size": 529,
+      "test_size": 28,
+      "best_iteration": 300
     }
   ],
   "tier": "per_stock",
   "identifier": "FTI",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": -0.04053692599493334,
-  "mae": 1.6250462044292204,
-  "rmse": 2.07118091857829,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.091188422175249,
+  "mae": 25.31379331655434,
+  "rmse": 29.785045581180697,
+  "auc": 0.091188422175249,
+  "mean_auc": 0.091188422175249,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 615,
+  "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-05-09",
-    "end": "2026-04-26"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_-0.0405",
+  "rejected_reason": "spearman_below_threshold_0.0912",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.28890365656076084,
-      "mae": 1.4631623892098988,
-      "rmse": 1.9765751611124445,
+      "spearman": 0.2872558005917669,
+      "mae": 30.947811442501624,
+      "rmse": 34.51958302419167,
       "fold": 1,
-      "train_size": 422,
-      "test_size": 47,
-      "best_iteration": 48
+      "train_size": 409,
+      "test_size": 69,
+      "best_iteration": 19
     },
     {
-      "spearman": -0.12424529449393039,
-      "mae": 3.0609511186256464,
-      "rmse": 3.615662286282803,
+      "spearman": 0.039016763463648955,
+      "mae": 24.973019622801463,
+      "rmse": 29.575861515186816,
+      "fold": 2,
+      "train_size": 478,
+      "test_size": 68,
+      "best_iteration": 37
+    },
+    {
+      "spearman": 0.039849144108484,
+      "mae": 32.44618684980494,
+      "rmse": 36.89868682543233,
       "fold": 3,
-      "train_size": 515,
-      "test_size": 53,
-      "best_iteration": 66
+      "train_size": 546,
+      "test_size": 68,
+      "best_iteration": 8
     },
     {
-      "spearman": 0.2915381730698912,
-      "mae": 0.3510251054521163,
-      "rmse": 0.621305308339622,
+      "spearman": -0.34391967393842954,
+      "mae": 16.605975616803278,
+      "rmse": 22.557890506385508,
+      "fold": 4,
+      "train_size": 614,
+      "test_size": 34,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.4337400766507747,
+      "mae": 21.595973050860398,
+      "rmse": 25.373206034707167,
       "fold": 5,
-      "train_size": 591,
-      "test_size": 24,
-      "best_iteration": 81
+      "train_size": 648,
+      "test_size": 35,
+      "best_iteration": 10
     }
   ],
   "tier": "per_stock",
   "identifier": "ALG",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

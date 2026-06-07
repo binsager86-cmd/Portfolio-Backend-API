@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.8250006140455199,
-  "mae": 12.773465574395152,
-  "rmse": 14.435000185958538,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.11995776967637772,
+  "mae": 31.53024417972743,
+  "rmse": 35.33079859762959,
+  "auc": 0.11995776967637772,
+  "mean_auc": 0.11995776967637772,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 477,
+  "n_train_events": 656,
   "train_date_range": {
-    "start": "2023-07-06",
-    "end": "2026-04-15"
+    "start": "2023-07-04",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.1200",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.6695212516923281,
-      "mae": 24.496408770204592,
-      "rmse": 24.514958972433828,
+      "spearman": -0.30150643623235057,
+      "mae": 22.864290579118723,
+      "rmse": 28.230509082355944,
       "fold": 1,
-      "train_size": 266,
-      "test_size": 68,
+      "train_size": 393,
+      "test_size": 66,
       "best_iteration": 1
     },
     {
-      "spearman": 0.8068602186017464,
-      "mae": 6.4661616312301025,
-      "rmse": 9.204017593122892,
+      "spearman": 0.40494133013131517,
+      "mae": 31.02694910435415,
+      "rmse": 36.00997284654394,
       "fold": 2,
-      "train_size": 334,
-      "test_size": 47,
-      "best_iteration": 32
+      "train_size": 459,
+      "test_size": 65,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.9986203718424852,
-      "mae": 7.357826321750759,
-      "rmse": 9.586023992318898,
-      "fold": 5,
-      "train_size": 407,
-      "test_size": 70,
+      "spearman": 0.3122887765224915,
+      "mae": 35.755527159886505,
+      "rmse": 38.22287991599666,
+      "fold": 3,
+      "train_size": 524,
+      "test_size": 66,
+      "best_iteration": 35
+    },
+    {
+      "spearman": 0.1541195308118707,
+      "mae": 37.85263079792668,
+      "rmse": 40.0334075019635,
+      "fold": 4,
+      "train_size": 590,
+      "test_size": 33,
       "best_iteration": 1
+    },
+    {
+      "spearman": 0.02994564714856182,
+      "mae": 30.151823257351072,
+      "rmse": 34.15722364128788,
+      "fold": 5,
+      "train_size": 623,
+      "test_size": 33,
+      "best_iteration": 46
     }
   ],
   "tier": "per_stock",
   "identifier": "MASHAER",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

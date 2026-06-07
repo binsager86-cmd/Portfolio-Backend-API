@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": -0.15214515486254615,
-  "mae": 18.231735440913692,
-  "rmse": 21.243336060327664,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.7332146198130254,
+  "mae": 31.344930671283713,
+  "rmse": 35.08570036735576,
+  "auc": 0.7332146198130254,
+  "mean_auc": 0.7332146198130254,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 225,
+  "n_train_events": 445,
   "train_date_range": {
-    "start": "2023-11-12",
-    "end": "2026-04-08"
+    "start": "2023-08-20",
+    "end": "2026-03-11"
   },
-  "rejected_reason": "spearman_below_threshold_-0.1521",
+  "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.45643546458763845,
-      "mae": 18.10863425554926,
-      "rmse": 19.438077727795275,
+      "spearman": 0.5447608770462217,
+      "mae": 25.564358770086184,
+      "rmse": 29.131181640235997,
       "fold": 1,
-      "train_size": 164,
-      "test_size": 15,
-      "best_iteration": 24
+      "train_size": 267,
+      "test_size": 44,
+      "best_iteration": 72
     },
     {
-      "spearman": 0.0,
-      "mae": 26.16007944770422,
-      "rmse": 27.35274486248962,
+      "spearman": 0.9380841184638924,
+      "mae": 18.9491252335099,
+      "rmse": 25.393665042152037,
+      "fold": 2,
+      "train_size": 311,
+      "test_size": 45,
+      "best_iteration": 300
+    },
+    {
+      "spearman": 0.5935200286645522,
+      "mae": 14.192680582513175,
+      "rmse": 18.72481758196461,
       "fold": 3,
-      "train_size": 188,
-      "test_size": 25,
-      "best_iteration": 5
+      "train_size": 356,
+      "test_size": 44,
+      "best_iteration": 38
     },
     {
-      "spearman": 0.0,
-      "mae": 10.426492619487586,
-      "rmse": 16.939185590698102,
+      "spearman": 0.9012166645368248,
+      "mae": 56.594679295601715,
+      "rmse": 58.133723272774255,
       "fold": 4,
-      "train_size": 213,
-      "test_size": 7,
-      "best_iteration": 74
+      "train_size": 400,
+      "test_size": 22,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.688491410353636,
+      "mae": 41.42380947470759,
+      "rmse": 44.04511429965193,
+      "fold": 5,
+      "train_size": 422,
+      "test_size": 23,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "NAPESCO",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

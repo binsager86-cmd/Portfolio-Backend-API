@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.057879512568242246,
-  "mae": 2.825539907638447,
-  "rmse": 3.1697342539919187,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.20270678413517756,
+  "mae": 22.494548007324262,
+  "rmse": 26.81837921543839,
+  "auc": 0.20270678413517756,
+  "mean_auc": 0.20270678413517756,
   "log_loss": NaN,
   "calibration_error": NaN,
   "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-06-14",
-    "end": "2026-04-23"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_0.0579",
+  "rejected_reason": "spearman_below_threshold_0.2027",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.4103395126031124,
-      "mae": 5.373005020731447,
-      "rmse": 5.998544087667324,
+      "spearman": 0.2630748388465936,
+      "mae": 17.007752073933894,
+      "rmse": 19.847356068499955,
+      "fold": 1,
+      "train_size": 409,
+      "test_size": 69,
+      "best_iteration": 17
+    },
+    {
+      "spearman": 0.6466311504978605,
+      "mae": 38.54850113849792,
+      "rmse": 45.55392143848921,
       "fold": 2,
-      "train_size": 444,
-      "test_size": 131,
-      "best_iteration": 15
+      "train_size": 478,
+      "test_size": 68,
+      "best_iteration": 299
     },
     {
-      "spearman": -0.39342628299351556,
-      "mae": 0.26220379095364876,
-      "rmse": 0.5557326230741636,
+      "spearman": -0.16652840360436935,
+      "mae": 21.472293636892577,
+      "rmse": 25.57130657056466,
       "fold": 3,
-      "train_size": 575,
-      "test_size": 55,
-      "best_iteration": 54
+      "train_size": 546,
+      "test_size": 68,
+      "best_iteration": 2
     },
     {
-      "spearman": 0.15672530809512988,
-      "mae": 2.8414109112302466,
-      "rmse": 2.9549260512342683,
+      "spearman": 0.06218354227038638,
+      "mae": 17.39520745044662,
+      "rmse": 19.466449266559472,
+      "fold": 4,
+      "train_size": 614,
+      "test_size": 34,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.20817279266541663,
+      "mae": 18.04898573685031,
+      "rmse": 23.652862733078653,
       "fold": 5,
-      "train_size": 656,
-      "test_size": 27,
-      "best_iteration": 8
+      "train_size": 648,
+      "test_size": 35,
+      "best_iteration": 23
     }
   ],
   "tier": "per_stock",
   "identifier": "AZNOULA",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

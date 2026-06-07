@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.5547415565616771,
-  "mae": 13.744005172472908,
-  "rmse": 18.628915502244933,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.2491552970372739,
+  "mae": 31.365286786954606,
+  "rmse": 34.68699577242158,
+  "auc": 0.2491552970372739,
+  "mean_auc": 0.2491552970372739,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 479,
+  "n_train_events": 648,
   "train_date_range": {
-    "start": "2023-05-24",
-    "end": "2026-05-07"
+    "start": "2023-07-09",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.2492",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.8416960121976149,
-      "mae": 28.55822010436795,
-      "rmse": 29.27578294362793,
+      "spearman": 0.2729612396025459,
+      "mae": 24.176828702769427,
+      "rmse": 28.88664177861626,
       "fold": 1,
-      "train_size": 333,
-      "test_size": 43,
-      "best_iteration": 25
+      "train_size": 388,
+      "test_size": 65,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.8086423746383082,
-      "mae": 10.274735994705063,
-      "rmse": 16.931932550157388,
+      "spearman": -0.1613308276996222,
+      "mae": 38.17568375931013,
+      "rmse": 40.617346098414274,
       "fold": 2,
-      "train_size": 376,
-      "test_size": 13,
-      "best_iteration": 76
+      "train_size": 453,
+      "test_size": 65,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.013886282849108205,
-      "mae": 2.3990594183457055,
-      "rmse": 9.679031012949476,
+      "spearman": -0.1718269800829282,
+      "mae": 29.684604964531676,
+      "rmse": 34.56068739327785,
+      "fold": 3,
+      "train_size": 518,
+      "test_size": 65,
+      "best_iteration": 2
+    },
+    {
+      "spearman": 0.7060806241886692,
+      "mae": 37.26557002339326,
+      "rmse": 38.43059379268295,
+      "fold": 4,
+      "train_size": 583,
+      "test_size": 32,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.5998924291777048,
+      "mae": 27.523746484768534,
+      "rmse": 30.939709799116585,
       "fold": 5,
-      "train_size": 404,
-      "test_size": 75,
-      "best_iteration": 14
+      "train_size": 615,
+      "test_size": 33,
+      "best_iteration": 36
     }
   ],
   "tier": "per_stock",
   "identifier": "SENERGY",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

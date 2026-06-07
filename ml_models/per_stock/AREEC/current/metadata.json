@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": -0.30109712141006,
-  "mae": 6.324213157535792,
-  "rmse": 6.5934549756689975,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.3958524792771235,
+  "mae": 25.645311518001716,
+  "rmse": 29.40780079878462,
+  "auc": 0.3958524792771235,
+  "mean_auc": 0.3958524792771235,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 430,
+  "n_train_events": 580,
   "train_date_range": {
-    "start": "2023-07-31",
-    "end": "2026-04-14"
+    "start": "2023-06-21",
+    "end": "2026-03-03"
   },
-  "rejected_reason": "spearman_below_threshold_-0.3011",
+  "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.17835157040349756,
-      "mae": 10.050103630182488,
-      "rmse": 10.527894347554673,
+      "spearman": 0.41524935796473106,
+      "mae": 29.076890182586077,
+      "rmse": 34.095421746162906,
+      "fold": 1,
+      "train_size": 348,
+      "test_size": 58,
+      "best_iteration": 106
+    },
+    {
+      "spearman": -0.10743872099931906,
+      "mae": 29.534526771626474,
+      "rmse": 34.43894257227393,
       "fold": 2,
-      "train_size": 266,
-      "test_size": 76,
+      "train_size": 406,
+      "test_size": 58,
       "best_iteration": 1
     },
     {
-      "spearman": -0.3963827972987767,
-      "mae": 7.0181898739940145,
-      "rmse": 7.028995917729578,
+      "spearman": 0.5475509683392973,
+      "mae": 26.181867103793735,
+      "rmse": 29.593950714257,
       "fold": 3,
-      "train_size": 342,
-      "test_size": 62,
+      "train_size": 464,
+      "test_size": 58,
       "best_iteration": 1
     },
     {
-      "spearman": -0.3285569965279058,
-      "mae": 1.9043459684308743,
-      "rmse": 2.223474661722741,
+      "spearman": 0.7759695757872866,
+      "mae": 15.013397493479358,
+      "rmse": 17.875756656344418,
       "fold": 4,
-      "train_size": 404,
-      "test_size": 14,
-      "best_iteration": 70
+      "train_size": 522,
+      "test_size": 29,
+      "best_iteration": 96
+    },
+    {
+      "spearman": 0.34793121529362186,
+      "mae": 28.41987603852292,
+      "rmse": 31.034932304884826,
+      "fold": 5,
+      "train_size": 551,
+      "test_size": 29,
+      "best_iteration": 288
     }
   ],
   "tier": "per_stock",
   "identifier": "AREEC",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

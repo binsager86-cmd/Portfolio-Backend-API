@@ -1,57 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.1615016614403323,
-  "mae": 5.911638072935462,
-  "rmse": 6.544392904605016,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.1218097238247888,
+  "mae": 36.69678750086333,
+  "rmse": 39.68965190989471,
+  "auc": 0.1218097238247888,
+  "mean_auc": 0.1218097238247888,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 509,
+  "n_train_events": 670,
   "train_date_range": {
-    "start": "2023-05-11",
-    "end": "2026-04-26"
+    "start": "2023-06-13",
+    "end": "2026-03-29"
   },
-  "rejected_reason": "spearman_below_threshold_0.1615",
+  "rejected_reason": "spearman_below_threshold_0.1218",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.06797979554749446,
-      "mae": 8.669864255289115,
-      "rmse": 8.832683168187433,
+      "spearman": 0.10202176154798287,
+      "mae": 35.52848148863067,
+      "rmse": 39.57901890696952,
       "fold": 1,
-      "train_size": 345,
+      "train_size": 402,
       "test_size": 66,
-      "best_iteration": 24
+      "best_iteration": 1
     },
     {
-      "spearman": 0.3975702485178524,
-      "mae": 8.083965497302326,
-      "rmse": 8.684713259869657,
+      "spearman": -0.014558881058406145,
+      "mae": 29.150509305079474,
+      "rmse": 33.283948009138086,
       "fold": 2,
-      "train_size": 411,
-      "test_size": 40,
-      "best_iteration": 29
+      "train_size": 468,
+      "test_size": 68,
+      "best_iteration": 17
     },
     {
-      "spearman": -0.274737226882296,
-      "mae": 5.686506987700149,
-      "rmse": 6.813409650209457,
+      "spearman": 0.4362989279025107,
+      "mae": 32.29867787295348,
+      "rmse": 35.23472713457288,
       "fold": 3,
-      "train_size": 451,
-      "test_size": 28,
-      "best_iteration": 130
+      "train_size": 536,
+      "test_size": 67,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.5911534196732672,
-      "mae": 1.2062155514502573,
-      "rmse": 1.8467655401535146,
+      "spearman": -0.04838418921627486,
+      "mae": 38.33627834942402,
+      "rmse": 41.727734366122036,
       "fold": 4,
-      "train_size": 479,
-      "test_size": 15,
-      "best_iteration": 69
+      "train_size": 603,
+      "test_size": 33,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.1336709999481315,
+      "mae": 48.16999048822902,
+      "rmse": 48.622831132671,
+      "fold": 5,
+      "train_size": 636,
+      "test_size": 34,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "KFOUC",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

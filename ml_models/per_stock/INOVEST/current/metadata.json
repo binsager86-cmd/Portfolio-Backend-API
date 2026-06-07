@@ -1,66 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.8512567649468263,
-  "mae": 4.759174106774468,
-  "rmse": 6.856727146581423,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.4279418724662385,
+  "mae": 25.1065051584382,
+  "rmse": 29.126921900550098,
+  "auc": 0.4279418724662385,
+  "mean_auc": 0.4279418724662385,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 623,
+  "n_train_events": 661,
   "train_date_range": {
-    "start": "2023-06-13",
-    "end": "2026-04-20"
+    "start": "2023-06-15",
+    "end": "2026-03-30"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.9841800857910008,
-      "mae": 5.384565584118371,
-      "rmse": 6.782710128703391,
+      "spearman": 0.22672510513725921,
+      "mae": 19.616343043574787,
+      "rmse": 25.53074878784756,
       "fold": 1,
-      "train_size": 408,
-      "test_size": 60,
-      "best_iteration": 41
+      "train_size": 396,
+      "test_size": 66,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.9745517374596835,
-      "mae": 5.532566292030295,
-      "rmse": 6.775330620810385,
+      "spearman": 0.749469961671429,
+      "mae": 24.554755511023263,
+      "rmse": 27.60700446085887,
       "fold": 2,
-      "train_size": 468,
-      "test_size": 55,
-      "best_iteration": 38
+      "train_size": 462,
+      "test_size": 66,
+      "best_iteration": 65
     },
     {
-      "spearman": 0.3156614074253085,
-      "mae": 9.195644326614218,
-      "rmse": 16.498877577666782,
+      "spearman": 0.00017072282235242568,
+      "mae": 31.82165783777355,
+      "rmse": 36.08389068586891,
       "fold": 3,
-      "train_size": 523,
-      "test_size": 18,
-      "best_iteration": 380
+      "train_size": 528,
+      "test_size": 66,
+      "best_iteration": 2
     },
     {
-      "spearman": 0.9930954295082076,
-      "mae": 1.4857154506732881,
-      "rmse": 1.7363301345756923,
+      "spearman": 0.46776868926419163,
+      "mae": 22.687703728541116,
+      "rmse": 26.761044959872653,
       "fold": 4,
-      "train_size": 541,
-      "test_size": 43,
-      "best_iteration": 47
+      "train_size": 594,
+      "test_size": 33,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.9887951645499313,
-      "mae": 2.1973788804361667,
-      "rmse": 2.490387271150866,
+      "spearman": 0.6955748834359603,
+      "mae": 26.852065671278275,
+      "rmse": 29.651920608302508,
       "fold": 5,
-      "train_size": 584,
-      "test_size": 39,
-      "best_iteration": 55
+      "train_size": 627,
+      "test_size": 34,
+      "best_iteration": 31
     }
   ],
   "tier": "per_stock",
   "identifier": "INOVEST",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

@@ -1,66 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.17694694514496276,
-  "mae": 20.513033395087383,
-  "rmse": 23.87971125361087,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.14924462016185774,
+  "mae": 34.643335497119025,
+  "rmse": 36.92742747775888,
+  "auc": 0.14924462016185774,
+  "mean_auc": 0.14924462016185774,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 488,
+  "n_train_events": 570,
   "train_date_range": {
-    "start": "2023-07-06",
-    "end": "2026-05-05"
+    "start": "2023-07-24",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_0.1769",
+  "rejected_reason": "spearman_below_threshold_0.1492",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.9980981454128419,
-      "mae": 4.502144009376958,
-      "rmse": 8.308726251097717,
+      "spearman": 0.28513687071256616,
+      "mae": 37.65989078820377,
+      "rmse": 39.11877854684975,
       "fold": 1,
-      "train_size": 203,
-      "test_size": 91,
-      "best_iteration": 65
+      "train_size": 342,
+      "test_size": 57,
+      "best_iteration": 1
     },
     {
-      "spearman": -0.617033532905936,
-      "mae": 50.65118555503064,
-      "rmse": 51.35225526850949,
+      "spearman": -0.2624396588356675,
+      "mae": 29.526944701390136,
+      "rmse": 31.754029581738262,
       "fold": 2,
-      "train_size": 294,
-      "test_size": 28,
-      "best_iteration": 1
+      "train_size": 399,
+      "test_size": 57,
+      "best_iteration": 2
     },
     {
-      "spearman": 0.4629100498862757,
-      "mae": 11.249203928034131,
-      "rmse": 14.503805218113197,
+      "spearman": -0.08967872308531862,
+      "mae": 44.90606494252926,
+      "rmse": 48.48672580900082,
       "fold": 3,
-      "train_size": 322,
-      "test_size": 13,
-      "best_iteration": 131
+      "train_size": 456,
+      "test_size": 57,
+      "best_iteration": 8
     },
     {
-      "spearman": -0.30107526881720426,
-      "mae": 32.83061762600693,
-      "rmse": 34.22441878736008,
+      "spearman": 0.02875978497548062,
+      "mae": 27.56360397545083,
+      "rmse": 30.603850555971608,
       "fold": 4,
-      "train_size": 335,
-      "test_size": 32,
-      "best_iteration": 1
+      "train_size": 513,
+      "test_size": 28,
+      "best_iteration": 3
     },
     {
-      "spearman": 0.34183533214883643,
-      "mae": 3.3320158569882845,
-      "rmse": 11.009350742973878,
+      "spearman": 0.7844448270422281,
+      "mae": 33.56017307802112,
+      "rmse": 34.673752895234,
       "fold": 5,
-      "train_size": 367,
-      "test_size": 121,
-      "best_iteration": 3
+      "train_size": 541,
+      "test_size": 29,
+      "best_iteration": 16
     }
   ],
   "tier": "per_stock",
   "identifier": "OSOUL",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

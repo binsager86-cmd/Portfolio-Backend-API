@@ -1,30 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.27490738120965297,
-  "mae": 4.589042580103049,
-  "rmse": 9.67551473147702,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.21882120441192413,
+  "mae": 28.392445996920024,
+  "rmse": 31.62540112073807,
+  "auc": 0.21882120441192413,
+  "mean_auc": 0.21882120441192413,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 530,
+  "n_train_events": 668,
   "train_date_range": {
-    "start": "2023-04-20",
-    "end": "2026-04-22"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_0.2749",
+  "rejected_reason": "spearman_below_threshold_0.2188",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.27490738120965297,
-      "mae": 4.589042580103049,
-      "rmse": 9.67551473147702,
+      "spearman": 0.45365595372780043,
+      "mae": 28.84357177672545,
+      "rmse": 32.76186102324762,
+      "fold": 1,
+      "train_size": 400,
+      "test_size": 67,
+      "best_iteration": 2
+    },
+    {
+      "spearman": 0.4704967070613163,
+      "mae": 26.58388269407063,
+      "rmse": 29.710448419380715,
+      "fold": 2,
+      "train_size": 467,
+      "test_size": 67,
+      "best_iteration": 34
+    },
+    {
+      "spearman": -0.28123713915196163,
+      "mae": 26.28245502022141,
+      "rmse": 28.561927463365045,
+      "fold": 3,
+      "train_size": 534,
+      "test_size": 67,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.6456543954785022,
+      "mae": 26.210116769506605,
+      "rmse": 28.491059402441046,
+      "fold": 4,
+      "train_size": 601,
+      "test_size": 33,
+      "best_iteration": 1
+    },
+    {
+      "spearman": -0.19446389505603695,
+      "mae": 34.04220372407603,
+      "rmse": 38.60170929525594,
       "fold": 5,
-      "train_size": 477,
-      "test_size": 53,
-      "best_iteration": 27
+      "train_size": 634,
+      "test_size": 34,
+      "best_iteration": 2
     }
   ],
   "tier": "per_stock",
   "identifier": "KBT",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

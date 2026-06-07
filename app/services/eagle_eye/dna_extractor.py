@@ -1179,11 +1179,8 @@ def extract_dna(
         pre_move_volume_profile=pre_move_volume_profile,
         fakeout_volume_profile=fakeout_volume_profile,
         available_window_days=list(windows),
-        # Use the data-driven optimal hold window as the default display window.
-        # This replaces the hardcoded 20-day default — each stock now shows
-        # its own historically best horizon (e.g. 40d for a slow mover, 60d
-        # for a compounding accumulator, etc.).
-        default_window_days=optimal_hold_window,
+        # Preserve caller-selected default window for UI/display consistency.
+        default_window_days=default_window,
         confidence_floor=min_setup_occurrences,
         window_profiles=window_profiles,
         setup_examples=_build_setup_examples(indicators_df, setup_matches, windows, thresholds),

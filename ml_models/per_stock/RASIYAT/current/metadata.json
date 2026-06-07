@@ -1,57 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.30521501476046053,
-  "mae": 13.353237200526033,
-  "rmse": 14.066239395775447,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.20517359409324593,
+  "mae": 28.71079213329707,
+  "rmse": 32.75204505983883,
+  "auc": 0.20517359409324593,
+  "mean_auc": 0.20517359409324593,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 731,
+  "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-08-02",
-    "end": "2026-04-26"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.2052",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.9361647795030652,
-      "mae": 7.447564482318217,
-      "rmse": 7.599097695382435,
+      "spearman": 0.2956547452395084,
+      "mae": 26.50607363024902,
+      "rmse": 33.9414853451168,
       "fold": 1,
-      "train_size": 401,
-      "test_size": 91,
-      "best_iteration": 34
+      "train_size": 409,
+      "test_size": 69,
+      "best_iteration": 28
     },
     {
-      "spearman": -0.03323569830471032,
-      "mae": 9.781636116774575,
-      "rmse": 12.135142848424003,
+      "spearman": 0.5300353648450432,
+      "mae": 37.28312639937914,
+      "rmse": 39.7175099330495,
       "fold": 2,
-      "train_size": 492,
-      "test_size": 57,
-      "best_iteration": 35
+      "train_size": 478,
+      "test_size": 68,
+      "best_iteration": 3
     },
     {
-      "spearman": 0.6722711355000569,
-      "mae": 18.032289118190732,
-      "rmse": 18.22232008838146,
+      "spearman": -0.04956742956609724,
+      "mae": 18.997360363823528,
+      "rmse": 22.762046607658974,
       "fold": 3,
-      "train_size": 549,
-      "test_size": 76,
-      "best_iteration": 9
+      "train_size": 546,
+      "test_size": 68,
+      "best_iteration": 1
     },
     {
-      "spearman": -0.3543401576565698,
-      "mae": 18.15145908482061,
-      "rmse": 18.3083969509139,
-      "fold": 5,
-      "train_size": 647,
-      "test_size": 84,
+      "spearman": 0.49994242547554346,
+      "mae": 41.796248897944345,
+      "rmse": 44.82128104829952,
+      "fold": 4,
+      "train_size": 614,
+      "test_size": 34,
       "best_iteration": 1
+    },
+    {
+      "spearman": -0.25019713552776807,
+      "mae": 18.971151375089317,
+      "rmse": 22.517902365069336,
+      "fold": 5,
+      "train_size": 648,
+      "test_size": 35,
+      "best_iteration": 100
     }
   ],
   "tier": "per_stock",
   "identifier": "RASIYAT",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

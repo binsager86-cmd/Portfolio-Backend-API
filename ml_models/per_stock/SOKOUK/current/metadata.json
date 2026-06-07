@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.8978875593460031,
-  "mae": 13.739552520383304,
-  "rmse": 14.987058363756676,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.38916455757954826,
+  "mae": 30.437149081756626,
+  "rmse": 33.83973934695914,
+  "auc": 0.38916455757954826,
+  "mean_auc": 0.38916455757954826,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 513,
+  "n_train_events": 682,
   "train_date_range": {
-    "start": "2023-05-11",
-    "end": "2026-05-07"
+    "start": "2023-06-14",
+    "end": "2026-03-30"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.9483716648555721,
-      "mae": 28.99701637526083,
-      "rmse": 29.786683964372905,
+      "spearman": 0.5609512894384853,
+      "mae": 19.658101490555126,
+      "rmse": 23.131828001194886,
       "fold": 1,
-      "train_size": 301,
-      "test_size": 74,
-      "best_iteration": 7
+      "train_size": 409,
+      "test_size": 68,
+      "best_iteration": 70
     },
     {
-      "spearman": 0.8871655103642435,
-      "mae": 4.0822904826614685,
-      "rmse": 5.5895841676456826,
+      "spearman": 0.27926277062781013,
+      "mae": 26.713778667455898,
+      "rmse": 30.82064150458329,
       "fold": 2,
-      "train_size": 375,
-      "test_size": 37,
-      "best_iteration": 72
+      "train_size": 477,
+      "test_size": 68,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.8581255028181937,
-      "mae": 8.139350703227612,
-      "rmse": 9.584906959251443,
+      "spearman": 0.3066055855983509,
+      "mae": 28.73700187106858,
+      "rmse": 33.84523332517705,
+      "fold": 3,
+      "train_size": 545,
+      "test_size": 68,
+      "best_iteration": 180
+    },
+    {
+      "spearman": 0.30397926891486565,
+      "mae": 46.975991475880924,
+      "rmse": 48.50786146275044,
+      "fold": 4,
+      "train_size": 613,
+      "test_size": 34,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.4950238733182292,
+      "mae": 30.100871903822604,
+      "rmse": 32.893132441090046,
       "fold": 5,
-      "train_size": 450,
-      "test_size": 63,
-      "best_iteration": 6
+      "train_size": 647,
+      "test_size": 35,
+      "best_iteration": 26
     }
   ],
   "tier": "per_stock",
   "identifier": "SOKOUK",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

@@ -1226,6 +1226,7 @@ async def get_scanner(
                 continue_rising_reason=row.get("continue_rising_reason"),
                 continue_rising_exhaustion_count=int(row.get("continue_rising_exhaustion_count") or 0),
                 continue_rising_exhaustion_signals=list(row.get("continue_rising_exhaustion_signals") or []),
+                risky_near_resistance=bool(row.get("risky_near_resistance", False)),
             ))
 
         # Cache the unfiltered response for 30 s

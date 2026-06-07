@@ -1,57 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.26413181465452606,
-  "mae": 22.21031599458618,
-  "rmse": 24.780486289223774,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.15897633998979743,
+  "mae": 30.548082787394087,
+  "rmse": 33.91450962130139,
+  "auc": 0.15897633998979743,
+  "mean_auc": 0.15897633998979743,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 561,
+  "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-08-02",
-    "end": "2026-04-20"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_0.2641",
+  "rejected_reason": "spearman_below_threshold_0.1590",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.4122490007006448,
-      "mae": 8.189535832676707,
-      "rmse": 10.356766005576315,
+      "spearman": 0.10774597121933671,
+      "mae": 29.38584486651114,
+      "rmse": 31.555454698427102,
       "fold": 1,
-      "train_size": 264,
-      "test_size": 31,
-      "best_iteration": 29
+      "train_size": 409,
+      "test_size": 69,
+      "best_iteration": 19
     },
     {
-      "spearman": 0.9040979560511981,
-      "mae": 45.49933484677903,
-      "rmse": 51.235987836854655,
-      "fold": 3,
-      "train_size": 322,
-      "test_size": 186,
+      "spearman": 0.10432113417294525,
+      "mae": 26.87872090635289,
+      "rmse": 31.513025531243628,
+      "fold": 2,
+      "train_size": 478,
+      "test_size": 68,
       "best_iteration": 1
     },
     {
-      "spearman": 0.7153530039916176,
-      "mae": 24.28721947045881,
-      "rmse": 25.35799815551696,
-      "fold": 4,
-      "train_size": 508,
-      "test_size": 13,
-      "best_iteration": 13
+      "spearman": 0.21413290356649123,
+      "mae": 31.978929721045386,
+      "rmse": 36.51713114675017,
+      "fold": 3,
+      "train_size": 546,
+      "test_size": 68,
+      "best_iteration": 93
     },
     {
-      "spearman": -0.9751727021253563,
-      "mae": 10.865173828430171,
-      "rmse": 12.171193158947181,
+      "spearman": -0.3169481362657992,
+      "mae": 47.85749972638191,
+      "rmse": 49.70759845119237,
+      "fold": 4,
+      "train_size": 614,
+      "test_size": 34,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.6856298272560132,
+      "mae": 16.639418716679113,
+      "rmse": 20.279338278893672,
       "fold": 5,
-      "train_size": 521,
-      "test_size": 40,
-      "best_iteration": 19
+      "train_size": 648,
+      "test_size": 35,
+      "best_iteration": 232
     }
   ],
   "tier": "per_stock",
   "identifier": "MEZZAN",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

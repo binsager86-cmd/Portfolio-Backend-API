@@ -39,11 +39,24 @@ def format_signal(
     # Preferred order type
     preferred_order = "LIMIT"
 
+    reason: str | None
+    if signal_direction != "NEUTRAL":
+        reason = None
+    elif alerts and isinstance(alerts[0], str):
+        first_alert = alerts[0]
+        if first_alert.startswith("LIQUIDITY FAIL"):
+            reason = "liquidity_failed"
+        else:
+            reason = first_alert.replace("No signal: ", "")
+    else:
+        reason = None
+
     return {
         "timestamp": now_iso,
         "stock_code": stock_code.upper(),
         "segment": segment.upper(),
         "signal": signal_direction,
+        "reason": reason,
         "setup_type": setup_type,
         "execution": {
             "entry_zone_fils": [levels.get("entry_low"), levels.get("entry_high")],
@@ -71,6 +84,7 @@ def format_signal(
         },
         "confluence_details": {
             "total_score": confluence.get("total_score"),
+            "total_score_raw": confluence.get("total_score_raw", confluence.get("total_score")),
             "regime": confluence.get("regime"),
             "regime_confidence": confluence.get("regime_confidence"),
             "auction_intensity": confluence.get("auction_intensity"),
@@ -78,11 +92,14 @@ def format_signal(
             "raw_sub_scores": confluence.get("raw_sub_scores"),
             "liquidity_passed": confluence.get("liquidity_passed"),
             "liquidity_details": confluence.get("liquidity_details"),
+            "circuit_proximity": confluence.get("circuit_proximity"),
             "support_levels": confluence.get("support_levels", []),
             "resistance_levels": confluence.get("resistance_levels", []),
             "vwap": confluence.get("vwap"),
             "rich_sr": confluence.get("rich_sr"),
             "volume_profile": confluence.get("volume_profile"),
+            "indicator_breakdown": confluence.get("indicator_breakdown"),
+            "four_scores": confluence.get("four_scores"),
         },
         "entry_trigger": entry_trigger or {
             "action": "HOLD", "trigger": "none",

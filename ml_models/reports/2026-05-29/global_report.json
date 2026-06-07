@@ -1,0 +1,232 @@
+[
+  {
+    "tier": "global",
+    "identifier": "baseline",
+    "task": "regression",
+    "training_set": {
+      "n_events": 82758,
+      "date_range": {
+        "start": "2023-05-28",
+        "end": "2026-03-30"
+      },
+      "target_col": "target_score",
+      "target_mean": 52.12635116846709,
+      "target_min": 0.0,
+      "target_max": 100.0
+    },
+    "walk_forward_cv": {
+      "folds": [
+        {
+          "spearman": 0.2291495515998675,
+          "mae": 29.565975417347577,
+          "rmse": 33.68344482830285,
+          "fold": 1,
+          "train_size": 46828,
+          "test_size": 8842,
+          "best_iteration": 69
+        },
+        {
+          "spearman": 0.2537880269237637,
+          "mae": 30.254326827742887,
+          "rmse": 34.278761117029326,
+          "fold": 2,
+          "train_size": 55670,
+          "test_size": 9226,
+          "best_iteration": 23
+        },
+        {
+          "spearman": 0.08750355682759528,
+          "mae": 31.148307460376323,
+          "rmse": 34.827071668464335,
+          "fold": 3,
+          "train_size": 64896,
+          "test_size": 9028,
+          "best_iteration": 12
+        },
+        {
+          "spearman": 0.04133675283328921,
+          "mae": 33.903626600265845,
+          "rmse": 37.25770971211972,
+          "fold": 4,
+          "train_size": 73924,
+          "test_size": 4497,
+          "best_iteration": 1
+        },
+        {
+          "spearman": 0.3026313270585619,
+          "mae": 27.48256980553006,
+          "rmse": 31.62011544916237,
+          "fold": 5,
+          "train_size": 78421,
+          "test_size": 4337,
+          "best_iteration": 243
+        }
+      ],
+      "mean_spearman": 0.1828818430486155,
+      "std_spearman": 0.10063831947473292,
+      "mean_mae": 30.470961222252537,
+      "mean_rmse": 34.33342055501572
+    },
+    "calibration": {
+      "fitted": false,
+      "warning": false,
+      "max_error": NaN,
+      "mean_error": NaN,
+      "reliability": []
+    },
+    "top_features": [
+      {
+        "feature": "selloff_from_60d_high_pct",
+        "gain": 7436038.575927734
+      },
+      {
+        "feature": "position_in_60d_range_pct",
+        "gain": 6490452.7060546875
+      },
+      {
+        "feature": "obv_change_20d",
+        "gain": 5918600.268798828
+      },
+      {
+        "feature": "macd_hist_velocity_5d",
+        "gain": 5858819.970214844
+      },
+      {
+        "feature": "accumulation_score",
+        "gain": 5579340.5244140625
+      },
+      {
+        "feature": "macd_histogram",
+        "gain": 5227120.080688477
+      },
+      {
+        "feature": "volume_acceleration",
+        "gain": 4361109.283935547
+      },
+      {
+        "feature": "adx",
+        "gain": 3653905.3217773438
+      },
+      {
+        "feature": "obv_change_10d",
+        "gain": 3537786.2266845703
+      },
+      {
+        "feature": "price_extension_from_20d_low_pct",
+        "gain": 3489069.838623047
+      },
+      {
+        "feature": "di_spread",
+        "gain": 3303806.9716796875
+      },
+      {
+        "feature": "cmf",
+        "gain": 2977366.0529785156
+      },
+      {
+        "feature": "stochastic_k",
+        "gain": 2499334.428833008
+      },
+      {
+        "feature": "volume_ratio_20d",
+        "gain": 2418294.5834960938
+      },
+      {
+        "feature": "rsi",
+        "gain": 2272300.751953125
+      }
+    ],
+    "failure_cases": [
+      {
+        "ticker": "CATTL",
+        "event_id": "CATTL_2026-02-23_670",
+        "event_date": "2026-02-23 00:00:00",
+        "actual": 0.0,
+        "predicted": 75.24354983267311,
+        "abs_error": 75.24354983267311,
+        "outcome_category": ""
+      },
+      {
+        "ticker": "ACICO",
+        "event_id": "ACICO_2026-02-05_417",
+        "event_date": "2026-02-05 00:00:00",
+        "actual": 100.0,
+        "predicted": 26.271694401128237,
+        "abs_error": 73.72830559887177,
+        "outcome_category": ""
+      },
+      {
+        "ticker": "JTC",
+        "event_id": "JTC_2026-03-26_698",
+        "event_date": "2026-03-26 00:00:00",
+        "actual": 100.0,
+        "predicted": 27.750104726050065,
+        "abs_error": 72.24989527394993,
+        "outcome_category": ""
+      },
+      {
+        "ticker": "ACICO",
+        "event_id": "ACICO_2026-03-30_448",
+        "event_date": "2026-03-30 00:00:00",
+        "actual": 96.57,
+        "predicted": 24.96634083722128,
+        "abs_error": 71.60365916277871,
+        "outcome_category": ""
+      },
+      {
+        "ticker": "ENERGYH",
+        "event_id": "ENERGYH_2026-02-16_632",
+        "event_date": "2026-02-16 00:00:00",
+        "actual": 0.0,
+        "predicted": 71.57525260874493,
+        "abs_error": 71.57525260874493,
+        "outcome_category": ""
+      },
+      {
+        "ticker": "GINS",
+        "event_id": "GINS_2025-04-06_294",
+        "event_date": "2025-04-06 00:00:00",
+        "actual": 0.0,
+        "predicted": 71.33763232259717,
+        "abs_error": 71.33763232259717,
+        "outcome_category": ""
+      },
+      {
+        "ticker": "ABAR",
+        "event_id": "ABAR_2025-03-03_459",
+        "event_date": "2025-03-03 00:00:00",
+        "actual": 0.0,
+        "predicted": 70.15075823352187,
+        "abs_error": 70.15075823352187,
+        "outcome_category": ""
+      },
+      {
+        "ticker": "DIGITUS",
+        "event_id": "DIGITUS_2026-03-24_519",
+        "event_date": "2026-03-24 00:00:00",
+        "actual": 100.0,
+        "predicted": 29.855474396281057,
+        "abs_error": 70.14452560371895,
+        "outcome_category": ""
+      },
+      {
+        "ticker": "VALMORE",
+        "event_id": "VALMORE_2025-04-29_504",
+        "event_date": "2025-04-29 00:00:00",
+        "actual": 4.43,
+        "predicted": 73.93718148517682,
+        "abs_error": 69.50718148517683,
+        "outcome_category": ""
+      },
+      {
+        "ticker": "KHOT",
+        "event_id": "KHOT_2026-03-11_344",
+        "event_date": "2026-03-11 00:00:00",
+        "actual": 5.0,
+        "predicted": 74.05551278904551,
+        "abs_error": 69.05551278904551,
+        "outcome_category": ""
+      }
+    ]
+  }
+]
