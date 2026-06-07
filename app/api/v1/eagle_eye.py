@@ -235,12 +235,12 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
     """Return cached ticker fundamentals used by scanner table columns.
 
     Source priority:
-    1) TickerChart QuotesSnapShot (P/E, LTM EPS, BVPS)
-    2) ``stocks.pe_ratio``
-    3) Latest ``stock_metrics`` values for:
+    1) Latest ``ml_fundamentals`` snapshot (StockAnalysis-first daily refresh for EPS/BVPS)
+    2) TickerChart QuotesSnapShot (P/E only)
+    3) ``stocks.pe_ratio``
+    4) Latest ``stock_metrics`` values for:
          - "Book Value / Share"
          - "EPS" (used to derive P/E when direct PE is missing)
-    4) Latest ``ml_fundamentals`` snapshot (fills remaining gaps)
     """
     global _FUNDAMENTALS_MAP_CACHE, _FUNDAMENTALS_MAP_CACHE_AT
 
@@ -257,7 +257,9 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
         from app.core.database import column_exists, query_all
         from app.services import tickerchart_service as tc
 
-        # Primary source: TickerChart QuotesSnapShot fundamentals.
+        # Primary PE source: TickerChart QuotesSnapShot fundamentals.
+        # EPS/BVPS are intentionally sourced from ml_fundamentals/stock_metrics,
+        # not from snapshot fields, to keep Eagle Eye aligned to StockAnalysis.
         # Scanner universe is Kuwait-focused, so symbols are resolved as KSE.
         for raw_ticker in _get_meta_map().keys():
             ticker = _normalize_symbol(raw_ticker)
@@ -275,18 +277,12 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
 
             try:
                 pe_val = _sanitize_pe_ratio(tc.read_quotes_snapshot_pe(ticker, "KSE"))
-                eps_val = _safe_float(tc.read_quotes_snapshot_ltm_eps(ticker, "KSE", price_divisor=_KSE_PRICE_DIVISOR))
-                bvps_val = _safe_float(tc.read_quotes_snapshot_bvps(ticker, "KSE", price_divisor=_KSE_PRICE_DIVISOR))
             except Exception as exc:
                 logger.debug("TickerChart snapshot fundamentals unavailable for %s: %s", ticker, exc)
                 continue
 
             if pe_val is not None:
                 fmap[ticker]["pe_ratio"] = pe_val
-            if eps_val is not None:
-                fmap[ticker]["eps"] = eps_val
-            if bvps_val is not None:
-                fmap[ticker]["book_value_per_share"] = bvps_val
 
         has_stocks_symbol = column_exists("stocks", "symbol")
         has_stocks_pe = column_exists("stocks", "pe_ratio")
@@ -448,10 +444,11 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
             except Exception as exc:
                 logger.warning("stock_metrics->stocks_master fundamentals query failed: %s", exc)
 
-        # Fill any remaining gaps from latest ml_fundamentals snapshots.
+        # ml_fundamentals overlay: prefer daily StockAnalysis-fed EPS/BVPS.
         has_mlf_ticker = column_exists("ml_fundamentals", "stock_ticker")
         has_mlf_disclosure = column_exists("ml_fundamentals", "disclosure_date")
         has_mlf_id = column_exists("ml_fundamentals", "id")
+        has_mlf_source = column_exists("ml_fundamentals", "source")
         has_mlf_period_end = column_exists("ml_fundamentals", "period_end_date")
         has_mlf_created = column_exists("ml_fundamentals", "created_at")
         has_mlf_pe = column_exists("ml_fundamentals", "pe_ratio")
@@ -461,6 +458,10 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
         mlf_order_parts: list[str] = []
         if has_mlf_disclosure:
             mlf_order_parts.append(_nulls_last_desc("disclosure_date"))
+        if has_mlf_source:
+            mlf_order_parts.append(
+                "CASE WHEN LOWER(COALESCE(source, '')) LIKE 'stockanalysis%' THEN 0 ELSE 1 END"
+            )
         if has_mlf_period_end:
             mlf_order_parts.append(_nulls_last_desc("period_end_date"))
         if has_mlf_created:
@@ -513,11 +514,14 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
                     eps_val = _safe_float(r.get("eps"))
                     bvps_val = _safe_float(r.get("book_value_per_share"))
 
+                    # Keep PE conservative: only fill if missing.
                     if fmap[ticker].get("pe_ratio") is None and pe_val is not None:
                         fmap[ticker]["pe_ratio"] = pe_val
-                    if fmap[ticker].get("eps") is None and eps_val is not None:
+                    # EPS and BVPS are intentionally overridden by the latest
+                    # ml_fundamentals row (StockAnalysis-first daily source).
+                    if eps_val is not None:
                         fmap[ticker]["eps"] = eps_val
-                    if fmap[ticker].get("book_value_per_share") is None and bvps_val is not None:
+                    if bvps_val is not None:
                         fmap[ticker]["book_value_per_share"] = bvps_val
             except Exception as exc:
                 logger.warning("ml_fundamentals fallback query failed: %s", exc)

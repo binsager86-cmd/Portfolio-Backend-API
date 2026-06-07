@@ -58,6 +58,7 @@ class Settings(BaseSettings):
     TECHNICAL_BATCH_MINUTE: int = 5
     TECHNICAL_BATCH_MAX_CONCURRENCY: int = 4
     TECHNICAL_BATCH_SEGMENT: str = "PREMIER"
+    STOCKANALYSIS_MAX_WORKERS: int = 4  # bounded concurrency for daily fundamentals scrape
     PUSH_NOTIFICATIONS_ENABLED: bool = True
 
     # App version gating

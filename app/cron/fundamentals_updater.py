@@ -13,7 +13,9 @@ import time
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
-from app.core.database import exec_sql
+from app.core.config import get_settings
+from app.core.database import exec_sql, query_all
+from app.services.stockanalysis_service import fetch_trailing_eps_bvps_batch
 from app.services import tickerchart_service as tc
 from app.services.eagle_eye.adapter import TickerChartAdapter
 
@@ -42,10 +44,11 @@ def run_tickerchart_fundamentals_update() -> dict:
     """Refresh today's PE/BVPS/EPS values for the Eagle Eye universe."""
     started_at = time.time()
     disclosure_date = _today_kuwait_iso()
-    source = "tickerchart_snapshot_daily"
+    source = "stockanalysis_primary_daily"
+    settings = get_settings()
 
     logger.info(
-        "📘 Daily fundamentals refresh starting (date=%s, eps=FactSet LTM with snapshot fallback)",
+        "📘 Daily fundamentals refresh starting (date=%s, eps/bvps=StockAnalysis primary, pe=TickerChart price/eps)",
         disclosure_date,
     )
 
@@ -62,12 +65,35 @@ def run_tickerchart_fundamentals_update() -> dict:
         return run_info
 
     seen: set[str] = set()
+    skipped_existing = 0
     upserted = 0
     no_data = 0
     failed = 0
-    eps_from_factset = 0
-    eps_from_snapshot = 0
+    eps_from_stockanalysis = 0
+    bvps_from_stockanalysis = 0
     eps_missing = 0
+    pe_from_price_eps = 0
+
+    existing_rows = query_all(
+        """
+        SELECT stock_ticker, eps, book_value_per_share, pe_ratio
+        FROM ml_fundamentals
+        WHERE disclosure_date = ? AND source = ?
+        """,
+        (disclosure_date, source),
+    )
+    existing_today: dict[str, dict] = {}
+    for r in existing_rows or []:
+        t = str((r.get("stock_ticker") if hasattr(r, "get") else r[0]) or "").upper().strip()
+        if not t:
+            continue
+        existing_today[t] = {
+            "eps": (r.get("eps") if hasattr(r, "get") else r[1]),
+            "book_value_per_share": (r.get("book_value_per_share") if hasattr(r, "get") else r[2]),
+            "pe_ratio": (r.get("pe_ratio") if hasattr(r, "get") else r[3]),
+        }
+
+    to_fetch: list[str] = []
 
     for meta in universe:
         ticker = str(getattr(meta, "ticker", "") or "").upper().strip()
@@ -75,26 +101,53 @@ def run_tickerchart_fundamentals_update() -> dict:
             continue
         seen.add(ticker)
 
+        ready = existing_today.get(ticker)
+        if ready and ready.get("eps") is not None and ready.get("book_value_per_share") is not None and ready.get("pe_ratio") is not None:
+            skipped_existing += 1
+            continue
+
+        to_fetch.append(ticker)
+
+    sa_batch = fetch_trailing_eps_bvps_batch(
+        to_fetch,
+        "KSE",
+        max_workers=settings.STOCKANALYSIS_MAX_WORKERS,
+    )
+
+    for ticker in to_fetch:
+
         try:
-            pe_ratio = _round_or_none(tc.read_quotes_snapshot_pe(ticker, "KSE"), 4)
-            eps_snapshot = _round_or_none(
-                tc.read_quotes_snapshot_ltm_eps(ticker, "KSE", price_divisor=1000.0),
-                6,
-            )
-            eps_factset = _round_or_none(tc.fetch_factset_ltm_eps(ticker, "KSE"), 6)
-            bvps = _round_or_none(tc.read_quotes_snapshot_bvps(ticker, "KSE", price_divisor=1000.0), 6)
+            pe_snapshot = _round_or_none(tc.read_quotes_snapshot_pe(ticker, "KSE"), 3)
+            last_price = _round_or_none(tc.read_quotes_snapshot_last_price(ticker, "KSE", price_divisor=1000.0), 6)
+            sa = sa_batch.get(ticker) or {}
+            eps_stockanalysis = _round_or_none(sa.get("eps"), 3)
+            bvps_stockanalysis = _round_or_none(sa.get("book_value_per_share"), 3)
+            pe_stockanalysis = _round_or_none(sa.get("pe_ratio"), 3)
         except Exception as exc:
             failed += 1
             logger.debug("TickerChart snapshot read failed for %s: %s", ticker, exc)
             continue
 
-        eps = eps_factset if eps_factset is not None else eps_snapshot
-        if eps_factset is not None:
-            eps_from_factset += 1
-        elif eps_snapshot is not None:
-            eps_from_snapshot += 1
+        eps = eps_stockanalysis
+        bvps = bvps_stockanalysis
+        pe_ratio = None
+
+        if eps_stockanalysis is not None:
+            eps_from_stockanalysis += 1
         else:
             eps_missing += 1
+
+        if bvps_stockanalysis is not None:
+            bvps_from_stockanalysis += 1
+
+        if pe_stockanalysis is not None and pe_stockanalysis > 0:
+            pe_ratio = pe_stockanalysis
+        elif last_price is not None and eps is not None and eps > 0:
+            pe_ratio = _round_or_none(last_price / eps, 3)
+            if pe_ratio is not None:
+                pe_from_price_eps += 1
+        if pe_ratio is None:
+            pe_ratio = pe_snapshot
 
         if pe_ratio is None and eps is None and bvps is None:
             no_data += 1
@@ -142,26 +195,34 @@ def run_tickerchart_fundamentals_update() -> dict:
         "date": disclosure_date,
         "source": source,
         "universe": len(seen),
+        "skipped_existing": skipped_existing,
+        "fetched": len(to_fetch),
         "upserted": upserted,
         "no_data": no_data,
         "failed": failed,
-        "eps_from_factset": eps_from_factset,
-        "eps_from_snapshot": eps_from_snapshot,
+        "eps_from_stockanalysis": eps_from_stockanalysis,
+        "bvps_from_stockanalysis": bvps_from_stockanalysis,
         "eps_missing": eps_missing,
+        "pe_from_price_over_eps": pe_from_price_eps,
         "elapsed_sec": round(time.time() - started_at, 2),
     }
     _last_run.update(run_info)
 
     logger.info(
         (
-            "📘 Daily fundamentals refresh done: upserted=%d no_data=%d failed=%d "
-            "eps_factset=%d eps_snapshot=%d eps_missing=%d elapsed=%.2fs"
+            "📘 Daily fundamentals refresh done: universe=%d fetched=%d skipped_existing=%d "
+            "upserted=%d no_data=%d failed=%d eps_stockanalysis=%d "
+            "bvps_stockanalysis=%d pe_price_over_eps=%d eps_missing=%d elapsed=%.2fs"
         ),
+        len(seen),
+        len(to_fetch),
+        skipped_existing,
         upserted,
         no_data,
         failed,
-        eps_from_factset,
-        eps_from_snapshot,
+        eps_from_stockanalysis,
+        bvps_from_stockanalysis,
+        pe_from_price_eps,
         eps_missing,
         run_info["elapsed_sec"],
     )
