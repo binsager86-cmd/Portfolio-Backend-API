@@ -766,6 +766,87 @@ def compute_all_ratings(
         }
 
         save_rating(symbol, name_en, sector, result)
+
+    def _apply_riding_entry_fallback(
+        entry_plan: dict,
+        latest_row: dict,
+        support_resistance: dict,
+        *,
+        continue_rising: bool,
+    ) -> dict:
+        """Fill conservative Entry/TP levels when a stock is marked as Riding.
+
+        The main planner can decline a setup (null entry/tp fields) when current
+        risk/reward is not favorable. For continue-rising names we still want a
+        practical plan in the scanner instead of dashes.
+        """
+        if not continue_rising:
+            return entry_plan
+
+        if entry_plan.get("entry_primary") is not None and entry_plan.get("tp1") is not None:
+            return entry_plan
+
+        close = _safe_float(latest_row.get("close"))
+        if close is None or close <= 0:
+            return entry_plan
+
+        atr = _safe_float(latest_row.get("atr"))
+        if atr is None or atr <= 0:
+            atr = close * 0.02
+
+        supports = support_resistance.get("supports") or []
+        resistances = support_resistance.get("resistances") or []
+
+        below_supports = [
+            _safe_float(s.get("price"))
+            for s in supports
+            if _safe_float(s.get("price")) is not None and _safe_float(s.get("price")) < close
+        ]
+        above_resistances = [
+            _safe_float(r.get("price"))
+            for r in resistances
+            if _safe_float(r.get("price")) is not None and _safe_float(r.get("price")) > close
+        ]
+
+        nearest_support = max(below_supports) if below_supports else close - 1.25 * atr
+        nearest_resistance = min(above_resistances) if above_resistances else close + 1.5 * atr
+
+        entry_primary = close
+        min_stop_gap = max(0.75 * atr, close * 0.015)
+        stop_loss = min(nearest_support * 0.99, entry_primary - min_stop_gap)
+        if stop_loss >= entry_primary:
+            stop_loss = entry_primary - min_stop_gap
+        if stop_loss <= 0:
+            return entry_plan
+
+        tp1 = max(nearest_resistance, entry_primary + 1.0 * atr)
+        if tp1 <= entry_primary:
+            tp1 = entry_primary + 1.0 * atr
+
+        risk = entry_primary - stop_loss
+        reward = tp1 - entry_primary
+        rr_value = (reward / risk) if risk > 0 else None
+
+        fallback = dict(entry_plan)
+        fallback.update(
+            {
+                "plan_state": "FALLBACK_RIDING",
+                "plan_reason": "Continue-rising momentum active; using conservative fallback entry/targets.",
+                "entry_primary": round(entry_primary, 4),
+                "entry_aggressive": round(entry_primary, 4),
+                "entry_conservative": round(max(entry_primary - 0.5 * atr, stop_loss + 0.5 * atr), 4),
+                "stop_loss": round(stop_loss, 4),
+                "tp1": round(tp1, 4),
+                "tp1_probability": 0.55,
+                "tp2": round(tp1 + 0.75 * atr, 4),
+                "tp2_probability": 0.35,
+                "tp3": round(tp1 + 1.75 * atr, 4),
+                "tp3_probability": 0.15,
+                "risk_reward_ratio": round(rr_value, 4) if rr_value is not None else None,
+                "gain_pct_to_tp1": round((reward / entry_primary) * 100.0, 4) if entry_primary > 0 else None,
+            }
+        )
+        return fallback
         log_compute("rating_run", symbol, "skip", reason)
 
     if verbose:
@@ -840,6 +921,12 @@ def compute_all_ratings(
 
             sr = compute_support_resistance(df, latest)
             et = compute_entry_stop_targets(df, latest, sr, stage=stage)
+            et = _apply_riding_entry_fallback(
+                et,
+                latest,
+                sr,
+                continue_rising=bool(recommendation_payload.get("continue_rising", False)),
+            )
             explanation = explain(recommendation_payload, latest, pattern_match=None)
             top_supporting = explanation.get("why_supporting", [])[:2]
             thesis = generate_thesis(
