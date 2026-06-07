@@ -883,6 +883,7 @@ def compute_all_ratings(
                 "continue_rising_reason": recommendation_payload.get("continue_rising_reason"),
                 "continue_rising_exhaustion_count": recommendation_payload.get("continue_rising_exhaustion_count", 0),
                 "continue_rising_exhaustion_signals": recommendation_payload.get("continue_rising_exhaustion_signals", []),
+                "risky_near_resistance": recommendation_payload.get("risky_near_resistance", False),
                 "volume_context": volume_context,
                 "days_of_history": len(df),
                 "computed_at": run_started,

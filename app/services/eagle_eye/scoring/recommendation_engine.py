@@ -117,8 +117,31 @@ def generate_recommendation(
     if int(_safe_float(ind.get("near_zero_volume_flag"), 0.0)) == 1:
         veto_reasons.append("Near-zero volume today")
 
+    close = _safe_float(ind.get("close") or ind.get("last_price"), 0.0)
+    ema_10 = _safe_float(ind.get("ema_10"), float("inf"))
+    ema_20 = _safe_float(ind.get("ema_20"), float("inf"))
+    ema_30 = _safe_float(ind.get("ema_30"), float("inf"))
+    plus_di = _safe_float(ind.get("plus_di"), 0.0)
+    minus_di = _safe_float(ind.get("minus_di"), 0.0)
+    di_spread = plus_di - minus_di
+    stock_50sma_slope_20d = _safe_float(ind.get("stock_50sma_slope_20d"), 0.0)
+
+    cmf_20 = _safe_float(ind.get("cmf_20"), 0.0)
+    macd_histogram = _safe_float(ind.get("macd_histogram"), 0.0)
+    confirmed_early = cmf_20 > 0.0 and macd_histogram >= 0.0
+    early_breakout = _is_early_markup_breakout(ind)
+    advancing = (
+        close > ema_10
+        and close > ema_20
+        and close > ema_30
+        and di_spread > 0.0
+        and stock_50sma_slope_20d > 0.0
+        and cmf_20 > 0.0
+    )
+
     rr = _safe_float(ind.get("risk_reward_ratio"), 0.0)
-    if rr < 2.0:
+    risky_near_resistance = advancing and rr < 2.0
+    if rr < 2.0 and not advancing:
         veto_reasons.append(f"Risk/reward {rr:.1f} below 2.0 minimum")
 
     if stage == "MARKDOWN":
@@ -131,10 +154,9 @@ def generate_recommendation(
 
     buy_allowed = len(veto_reasons) == 0
 
-    cmf_20 = _safe_float(ind.get("cmf_20"), 0.0)
-    macd_histogram = _safe_float(ind.get("macd_histogram"), 0.0)
-    confirmed_early = cmf_20 > 0.0 and macd_histogram >= 0.0
-    early_breakout = _is_early_markup_breakout(ind)
+    continue_rising = compute_continue_rising(ind, stage)
+    exhaustion_count = int(_safe_float(continue_rising.get("continue_rising_exhaustion_count"), 0.0))
+    exhausted = exhaustion_count >= 2
 
     if stage == "MARKDOWN":
         base_rec = "SELL"
@@ -155,6 +177,18 @@ def generate_recommendation(
         base_rec = "WATCHLIST"
     else:
         base_rec = "NEUTRAL"
+
+    # Unified precedence: advancing stocks become actionable regardless of stage bucket.
+    if buy_allowed and advancing:
+        if exhausted:
+            base_rec = "HOLD"
+        elif confirmed_early:
+            base_rec = "BUY"
+        else:
+            base_rec = "WATCHLIST"
+    elif stage == "EARLY_MARKUP" and (not advancing or not confirmed_early):
+        # Keep early turns non-actionable until they are genuinely advancing.
+        base_rec = "WATCHLIST"
 
     takeoff_sim = 0.0
     crash_sim = 0.0
@@ -184,8 +218,6 @@ def generate_recommendation(
         base_rec = "WATCHLIST"
         veto_reasons.append("Pattern memory: resembles pre-crash setups")
 
-    continue_rising = compute_continue_rising(ind, stage)
-
     return {
         "recommendation": base_rec,
         "confidence": round(final_confidence, 1),
@@ -200,5 +232,6 @@ def generate_recommendation(
         },
         "family_scores": dict(family_scores),
         "data_quality_score": round(dq, 1),
+        "risky_near_resistance": risky_near_resistance,
         **continue_rising,
     }

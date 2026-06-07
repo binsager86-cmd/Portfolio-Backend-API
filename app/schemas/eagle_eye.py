@@ -60,6 +60,7 @@ class RatedStock(BaseModel):
     continue_rising_reason: Optional[str] = None
     continue_rising_exhaustion_count: int = 0
     continue_rising_exhaustion_signals: List[str] = []
+    risky_near_resistance: bool = False
 
 
 class ScannerResponse(BaseModel):
@@ -93,6 +94,7 @@ class FullStockAnalysis(BaseModel):
     continue_rising_reason: Optional[str] = None
     continue_rising_exhaustion_count: int = 0
     continue_rising_exhaustion_signals: List[str] = []
+    risky_near_resistance: bool = False
 
     # SR levels
     supports: List[SupportResistanceLevel] = []
