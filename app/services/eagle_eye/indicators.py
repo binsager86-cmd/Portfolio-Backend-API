@@ -984,6 +984,7 @@ def compute_all_indicators(
 
     out['cmf_10'] = cmf(df, 10)
     # Compatibility alias: many rule/scoring paths still consume cmf_20* keys.
+    # While CONFIG.CMF_PERIOD == 10, cmf_20 intentionally aliases cmf_10.
     if CONFIG.CMF_PERIOD == 10:
         out['cmf_20'] = out['cmf_10']
     else:
@@ -1151,5 +1152,116 @@ def compute_all_indicators(
         out['pct_above_60d_low'] = (
             (out['close'] / low_60.replace(0, np.nan) - 1.0) * 100.0
         )
+
+    # =========================================================================
+    # EXIT / SELL-PATTERN FEATURES  (multi-bar, no forward-looking data)
+    # =========================================================================
+    # These columns are consumed by the exit-signal pre-drop detector in
+    # dna_extractor.py and by the rating engine's bearish-condition checks.
+
+    # -- Parabolic extension above key moving averages -----------------------
+    _sma200 = out['sma_200'] if 'sma_200' in out.columns else df['close'].rolling(200, min_periods=1).mean()
+    _ema50  = out['ema_50']  if 'ema_50'  in out.columns else df['close'].ewm(span=50).mean()
+    out['pct_above_200sma'] = ((df['close'] / _sma200.replace(0, np.nan)) - 1.0) * 100.0
+    out['pct_above_50ema']  = ((df['close'] / _ema50.replace(0, np.nan))  - 1.0) * 100.0
+    # Boolean flags: price is > 30% / > 20% above MA — historically danger zone
+    out['parabolic_vs_200sma'] = (out['pct_above_200sma'] >= 30.0).astype(int)
+    out['extended_vs_50ema']   = (out['pct_above_50ema']  >= 20.0).astype(int)
+
+    # -- Consecutive red candles at highs ------------------------------------
+    # A red candle is one where close < open.
+    _open_px = df['open'] if 'open' in df.columns else df['close']
+    _red_candle = (df['close'] < _open_px).astype(int)
+    red_groups = (_red_candle == 0).cumsum()
+    out['consecutive_red_closes'] = _red_candle.groupby(red_groups).cumsum().astype(float)
+    # "Red cluster at high": 3+ consecutive red closes AND price is still
+    # within 5% of the 20-day rolling high.
+    _high_20d = df['high'].rolling(20).max()
+    _near_high = (df['close'] >= _high_20d * 0.95)
+    out['red_cluster_at_high'] = (
+        (out['consecutive_red_closes'] >= 3) & _near_high
+    ).astype(int)
+
+    # -- Distribution volume: selling into strength --------------------------
+    # Heavy down-day volume while price is still near highs (smart money exiting).
+    _down_day_vol_5d = (df['volume'] * (1 - _red_candle.shift(1).fillna(0).clip(0, 1))).rolling(5).sum()
+    _total_vol_5d    = df['volume'].rolling(5).sum().replace(0, np.nan)
+    out['distribution_vol_ratio_5d'] = (
+        (df['volume'] * _red_candle).rolling(5).sum() / _total_vol_5d
+    )
+    # Flag: > 60% of 5-day volume is on down days, while near 20d high
+    out['distribution_at_high_flag'] = (
+        (out['distribution_vol_ratio_5d'] >= 0.60) & _near_high
+    ).astype(int)
+
+    # -- MACD histogram trending down for 3+ bars ----------------------------
+    _macd_down = (out['macd_histogram'] < out['macd_histogram'].shift(1)).astype(int)
+    _macd_down_groups = (_macd_down == 0).cumsum()
+    out['macd_hist_declining_streak'] = _macd_down.groupby(_macd_down_groups).cumsum().astype(float)
+    out['macd_hist_declining_3d']     = (out['macd_hist_declining_streak'] >= 3).astype(int)
+
+    # -- EMA bearish crossover (10 crosses below 30) -------------------------
+    _ema10 = out['ema_10'] if 'ema_10' in out.columns else df['close'].ewm(span=10).mean()
+    _ema30 = out['ema_30'] if 'ema_30' in out.columns else df['close'].ewm(span=30).mean()
+    _ema10_below_30 = (_ema10 < _ema30).astype(int)
+    # Fire on the bar where it just crossed below (was above on prior bar)
+    out['ema_bearish_cross_10_30'] = (
+        (_ema10_below_30 == 1) & (_ema10_below_30.shift(1).fillna(0) == 0)
+    ).astype(int)
+    # Sustained: ema10 below ema30 for 3+ days
+    out['ema10_below_ema30'] = _ema10_below_30
+    _ema_below_groups = (_ema10_below_30 == 0).cumsum()
+    out['ema10_below_ema30_streak'] = _ema10_below_30.groupby(_ema_below_groups).cumsum().astype(float)
+
+    # -- Volume spike on red at high (the classic "blow-off top" tell) -------
+    _vol_spike = (out.get('rel_volume', pd.Series(1.0, index=df.index)) >= 1.8)
+    out['vol_spike_on_red_at_high']  = (
+        _vol_spike & (_red_candle == 1) & _near_high
+    ).astype(int)
+
+    # =========================================================================
+    # BUY SETUP / ACCUMULATION PATTERN FEATURES
+    # =========================================================================
+
+    # -- Base / accumulation breakout ----------------------------------------
+    # Price was in tight range (accumulation) and now closes above the N-bar high.
+    _close_3d_max = df['close'].shift(1).rolling(15).max()
+    out['breakout_from_15d_base'] = (
+        (df['close'] > _close_3d_max)
+        & (out['accumulation_compression_days'].shift(1).fillna(0) >= 5)
+    ).astype(int)
+
+    # -- EMA stack bullish convergence from below ----------------------------
+    # 200 SMA slope turning positive after a sustained downtrend
+    _sma200_slope = _sma200.diff(5)
+    out['sma200_slope_turning_up'] = (
+        (_sma200_slope >= 0) & (_sma200_slope.shift(5).fillna(-1) < 0)
+    ).astype(int)
+
+    # -- Capitulation reversal: big drop then volume dry-up then bounce ------
+    # Uses existing 'capitulation_reversal_score' but adds a cleaner binary flag.
+    out['capitulation_reversal_flag'] = (
+        out['capitulation_reversal_score'] >= 55.0
+    ).astype(int)
+
+    # -- RSI recovering from oversold ----------------------------------------
+    _rsi_was_below_30 = (out['rsi'].shift(1).fillna(50) < 30)
+    _rsi_now_above_35 = (out['rsi'] >= 35)
+    out['rsi_oversold_recovery'] = (_rsi_was_below_30 & _rsi_now_above_35).astype(int)
+    # Sustained oversold recovery: RSI crossing 40 from below 30 in last 10 bars
+    out['rsi_deep_oversold_10d'] = (out['rsi'].rolling(10).min() < 30).astype(int)
+
+    # -- EMA golden cross (10 EMA crossing above 30 EMA) ---------------------
+    _ema10_above_30 = (_ema10 > _ema30).astype(int)
+    out['ema_golden_cross_10_30'] = (
+        (_ema10_above_30 == 1) & (_ema10_above_30.shift(1).fillna(0) == 0)
+    ).astype(int)
+
+    # -- Price compressing near multi-month lows (ideal buy zone) -----------
+    _low_60d = df['low'].rolling(60).min()
+    out['near_60d_low_compression'] = (
+        (df['close'] <= _low_60d * 1.05)
+        & (out['accumulation_compression_days'] >= 3)
+    ).astype(int)
 
     return out
