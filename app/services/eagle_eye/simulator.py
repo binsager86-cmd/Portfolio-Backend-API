@@ -123,6 +123,11 @@ def _query_val(sql: str, params: tuple = ()):
     return query_val(sql, params)
 
 
+def _column_exists(table: str, column: str) -> bool:
+    from app.core.database import column_exists
+    return bool(column_exists(table, column))
+
+
 def _now_ts() -> str:
     return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -549,7 +554,6 @@ class SimulatorEngine:
         confidence = float(rating.get("confidence") or 0)
         stage = rating.get("stage") or ""
         rating_label = str(rating.get("rating") or "HOLD").upper()
-        ml_score = rating.get("ml_score")
         ticker = rating.get("ticker") or ""
         sector = rating.get("sector") or "UNKNOWN"
 
@@ -558,12 +562,11 @@ class SimulatorEngine:
             return _skip("RATING_NOT_BUY")
         if confidence < required_confidence:
             return _skip("CONFIDENCE_BELOW_THRESHOLD")
-        if ml_score is None:
-            return _skip("ML_SCORE_MISSING")
-        try:
-            float(ml_score)
-        except (TypeError, ValueError):
-            return _skip("ML_SCORE_MISSING")
+
+        # Enforce per-strategy lifecycle stage rules.
+        # This was defined in StrategyConfig but not applied in entry decisions.
+        if stage and stage not in strategy.allowed_stages:
+            return _skip("STAGE_NOT_ALLOWED")
 
         if self._already_holding(strategy.portfolio_id, ticker):
             return _skip("ALREADY_HOLDING")
@@ -1372,8 +1375,23 @@ class SimulatorEngine:
 
     def _get_current_rating(self, ticker: str, date_str: Optional[str] = None) -> Optional[dict]:
         self._assert_live_forward_date(date_str)
+
+        # Prefer today's computed snapshot to keep simulator actions strictly daily.
+        # Fall back to latest row only when computed_date is unavailable in schema.
+        if _column_exists("ee_ratings_cache", "computed_date") and date_str:
+            row = _query_one(
+                """SELECT stage, rating, confidence, ml_score, last_price, market_tier, computed_date, computed_at
+                   FROM ee_ratings_cache
+                   WHERE ticker = ? AND computed_date = ?""",
+                (ticker.upper(), date_str),
+            )
+            if row is not None:
+                return dict(row.items())
+
         row = _query_one(
-            "SELECT stage, rating, confidence, ml_score, last_price, market_tier FROM ee_ratings_cache WHERE ticker = ?",
+            """SELECT stage, rating, confidence, ml_score, last_price, market_tier, computed_date, computed_at
+               FROM ee_ratings_cache
+               WHERE ticker = ?""",
             (ticker.upper(),),
         )
         return dict(row.items()) if row else None
@@ -1381,15 +1399,35 @@ class SimulatorEngine:
     def _get_todays_ratings(self, date_str: str) -> List[dict]:
         """Load all rated stocks for live-forward trading on the current date only."""
         self._assert_live_forward_date(date_str)
-        rows = _query_all(
-            """SELECT ticker, name_en, sector, stage, rating, confidence, ml_score, thesis,
-                      entry_primary, stop_loss, tp1, tp2, tp3, last_price,
-                      market_tier,
-                      signals_json, indicators_json, volume_context_json, computed_at
-               FROM   ee_ratings_cache
-               ORDER  BY confidence DESC""",
-            (),
-        )
+
+        if _column_exists("ee_ratings_cache", "computed_date"):
+            rows = _query_all(
+                """SELECT ticker, name_en, sector, stage, rating, confidence, ml_score, thesis,
+                          entry_primary, stop_loss, tp1, tp2, tp3, last_price,
+                          market_tier,
+                          signals_json, indicators_json, volume_context_json, computed_date, computed_at
+                   FROM   ee_ratings_cache
+                   WHERE  computed_date = ?
+                   ORDER  BY confidence DESC""",
+                (date_str,),
+            )
+        else:
+            rows = _query_all(
+                """SELECT ticker, name_en, sector, stage, rating, confidence, ml_score, thesis,
+                          entry_primary, stop_loss, tp1, tp2, tp3, last_price,
+                          market_tier,
+                          signals_json, indicators_json, volume_context_json, computed_at
+                   FROM   ee_ratings_cache
+                   ORDER  BY confidence DESC""",
+                (),
+            )
+
+        if not rows:
+            logger.warning(
+                "Simulator daily run skipped entries: no ee_ratings_cache snapshot for %s",
+                date_str,
+            )
+
         result = []
         for r in rows:
             indicators = r.get("indicators_json")
