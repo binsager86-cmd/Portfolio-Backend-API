@@ -31,6 +31,12 @@ from app.api.deps import get_current_user, require_admin
 from app.core.security import TokenData
 from app.schemas.eagle_eye import (
     BehavioralDNAResponse,
+    DNACycleProfileResponse,
+    DNAExitSignalProfileResponse,
+    DNAHistoricalTargetClusterResponse,
+    DNAPostDropBehaviorResponse,
+    DNAPreDropSignalResponse,
+    DNAPullbackEntryProfileResponse,
     DNAResponse,
     DNASetupBarResponse,
     DNASetupExampleResponse,
@@ -592,6 +598,32 @@ def _predict_ml_opportunity_score(ticker: str, ohlcv_df, as_of: date) -> Optiona
     return None
 
 
+def _build_exit_signal_profile_response(
+    raw: Optional[dict],
+) -> Optional[DNAExitSignalProfileResponse]:
+    """Convert the serialised exit_signal_profile dict to an API response object."""
+    if not isinstance(raw, dict):
+        return None
+    try:
+        pre_drop_signals = [
+            DNAPreDropSignalResponse(**sig)
+            for sig in (raw.get("pre_drop_signals") or [])
+            if isinstance(sig, dict)
+        ]
+        pdb_raw = raw.get("post_drop_behavior")
+        post_drop = DNAPostDropBehaviorResponse(**pdb_raw) if isinstance(pdb_raw, dict) else None
+        return DNAExitSignalProfileResponse(
+            drop_threshold_pct=raw.get("drop_threshold_pct", -10.0),
+            historical_drop_events=raw.get("historical_drop_events", 0),
+            avg_drop_magnitude_pct=raw.get("avg_drop_magnitude_pct", 0.0),
+            avg_days_peak_to_trough=raw.get("avg_days_peak_to_trough", 0.0),
+            pre_drop_signals=pre_drop_signals,
+            post_drop_behavior=post_drop,
+        )
+    except Exception:
+        return None
+
+
 def _build_threshold_profile_response(
     threshold_profile: dict,
     fallback_total_setups: int,
@@ -918,23 +950,33 @@ def _run_analysis(ticker: str) -> Optional[dict]:
                 "risk_reward_ratio": None,
                 "gain_pct_to_tp1": None,
             }
-            try:
-                from app.services.eagle_eye.adapter import TickerChartAdapter
-                from app.services.eagle_eye.rating_engine import compute_entry_stop_targets
+            # Performance fast path:
+            # Do NOT fetch live OHLCV on every request when cache already has
+            # plan fields. Only recompute trade plan if cache is missing
+            # essential fields (legacy/partial rows).
+            needs_entry_recompute = (
+                entry.get("entry_primary") is None
+                or entry.get("stop_loss") is None
+                or entry.get("tp1") is None
+            )
+            if needs_entry_recompute:
+                try:
+                    from app.services.eagle_eye.adapter import TickerChartAdapter
+                    from app.services.eagle_eye.rating_engine import compute_entry_stop_targets
 
-                adapter = TickerChartAdapter()
-                end_d = date.today()
-                start_d = end_d - timedelta(days=_LOOKBACK_YEARS * 365 + 60)
-                df = adapter.get_ohlcv_daily(ticker, start_d, end_d)
-                if df is not None and len(df) >= 30 and isinstance(indicators, dict):
-                    entry = compute_entry_stop_targets(
-                        df,
-                        indicators,
-                        {"supports": supports, "resistances": resistances},
-                        stage=cached_row.get("stage"),
-                    )
-            except Exception as exc:
-                logger.debug("Live trade-plan refresh miss for %s: %s", ticker, exc)
+                    adapter = TickerChartAdapter()
+                    end_d = date.today()
+                    start_d = end_d - timedelta(days=_LOOKBACK_YEARS * 365 + 60)
+                    df = adapter.get_ohlcv_daily(ticker, start_d, end_d)
+                    if df is not None and len(df) >= 30 and isinstance(indicators, dict):
+                        entry = compute_entry_stop_targets(
+                            df,
+                            indicators,
+                            {"supports": supports, "resistances": resistances},
+                            stage=cached_row.get("stage"),
+                        )
+                except Exception as exc:
+                    logger.debug("Deferred trade-plan recompute miss for %s: %s", ticker, exc)
             result = {
                 "ticker": ticker.upper(),
                 "stage": cached_row.get("stage"),
@@ -1231,6 +1273,7 @@ async def get_scanner(
                 continue_rising_exhaustion_count=int(row.get("continue_rising_exhaustion_count") or 0),
                 continue_rising_exhaustion_signals=list(row.get("continue_rising_exhaustion_signals") or []),
                 risky_near_resistance=bool(row.get("risky_near_resistance", False)),
+                risk_reward_ratio=_safe_float(row.get("risk_reward_ratio")),
             ))
 
         # Cache the unfiltered response for 30 s
@@ -1270,7 +1313,9 @@ async def get_stock_analysis(
     Includes stage, rating, confidence, SR levels, entry/stop/targets, and signals.
     """
     t = ticker.upper().strip()
-    analysis = _run_analysis(t)
+    # _run_analysis is CPU/IO-heavy synchronous code; run it off the main
+    # event loop so concurrent API calls remain responsive.
+    analysis = await asyncio.to_thread(_run_analysis, t)
     if analysis is None:
         raise HTTPException(status_code=404, detail=f"No data found for ticker '{t}'")
 
@@ -1566,6 +1611,24 @@ async def _get_stock_dna_inner(t: str, cache_key: str, load_dna):
         setup_examples=setup_examples,
         dominant_pattern=stored.get("dominant_pattern"),
         computed_at=stored.get("computed_at", datetime.utcnow().date().isoformat()),
+        optimal_hold_window_days=stored.get("optimal_hold_window_days"),
+        avg_entry_quality_score=stored.get("avg_entry_quality_score"),
+        pullback_entry_profile=(
+            DNAPullbackEntryProfileResponse(**stored.get("pullback_entry_profile", {}))
+            if isinstance(stored.get("pullback_entry_profile"), dict)
+            else None
+        ),
+        historical_target_clusters=[
+            DNAHistoricalTargetClusterResponse(**cluster)
+            for cluster in (stored.get("historical_target_clusters") or [])
+            if isinstance(cluster, dict)
+        ],
+        cycle_profile=(
+            DNACycleProfileResponse(**stored.get("cycle_profile", {}))
+            if isinstance(stored.get("cycle_profile"), dict)
+            else None
+        ),
+        exit_signal_profile=_build_exit_signal_profile_response(stored.get("exit_signal_profile")),
     )
     _DNA_CACHE[cache_key] = dna_response.model_dump()
     return DNAResponse(status="ok", data=dna_response)
@@ -2390,6 +2453,77 @@ def _resolve_ml_display_state() -> tuple[bool, bool, Optional[str], bool]:
     config_enabled = settings.ENABLE_ML_DISPLAY
     enabled = config_enabled and not auto_disabled
     return enabled, auto_disabled, disabled_reason, config_enabled
+
+
+# ── Similar historical setups (pattern-store nearest-neighbour query) ─────────
+
+@router.get("/stocks/{ticker}/similar-setups", summary="Similar historical setups via pattern store")
+async def get_similar_setups(
+    ticker: str,
+    top_k: int = 5,
+    _user: TokenData = Depends(get_current_user),
+):
+    """
+    Return the top-K historical dates for *ticker* whose indicator fingerprint
+    is most similar to today's — identified by cosine similarity in the ML
+    pattern store (NearestNeighbors index).
+
+    Each result includes:
+      - date: the historical setup date
+      - similarity: cosine similarity 0–1 (higher = more similar)
+      - primary_label: 1 if that setup led to a breakout, 0 if not
+      - max_excursion_pct: best forward gain achieved after that setup
+
+    Returns status="no_index" when the pattern index has not yet been built
+    for this ticker (run build_all_pattern_indices() to populate).
+    """
+    import numpy as np
+    from datetime import date as _date
+    from app.services.eagle_eye.store import load_ohlcv
+    from app.services.eagle_eye.ml.feature_builder import build_inference_row
+    from app.services.eagle_eye.ml.pattern_store import load_pattern_index, query_similar
+
+    t = ticker.upper().strip()
+    top_k = max(1, min(top_k, 20))
+
+    try:
+        ohlcv = load_ohlcv(t)
+    except Exception as exc:
+        raise HTTPException(status_code=404, detail=f"OHLCV data unavailable for {t}: {exc}") from exc
+
+    if ohlcv is None or ohlcv.empty:
+        raise HTTPException(status_code=404, detail=f"No OHLCV data found for {t}")
+
+    feature_row = build_inference_row(ticker=t, ohlcv=ohlcv)
+    if feature_row is None:
+        return {"ticker": t, "status": "insufficient_data", "setups": []}
+
+    bundle = load_pattern_index(t)
+    if bundle is None:
+        return {"ticker": t, "status": "no_index", "setups": []}
+
+    feature_cols: list = bundle["feature_cols"]
+    query_vec = np.array(
+        [float(feature_row.get(f, 0.0)) for f in feature_cols],
+        dtype=np.float32,
+    )
+
+    results = query_similar(
+        ticker=t,
+        query_vector=query_vec,
+        query_date=_date.today(),
+        top_k=top_k,
+        bundle=bundle,
+    )
+
+    return {
+        "ticker": t,
+        "status": "ok",
+        "as_of": _date.today().isoformat(),
+        "feature_count": len(feature_cols),
+        "setups": results,
+    }
+
 
 @router.get("/ml/display-state", summary="ML display kill-switch state")
 async def get_ml_display_state(

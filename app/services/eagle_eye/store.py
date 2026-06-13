@@ -123,6 +123,7 @@ def ensure_tables() -> None:
     _acim("ee_ratings_cache", "run_started_at", "TEXT")
     _acim("ee_ratings_cache", "code_fingerprint", "TEXT")
     _acim("ee_ratings_cache", "risky_near_resistance", "INTEGER")
+    _acim("ee_ratings_cache", "risk_reward_ratio", "REAL")
 
     exec_sql(
         """
@@ -445,6 +446,9 @@ def save_rating(
 
     et = result.get("entry") or {}
     ind = result.get("indicators") or {}
+    rr_cached = _f(ind.get("risk_reward_ratio"))
+    if rr_cached is None:
+        rr_cached = 0.0
     computed_at = result.get("computed_at")
     if not computed_at:
         computed_at = datetime.now().isoformat(timespec="seconds")
@@ -460,8 +464,8 @@ def save_rating(
             stop_loss, tp1, tp1_probability, tp2, tp2_probability, tp3, tp3_probability,
             last_price, supports_json, resistances_json, signals_json, indicators_json,
             days_of_history, computed_at, computed_date, run_id, run_started_at, code_fingerprint,
-            updated_at, volume_context_json, risky_near_resistance
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            updated_at, volume_context_json, risky_near_resistance, risk_reward_ratio
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT (ticker) DO UPDATE SET
             name_en = excluded.name_en,
             sector = excluded.sector,
@@ -494,7 +498,8 @@ def save_rating(
             code_fingerprint = excluded.code_fingerprint,
             updated_at = excluded.updated_at,
             volume_context_json = excluded.volume_context_json,
-            risky_near_resistance = excluded.risky_near_resistance
+            risky_near_resistance = excluded.risky_near_resistance,
+            risk_reward_ratio = excluded.risk_reward_ratio
         """,
         (
             ticker.upper(),
@@ -530,6 +535,7 @@ def save_rating(
             int(time.time()),
             json.dumps(result.get("volume_context") or {}),
             int(result.get("risky_near_resistance", False)),
+            rr_cached,
         ),
     )
 
@@ -555,7 +561,7 @@ def load_all_ratings(
     sql = """
            SELECT ticker, name_en, sector, market_tier, stage, rating, confidence, ml_score, thesis,
                entry_primary, stop_loss, tp1, last_price, computed_at, computed_date,
-               volume_context_json, indicators_json, risky_near_resistance
+               volume_context_json, indicators_json, risky_near_resistance, risk_reward_ratio
         FROM   ee_ratings_cache
         WHERE  confidence >= ?
     """
@@ -609,34 +615,11 @@ def load_all_ratings(
 
             d.update(compute_continue_rising(indicators, str(d.get("stage") or "")))
 
-            close = _safe_float(indicators.get("close") or indicators.get("last_price"))
-            ema_10 = _safe_float(indicators.get("ema_10"))
-            ema_20 = _safe_float(indicators.get("ema_20"))
-            ema_30 = _safe_float(indicators.get("ema_30"))
-            plus_di = _safe_float(indicators.get("plus_di"))
-            minus_di = _safe_float(indicators.get("minus_di"))
-            slope_50 = _safe_float(indicators.get("stock_50sma_slope_20d"))
-            cmf_20 = _safe_float(indicators.get("cmf_20"))
-            rr = _safe_float(indicators.get("risk_reward_ratio"))
-
-            advancing = bool(
-                close is not None
-                and ema_10 is not None
-                and ema_20 is not None
-                and ema_30 is not None
-                and plus_di is not None
-                and minus_di is not None
-                and slope_50 is not None
-                and cmf_20 is not None
-                and close > ema_10
-                and close > ema_20
-                and close > ema_30
-                and (plus_di - minus_di) > 0.0
-                and slope_50 > 0.0
-                and cmf_20 > 0.0
-            )
+            rr = _safe_float(d.get("risk_reward_ratio"))
+            if rr is None:
+                rr = _safe_float(indicators.get("risk_reward_ratio"))
             d["risk_reward_ratio"] = rr
-            d["risky_near_resistance"] = bool(advancing and rr is not None and rr < 2.0)
+            d["risky_near_resistance"] = bool(d.get("risky_near_resistance", False))
         else:
             d["risk_reward_ratio"] = None
             d["risky_near_resistance"] = False

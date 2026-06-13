@@ -61,6 +61,7 @@ class RatedStock(BaseModel):
     continue_rising_exhaustion_count: int = 0
     continue_rising_exhaustion_signals: List[str] = []
     risky_near_resistance: bool = False
+    risk_reward_ratio: Optional[float] = None
 
 
 class ScannerResponse(BaseModel):
@@ -222,6 +223,59 @@ class DNASetupExampleResponse(BaseModel):
     forward_outcomes: Dict[str, DNASetupForwardOutcomeResponse] = {}
 
 
+class DNAPullbackEntryProfileResponse(BaseModel):
+    median_pullback_pct: float
+    max_pullback_pct: float
+    pullback_within_days: int
+    recovery_days: int
+    pullback_success_rate: float
+    sample_count: int
+
+
+class DNAHistoricalTargetClusterResponse(BaseModel):
+    gain_pct_from_entry: float
+    cluster_strength: int
+    avg_days_to_reach: float
+    hit_rate: float
+
+
+class DNACycleProfileResponse(BaseModel):
+    period_days: float
+    std_days: float
+    period_confidence: str
+    sample_count: int
+    days_since_last: int
+    days_to_next: float
+
+
+class DNAPreDropSignalResponse(BaseModel):
+    signal: str
+    label: str
+    description: str
+    fired_before_drop_pct: float
+    avg_bars_before_drop: float
+    sample_count: int
+
+
+class DNAPostDropBehaviorResponse(BaseModel):
+    classification: str
+    bounce_rate_pct: float
+    avg_recovery_days: float
+    avg_continuation_pct: float
+    bounce_window_days: int
+    sample_count: int
+    classification_reason: str
+
+
+class DNAExitSignalProfileResponse(BaseModel):
+    drop_threshold_pct: float
+    historical_drop_events: int
+    avg_drop_magnitude_pct: float
+    avg_days_peak_to_trough: float
+    pre_drop_signals: List[DNAPreDropSignalResponse] = []
+    post_drop_behavior: Optional[DNAPostDropBehaviorResponse] = None
+
+
 class BehavioralDNAResponse(BaseModel):
     ticker: str
     total_events_analyzed: int
@@ -238,6 +292,12 @@ class BehavioralDNAResponse(BaseModel):
     setup_examples: List[DNASetupExampleResponse] = []
     dominant_pattern: Optional[str] = None
     computed_at: Optional[str] = None
+    optimal_hold_window_days: Optional[int] = None
+    avg_entry_quality_score: Optional[float] = None
+    pullback_entry_profile: Optional[DNAPullbackEntryProfileResponse] = None
+    historical_target_clusters: List[DNAHistoricalTargetClusterResponse] = []
+    cycle_profile: Optional[DNACycleProfileResponse] = None
+    exit_signal_profile: Optional[DNAExitSignalProfileResponse] = None
 
 
 class DNAResponse(BaseModel):
