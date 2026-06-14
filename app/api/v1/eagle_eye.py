@@ -296,10 +296,32 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
 
         has_stocks_symbol = column_exists("stocks", "symbol")
         has_stocks_pe = column_exists("stocks", "pe_ratio")
+        has_stocks_bvps = column_exists("stocks", "book_value_per_share")
+        has_stocks_bvps_alt = column_exists("stocks", "bvps")
+        has_stocks_eps = column_exists("stocks", "eps")
+        has_stocks_eps_ttm = column_exists("stocks", "eps_ttm")
+        has_stocks_ttm_eps = column_exists("stocks", "ttm_eps")
 
         if has_stocks_symbol:
             pe_select = "pe_ratio" if has_stocks_pe else "NULL AS pe_ratio"
-            rows = query_all(f"SELECT symbol, {pe_select} FROM stocks", ())
+            bvps_select = (
+                "book_value_per_share"
+                if has_stocks_bvps
+                else ("bvps AS book_value_per_share" if has_stocks_bvps_alt else "NULL AS book_value_per_share")
+            )
+            eps_select = (
+                "eps"
+                if has_stocks_eps
+                else (
+                    "eps_ttm AS eps"
+                    if has_stocks_eps_ttm
+                    else ("ttm_eps AS eps" if has_stocks_ttm_eps else "NULL AS eps")
+                )
+            )
+            rows = query_all(
+                f"SELECT symbol, {pe_select}, {bvps_select}, {eps_select} FROM stocks",
+                (),
+            )
             for r in rows or []:
                 ticker = _normalize_symbol(r.get("symbol"))
                 if not ticker:
@@ -315,6 +337,12 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
                 pe_val = _sanitize_pe_ratio(r.get("pe_ratio"))
                 if fmap[ticker].get("pe_ratio") is None and pe_val is not None:
                     fmap[ticker]["pe_ratio"] = pe_val
+                bvps_val = _safe_float(r.get("book_value_per_share"))
+                if fmap[ticker].get("book_value_per_share") is None and bvps_val is not None:
+                    fmap[ticker]["book_value_per_share"] = bvps_val
+                eps_val = _safe_float(r.get("eps"))
+                if fmap[ticker].get("eps") is None and eps_val is not None:
+                    fmap[ticker]["eps"] = eps_val
 
         # Pull latest EPS + BVPS per ticker from stock_metrics.
         has_metric_name = column_exists("stock_metrics", "metric_name")
@@ -463,7 +491,10 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
         has_mlf_created = column_exists("ml_fundamentals", "created_at")
         has_mlf_pe = column_exists("ml_fundamentals", "pe_ratio")
         has_mlf_eps = column_exists("ml_fundamentals", "eps")
+        has_mlf_eps_ttm = column_exists("ml_fundamentals", "eps_ttm")
+        has_mlf_ttm_eps = column_exists("ml_fundamentals", "ttm_eps")
         has_mlf_bvps = column_exists("ml_fundamentals", "book_value_per_share")
+        has_mlf_bvps_alt = column_exists("ml_fundamentals", "bvps")
 
         mlf_order_parts: list[str] = []
         if has_mlf_disclosure:
@@ -484,14 +515,28 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
 
         if has_mlf_ticker and has_mlf_disclosure and has_mlf_id:
             try:
+                mlf_eps_select = (
+                    "eps"
+                    if has_mlf_eps
+                    else (
+                        "eps_ttm AS eps"
+                        if has_mlf_eps_ttm
+                        else ("ttm_eps AS eps" if has_mlf_ttm_eps else "NULL AS eps")
+                    )
+                )
+                mlf_bvps_select = (
+                    "book_value_per_share"
+                    if has_mlf_bvps
+                    else ("bvps AS book_value_per_share" if has_mlf_bvps_alt else "NULL AS book_value_per_share")
+                )
                 mlf_rows = query_all(
                     f"""
                     WITH ranked AS (
                         SELECT
                             stock_ticker AS symbol,
                             {'pe_ratio' if has_mlf_pe else 'NULL'} AS pe_ratio,
-                            {'eps' if has_mlf_eps else 'NULL'} AS eps,
-                            {'book_value_per_share' if has_mlf_bvps else 'NULL'} AS book_value_per_share,
+                            {mlf_eps_select} AS eps,
+                            {mlf_bvps_select} AS book_value_per_share,
                             ROW_NUMBER() OVER (
                                 PARTITION BY UPPER(TRIM(stock_ticker))
                                 ORDER BY
