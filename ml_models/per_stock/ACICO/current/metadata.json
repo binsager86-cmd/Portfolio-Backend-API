@@ -1,57 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.15358288441278417,
-  "mae": 28.94976571365365,
-  "rmse": 30.326360266621915,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": -0.14378628108307384,
+  "mae": 32.63253634057584,
+  "rmse": 35.5828982780737,
+  "auc": -0.14378628108307384,
+  "mean_auc": -0.14378628108307384,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 274,
+  "n_train_events": 389,
   "train_date_range": {
-    "start": "2024-07-16",
-    "end": "2026-05-24"
+    "start": "2024-08-29",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_0.1536",
+  "rejected_reason": "spearman_below_threshold_-0.1438",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.8302316029952278,
-      "mae": 43.65240266026909,
-      "rmse": 44.003525695270575,
+      "spearman": -0.2859693123085161,
+      "mae": 40.7160486166245,
+      "rmse": 42.103182312502305,
       "fold": 1,
-      "train_size": 201,
-      "test_size": 19,
-      "best_iteration": 6
+      "train_size": 233,
+      "test_size": 39,
+      "best_iteration": 70
     },
     {
-      "spearman": -0.6075790051927725,
-      "mae": 40.415406924047765,
-      "rmse": 42.74854314867362,
+      "spearman": 0.458213195637393,
+      "mae": 24.0497474009122,
+      "rmse": 27.303998512385288,
       "fold": 2,
-      "train_size": 220,
-      "test_size": 23,
+      "train_size": 272,
+      "test_size": 39,
+      "best_iteration": 15
+    },
+    {
+      "spearman": -0.23628479110260733,
+      "mae": 25.395734525235568,
+      "rmse": 27.559678088191195,
+      "fold": 3,
+      "train_size": 311,
+      "test_size": 39,
+      "best_iteration": 68
+    },
+    {
+      "spearman": -0.5215055113508807,
+      "mae": 32.5845982815354,
+      "rmse": 37.50311518898355,
+      "fold": 4,
+      "train_size": 350,
+      "test_size": 19,
       "best_iteration": 1
     },
     {
-      "spearman": 0.3916789398486814,
-      "mae": 24.938865076809236,
-      "rmse": 26.48100833928807,
-      "fold": 3,
-      "train_size": 243,
+      "spearman": -0.133384986290758,
+      "mae": 40.416552878571494,
+      "rmse": 43.44451728830613,
+      "fold": 5,
+      "train_size": 369,
       "test_size": 20,
-      "best_iteration": 17
-    },
-    {
-      "spearman": 0.0,
-      "mae": 6.792388193488521,
-      "rmse": 8.072363883255408,
-      "fold": 4,
-      "train_size": 263,
-      "test_size": 6,
-      "best_iteration": 74
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "ACICO",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

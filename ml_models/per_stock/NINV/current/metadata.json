@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.008977463898478588,
-  "mae": 13.948976941198511,
-  "rmse": 14.26019648753153,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.24762018868705943,
+  "mae": 28.18201749401775,
+  "rmse": 32.35192269972215,
+  "auc": 0.24762018868705943,
+  "mean_auc": 0.24762018868705943,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 605,
+  "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-07-05",
-    "end": "2026-04-26"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_0.0090",
+  "rejected_reason": "spearman_below_threshold_0.2476",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": NaN,
-      "mae": 13.799304910404349,
-      "rmse": 13.82914245237946,
+      "spearman": 0.1582714438248554,
+      "mae": 22.430389940245632,
+      "rmse": 28.568479291420083,
       "fold": 1,
-      "train_size": 370,
-      "test_size": 67,
-      "best_iteration": 1
+      "train_size": 409,
+      "test_size": 69,
+      "best_iteration": 59
     },
     {
-      "spearman": 0.28468756705205295,
-      "mae": 17.160501416565417,
-      "rmse": 17.405011087263247,
+      "spearman": 0.11981718582057653,
+      "mae": 30.559044278813204,
+      "rmse": 35.20793583325216,
       "fold": 2,
-      "train_size": 437,
-      "test_size": 94,
+      "train_size": 478,
+      "test_size": 68,
+      "best_iteration": 6
+    },
+    {
+      "spearman": 0.08121238404080977,
+      "mae": 30.51107510271573,
+      "rmse": 34.41974374933615,
+      "fold": 3,
+      "train_size": 546,
+      "test_size": 68,
       "best_iteration": 1
     },
     {
-      "spearman": -0.26673263925509577,
-      "mae": 10.887124496625772,
-      "rmse": 11.546435922951888,
-      "fold": 3,
-      "train_size": 531,
-      "test_size": 37,
-      "best_iteration": 135
+      "spearman": 0.7177121971305936,
+      "mae": 28.433022815480548,
+      "rmse": 31.832681928790286,
+      "fold": 4,
+      "train_size": 614,
+      "test_size": 34,
+      "best_iteration": 3
+    },
+    {
+      "spearman": 0.16108773261846193,
+      "mae": 28.976555332833637,
+      "rmse": 31.730772695812085,
+      "fold": 5,
+      "train_size": 648,
+      "test_size": 35,
+      "best_iteration": 20
     }
   ],
   "tier": "per_stock",
   "identifier": "NINV",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

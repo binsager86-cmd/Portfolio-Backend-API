@@ -1,66 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.2344769827175967,
-  "mae": 14.408359072741423,
-  "rmse": 16.72968250725477,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.6298004957617465,
+  "mae": 23.19241617838177,
+  "rmse": 27.648486266713753,
+  "auc": 0.6298004957617465,
+  "mean_auc": 0.6298004957617465,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 703,
+  "n_train_events": 694,
   "train_date_range": {
-    "start": "2023-04-20",
-    "end": "2026-04-21"
+    "start": "2023-05-28",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_0.2345",
+  "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.16290656687500285,
-      "mae": 14.181259023362037,
-      "rmse": 15.931494149324969,
+      "spearman": 0.6378977939561656,
+      "mae": 21.27775708527347,
+      "rmse": 25.514158784644426,
       "fold": 1,
-      "train_size": 330,
-      "test_size": 96,
-      "best_iteration": 1
+      "train_size": 416,
+      "test_size": 69,
+      "best_iteration": 298
     },
     {
-      "spearman": -0.17093520167692652,
-      "mae": 26.127315677725825,
-      "rmse": 30.82810131849634,
+      "spearman": 0.6272707314875909,
+      "mae": 27.502090477226382,
+      "rmse": 32.63591314071685,
       "fold": 2,
-      "train_size": 426,
-      "test_size": 88,
-      "best_iteration": 1
+      "train_size": 485,
+      "test_size": 70,
+      "best_iteration": 6
     },
     {
-      "spearman": -0.28940540425293926,
-      "mae": 21.47918915190984,
-      "rmse": 23.029905370043497,
+      "spearman": 0.7742407628962519,
+      "mae": 22.896655893385674,
+      "rmse": 26.187791015534682,
       "fold": 3,
-      "train_size": 514,
-      "test_size": 100,
-      "best_iteration": 1
+      "train_size": 555,
+      "test_size": 69,
+      "best_iteration": 24
     },
     {
-      "spearman": 0.890422684596333,
-      "mae": 9.045656754969755,
-      "rmse": 10.168210800306122,
+      "spearman": 0.4342789619274547,
+      "mae": 21.873985368967382,
+      "rmse": 26.127720861009873,
       "fold": 4,
-      "train_size": 614,
-      "test_size": 31,
-      "best_iteration": 27
+      "train_size": 624,
+      "test_size": 35,
+      "best_iteration": 6
     },
     {
-      "spearman": 0.9052094017965191,
-      "mae": 1.2083747557396558,
-      "rmse": 3.690700898102899,
+      "spearman": 0.6753142285412694,
+      "mae": 22.41159206705593,
+      "rmse": 27.776847531662916,
       "fold": 5,
-      "train_size": 645,
-      "test_size": 58,
-      "best_iteration": 205
+      "train_size": 659,
+      "test_size": 35,
+      "best_iteration": 42
     }
   ],
   "tier": "per_stock",
   "identifier": "AAYAN",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

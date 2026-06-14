@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.80538218932496,
-  "mae": 26.06732466508548,
-  "rmse": 28.474602856076714,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.3919148616641689,
+  "mae": 32.01694227340336,
+  "rmse": 34.85826855434907,
+  "auc": 0.3919148616641689,
+  "mean_auc": 0.3919148616641689,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 593,
+  "n_train_events": 555,
   "train_date_range": {
-    "start": "2023-10-01",
-    "end": "2026-04-16"
+    "start": "2023-08-13",
+    "end": "2026-03-30"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.547295625186467,
-      "mae": 11.805917903841191,
-      "rmse": 17.23443648229346,
+      "spearman": 0.5545254049280972,
+      "mae": 26.590958260026767,
+      "rmse": 31.830304860583894,
       "fold": 1,
-      "train_size": 266,
-      "test_size": 80,
-      "best_iteration": 10
+      "train_size": 333,
+      "test_size": 55,
+      "best_iteration": 112
     },
     {
-      "spearman": 0.9999999999999999,
-      "mae": 36.73158054838858,
-      "rmse": 38.05351504248329,
+      "spearman": 0.5101290727243569,
+      "mae": 18.433123997268915,
+      "rmse": 23.893486714202524,
       "fold": 2,
-      "train_size": 346,
-      "test_size": 78,
+      "train_size": 388,
+      "test_size": 56,
+      "best_iteration": 30
+    },
+    {
+      "spearman": -0.28228580039774664,
+      "mae": 37.877674091309316,
+      "rmse": 38.728038546057306,
+      "fold": 3,
+      "train_size": 444,
+      "test_size": 55,
       "best_iteration": 1
     },
     {
-      "spearman": 0.8688509427884128,
-      "mae": 29.664475543026672,
-      "rmse": 30.135857043453395,
+      "spearman": 0.4729711280093402,
+      "mae": 25.57636502729066,
+      "rmse": 26.91101792375272,
+      "fold": 4,
+      "train_size": 499,
+      "test_size": 28,
+      "best_iteration": 33
+    },
+    {
+      "spearman": 0.7042345030567968,
+      "mae": 51.60658999112112,
+      "rmse": 52.9284947271489,
       "fold": 5,
-      "train_size": 439,
-      "test_size": 154,
-      "best_iteration": 1
+      "train_size": 527,
+      "test_size": 28,
+      "best_iteration": 5
     }
   ],
   "tier": "per_stock",
   "identifier": "ASC",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

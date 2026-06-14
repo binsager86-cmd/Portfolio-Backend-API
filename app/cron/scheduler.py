@@ -261,6 +261,32 @@ def start_scheduler() -> None:
         )
     else:
         logger.info("⏸  Price scheduler disabled (PRICE_UPDATE_ENABLED=False)")
+        # Keep fundamentals (including daily TTM EPS refresh) running even when
+        # price/snapshot automation is disabled.
+        try:
+            from app.cron.fundamentals_updater import run_tickerchart_fundamentals_update
+
+            fundamentals_trigger = CronTrigger(
+                hour=settings.PRICE_UPDATE_HOUR,
+                minute=settings.PRICE_UPDATE_MINUTE,
+                timezone="Asia/Kuwait",
+            )
+            _scheduler.add_job(
+                run_tickerchart_fundamentals_update,
+                trigger=fundamentals_trigger,
+                id="daily_fundamentals_refresh",
+                name="Daily fundamentals refresh",
+                replace_existing=True,
+                coalesce=True,
+                max_instances=1,
+            )
+            logger.info(
+                "📘 Daily fundamentals refresh scheduled — daily at %02d:%02d Asia/Kuwait",
+                settings.PRICE_UPDATE_HOUR,
+                settings.PRICE_UPDATE_MINUTE,
+            )
+        except Exception as exc:
+            logger.warning("Could not schedule daily fundamentals refresh: %s", exc)
 
     # ── Nightly data-retention sweep (03:00 Asia/Kuwait) ────────
     try:
@@ -319,13 +345,13 @@ def start_scheduler() -> None:
             """Weekly full recompute including DNA profiles (Sundays)."""
             run_nightly_recompute(dna_refresh=True, verbose=False)
 
-        # Sun–Thu at 13:15 Asia/Kuwait — intraday refresh near Boursa close
+        # Sun–Thu at 14:35 Asia/Kuwait — secondary refresh after nightly recompute (~14:05–14:25)
         _scheduler.add_job(
             _run_eagle_eye_intraday_refresh,
             trigger=CronTrigger(
                 day_of_week="sun,mon,tue,wed,thu",
-                hour=13,
-                minute=15,
+                hour=14,
+                minute=35,
                 timezone="Asia/Kuwait",
             ),
             id="eagle_eye_intraday_refresh",
@@ -394,7 +420,7 @@ def start_scheduler() -> None:
 
         logger.info(
             "Eagle Eye jobs scheduled "
-            "(Sun–Thu 13:15 intraday; Sun–Thu 14:05 nightly; DNA rebuild Sun 14:30; Simulator 14:20 Asia/Kuwait)"
+            "(Sun–Thu 14:05 nightly; Sun–Thu 14:35 secondary refresh; DNA rebuild Sun 14:30; Simulator 14:20 Asia/Kuwait)"
         )
     except Exception as exc:
         logger.warning("Could not schedule Eagle Eye jobs: %s", exc)

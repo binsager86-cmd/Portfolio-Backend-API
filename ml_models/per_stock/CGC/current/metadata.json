@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.1331273873371221,
-  "mae": 23.190641096880757,
-  "rmse": 24.38807403330883,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.25951011179912015,
+  "mae": 28.75758525609961,
+  "rmse": 31.796152358484722,
+  "auc": 0.25951011179912015,
+  "mean_auc": 0.25951011179912015,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 631,
+  "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-08-02",
-    "end": "2026-05-03"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_0.1331",
+  "rejected_reason": "spearman_below_threshold_0.2595",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.07612588452469962,
-      "mae": 30.841938837264557,
-      "rmse": 31.050695524999604,
+      "spearman": 0.026826879365927432,
+      "mae": 29.70060592655315,
+      "rmse": 33.9858589383446,
       "fold": 1,
-      "train_size": 381,
-      "test_size": 83,
-      "best_iteration": 1
+      "train_size": 409,
+      "test_size": 69,
+      "best_iteration": 4
     },
     {
-      "spearman": 0.3753441242145795,
-      "mae": 32.69960418668484,
-      "rmse": 32.95731219208075,
+      "spearman": 0.04885141088452772,
+      "mae": 37.62761117500727,
+      "rmse": 38.182469119109484,
       "fold": 2,
-      "train_size": 464,
-      "test_size": 79,
+      "train_size": 478,
+      "test_size": 68,
       "best_iteration": 1
     },
     {
-      "spearman": 0.10016392232148637,
-      "mae": 6.030380266692876,
-      "rmse": 9.156214382846143,
+      "spearman": 0.5384894587179805,
+      "mae": 18.11506455547821,
+      "rmse": 21.692614917238657,
       "fold": 3,
-      "train_size": 543,
-      "test_size": 42,
-      "best_iteration": 165
+      "train_size": 546,
+      "test_size": 68,
+      "best_iteration": 20
+    },
+    {
+      "spearman": 0.3416425528500515,
+      "mae": 43.583144705650795,
+      "rmse": 46.31361762486228,
+      "fold": 4,
+      "train_size": 614,
+      "test_size": 34,
+      "best_iteration": 34
+    },
+    {
+      "spearman": 0.34174025717711354,
+      "mae": 14.761499917808644,
+      "rmse": 18.806201192868567,
+      "fold": 5,
+      "train_size": 648,
+      "test_size": 35,
+      "best_iteration": 290
     }
   ],
   "tier": "per_stock",
   "identifier": "CGC",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

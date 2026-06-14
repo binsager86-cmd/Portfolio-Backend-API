@@ -1,66 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": -0.026086409521958242,
-  "mae": 20.607450512778748,
-  "rmse": 22.489140418758993,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.36026589653073043,
+  "mae": 20.900603467885567,
+  "rmse": 26.256988665732752,
+  "auc": 0.36026589653073043,
+  "mean_auc": 0.36026589653073043,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 488,
+  "n_train_events": 641,
   "train_date_range": {
-    "start": "2023-07-03",
-    "end": "2026-05-20"
+    "start": "2023-06-14",
+    "end": "2026-03-29"
   },
-  "rejected_reason": "spearman_below_threshold_-0.0261",
+  "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.33086425289860777,
-      "mae": 51.236014093258724,
-      "rmse": 54.674068756037336,
+      "spearman": 0.641992406647468,
+      "mae": 20.902166390253164,
+      "rmse": 25.979894106839488,
       "fold": 1,
-      "train_size": 242,
-      "test_size": 66,
+      "train_size": 384,
+      "test_size": 64,
+      "best_iteration": 52
+    },
+    {
+      "spearman": 0.32139411061361073,
+      "mae": 19.020047247910846,
+      "rmse": 24.49528945138805,
+      "fold": 2,
+      "train_size": 448,
+      "test_size": 64,
+      "best_iteration": 2
+    },
+    {
+      "spearman": -0.038859861756068786,
+      "mae": 30.47172482878471,
+      "rmse": 36.23218582928875,
+      "fold": 3,
+      "train_size": 512,
+      "test_size": 64,
       "best_iteration": 1
     },
     {
-      "spearman": 0.5077588112644296,
-      "mae": 4.9333484989733245,
-      "rmse": 8.167709339939533,
-      "fold": 2,
-      "train_size": 308,
-      "test_size": 21,
-      "best_iteration": 43
-    },
-    {
-      "spearman": -0.1187442057312266,
-      "mae": 14.083926317670493,
-      "rmse": 14.502737737721125,
-      "fold": 3,
-      "train_size": 329,
-      "test_size": 63,
-      "best_iteration": 10
-    },
-    {
-      "spearman": -0.6918585560380088,
-      "mae": 11.462030918109178,
-      "rmse": 13.224590339916059,
+      "spearman": 0.25155165501200444,
+      "mae": 22.230348825211536,
+      "rmse": 27.365346427706044,
       "fold": 4,
-      "train_size": 392,
-      "test_size": 27,
-      "best_iteration": 195
+      "train_size": 576,
+      "test_size": 32,
+      "best_iteration": 290
     },
     {
-      "spearman": 0.5032761557936224,
-      "mae": 21.321932735882033,
-      "rmse": 21.8765959201809,
+      "spearman": 0.6252511721366377,
+      "mae": 11.878730047267577,
+      "rmse": 17.212227513441434,
       "fold": 5,
-      "train_size": 419,
-      "test_size": 69,
-      "best_iteration": 13
+      "train_size": 608,
+      "test_size": 33,
+      "best_iteration": 22
     }
   ],
   "tier": "per_stock",
   "identifier": "MUNTAZAHAT",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

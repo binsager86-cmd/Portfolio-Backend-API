@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.7150441528414362,
-  "mae": 2.926475658364056,
-  "rmse": 5.763527837359849,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.6645868115385245,
+  "mae": 22.201265643631256,
+  "rmse": 25.049448839784322,
+  "auc": 0.6645868115385245,
+  "mean_auc": 0.6645868115385245,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 421,
+  "n_train_events": 477,
   "train_date_range": {
-    "start": "2023-08-01",
-    "end": "2026-05-24"
+    "start": "2023-08-22",
+    "end": "2026-03-29"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.59182064322954,
-      "mae": 6.5924011508063405,
-      "rmse": 8.472458379240953,
+      "spearman": 0.7547924899789824,
+      "mae": 16.899984270717987,
+      "rmse": 20.48643803297192,
+      "fold": 1,
+      "train_size": 286,
+      "test_size": 47,
+      "best_iteration": 159
+    },
+    {
+      "spearman": 0.33231500131286446,
+      "mae": 22.929339621572172,
+      "rmse": 26.68001675259934,
       "fold": 2,
-      "train_size": 294,
-      "test_size": 39,
-      "best_iteration": 29
-    },
-    {
-      "spearman": 0.5533118152947685,
-      "mae": 2.1827885410743306,
-      "rmse": 8.813440639990926,
-      "fold": 3,
       "train_size": 333,
-      "test_size": 61,
-      "best_iteration": 215
+      "test_size": 48,
+      "best_iteration": 67
     },
     {
-      "spearman": 1.0,
-      "mae": 0.004237283211497633,
-      "rmse": 0.004684492847669931,
+      "spearman": 0.46544364493923657,
+      "mae": 31.670158310074182,
+      "rmse": 33.82291039480444,
+      "fold": 3,
+      "train_size": 381,
+      "test_size": 48,
+      "best_iteration": 24
+    },
+    {
+      "spearman": 0.9190983656410036,
+      "mae": 31.54120026783757,
+      "rmse": 32.90361666698384,
+      "fold": 4,
+      "train_size": 429,
+      "test_size": 24,
+      "best_iteration": 32
+    },
+    {
+      "spearman": 0.8512845558205357,
+      "mae": 7.965645747954375,
+      "rmse": 11.354262351562067,
       "fold": 5,
-      "train_size": 399,
-      "test_size": 22,
-      "best_iteration": 89
+      "train_size": 453,
+      "test_size": 24,
+      "best_iteration": 52
     }
   ],
   "tier": "per_stock",
   "identifier": "OSOS",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

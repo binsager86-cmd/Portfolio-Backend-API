@@ -1,57 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.5120277281318727,
-  "mae": 19.88053816793337,
-  "rmse": 20.298925946171572,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.35446721809089077,
+  "mae": 22.387935780991015,
+  "rmse": 25.576910904669628,
+  "auc": 0.35446721809089077,
+  "mean_auc": 0.35446721809089077,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 595,
+  "n_train_events": 658,
   "train_date_range": {
-    "start": "2023-07-11",
-    "end": "2026-04-20"
+    "start": "2023-07-23",
+    "end": "2026-03-30"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.6742988545672532,
-      "mae": 2.0993701122756976,
-      "rmse": 2.8987694554754633,
+      "spearman": 0.6786345381290432,
+      "mae": 21.18564546655585,
+      "rmse": 24.156370411919124,
       "fold": 1,
-      "train_size": 398,
-      "test_size": 25,
-      "best_iteration": 223
+      "train_size": 394,
+      "test_size": 66,
+      "best_iteration": 70
     },
     {
-      "spearman": 0.9301632984350037,
-      "mae": 33.15847888652379,
-      "rmse": 33.5101352887061,
+      "spearman": -0.5991153572826915,
+      "mae": 32.899622289810765,
+      "rmse": 35.78411520103198,
       "fold": 2,
-      "train_size": 423,
-      "test_size": 48,
-      "best_iteration": 2
-    },
-    {
-      "spearman": 0.9972852918835005,
-      "mae": 10.738610400888405,
-      "rmse": 11.238982655654016,
-      "fold": 4,
-      "train_size": 491,
-      "test_size": 74,
-      "best_iteration": 11
-    },
-    {
-      "spearman": -0.5536365323582665,
-      "mae": 33.52569327204559,
-      "rmse": 33.547816384850705,
-      "fold": 5,
-      "train_size": 565,
-      "test_size": 30,
+      "train_size": 460,
+      "test_size": 66,
       "best_iteration": 1
+    },
+    {
+      "spearman": 0.6873375517499002,
+      "mae": 22.977722633189856,
+      "rmse": 26.0494417107687,
+      "fold": 3,
+      "train_size": 526,
+      "test_size": 66,
+      "best_iteration": 33
+    },
+    {
+      "spearman": 0.3136532071234203,
+      "mae": 19.40043009851622,
+      "rmse": 24.875464988363234,
+      "fold": 4,
+      "train_size": 592,
+      "test_size": 33,
+      "best_iteration": 9
+    },
+    {
+      "spearman": 0.6918261507347816,
+      "mae": 15.476258416882372,
+      "rmse": 17.0191622112651,
+      "fold": 5,
+      "train_size": 625,
+      "test_size": 33,
+      "best_iteration": 233
     }
   ],
   "tier": "per_stock",
   "identifier": "SANAM",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

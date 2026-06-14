@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.4999008231667324,
-  "mae": 18.233128837283125,
-  "rmse": 20.079787147641504,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.5487836673097546,
+  "mae": 23.488189178833018,
+  "rmse": 26.12163844426707,
+  "auc": 0.5487836673097546,
+  "mean_auc": 0.5487836673097546,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 352,
+  "n_train_events": 480,
   "train_date_range": {
-    "start": "2023-06-15",
-    "end": "2025-08-10"
+    "start": "2023-06-26",
+    "end": "2025-06-17"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": NaN,
-      "mae": 26.88260868971055,
-      "rmse": 28.111363342225214,
-      "fold": 3,
-      "train_size": 253,
-      "test_size": 64,
+      "spearman": 0.6287842801401919,
+      "mae": 24.98424582523508,
+      "rmse": 27.674141585147197,
+      "fold": 1,
+      "train_size": 288,
+      "test_size": 48,
       "best_iteration": 1
     },
     {
-      "spearman": 0.0,
-      "mae": 19.735781002963225,
-      "rmse": 23.936935358253574,
-      "fold": 4,
-      "train_size": 317,
-      "test_size": 3,
-      "best_iteration": 27
+      "spearman": 0.32165230415376816,
+      "mae": 21.5228371161656,
+      "rmse": 25.01974089974067,
+      "fold": 2,
+      "train_size": 336,
+      "test_size": 48,
+      "best_iteration": 11
     },
     {
-      "spearman": 0.9998016463334648,
-      "mae": 8.080996819175605,
-      "rmse": 8.191062742445721,
+      "spearman": 0.6744661158634637,
+      "mae": 35.6847891187142,
+      "rmse": 37.14395951575865,
+      "fold": 3,
+      "train_size": 384,
+      "test_size": 48,
+      "best_iteration": 2
+    },
+    {
+      "spearman": 0.43897843675784665,
+      "mae": 19.070320475151835,
+      "rmse": 20.75574615212585,
+      "fold": 4,
+      "train_size": 432,
+      "test_size": 24,
+      "best_iteration": 242
+    },
+    {
+      "spearman": 0.680037199633502,
+      "mae": 16.178753358898362,
+      "rmse": 20.01460406856296,
       "fold": 5,
-      "train_size": 320,
-      "test_size": 32,
-      "best_iteration": 45
+      "train_size": 456,
+      "test_size": 24,
+      "best_iteration": 46
     }
   ],
   "tier": "per_stock",
   "identifier": "MASAKEN",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

@@ -1,57 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.3968948029134825,
-  "mae": 16.321045637265726,
-  "rmse": 17.842668602226166,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.15135110758293022,
+  "mae": 24.60716687861818,
+  "rmse": 28.985873039783865,
+  "auc": 0.15135110758293022,
+  "mean_auc": 0.15135110758293022,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 617,
+  "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-05-30",
-    "end": "2026-04-26"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.1514",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.11966183855241383,
-      "mae": 47.284603350987815,
-      "rmse": 47.84477167927113,
+      "spearman": 0.012766187413134882,
+      "mae": 35.723020614533326,
+      "rmse": 40.67165817135166,
       "fold": 1,
-      "train_size": 423,
-      "test_size": 59,
+      "train_size": 409,
+      "test_size": 69,
       "best_iteration": 1
     },
     {
-      "spearman": 0.5459358618621967,
-      "mae": 3.6127789674192723,
-      "rmse": 5.90281595074117,
+      "spearman": -0.19352777118878292,
+      "mae": 21.617933708332597,
+      "rmse": 26.986309980106466,
       "fold": 2,
-      "train_size": 482,
-      "test_size": 63,
-      "best_iteration": 58
+      "train_size": 478,
+      "test_size": 68,
+      "best_iteration": 28
     },
     {
-      "spearman": 0.20120742795867144,
-      "mae": 1.161082077231934,
-      "rmse": 1.567239579915401,
+      "spearman": -0.10784003530085612,
+      "mae": 30.530116293570607,
+      "rmse": 34.14169923682132,
       "fold": 3,
-      "train_size": 545,
-      "test_size": 26,
-      "best_iteration": 82
+      "train_size": 546,
+      "test_size": 68,
+      "best_iteration": 3
     },
     {
-      "spearman": 0.9600977603854758,
-      "mae": 13.22571815342388,
-      "rmse": 16.05584719897696,
+      "spearman": 0.8440675400904113,
+      "mae": 19.77228173749234,
+      "rmse": 21.514936237487955,
+      "fold": 4,
+      "train_size": 614,
+      "test_size": 34,
+      "best_iteration": 66
+    },
+    {
+      "spearman": 0.20128961690074393,
+      "mae": 15.392482039162028,
+      "rmse": 21.614761573151945,
       "fold": 5,
-      "train_size": 584,
-      "test_size": 33,
-      "best_iteration": 118
+      "train_size": 648,
+      "test_size": 35,
+      "best_iteration": 9
     }
   ],
   "tier": "per_stock",
   "identifier": "OULAFUEL",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

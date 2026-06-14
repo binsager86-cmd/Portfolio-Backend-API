@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.3336712317591959,
-  "mae": 24.338939861153104,
-  "rmse": 26.693841539383424,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.3829773162559011,
+  "mae": 29.681205899425482,
+  "rmse": 35.03480531945015,
+  "auc": 0.3829773162559011,
+  "mean_auc": 0.3829773162559011,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 552,
+  "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-07-05",
-    "end": "2026-05-21"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.15692235221479642,
-      "mae": 53.18201458536722,
-      "rmse": 59.203400415587865,
+      "spearman": 0.740293027515436,
+      "mae": 40.852767749266675,
+      "rmse": 43.47716355304583,
       "fold": 1,
-      "train_size": 271,
-      "test_size": 112,
+      "train_size": 409,
+      "test_size": 69,
+      "best_iteration": 36
+    },
+    {
+      "spearman": 0.29880291437079687,
+      "mae": 22.194961655480004,
+      "rmse": 28.006347617204103,
+      "fold": 2,
+      "train_size": 478,
+      "test_size": 68,
+      "best_iteration": 5
+    },
+    {
+      "spearman": 0.6898726603868036,
+      "mae": 33.119037125120215,
+      "rmse": 41.815650433950616,
+      "fold": 3,
+      "train_size": 546,
+      "test_size": 68,
+      "best_iteration": 49
+    },
+    {
+      "spearman": 0.22745480349694208,
+      "mae": 30.226468161184645,
+      "rmse": 35.16237639818948,
+      "fold": 4,
+      "train_size": 614,
+      "test_size": 34,
       "best_iteration": 1
     },
     {
-      "spearman": 0.8870994444268291,
-      "mae": 11.657008074526695,
-      "rmse": 11.941399747685224,
-      "fold": 3,
-      "train_size": 415,
-      "test_size": 70,
-      "best_iteration": 11
-    },
-    {
-      "spearman": 0.27083660306555496,
-      "mae": 8.177796923565392,
-      "rmse": 8.936724454877178,
+      "spearman": -0.041536824490473113,
+      "mae": 22.012794806075878,
+      "rmse": 26.712488594860737,
       "fold": 5,
-      "train_size": 501,
-      "test_size": 51,
-      "best_iteration": 20
+      "train_size": 648,
+      "test_size": 35,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "JAZEERA",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

@@ -1,39 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": -0.9012230168282016,
-  "mae": 42.28880560765542,
-  "rmse": 42.605464549725376,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.31994620515724437,
+  "mae": 28.613957165381482,
+  "rmse": 32.23428223329585,
+  "auc": 0.31994620515724437,
+  "mean_auc": 0.31994620515724437,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 571,
+  "n_train_events": 654,
   "train_date_range": {
-    "start": "2023-06-14",
-    "end": "2026-04-26"
+    "start": "2023-07-04",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_-0.9012",
+  "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.8024460336564033,
-      "mae": 44.16035313168222,
-      "rmse": 44.59054963820073,
+      "spearman": 0.3237400059767203,
+      "mae": 22.19808139315933,
+      "rmse": 25.976384867171394,
+      "fold": 1,
+      "train_size": 392,
+      "test_size": 65,
+      "best_iteration": 48
+    },
+    {
+      "spearman": 0.2903755134537061,
+      "mae": 37.54656891617943,
+      "rmse": 38.724437047541365,
       "fold": 2,
-      "train_size": 360,
-      "test_size": 86,
+      "train_size": 457,
+      "test_size": 66,
+      "best_iteration": 14
+    },
+    {
+      "spearman": -0.11853782112296743,
+      "mae": 32.97494556334438,
+      "rmse": 37.47379728602672,
+      "fold": 3,
+      "train_size": 523,
+      "test_size": 65,
       "best_iteration": 1
     },
     {
-      "spearman": -1.0,
-      "mae": 40.417258083628624,
-      "rmse": 40.620379461250025,
+      "spearman": 0.7507939265826401,
+      "mae": 25.09077497775072,
+      "rmse": 29.09863013569101,
+      "fold": 4,
+      "train_size": 588,
+      "test_size": 33,
+      "best_iteration": 86
+    },
+    {
+      "spearman": 0.3533594008961228,
+      "mae": 25.25941497647354,
+      "rmse": 29.898161830048767,
       "fold": 5,
-      "train_size": 461,
-      "test_size": 110,
-      "best_iteration": 1
+      "train_size": 621,
+      "test_size": 33,
+      "best_iteration": 279
     }
   ],
   "tier": "per_stock",
   "identifier": "CLEANING",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

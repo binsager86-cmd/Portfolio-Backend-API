@@ -1,39 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.8467354108318537,
-  "mae": 17.841638875974997,
-  "rmse": 18.25275225784383,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.4380372464651628,
+  "mae": 33.93157015339189,
+  "rmse": 35.97143098352176,
+  "auc": 0.4380372464651628,
+  "mean_auc": 0.4380372464651628,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 417,
+  "n_train_events": 472,
   "train_date_range": {
-    "start": "2024-05-29",
-    "end": "2026-05-06"
+    "start": "2024-04-16",
+    "end": "2026-03-30"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.6936318133736776,
-      "mae": 0.7555479707462429,
-      "rmse": 0.945630463963891,
-      "fold": 2,
-      "train_size": 338,
-      "test_size": 20,
-      "best_iteration": 56
+      "spearman": 0.618657949959595,
+      "mae": 29.989463208974428,
+      "rmse": 33.1734028660096,
+      "fold": 1,
+      "train_size": 283,
+      "test_size": 47,
+      "best_iteration": 2
     },
     {
-      "spearman": 0.9998390082900298,
-      "mae": 34.92772978120375,
-      "rmse": 35.55987405172377,
-      "fold": 5,
-      "train_size": 370,
+      "spearman": 0.7467093266110779,
+      "mae": 24.70753101615314,
+      "rmse": 26.768486112164094,
+      "fold": 2,
+      "train_size": 330,
       "test_size": 47,
-      "best_iteration": 56
+      "best_iteration": 131
+    },
+    {
+      "spearman": 0.8079350551188459,
+      "mae": 44.90960312618526,
+      "rmse": 46.22363068001824,
+      "fold": 3,
+      "train_size": 377,
+      "test_size": 47,
+      "best_iteration": 1
+    },
+    {
+      "spearman": -0.3808515619360222,
+      "mae": 46.54996465604899,
+      "rmse": 46.90921828937462,
+      "fold": 4,
+      "train_size": 424,
+      "test_size": 24,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.39773546257231707,
+      "mae": 23.50128875959763,
+      "rmse": 26.78241697004227,
+      "fold": 5,
+      "train_size": 448,
+      "test_size": 24,
+      "best_iteration": 32
     }
   ],
   "tier": "per_stock",
   "identifier": "PAPCO",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

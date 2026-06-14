@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.17959062466782816,
-  "mae": 18.82376418167193,
-  "rmse": 21.71198232444279,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.05698031539318414,
+  "mae": 27.381182504858618,
+  "rmse": 31.673086805428873,
+  "auc": 0.05698031539318414,
+  "mean_auc": 0.05698031539318414,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 457,
+  "n_train_events": 604,
   "train_date_range": {
-    "start": "2023-07-09",
-    "end": "2026-04-16"
+    "start": "2023-07-24",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_0.1796",
+  "rejected_reason": "spearman_below_threshold_0.0570",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.9953677016016352,
-      "mae": 43.426123488921405,
-      "rmse": 49.16962070289422,
+      "spearman": 0.4232062319524571,
+      "mae": 28.743607215879322,
+      "rmse": 33.52785953418948,
+      "fold": 1,
+      "train_size": 362,
+      "test_size": 60,
+      "best_iteration": 4
+    },
+    {
+      "spearman": 0.3791141479485582,
+      "mae": 33.958675315465946,
+      "rmse": 36.75205337058814,
+      "fold": 2,
+      "train_size": 422,
+      "test_size": 61,
+      "best_iteration": 1
+    },
+    {
+      "spearman": -0.17922902483497458,
+      "mae": 27.77694245094046,
+      "rmse": 32.70543358630201,
       "fold": 3,
-      "train_size": 289,
-      "test_size": 103,
-      "best_iteration": 23
+      "train_size": 483,
+      "test_size": 60,
+      "best_iteration": 10
     },
     {
-      "spearman": 0.3169833889962083,
-      "mae": 8.976682892271485,
-      "rmse": 9.096515702864766,
+      "spearman": 0.11226966251514524,
+      "mae": 21.588311301725817,
+      "rmse": 27.106821680870848,
       "fold": 4,
-      "train_size": 392,
-      "test_size": 21,
-      "best_iteration": 22
+      "train_size": 543,
+      "test_size": 30,
+      "best_iteration": 5
     },
     {
-      "spearman": -0.773579216594359,
-      "mae": 4.068486163822899,
-      "rmse": 6.86981056756939,
+      "spearman": -0.45045944061526516,
+      "mae": 24.83837624028156,
+      "rmse": 28.2732658551939,
       "fold": 5,
-      "train_size": 413,
-      "test_size": 44,
-      "best_iteration": 28
+      "train_size": 573,
+      "test_size": 31,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "ALMANAR",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

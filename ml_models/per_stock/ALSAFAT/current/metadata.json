@@ -1,57 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": -0.31588217164940696,
-  "mae": 26.168028940006575,
-  "rmse": 29.729165127630054,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.5588458324573919,
+  "mae": 21.470423148709095,
+  "rmse": 24.25455994054267,
+  "auc": 0.5588458324573919,
+  "mean_auc": 0.5588458324573919,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 613,
+  "n_train_events": 694,
   "train_date_range": {
-    "start": "2023-04-17",
-    "end": "2026-05-07"
+    "start": "2023-05-28",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_-0.3159",
+  "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.6561568371319215,
-      "mae": 75.72229631702514,
-      "rmse": 78.8683660630124,
+      "spearman": 0.750926447552545,
+      "mae": 16.522716066499054,
+      "rmse": 20.530097976556814,
+      "fold": 1,
+      "train_size": 416,
+      "test_size": 69,
+      "best_iteration": 28
+    },
+    {
+      "spearman": 0.3665447946853099,
+      "mae": 41.32464081294284,
+      "rmse": 42.05989156739116,
       "fold": 2,
-      "train_size": 317,
-      "test_size": 212,
+      "train_size": 485,
+      "test_size": 70,
+      "best_iteration": 6
+    },
+    {
+      "spearman": 0.1262345630127817,
+      "mae": 30.102344159677322,
+      "rmse": 34.13711909858123,
+      "fold": 3,
+      "train_size": 555,
+      "test_size": 69,
       "best_iteration": 1
     },
     {
-      "spearman": -0.6085806194501846,
-      "mae": 24.81368830176979,
-      "rmse": 35.44530984029372,
-      "fold": 3,
-      "train_size": 529,
-      "test_size": 35,
-      "best_iteration": 107
-    },
-    {
-      "spearman": 0.4997059111597352,
-      "mae": 0.4786501645792102,
-      "rmse": 0.7738127015919246,
+      "spearman": 0.8679807048734338,
+      "mae": 8.800068665973294,
+      "rmse": 11.932861760740801,
       "fold": 4,
-      "train_size": 564,
-      "test_size": 26,
-      "best_iteration": 62
+      "train_size": 624,
+      "test_size": 35,
+      "best_iteration": 53
     },
     {
-      "spearman": -0.49849714117525695,
-      "mae": 3.6574809766521605,
-      "rmse": 3.829171905622176,
+      "spearman": 0.6825426521628888,
+      "mae": 10.602346038452945,
+      "rmse": 12.61282929944333,
       "fold": 5,
-      "train_size": 590,
-      "test_size": 23,
-      "best_iteration": 54
+      "train_size": 659,
+      "test_size": 35,
+      "best_iteration": 133
     }
   ],
   "tier": "per_stock",
   "identifier": "ALSAFAT",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

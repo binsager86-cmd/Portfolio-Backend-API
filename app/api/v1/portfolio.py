@@ -127,7 +127,11 @@ async def portfolio_holdings(
     all_holdings = []
 
     for pname in portfolios_to_query:
-        df = build_portfolio_table(pname, current_user.user_id)
+        df = build_portfolio_table(
+            pname,
+            current_user.user_id,
+            fetch_missing_pe=False,
+        )
         if df.empty:
             continue
 

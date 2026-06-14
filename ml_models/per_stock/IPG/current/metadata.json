@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": -0.1392192043368298,
-  "mae": 10.735371724135428,
-  "rmse": 14.5504331973428,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.4621103990232697,
+  "mae": 30.95507728185449,
+  "rmse": 33.17890801137425,
+  "auc": 0.4621103990232697,
+  "mean_auc": 0.4621103990232697,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 303,
+  "n_train_events": 396,
   "train_date_range": {
-    "start": "2023-05-22",
-    "end": "2026-04-13"
+    "start": "2023-08-17",
+    "end": "2026-03-11"
   },
-  "rejected_reason": "spearman_below_threshold_-0.1392",
+  "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.9348371797682362,
-      "mae": 12.602445764617356,
-      "rmse": 20.093347171493278,
+      "spearman": 0.4435576614039016,
+      "mae": 33.86173305358187,
+      "rmse": 35.98480073847452,
+      "fold": 1,
+      "train_size": 237,
+      "test_size": 40,
+      "best_iteration": 47
+    },
+    {
+      "spearman": 0.16297822682833563,
+      "mae": 15.200494214459132,
+      "rmse": 18.526614813089036,
       "fold": 2,
-      "train_size": 215,
-      "test_size": 23,
-      "best_iteration": 24
+      "train_size": 277,
+      "test_size": 39,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.32607294957656496,
-      "mae": 10.0078364761844,
-      "rmse": 13.789651673075864,
+      "spearman": 0.7252614347034071,
+      "mae": 29.386066841701144,
+      "rmse": 31.2979783704383,
       "fold": 3,
-      "train_size": 238,
-      "test_size": 47,
-      "best_iteration": 50
+      "train_size": 316,
+      "test_size": 40,
+      "best_iteration": 4
     },
     {
-      "spearman": 0.19110661718118185,
-      "mae": 9.595832931604528,
-      "rmse": 9.768300747459257,
+      "spearman": 0.5665672681995083,
+      "mae": 24.605970855096036,
+      "rmse": 26.625400471169062,
+      "fold": 4,
+      "train_size": 356,
+      "test_size": 20,
+      "best_iteration": 30
+    },
+    {
+      "spearman": 0.41218740398119613,
+      "mae": 51.72112144443427,
+      "rmse": 53.45974566370031,
       "fold": 5,
-      "train_size": 291,
-      "test_size": 12,
-      "best_iteration": 22
+      "train_size": 376,
+      "test_size": 20,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "IPG",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

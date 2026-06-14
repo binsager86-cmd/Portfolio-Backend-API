@@ -4560,10 +4560,16 @@ async def get_validated_fcf(
     # Fallback: try from financial_line_items directly
     if not result.get("metrics") and not result.get("metrics_by_period"):
         items = _load_items_for_period(stock_id, period_end_date or "")
+        stmt_fcf = (
+            items.get("FREE_CASH_FLOW")
+            or items.get("UNLEVERED_FREE_CASH_FLOW")
+            or items.get("LEVERED_FREE_CASH_FLOW")
+        )
         cfo = items.get("CASH_FROM_OPERATIONS")
         capex = items.get("CAPITAL_EXPENDITURES") or items.get("CAPEX")
-        if cfo is not None:
-            fcf = (cfo - abs(capex)) if capex is not None else None
+        if stmt_fcf is not None or cfo is not None:
+            # Use statement FCF as-is whenever present.
+            fcf = stmt_fcf if stmt_fcf is not None else ((cfo - abs(capex)) if capex is not None else None)
             result["metrics"] = {
                 "cash_from_operations": cfo,
                 "capex_ppe_cash": capex,
@@ -4900,6 +4906,25 @@ async def get_valuation_defaults(
         val = r[1] if isinstance(r, (tuple, list)) else r["metric_value"]
         if name not in latest:
             latest[name] = val
+
+    # For Free Cash Flow metrics, prefer the latest annual statement-backed
+    # values as-is. This avoids quarter-vs-annual sign confusion in score cards.
+    annual_flow_rows = query_all(
+        """SELECT metric_name, metric_value
+           FROM stock_metrics
+           WHERE stock_id = ?
+             AND fiscal_quarter IS NULL
+             AND metric_name IN ('Free Cash Flow', 'FCF Margin')
+           ORDER BY period_end_date DESC""",
+        (stock_id,),
+    )
+    annual_flow_latest: Dict[str, float] = {}
+    for r in annual_flow_rows:
+        metric_name = r[0] if isinstance(r, (tuple, list)) else r["metric_name"]
+        metric_value = r[1] if isinstance(r, (tuple, list)) else r["metric_value"]
+        if metric_name not in annual_flow_latest:
+            annual_flow_latest[metric_name] = metric_value
+    latest.update(annual_flow_latest)
 
     # Shares outstanding, exchange, and summary MoS from analysis_stocks table
     stock_row = query_one("SELECT outstanding_shares, summary_margin_of_safety, exchange FROM analysis_stocks WHERE id = ?", (stock_id,))
@@ -5994,20 +6019,127 @@ def _verify_stock_owner(stock_id: int, user_id: int) -> None:
 
 # ── Metrics calculation (mirrors MetricsCalculator) ──────────────────
 
+_STATEMENT_PRIORITY_DEFAULT: Tuple[str, ...] = ("income", "balance", "cashflow", "equity")
+_STATEMENT_PRIORITY_CASHFLOW: Tuple[str, ...] = ("cashflow", "income", "balance", "equity")
+_STATEMENT_PRIORITY_BALANCE: Tuple[str, ...] = ("balance", "income", "cashflow", "equity")
+
+_CASHFLOW_PRIORITY_CODES = {
+    "CASH_FROM_OPERATIONS",
+    "OPERATING_CASH_FLOW",
+    "CASH_FROM_INVESTING",
+    "INVESTING_CASH_FLOW",
+    "CASH_FROM_FINANCING",
+    "FINANCING_CASH_FLOW",
+    "CAPITAL_EXPENDITURES",
+    "CAPEX",
+    "FREE_CASH_FLOW",
+    "UNLEVERED_FREE_CASH_FLOW",
+    "LEVERED_FREE_CASH_FLOW",
+    "FREE_CASH_FLOW_MARGIN",
+    "NET_CHANGE_IN_CASH",
+    "DIVIDENDS_PAID",
+    "COMMON_DIVIDENDS_PAID",
+}
+
+_BALANCE_PRIORITY_CODES = {
+    "TOTAL_ASSETS",
+    "TOTAL_CURRENT_ASSETS",
+    "TOTAL_LIABILITIES",
+    "TOTAL_CURRENT_LIABILITIES",
+    "TOTAL_EQUITY",
+    "SHAREHOLDERS_EQUITY",
+    "TOTAL_SHAREHOLDERS_EQUITY",
+    "STOCKHOLDERS_EQUITY",
+    "TOTAL_COMMON_EQUITY",
+    "INVENTORY",
+    "ACCOUNTS_RECEIVABLE",
+    "OTHER_RECEIVABLES",
+    "ACCOUNTS_PAYABLE",
+    "SHORT_TERM_INVESTMENTS",
+    "MARKETABLE_SECURITIES",
+    "CASH_EQUIVALENTS",
+    "CASH_AND_EQUIVALENTS",
+    "CASH_AND_CASH_EQUIVALENTS",
+    "CASH",
+    "TOTAL_DEBT",
+    "SHORT_TERM_DEBT",
+    "SHORT_TERM_BORROWINGS",
+    "LONG_TERM_DEBT",
+    "LONG_TERM_BORROWINGS",
+    "DEBTNC",
+    "PPE_NET",
+    "NET_FIXED_ASSETS",
+    "PROPERTY_PLANT_EQUIPMENT",
+}
+
+_CASHFLOW_PRIORITY_HINTS = (
+    "CASH_FROM_",
+    "OPERATING_CASH_FLOW",
+    "INVESTING_CASH_FLOW",
+    "FINANCING_CASH_FLOW",
+    "FREE_CASH_FLOW",
+    "CAPEX",
+    "CAPITAL_EXPENDITURE",
+    "DIVIDEND",
+    "NET_CHANGE_IN_CASH",
+)
+
+_BALANCE_PRIORITY_HINTS = (
+    "ASSET",
+    "LIABIL",
+    "EQUITY",
+    "INVENT",
+    "RECEIV",
+    "PAYABLE",
+    "DEBT",
+    "BORROW",
+    "PPE",
+    "WORKINGCAPITAL",
+)
+
+
+def _statement_type_priority_for_code(normalized_code: str) -> Tuple[str, ...]:
+    """Return statement-type precedence for a normalized line-item code.
+
+    This enforces a single source-of-truth rule from cached statements when
+    the same normalized code appears in multiple statement types.
+    """
+    code = (normalized_code or "").upper()
+    if code in _CASHFLOW_PRIORITY_CODES or any(hint in code for hint in _CASHFLOW_PRIORITY_HINTS):
+        return _STATEMENT_PRIORITY_CASHFLOW
+    if code in _BALANCE_PRIORITY_CODES or any(hint in code for hint in _BALANCE_PRIORITY_HINTS):
+        return _STATEMENT_PRIORITY_BALANCE
+    return _STATEMENT_PRIORITY_DEFAULT
+
 def _load_item_rows_for_period(stock_id: int, period_end_date: str) -> List[Tuple[str, str, float]]:
-    """Return raw and normalized line-item codes for one reporting period."""
+    """Return canonical raw/normalized line items for one reporting period."""
     rows = query_all(
-        """SELECT li.line_item_code, li.amount
+        """SELECT fs.statement_type, li.line_item_code, li.amount
            FROM financial_line_items li
            JOIN financial_statements fs ON fs.id = li.statement_id
            WHERE fs.stock_id = ? AND fs.period_end_date = ?""",
         (stock_id, period_end_date),
     )
-    item_rows: List[Tuple[str, str, float]] = []
+
+    # Choose a single canonical value per normalized code using statement-type
+    # precedence so formulas always read from a stable cached-statement source.
+    candidates_by_code: Dict[str, List[Tuple[str, str, float, str]]] = {}
     for r in rows:
-        raw_code = r[0] if isinstance(r, (tuple, list)) else r["line_item_code"]
-        amount = r[1] if isinstance(r, (tuple, list)) else r["amount"]
-        item_rows.append((raw_code.upper(), _normalize_key(raw_code).upper(), amount))
+        statement_type = (r[0] if isinstance(r, (tuple, list)) else r["statement_type"]) or ""
+        raw_code = r[1] if isinstance(r, (tuple, list)) else r["line_item_code"]
+        amount = r[2] if isinstance(r, (tuple, list)) else r["amount"]
+        normalized_code = _normalize_key(raw_code).upper()
+        candidates_by_code.setdefault(normalized_code, []).append(
+            (raw_code.upper(), normalized_code, amount, str(statement_type).lower())
+        )
+
+    item_rows: List[Tuple[str, str, float]] = []
+    for normalized_code, candidates in candidates_by_code.items():
+        priority = _statement_type_priority_for_code(normalized_code)
+        rank = {stype: idx for idx, stype in enumerate(priority)}
+        best = min(candidates, key=lambda c: rank.get(c[3], len(priority)))
+        item_rows.append((best[0], best[1], best[2]))
+
     return item_rows
 
 
@@ -6424,9 +6556,16 @@ def _calculate_all_metrics(
         total_capex = (total_capex or 0.0) + abs(capex_intang)
         cfm["CAPEX Intangibles"] = capex_intang
 
+    # Prefer statement-provided FCF metrics when present, then fall back to
+    # deterministic reconstruction from CFO and capex.
+    stmt_fcf = _get("FREE_CASH_FLOW") or _get("UNLEVERED_FREE_CASH_FLOW") or _get("LEVERED_FREE_CASH_FLOW")
+    stmt_fcf_margin = _get("FREE_CASH_FLOW_MARGIN")
+
     # J) FCF = validated CFO - total cash CAPEX (deterministic, not from raw Gemini)
     fcf: Optional[float] = None
-    if cfo is not None and total_capex is not None:
+    if stmt_fcf is not None:
+        fcf = stmt_fcf
+    elif cfo is not None and total_capex is not None:
         fcf = cfo - total_capex
     elif cfo is not None and capex_ppe is not None:
         fcf = cfo - abs(capex_ppe)
@@ -6439,18 +6578,14 @@ def _calculate_all_metrics(
         cfm["Cash from Financing"] = cff
     if fcf is not None:
         cfm["Free Cash Flow"] = fcf
-        if revenue and revenue != 0:
+        if stmt_fcf_margin is not None:
+            cfm["FCF Margin"] = stmt_fcf_margin
+        elif revenue and revenue != 0:
             cfm["FCF Margin"] = fcf / revenue
         if shares and shares != 0:
             cfm["FCF / Share"] = fcf / shares
     if cfo is not None and net_income and net_income != 0:
         cfm["CFO / Net Income"] = cfo / net_income
-
-    # Free Cash Flow — also pick up from statement line items if not already set
-    if "Free Cash Flow" not in cfm:
-        stmt_fcf = _get("FREE_CASH_FLOW") or _get("UNLEVERED_FREE_CASH_FLOW") or _get("LEVERED_FREE_CASH_FLOW")
-        if stmt_fcf is not None:
-            cfm["Free Cash Flow"] = stmt_fcf
 
     # FCF Margin fallback: compute from whatever FCF we have
     if "FCF Margin" not in cfm:
@@ -6459,7 +6594,6 @@ def _calculate_all_metrics(
             cfm["FCF Margin"] = final_fcf / revenue
     # Also try the pre-computed line item from the statement
     if "FCF Margin" not in cfm:
-        stmt_fcf_margin = _get("FREE_CASH_FLOW_MARGIN")
         if stmt_fcf_margin is not None:
             cfm["FCF Margin"] = stmt_fcf_margin
 
@@ -7072,6 +7206,233 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
         if name not in latest:
             latest[name] = val
 
+    def _load_statement_items(
+        statement_type: str,
+        fiscal_year: int,
+        fiscal_quarter: Optional[int],
+    ) -> Dict[str, float]:
+        """Load normalized line items for one statement slice."""
+        if fiscal_quarter is None:
+            rows_li = query_all(
+                """SELECT li.line_item_code, li.amount
+                   FROM financial_line_items li
+                   JOIN financial_statements fs ON fs.id = li.statement_id
+                   WHERE fs.stock_id = ?
+                     AND fs.statement_type = ?
+                     AND fs.fiscal_year = ?
+                     AND fs.fiscal_quarter IS NULL
+                   ORDER BY fs.period_end_date DESC""",
+                (stock_id, statement_type, fiscal_year),
+            )
+        else:
+            rows_li = query_all(
+                """SELECT li.line_item_code, li.amount
+                   FROM financial_line_items li
+                   JOIN financial_statements fs ON fs.id = li.statement_id
+                   WHERE fs.stock_id = ?
+                     AND fs.statement_type = ?
+                     AND fs.fiscal_year = ?
+                     AND fs.fiscal_quarter = ?
+                   ORDER BY fs.period_end_date DESC""",
+                (stock_id, statement_type, fiscal_year, fiscal_quarter),
+            )
+
+        items_li: Dict[str, float] = {}
+        for rr in rows_li:
+            raw_code = rr[0] if isinstance(rr, (tuple, list)) else rr["line_item_code"]
+            amount = rr[1] if isinstance(rr, (tuple, list)) else rr["amount"]
+            normalized = _normalize_key(raw_code).upper()
+            if normalized not in items_li:
+                items_li[normalized] = amount
+        return items_li
+
+    def _first(items_map: Dict[str, float], *codes: str) -> Optional[float]:
+        for code in codes:
+            if code in items_map and items_map[code] is not None:
+                return items_map[code]
+        return None
+
+    def _build_ttm_metric_overrides() -> Dict[str, float]:
+        """Build TTM overrides for score-sensitive flow metrics."""
+        latest_flow = query_one(
+            """SELECT fiscal_year, fiscal_quarter
+               FROM financial_statements
+               WHERE stock_id = ?
+                 AND statement_type IN ('income', 'cashflow')
+                 AND fiscal_quarter IS NOT NULL
+               ORDER BY period_end_date DESC
+               LIMIT 1""",
+            (stock_id,),
+        )
+        if not latest_flow:
+            return {}
+
+        latest_fy = latest_flow[0] if isinstance(latest_flow, (tuple, list)) else latest_flow.get("fiscal_year")
+        latest_fq = latest_flow[1] if isinstance(latest_flow, (tuple, list)) else latest_flow.get("fiscal_quarter")
+        if latest_fy is None or latest_fq is None:
+            return {}
+
+        prior_fy = latest_fy - 1
+
+        annual_income = _load_statement_items("income", prior_fy, None)
+        latest_income = _load_statement_items("income", latest_fy, latest_fq)
+        prior_income = _load_statement_items("income", prior_fy, latest_fq)
+
+        annual_cashflow = _load_statement_items("cashflow", prior_fy, None)
+        latest_cashflow = _load_statement_items("cashflow", latest_fy, latest_fq)
+        prior_cashflow = _load_statement_items("cashflow", prior_fy, latest_fq)
+
+        def _to_ttm(
+            annual_map: Dict[str, float],
+            latest_map: Dict[str, float],
+            prior_map: Dict[str, float],
+        ) -> Dict[str, float]:
+            ttm_map: Dict[str, float] = {}
+            for code in set(annual_map.keys()) | set(latest_map.keys()) | set(prior_map.keys()):
+                ttm_map[code] = (
+                    (annual_map.get(code, 0.0) or 0.0)
+                    + (latest_map.get(code, 0.0) or 0.0)
+                    - (prior_map.get(code, 0.0) or 0.0)
+                )
+            return ttm_map
+
+        ttm_income = _to_ttm(annual_income, latest_income, prior_income)
+        ttm_cashflow = _to_ttm(annual_cashflow, latest_cashflow, prior_cashflow)
+
+        balance_head = query_one(
+            """SELECT fiscal_year, fiscal_quarter
+               FROM financial_statements
+               WHERE stock_id = ? AND statement_type = 'balance'
+               ORDER BY period_end_date DESC
+               LIMIT 1""",
+            (stock_id,),
+        )
+        balance_items: Dict[str, float] = {}
+        if balance_head:
+            bal_fy = balance_head[0] if isinstance(balance_head, (tuple, list)) else balance_head.get("fiscal_year")
+            bal_fq = balance_head[1] if isinstance(balance_head, (tuple, list)) else balance_head.get("fiscal_quarter")
+            balance_items = _load_statement_items("balance", bal_fy, bal_fq)
+
+        revenue = _first(ttm_income, "REVENUE", "TOTAL_REVENUE", "NET_REVENUE", "TOTAL_SALES")
+        gross_profit = _first(ttm_income, "GROSS_PROFIT")
+        operating_income = _first(ttm_income, "OPERATING_INCOME")
+        net_income = _first(ttm_income, "NET_INCOME")
+        interest_expense = _first(
+            ttm_income,
+            "INTEREST_EXPENSE",
+            "INTERESTEXPENSE",
+            "FINANCE_COSTS",
+            "FINANCE_EXPENSE",
+            "INTEREST_AND_FINANCE_COSTS",
+        )
+
+        total_assets = _first(balance_items, "TOTAL_ASSETS")
+        total_equity = _first(
+            balance_items,
+            "TOTAL_EQUITY",
+            "SHAREHOLDERS_EQUITY",
+            "TOTAL_SHAREHOLDERS_EQUITY",
+            "STOCKHOLDERS_EQUITY",
+            "TOTAL_COMMON_EQUITY",
+        )
+        cash = _first(
+            balance_items,
+            "CASH_EQUIVALENTS",
+            "CASH_AND_EQUIVALENTS",
+            "CASH_AND_CASH_EQUIVALENTS",
+            "CASH",
+        )
+        short_term_inv = _first(balance_items, "SHORT_TERM_INVESTMENTS", "MARKETABLE_SECURITIES")
+
+        cfo = _first(ttm_cashflow, "CASH_FROM_OPERATIONS", "OPERATING_CASH_FLOW")
+        stmt_fcf = _first(ttm_cashflow, "FREE_CASH_FLOW", "UNLEVERED_FREE_CASH_FLOW", "LEVERED_FREE_CASH_FLOW")
+        capex = _first(ttm_cashflow, "CAPITAL_EXPENDITURES", "CAPEX")
+        fcf = stmt_fcf
+        if fcf is None and cfo is not None and capex is not None:
+            fcf = cfo - abs(capex)
+
+        ebitda = _first(ttm_income, "EBITDA")
+        if ebitda is None:
+            da = _first(ttm_income, "DEPRECIATION_AMORTIZATION")
+            if operating_income is not None and da is not None:
+                ebitda = operating_income + abs(da)
+
+        overrides: Dict[str, float] = {}
+
+        if revenue not in (None, 0):
+            if gross_profit is not None:
+                overrides["Gross Margin"] = gross_profit / revenue
+            if operating_income is not None:
+                overrides["Operating Margin"] = operating_income / revenue
+            if net_income is not None:
+                overrides["Net Margin"] = net_income / revenue
+            if fcf is not None:
+                overrides["FCF Margin"] = fcf / revenue
+            if ebitda is not None:
+                overrides["EBITDA Margin"] = ebitda / revenue
+
+        if cfo is not None:
+            overrides["Cash from Operations"] = cfo
+        if fcf is not None:
+            overrides["Free Cash Flow"] = fcf
+        if cfo is not None and net_income not in (None, 0):
+            overrides["CFO / Net Income"] = cfo / net_income
+        if net_income is not None and cfo is not None and total_assets not in (None, 0):
+            overrides["Accruals Ratio"] = (net_income - cfo) / total_assets
+
+        if net_income is not None and total_assets not in (None, 0):
+            overrides["ROA"] = net_income / total_assets
+        if net_income is not None and total_equity not in (None, 0):
+            overrides["ROE"] = net_income / total_equity
+        if revenue not in (None, 0) and total_assets not in (None, 0):
+            overrides["Asset Turnover"] = revenue / total_assets
+        if interest_expense not in (None, 0) and operating_income is not None:
+            overrides["Interest Coverage"] = operating_income / abs(interest_expense)
+
+        total_debt = _first(balance_items, "TOTAL_DEBT")
+        if total_debt is None:
+            short_debt = _first(
+                balance_items,
+                "SHORT_TERM_DEBT",
+                "SHORT_TERM_BORROWINGS",
+                "CURRENT_PORTION_OF_DEBT",
+                "CURRENT_PORTION_OF_LONG_TERM_DEBT",
+                "CURRENT_PORTION_LT_DEBT",
+                "CURRENT_PORTION_OF_LONG_TERM_DEBTS",
+                "CURRENT_PORTION_OF_LEASES",
+                "CURRENTPORTDEBT",
+            )
+            long_debt = _first(
+                balance_items,
+                "LONG_TERM_DEBT",
+                "LONG_TERM_BORROWINGS",
+                "DEBTNC",
+                "CAPITAL_LEASES",
+            )
+            if short_debt is not None or long_debt is not None:
+                total_debt = (short_debt or 0) + (long_debt or 0)
+
+        tax_rate = _first(ttm_income, "EFFECTIVE_TAX_RATE")
+        if tax_rate is None:
+            income_tax = _first(ttm_income, "INCOME_TAX_EXPENSE", "PROVISION_FOR_INCOME_TAXES", "TAX_EXPENSE")
+            pretax = _first(ttm_income, "PRETAX_INCOME", "INCOME_BEFORE_TAX", "PROFIT_BEFORE_TAX")
+            if income_tax is not None and pretax not in (None, 0):
+                tax_rate = income_tax / pretax
+
+        if operating_income is not None and total_equity is not None:
+            safe_tax = min(max(tax_rate or 0, 0), 1)
+            invested_capital = (total_equity or 0) + (total_debt or 0) - (cash or 0) - (short_term_inv or 0)
+            if invested_capital > 0:
+                overrides["ROIC"] = operating_income * (1 - safe_tax) / invested_capital
+
+        return overrides
+
+    # TTM-based overrides for score metrics (annual + latest quarter - prior-year quarter).
+    try:
+        latest.update(_build_ttm_metric_overrides())
+    except Exception:
+        pass
+
     # Enrich with yfinance current price + volatility/beta
     symbol_row = query_one(
         "SELECT symbol FROM analysis_stocks WHERE id = ?", (stock_id,)
@@ -7146,11 +7507,17 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
     def _li(*codes: str) -> Optional[float]:
         """Return the latest amount for any of the given line_item_codes."""
         placeholders = ",".join("?" * len(codes))
+        normalized_primary = _normalize_key(codes[0]).upper() if codes else ""
+        priority = _statement_type_priority_for_code(normalized_primary)
+        case_parts = [f"WHEN '{stype}' THEN {idx}" for idx, stype in enumerate(priority)]
+        case_sql = " ".join(case_parts)
         row = query_one(
             f"""SELECT li.amount FROM financial_line_items li
                 JOIN financial_statements fs ON li.statement_id = fs.id
                 WHERE fs.stock_id = ? AND UPPER(li.line_item_code) IN ({placeholders})
-                ORDER BY fs.period_end_date DESC LIMIT 1""",
+                ORDER BY fs.period_end_date DESC,
+                         CASE LOWER(fs.statement_type) {case_sql} ELSE {len(priority)} END
+                LIMIT 1""",
             (stock_id, *[c.upper() for c in codes]),
         )
         if row:

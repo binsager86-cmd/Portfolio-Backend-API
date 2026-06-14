@@ -1,57 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": -0.292027964250824,
-  "mae": 37.27092254819023,
-  "rmse": 40.4578528522376,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.531492866900267,
+  "mae": 28.023654421694562,
+  "rmse": 31.346692720289326,
+  "auc": 0.531492866900267,
+  "mean_auc": 0.531492866900267,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 287,
+  "n_train_events": 485,
   "train_date_range": {
-    "start": "2023-09-14",
-    "end": "2026-04-16"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_-0.2920",
+  "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.2809762840609876,
-      "mae": 85.78295911169748,
-      "rmse": 88.44751137754933,
+      "spearman": 0.6312317454622873,
+      "mae": 31.79656022194256,
+      "rmse": 34.876986268394134,
       "fold": 1,
-      "train_size": 72,
-      "test_size": 101,
-      "best_iteration": 15
+      "train_size": 291,
+      "test_size": 48,
+      "best_iteration": 12
     },
     {
-      "spearman": -0.9960640836865495,
-      "mae": 46.82416792330675,
-      "rmse": 47.61720146777161,
+      "spearman": 0.8271639941057374,
+      "mae": 23.535941815092855,
+      "rmse": 29.34493298889911,
       "fold": 2,
-      "train_size": 173,
-      "test_size": 34,
-      "best_iteration": 3
+      "train_size": 339,
+      "test_size": 49,
+      "best_iteration": 17
     },
     {
-      "spearman": 0.046330197809366654,
-      "mae": 12.997714070554611,
-      "rmse": 16.730943374514133,
+      "spearman": 0.5930104169928618,
+      "mae": 45.56578346255501,
+      "rmse": 46.62483463882723,
       "fold": 3,
-      "train_size": 207,
-      "test_size": 30,
-      "best_iteration": 363
+      "train_size": 388,
+      "test_size": 48,
+      "best_iteration": 2
     },
     {
-      "spearman": -0.49935425518710075,
-      "mae": 3.478849087202068,
-      "rmse": 9.035755189115331,
+      "spearman": 0.47866962155280496,
+      "mae": 16.758892561892107,
+      "rmse": 19.601038960724864,
+      "fold": 4,
+      "train_size": 436,
+      "test_size": 24,
+      "best_iteration": 95
+    },
+    {
+      "spearman": 0.12738855638764401,
+      "mae": 22.461094046990276,
+      "rmse": 26.28567074460128,
       "fold": 5,
-      "train_size": 241,
-      "test_size": 46,
-      "best_iteration": 31
+      "train_size": 460,
+      "test_size": 25,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "INJAZZAT",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

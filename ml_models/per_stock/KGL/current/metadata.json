@@ -1,66 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.21692288077128924,
-  "mae": 50.902970749382554,
-  "rmse": 53.15017880515717,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.49485658670366905,
+  "mae": 28.437571501228508,
+  "rmse": 32.531129461182715,
+  "auc": 0.49485658670366905,
+  "mean_auc": 0.49485658670366905,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 384,
+  "n_train_events": 579,
   "train_date_range": {
-    "start": "2023-06-26",
-    "end": "2025-10-28"
+    "start": "2023-06-19",
+    "end": "2025-11-04"
   },
-  "rejected_reason": "spearman_below_threshold_0.2169",
+  "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.31250000000000006,
-      "mae": 63.35946516659901,
-      "rmse": 67.14814995271756,
+      "spearman": 0.5747140917079646,
+      "mae": 20.789618705733712,
+      "rmse": 27.171568371994514,
       "fold": 1,
-      "train_size": 256,
-      "test_size": 33,
+      "train_size": 347,
+      "test_size": 58,
       "best_iteration": 1
     },
     {
-      "spearman": 0.0944911182523068,
-      "mae": 64.98982262320018,
-      "rmse": 66.4904252979857,
+      "spearman": 0.6522158141662274,
+      "mae": 26.963106237364318,
+      "rmse": 30.0894520195803,
       "fold": 2,
-      "train_size": 289,
-      "test_size": 37,
-      "best_iteration": 1
+      "train_size": 405,
+      "test_size": 58,
+      "best_iteration": 72
     },
     {
-      "spearman": 0.9919308215960156,
-      "mae": 45.457532935227306,
-      "rmse": 45.52057163237996,
+      "spearman": 0.4812045665819247,
+      "mae": 23.60267896070393,
+      "rmse": 29.36130146593298,
       "fold": 3,
-      "train_size": 326,
-      "test_size": 39,
-      "best_iteration": 21
+      "train_size": 463,
+      "test_size": 58,
+      "best_iteration": 22
     },
     {
-      "spearman": 0.33118968837602675,
-      "mae": 48.07436139174058,
-      "rmse": 49.94619339101606,
+      "spearman": 0.6990790241753757,
+      "mae": 41.789556749541,
+      "rmse": 43.854634746157735,
       "fold": 4,
-      "train_size": 365,
-      "test_size": 14,
-      "best_iteration": 25
+      "train_size": 521,
+      "test_size": 29,
+      "best_iteration": 1
     },
     {
-      "spearman": -0.6454972243679028,
-      "mae": 32.63367163014571,
-      "rmse": 36.64555375168656,
+      "spearman": 0.06706943688685275,
+      "mae": 29.042896852799572,
+      "rmse": 32.17869070224803,
       "fold": 5,
-      "train_size": 379,
-      "test_size": 5,
-      "best_iteration": 1
+      "train_size": 550,
+      "test_size": 29,
+      "best_iteration": 43
     }
   ],
   "tier": "per_stock",
   "identifier": "KGL",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

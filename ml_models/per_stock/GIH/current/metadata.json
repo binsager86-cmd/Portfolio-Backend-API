@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.00046772625686105257,
-  "mae": 5.141210817453945,
-  "rmse": 6.322054391794602,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.39183643940750934,
+  "mae": 28.80825437746129,
+  "rmse": 32.42744670417928,
+  "auc": 0.39183643940750934,
+  "mean_auc": 0.39183643940750934,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 446,
+  "n_train_events": 645,
   "train_date_range": {
-    "start": "2023-05-08",
-    "end": "2026-05-11"
+    "start": "2023-06-15",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_0.0005",
+  "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.9793762543370321,
-      "mae": 10.115900949551293,
-      "rmse": 10.92261537229363,
+      "spearman": 0.7127529621545453,
+      "mae": 19.91751435394191,
+      "rmse": 25.049101779242225,
+      "fold": 1,
+      "train_size": 387,
+      "test_size": 64,
+      "best_iteration": 81
+    },
+    {
+      "spearman": -0.3391860415430423,
+      "mae": 41.52628003908306,
+      "rmse": 45.55057108181803,
       "fold": 2,
-      "train_size": 309,
-      "test_size": 40,
-      "best_iteration": 23
+      "train_size": 451,
+      "test_size": 65,
+      "best_iteration": 6
     },
     {
-      "spearman": 0.24710307120275524,
-      "mae": 0.9464396478336112,
-      "rmse": 1.5791236747592063,
+      "spearman": 0.4726202063470848,
+      "mae": 22.58656779673618,
+      "rmse": 26.96302299208304,
+      "fold": 3,
+      "train_size": 516,
+      "test_size": 64,
+      "best_iteration": 8
+    },
+    {
+      "spearman": 0.6754427968279824,
+      "mae": 32.45800237650866,
+      "rmse": 33.393984312277716,
       "fold": 4,
-      "train_size": 362,
-      "test_size": 26,
-      "best_iteration": 95
+      "train_size": 580,
+      "test_size": 32,
+      "best_iteration": 5
     },
     {
-      "spearman": 0.7336763619048601,
-      "mae": 4.3612918549769315,
-      "rmse": 6.46442412833097,
+      "spearman": 0.4375522732509764,
+      "mae": 27.552907321036635,
+      "rmse": 31.18055335547541,
       "fold": 5,
-      "train_size": 388,
-      "test_size": 58,
-      "best_iteration": 17
+      "train_size": 612,
+      "test_size": 33,
+      "best_iteration": 8
     }
   ],
   "tier": "per_stock",
   "identifier": "GIH",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

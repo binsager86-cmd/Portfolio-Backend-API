@@ -1,39 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.6793974958395191,
-  "mae": 6.110944007900214,
-  "rmse": 10.024049236571283,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.3943140297684052,
+  "mae": 28.82479835048373,
+  "rmse": 32.28275928000502,
+  "auc": 0.3943140297684052,
+  "mean_auc": 0.3943140297684052,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 736,
+  "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-06-11",
-    "end": "2026-04-23"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.46324229638324227,
-      "mae": 5.351552886504993,
-      "rmse": 10.254106249009409,
-      "fold": 2,
-      "train_size": 540,
-      "test_size": 92,
-      "best_iteration": 65
+      "spearman": 0.3178616603193942,
+      "mae": 22.1389945524681,
+      "rmse": 25.157157782022644,
+      "fold": 1,
+      "train_size": 409,
+      "test_size": 69,
+      "best_iteration": 7
     },
     {
-      "spearman": 0.8955526952957961,
-      "mae": 6.870335129295434,
-      "rmse": 9.79399222413316,
+      "spearman": -0.06507580603926923,
+      "mae": 30.981825138448464,
+      "rmse": 34.23488483475424,
+      "fold": 2,
+      "train_size": 478,
+      "test_size": 68,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.6507045643126242,
+      "mae": 32.02501672283021,
+      "rmse": 36.92005543635385,
+      "fold": 3,
+      "train_size": 546,
+      "test_size": 68,
+      "best_iteration": 53
+    },
+    {
+      "spearman": 0.6822770750778913,
+      "mae": 38.72221600827493,
+      "rmse": 39.722196941902936,
+      "fold": 4,
+      "train_size": 614,
+      "test_size": 34,
+      "best_iteration": 150
+    },
+    {
+      "spearman": 0.3858026551713853,
+      "mae": 20.255939330396952,
+      "rmse": 25.379501404991387,
       "fold": 5,
-      "train_size": 698,
-      "test_size": 38,
-      "best_iteration": 119
+      "train_size": 648,
+      "test_size": 35,
+      "best_iteration": 40
     }
   ],
   "tier": "per_stock",
   "identifier": "KRE",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

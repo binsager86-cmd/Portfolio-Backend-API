@@ -1,57 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.6548131633896022,
-  "mae": 28.976873315346104,
-  "rmse": 30.449304130455317,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.27393797323837,
+  "mae": 31.387697842805096,
+  "rmse": 34.76847467943105,
+  "auc": 0.27393797323837,
+  "mean_auc": 0.27393797323837,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 472,
+  "n_train_events": 625,
   "train_date_range": {
-    "start": "2023-05-04",
-    "end": "2026-04-22"
+    "start": "2023-06-08",
+    "end": "2026-03-26"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.2739",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": NaN,
-      "mae": 64.8424582216165,
-      "rmse": 65.81335781452533,
+      "spearman": 0.17481500519904514,
+      "mae": 34.97492878393103,
+      "rmse": 37.807369770558175,
+      "fold": 1,
+      "train_size": 375,
+      "test_size": 62,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.6522352952300295,
+      "mae": 28.470223685618915,
+      "rmse": 34.482818066805855,
       "fold": 2,
-      "train_size": 223,
-      "test_size": 118,
-      "best_iteration": 1
+      "train_size": 437,
+      "test_size": 63,
+      "best_iteration": 252
     },
     {
-      "spearman": 0.615733071608688,
-      "mae": 33.63843550927596,
-      "rmse": 35.14958151305098,
+      "spearman": -0.3577303407187327,
+      "mae": 32.26182788051179,
+      "rmse": 35.17346889206026,
       "fold": 3,
-      "train_size": 341,
-      "test_size": 53,
+      "train_size": 500,
+      "test_size": 62,
       "best_iteration": 1
     },
     {
-      "spearman": 0.9949715176896912,
-      "mae": 14.105137039700903,
-      "rmse": 15.11566627779009,
+      "spearman": 0.26906088858525795,
+      "mae": 37.50141892320016,
+      "rmse": 38.800553388280214,
       "fold": 4,
-      "train_size": 394,
-      "test_size": 30,
-      "best_iteration": 157
+      "train_size": 562,
+      "test_size": 31,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.35373490087042747,
-      "mae": 3.321462490791055,
-      "rmse": 5.718610916454847,
+      "spearman": 0.6313090178962502,
+      "mae": 23.730089940763605,
+      "rmse": 27.578163279450777,
       "fold": 5,
-      "train_size": 424,
-      "test_size": 48,
-      "best_iteration": 20
+      "train_size": 593,
+      "test_size": 32,
+      "best_iteration": 130
     }
   ],
   "tier": "per_stock",
   "identifier": "PAPER",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

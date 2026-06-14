@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": -0.010260088346002874,
-  "mae": 8.730911141794843,
-  "rmse": 9.704574925757292,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": -0.14882588401169514,
+  "mae": 34.33060490483683,
+  "rmse": 37.42116568160692,
+  "auc": -0.14882588401169514,
+  "mean_auc": -0.14882588401169514,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 614,
+  "n_train_events": 682,
   "train_date_range": {
-    "start": "2023-05-31",
-    "end": "2026-04-26"
+    "start": "2023-06-14",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_-0.0103",
+  "rejected_reason": "spearman_below_threshold_-0.1488",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.420166169905398,
-      "mae": 17.399901561443418,
-      "rmse": 18.615542783032954,
+      "spearman": 0.12191306904656424,
+      "mae": 28.897613729664375,
+      "rmse": 33.138336117342966,
+      "fold": 1,
+      "train_size": 409,
+      "test_size": 68,
+      "best_iteration": 1
+    },
+    {
+      "spearman": -0.4038112005269427,
+      "mae": 30.22675088200652,
+      "rmse": 35.77160630196057,
       "fold": 2,
-      "train_size": 459,
-      "test_size": 81,
-      "best_iteration": 5
+      "train_size": 477,
+      "test_size": 68,
+      "best_iteration": 2
     },
     {
-      "spearman": -0.2559632736711483,
-      "mae": 5.825701589490762,
-      "rmse": 6.955293539715265,
+      "spearman": -0.35081634208548607,
+      "mae": 33.09251031993785,
+      "rmse": 36.5886853877942,
       "fold": 3,
-      "train_size": 540,
-      "test_size": 35,
-      "best_iteration": 142
+      "train_size": 545,
+      "test_size": 68,
+      "best_iteration": 1
     },
     {
-      "spearman": -0.19498316127225834,
-      "mae": 2.9671302744503483,
-      "rmse": 3.5428884545236605,
+      "spearman": -0.12679220673154637,
+      "mae": 39.91463520288508,
+      "rmse": 41.34337881286026,
+      "fold": 4,
+      "train_size": 613,
+      "test_size": 34,
+      "best_iteration": 3
+    },
+    {
+      "spearman": 0.015377260238935134,
+      "mae": 39.52151438969033,
+      "rmse": 40.263821788076605,
       "fold": 5,
-      "train_size": 592,
-      "test_size": 22,
-      "best_iteration": 47
+      "train_size": 647,
+      "test_size": 35,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "KINV",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

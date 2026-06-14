@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.5283665772206168,
-  "mae": 4.509236522635604,
-  "rmse": 4.819744147328811,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.4160383169456602,
+  "mae": 22.728153845900643,
+  "rmse": 26.604640735517005,
+  "auc": 0.4160383169456602,
+  "mean_auc": 0.4160383169456602,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 467,
+  "n_train_events": 679,
   "train_date_range": {
-    "start": "2023-07-16",
-    "end": "2026-05-07"
+    "start": "2023-05-30",
+    "end": "2026-03-30"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.6590732205454571,
-      "mae": 1.268755140837104,
-      "rmse": 1.759320261100207,
+      "spearman": -0.1493564391099571,
+      "mae": 26.048875224184474,
+      "rmse": 31.617438509467057,
       "fold": 1,
-      "train_size": 323,
-      "test_size": 40,
-      "best_iteration": 166
+      "train_size": 407,
+      "test_size": 68,
+      "best_iteration": 2
     },
     {
-      "spearman": 0.3666666666666667,
-      "mae": 11.451797073275893,
-      "rmse": 11.820101904997106,
+      "spearman": 0.2371822221444247,
+      "mae": 22.157316654726145,
+      "rmse": 26.240137837941724,
       "fold": 2,
-      "train_size": 363,
-      "test_size": 41,
-      "best_iteration": 1
+      "train_size": 475,
+      "test_size": 68,
+      "best_iteration": 5
     },
     {
-      "spearman": 0.5593598444497264,
-      "mae": 0.8071573537938147,
-      "rmse": 0.87981027588912,
-      "fold": 5,
-      "train_size": 450,
-      "test_size": 17,
+      "spearman": 0.7229737322661256,
+      "mae": 15.79233263948953,
+      "rmse": 20.097128152858346,
+      "fold": 3,
+      "train_size": 543,
+      "test_size": 68,
       "best_iteration": 77
+    },
+    {
+      "spearman": 0.5610470435284335,
+      "mae": 27.403429957092097,
+      "rmse": 29.62584569297873,
+      "fold": 4,
+      "train_size": 611,
+      "test_size": 34,
+      "best_iteration": 88
+    },
+    {
+      "spearman": 0.7083450258992744,
+      "mae": 22.238814754010974,
+      "rmse": 25.442653484339168,
+      "fold": 5,
+      "train_size": 645,
+      "test_size": 34,
+      "best_iteration": 85
     }
   ],
   "tier": "per_stock",
   "identifier": "KCPC",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

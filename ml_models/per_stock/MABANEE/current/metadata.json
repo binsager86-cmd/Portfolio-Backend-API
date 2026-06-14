@@ -1,57 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.20066748637014198,
-  "mae": 10.163528284489088,
-  "rmse": 12.847385926993308,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": -0.05537088126420654,
+  "mae": 34.62473335996712,
+  "rmse": 38.285185081455985,
+  "auc": -0.05537088126420654,
+  "mean_auc": -0.05537088126420654,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 646,
+  "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-06-08",
-    "end": "2026-04-26"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_0.2007",
+  "rejected_reason": "spearman_below_threshold_-0.0554",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.8150788367490615,
-      "mae": 10.770672584582146,
-      "rmse": 13.724227543138966,
+      "spearman": -0.10465771670634164,
+      "mae": 36.89435557847696,
+      "rmse": 42.026724802596156,
       "fold": 1,
-      "train_size": 333,
-      "test_size": 98,
-      "best_iteration": 13
-    },
-    {
-      "spearman": -0.4573338329986377,
-      "mae": 22.62059021889405,
-      "rmse": 28.908848325768766,
-      "fold": 2,
-      "train_size": 431,
-      "test_size": 99,
+      "train_size": 409,
+      "test_size": 69,
       "best_iteration": 1
     },
     {
-      "spearman": -0.13739054312601678,
-      "mae": 6.345039149027343,
-      "rmse": 7.663745930978667,
-      "fold": 3,
-      "train_size": 530,
-      "test_size": 60,
-      "best_iteration": 30
+      "spearman": 0.24031278190971733,
+      "mae": 38.354683551079,
+      "rmse": 41.09591222434494,
+      "fold": 2,
+      "train_size": 478,
+      "test_size": 68,
+      "best_iteration": 3
     },
     {
-      "spearman": 0.582315484856161,
-      "mae": 0.917811185452815,
-      "rmse": 1.0927219080868285,
-      "fold": 5,
+      "spearman": -0.15573668268820126,
+      "mae": 31.982308086059614,
+      "rmse": 36.81157886663041,
+      "fold": 3,
+      "train_size": 546,
+      "test_size": 68,
+      "best_iteration": 1
+    },
+    {
+      "spearman": -0.20762264100464006,
+      "mae": 38.8954227684033,
+      "rmse": 41.06951429802313,
+      "fold": 4,
       "train_size": 614,
-      "test_size": 32,
-      "best_iteration": 48
+      "test_size": 34,
+      "best_iteration": 1
+    },
+    {
+      "spearman": -0.04915014783156706,
+      "mae": 26.996896815816687,
+      "rmse": 30.422195215685253,
+      "fold": 5,
+      "train_size": 648,
+      "test_size": 35,
+      "best_iteration": 2
     }
   ],
   "tier": "per_stock",
   "identifier": "MABANEE",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

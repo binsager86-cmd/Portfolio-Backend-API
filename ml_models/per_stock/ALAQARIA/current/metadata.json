@@ -1,57 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.4115727288499888,
-  "mae": 23.49481765510364,
-  "rmse": 26.59680533309413,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.29021266964979114,
+  "mae": 28.530254137131116,
+  "rmse": 31.493281643225128,
+  "auc": 0.29021266964979114,
+  "mean_auc": 0.29021266964979114,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 370,
+  "n_train_events": 554,
   "train_date_range": {
-    "start": "2023-07-18",
-    "end": "2026-05-06"
+    "start": "2023-08-15",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.2902",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": NaN,
-      "mae": 45.41774881866588,
-      "rmse": 45.507586110364954,
+      "spearman": 0.7469877177049268,
+      "mae": 33.29780317396654,
+      "rmse": 34.92092381173727,
       "fold": 1,
-      "train_size": 196,
-      "test_size": 66,
+      "train_size": 332,
+      "test_size": 55,
+      "best_iteration": 7
+    },
+    {
+      "spearman": 0.7921079735025065,
+      "mae": 15.857140746958168,
+      "rmse": 19.261088983356743,
+      "fold": 2,
+      "train_size": 387,
+      "test_size": 56,
+      "best_iteration": 239
+    },
+    {
+      "spearman": -0.17072741631356714,
+      "mae": 30.700071681142386,
+      "rmse": 36.66438530049154,
+      "fold": 3,
+      "train_size": 443,
+      "test_size": 55,
       "best_iteration": 1
     },
     {
-      "spearman": 0.9253808454167872,
-      "mae": 33.87060782170742,
-      "rmse": 35.117987766848906,
-      "fold": 2,
-      "train_size": 262,
-      "test_size": 47,
-      "best_iteration": 5
+      "spearman": 0.6284328911990619,
+      "mae": 38.13493239387105,
+      "rmse": 39.472809886582844,
+      "fold": 4,
+      "train_size": 498,
+      "test_size": 28,
+      "best_iteration": 1
     },
     {
-      "spearman": -0.0549365163332909,
-      "mae": 12.010144108974334,
-      "rmse": 20.195513152248736,
-      "fold": 3,
-      "train_size": 309,
-      "test_size": 14,
-      "best_iteration": 56
-    },
-    {
-      "spearman": 0.36427385746646995,
-      "mae": 2.680769871066932,
-      "rmse": 5.566134302913926,
+      "spearman": -0.5457378178439722,
+      "mae": 24.66132268971745,
+      "rmse": 27.147200233957257,
       "fold": 5,
-      "train_size": 326,
-      "test_size": 44,
-      "best_iteration": 37
+      "train_size": 526,
+      "test_size": 28,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "ALAQARIA",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

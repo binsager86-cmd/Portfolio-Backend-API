@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.39726472349703434,
-  "mae": 7.325290322582702,
-  "rmse": 8.36868497078816,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.4319731641599992,
+  "mae": 23.02937294282184,
+  "rmse": 27.416425635083794,
+  "auc": 0.4319731641599992,
+  "mean_auc": 0.4319731641599992,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 681,
+  "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-08-02",
-    "end": "2026-04-26"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.06963893781653256,
-      "mae": 8.275639467701895,
-      "rmse": 10.390345272125495,
+      "spearman": 0.5380117318424199,
+      "mae": 25.558832414220422,
+      "rmse": 28.83618560513081,
       "fold": 1,
-      "train_size": 461,
-      "test_size": 58,
-      "best_iteration": 30
+      "train_size": 409,
+      "test_size": 69,
+      "best_iteration": 42
     },
     {
-      "spearman": 0.775745071160795,
-      "mae": 11.676298611283041,
-      "rmse": 12.265151419722823,
+      "spearman": 0.3558934617194491,
+      "mae": 32.05439601150769,
+      "rmse": 35.8253940347411,
+      "fold": 2,
+      "train_size": 478,
+      "test_size": 68,
+      "best_iteration": 3
+    },
+    {
+      "spearman": 0.43229547959067793,
+      "mae": 22.476873523286113,
+      "rmse": 27.496386843830116,
       "fold": 3,
-      "train_size": 565,
-      "test_size": 69,
+      "train_size": 546,
+      "test_size": 68,
+      "best_iteration": 7
+    },
+    {
+      "spearman": 0.127617778597746,
+      "mae": 14.988428304526426,
+      "rmse": 19.793466881024575,
+      "fold": 4,
+      "train_size": 614,
+      "test_size": 34,
       "best_iteration": 1
     },
     {
-      "spearman": 0.34641016151377546,
-      "mae": 2.0239328887631665,
-      "rmse": 2.450558220516158,
+      "spearman": 0.706047369049703,
+      "mae": 20.068334460568558,
+      "rmse": 25.13069481069236,
       "fold": 5,
-      "train_size": 657,
-      "test_size": 24,
-      "best_iteration": 138
+      "train_size": 648,
+      "test_size": 35,
+      "best_iteration": 80
     }
   ],
   "tier": "per_stock",
   "identifier": "KIB",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

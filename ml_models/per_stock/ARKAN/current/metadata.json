@@ -1,57 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.0736839172947142,
-  "mae": 23.80770959364452,
-  "rmse": 29.335290632577525,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.5853122762602989,
+  "mae": 29.979342067681813,
+  "rmse": 33.29596101406086,
+  "auc": 0.5853122762602989,
+  "mean_auc": 0.5853122762602989,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 374,
+  "n_train_events": 504,
   "train_date_range": {
-    "start": "2023-11-27",
-    "end": "2026-04-26"
+    "start": "2023-09-07",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_0.0737",
+  "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": NaN,
-      "mae": 16.88799610202486,
-      "rmse": 26.719078868990092,
+      "spearman": 0.5237762213836948,
+      "mae": 26.656449223115914,
+      "rmse": 28.878369319563717,
       "fold": 1,
-      "train_size": 286,
-      "test_size": 49,
+      "train_size": 302,
+      "test_size": 50,
+      "best_iteration": 251
+    },
+    {
+      "spearman": 0.8126353031346465,
+      "mae": 23.270961420122887,
+      "rmse": 27.731007346627674,
+      "fold": 2,
+      "train_size": 352,
+      "test_size": 51,
+      "best_iteration": 294
+    },
+    {
+      "spearman": 0.6630956941762339,
+      "mae": 21.115283223938704,
+      "rmse": 25.75310517380467,
+      "fold": 3,
+      "train_size": 403,
+      "test_size": 50,
       "best_iteration": 1
     },
     {
-      "spearman": -0.6110100926607785,
-      "mae": 30.059599628185165,
-      "rmse": 39.049658816794704,
-      "fold": 2,
-      "train_size": 335,
-      "test_size": 15,
-      "best_iteration": 144
-    },
-    {
-      "spearman": 0.535887405665375,
-      "mae": 12.47741766671298,
-      "rmse": 14.844943497014436,
-      "fold": 3,
-      "train_size": 350,
-      "test_size": 14,
-      "best_iteration": 89
-    },
-    {
-      "spearman": 0.2961744388795462,
-      "mae": 35.80582497765508,
-      "rmse": 36.72748134751085,
+      "spearman": 0.10626035987803081,
+      "mae": 44.68369006875801,
+      "rmse": 45.63667323996613,
       "fold": 4,
-      "train_size": 364,
-      "test_size": 5,
-      "best_iteration": 119
+      "train_size": 453,
+      "test_size": 25,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.8207938027288887,
+      "mae": 34.17032640247355,
+      "rmse": 38.48064999034208,
+      "fold": 5,
+      "train_size": 478,
+      "test_size": 26,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "ARKAN",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

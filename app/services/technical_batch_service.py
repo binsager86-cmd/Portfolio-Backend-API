@@ -7,6 +7,7 @@ and serves latest-run snapshots for fast UI rendering.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import logging
 import time
@@ -647,13 +648,14 @@ async def _score_one_symbol(
         rows = forward_fill_gaps(rows)
         rows = attach_indicators(rows)
 
-        signal = generate_kuwait_signal(
+        maybe_signal = generate_kuwait_signal(
             rows=rows,
             stock_code=base,
             segment=segment.upper(),
             account_equity=account_equity,
             delay_hours=0,
         )
+        signal = await maybe_signal if inspect.isawaitable(maybe_signal) else maybe_signal
 
         raw_sub_scores = (signal.get("confluence_details") or {}).get("raw_sub_scores") or {}
         trend_raw = _to_int(raw_sub_scores.get("trend"))

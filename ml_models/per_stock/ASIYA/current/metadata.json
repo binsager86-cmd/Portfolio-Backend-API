@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.7000263947192478,
-  "mae": 24.033015311533635,
-  "rmse": 25.78937352158293,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.4827588116894342,
+  "mae": 29.015888544826957,
+  "rmse": 32.596433988606734,
+  "auc": 0.4827588116894342,
+  "mean_auc": 0.4827588116894342,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 520,
+  "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-06-01",
-    "end": "2026-04-23"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.7999292680606214,
-      "mae": 52.37942931258596,
-      "rmse": 56.852906829944835,
+      "spearman": 0.8130781844184191,
+      "mae": 21.221469069867545,
+      "rmse": 26.228675817675523,
+      "fold": 1,
+      "train_size": 409,
+      "test_size": 69,
+      "best_iteration": 206
+    },
+    {
+      "spearman": 0.40252660208692437,
+      "mae": 32.28803799818853,
+      "rmse": 35.70167088946747,
       "fold": 2,
-      "train_size": 258,
-      "test_size": 139,
+      "train_size": 478,
+      "test_size": 68,
+      "best_iteration": 32
+    },
+    {
+      "spearman": 0.41968748387579446,
+      "mae": 34.59880801819695,
+      "rmse": 36.71976929805464,
+      "fold": 3,
+      "train_size": 546,
+      "test_size": 68,
       "best_iteration": 2
     },
     {
-      "spearman": 0.33146693807539424,
-      "mae": 14.087722917119935,
-      "rmse": 14.437134031098223,
-      "fold": 3,
-      "train_size": 397,
-      "test_size": 62,
-      "best_iteration": 4
+      "spearman": 0.150259868224624,
+      "mae": 30.35873624420336,
+      "rmse": 32.82620205006201,
+      "fold": 4,
+      "train_size": 614,
+      "test_size": 34,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.9686829780217274,
-      "mae": 5.6318937048950115,
-      "rmse": 6.078079703705737,
+      "spearman": 0.628241919841409,
+      "mae": 26.612391393678415,
+      "rmse": 31.505851887774032,
       "fold": 5,
-      "train_size": 473,
-      "test_size": 47,
-      "best_iteration": 15
+      "train_size": 648,
+      "test_size": 35,
+      "best_iteration": 262
     }
   ],
   "tier": "per_stock",
   "identifier": "ASIYA",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

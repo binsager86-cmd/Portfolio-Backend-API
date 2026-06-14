@@ -1,66 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.35642973792878335,
-  "mae": 16.797102379564812,
-  "rmse": 20.42432522773661,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.37713492652837005,
+  "mae": 23.25690173850537,
+  "rmse": 26.72643265295496,
+  "auc": 0.37713492652837005,
+  "mean_auc": 0.37713492652837005,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 667,
+  "n_train_events": 678,
   "train_date_range": {
-    "start": "2023-06-14",
-    "end": "2026-04-23"
+    "start": "2023-06-20",
+    "end": "2026-03-30"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.1360827634879543,
-      "mae": 22.96344767490611,
-      "rmse": 28.721644598298884,
+      "spearman": 0.19510971124556392,
+      "mae": 37.5806891619342,
+      "rmse": 40.553235419703704,
       "fold": 1,
-      "train_size": 377,
-      "test_size": 53,
-      "best_iteration": 1
-    },
-    {
-      "spearman": 0.9134989112062926,
-      "mae": 21.221543220797166,
-      "rmse": 30.01315649687048,
-      "fold": 2,
-      "train_size": 430,
+      "train_size": 406,
       "test_size": 68,
-      "best_iteration": 52
+      "best_iteration": 6
     },
     {
-      "spearman": -0.19079384528972762,
-      "mae": 22.119502308706178,
-      "rmse": 23.081127074841294,
+      "spearman": 0.5790724470450566,
+      "mae": 20.93680784813605,
+      "rmse": 26.026588707973268,
+      "fold": 2,
+      "train_size": 474,
+      "test_size": 68,
+      "best_iteration": 65
+    },
+    {
+      "spearman": 0.08571975331261973,
+      "mae": 23.355040224314063,
+      "rmse": 28.455233249890885,
       "fold": 3,
-      "train_size": 498,
-      "test_size": 97,
-      "best_iteration": 1
+      "train_size": 542,
+      "test_size": 68,
+      "best_iteration": 8
     },
     {
-      "spearman": 0.8990419636615491,
-      "mae": 8.729449795922863,
-      "rmse": 8.861919916858687,
+      "spearman": 0.48729199409299623,
+      "mae": 15.105772476520903,
+      "rmse": 17.142911169329803,
       "fold": 4,
-      "train_size": 595,
-      "test_size": 48,
-      "best_iteration": 10
+      "train_size": 610,
+      "test_size": 34,
+      "best_iteration": 28
     },
     {
-      "spearman": 0.2964844235537572,
-      "mae": 8.95156889749176,
-      "rmse": 11.44377805181371,
+      "spearman": 0.5384807269456138,
+      "mae": 19.306198981621655,
+      "rmse": 21.45419471787712,
       "fold": 5,
-      "train_size": 643,
-      "test_size": 24,
-      "best_iteration": 20
+      "train_size": 644,
+      "test_size": 34,
+      "best_iteration": 64
     }
   ],
   "tier": "per_stock",
   "identifier": "AAYANRE",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

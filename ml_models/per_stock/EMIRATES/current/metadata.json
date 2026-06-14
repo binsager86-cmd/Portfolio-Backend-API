@@ -1,66 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": -0.056903015238340404,
-  "mae": 36.36781099970867,
-  "rmse": 38.26445302537986,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.37397962350673614,
+  "mae": 31.236829067830293,
+  "rmse": 34.386011863929696,
+  "auc": 0.37397962350673614,
+  "mean_auc": 0.37397962350673614,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 375,
+  "n_train_events": 579,
   "train_date_range": {
-    "start": "2023-07-11",
-    "end": "2026-04-26"
+    "start": "2023-08-02",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_-0.0569",
+  "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": NaN,
-      "mae": 47.477332820914725,
-      "rmse": 47.58176895949061,
+      "spearman": 0.6457541484803608,
+      "mae": 32.328005150011016,
+      "rmse": 35.53766969114679,
       "fold": 1,
-      "train_size": 213,
-      "test_size": 32,
-      "best_iteration": 1
+      "train_size": 347,
+      "test_size": 58,
+      "best_iteration": 20
     },
     {
-      "spearman": -0.5475596175766744,
-      "mae": 45.18326052099438,
-      "rmse": 45.52408514242562,
+      "spearman": 0.1528301862623632,
+      "mae": 27.630491087219955,
+      "rmse": 31.058118445210358,
       "fold": 2,
-      "train_size": 245,
-      "test_size": 42,
+      "train_size": 405,
+      "test_size": 58,
       "best_iteration": 1
     },
     {
-      "spearman": 0.1419939982047725,
-      "mae": 37.231766425604306,
-      "rmse": 41.8281127974713,
+      "spearman": 0.23322191489343336,
+      "mae": 34.345370695041154,
+      "rmse": 37.054123246016665,
       "fold": 3,
-      "train_size": 287,
-      "test_size": 26,
-      "best_iteration": 306
+      "train_size": 463,
+      "test_size": 58,
+      "best_iteration": 1
     },
     {
-      "spearman": -0.8192692799745684,
-      "mae": 18.044529211243297,
-      "rmse": 21.958327472169433,
+      "spearman": 0.44041034019634145,
+      "mae": 37.970040836320536,
+      "rmse": 40.931825564916615,
       "fold": 4,
-      "train_size": 313,
-      "test_size": 21,
-      "best_iteration": 126
+      "train_size": 521,
+      "test_size": 29,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.9972228383931088,
-      "mae": 33.90216601978663,
-      "rmse": 34.42997075534232,
+      "spearman": 0.3976815277011815,
+      "mae": 23.910237570558788,
+      "rmse": 27.348322372358055,
       "fold": 5,
-      "train_size": 334,
-      "test_size": 41,
-      "best_iteration": 135
+      "train_size": 550,
+      "test_size": 29,
+      "best_iteration": 107
     }
   ],
   "tier": "per_stock",
   "identifier": "EMIRATES",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

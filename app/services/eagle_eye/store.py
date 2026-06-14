@@ -122,6 +122,9 @@ def ensure_tables() -> None:
     _acim("ee_ratings_cache", "run_id", "TEXT")
     _acim("ee_ratings_cache", "run_started_at", "TEXT")
     _acim("ee_ratings_cache", "code_fingerprint", "TEXT")
+    _acim("ee_ratings_cache", "risky_near_resistance", "INTEGER")
+    _acim("ee_ratings_cache", "risk_reward_ratio", "REAL")
+    _acim("ee_ratings_cache", "risk_warning_score", "INTEGER")
 
     exec_sql(
         """
@@ -444,6 +447,9 @@ def save_rating(
 
     et = result.get("entry") or {}
     ind = result.get("indicators") or {}
+    rr_cached = _f(ind.get("risk_reward_ratio"))
+    if rr_cached is None:
+        rr_cached = 0.0
     computed_at = result.get("computed_at")
     if not computed_at:
         computed_at = datetime.now().isoformat(timespec="seconds")
@@ -459,8 +465,8 @@ def save_rating(
             stop_loss, tp1, tp1_probability, tp2, tp2_probability, tp3, tp3_probability,
             last_price, supports_json, resistances_json, signals_json, indicators_json,
             days_of_history, computed_at, computed_date, run_id, run_started_at, code_fingerprint,
-            updated_at, volume_context_json
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            updated_at, volume_context_json, risky_near_resistance, risk_reward_ratio, risk_warning_score
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT (ticker) DO UPDATE SET
             name_en = excluded.name_en,
             sector = excluded.sector,
@@ -492,7 +498,10 @@ def save_rating(
             run_started_at = excluded.run_started_at,
             code_fingerprint = excluded.code_fingerprint,
             updated_at = excluded.updated_at,
-            volume_context_json = excluded.volume_context_json
+            volume_context_json = excluded.volume_context_json,
+            risky_near_resistance = excluded.risky_near_resistance,
+            risk_reward_ratio = excluded.risk_reward_ratio,
+            risk_warning_score = excluded.risk_warning_score
         """,
         (
             ticker.upper(),
@@ -527,6 +536,9 @@ def save_rating(
             result.get("code_fingerprint"),
             int(time.time()),
             json.dumps(result.get("volume_context") or {}),
+            int(result.get("risky_near_resistance", False)),
+            rr_cached,
+            int(result.get("risk_warning_score") or 0),
         ),
     )
 
@@ -542,37 +554,80 @@ def load_all_ratings(
     min_confidence and limit are pushed to SQL so the DB does the work
     instead of loading every row and filtering in Python.
 
-    Fast path for the scanner endpoint.
+    By default, this returns the latest row per ticker regardless of date.
+    This keeps the scanner populated even if an in-progress recompute is
+    interrupted before all tickers are refreshed. When *computed_at* is
+    provided, rows are pinned to that date for explicit historical/day views.
     """
     from app.core.database import query_all
 
-    target_date = computed_at or date.today().isoformat()
-    if "T" in target_date:
-        target_date = target_date[:10]
-
-    rows = query_all(
-        """
-         SELECT ticker, name_en, sector, market_tier, stage, rating, confidence, ml_score, thesis,
+    sql = """
+           SELECT ticker, name_en, sector, market_tier, stage, rating, confidence, ml_score, thesis,
                entry_primary, stop_loss, tp1, last_price, computed_at, computed_date,
-               volume_context_json
+               volume_context_json, indicators_json, risky_near_resistance, risk_reward_ratio, risk_warning_score
         FROM   ee_ratings_cache
         WHERE  confidence >= ?
+    """
+    params: List[object] = [float(min_confidence)]
+
+    if computed_at:
+        target_date = computed_at
+        if "T" in target_date:
+            target_date = target_date[:10]
+        sql += """
           AND  (computed_date = ? OR computed_at = ? OR computed_at LIKE ?)
+        """
+        params.extend([target_date, target_date, f"{target_date}%"])
+
+    sql += """
         ORDER  BY confidence DESC
         LIMIT  ?
-        """,
-        (float(min_confidence), target_date, target_date, f"{target_date}%", int(limit)),
-    )
+    """
+    params.append(int(limit))
+
+    rows = query_all(sql, tuple(params))
     if not rows:
         return []
+
+    def _safe_float(v):
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            return None
+        if math.isnan(f) or math.isinf(f):
+            return None
+        return f
+
     result = []
     for r in rows:
         d = dict(r.items())
         vc_raw = d.pop("volume_context_json", None)
+        indicators_raw = d.pop("indicators_json", None)
         try:
             d["volume_context"] = json.loads(vc_raw) if vc_raw else {}
         except Exception:
             d["volume_context"] = {}
+        indicators = {}
+        if indicators_raw:
+            try:
+                indicators = json.loads(indicators_raw)
+            except Exception:
+                indicators = {}
+        if isinstance(indicators, dict):
+            from app.services.eagle_eye.scoring.recommendation_engine import compute_continue_rising
+
+            d.update(compute_continue_rising(indicators, str(d.get("stage") or "")))
+
+            rr = _safe_float(d.get("risk_reward_ratio"))
+            if rr is None:
+                rr = _safe_float(indicators.get("risk_reward_ratio"))
+            d["risk_reward_ratio"] = rr
+            d["risky_near_resistance"] = bool(d.get("risky_near_resistance", False))
+            d["risk_warning_score"] = int(d.get("risk_warning_score") or 0)
+        else:
+            d["risk_reward_ratio"] = None
+            d["risky_near_resistance"] = False
+            d["risk_warning_score"] = 0
         result.append(d)
     return result
 
@@ -588,7 +643,7 @@ def load_rating(ticker: str) -> Optional[dict]:
                stop_loss, tp1, tp1_probability, tp2, tp2_probability,
                tp3, tp3_probability, last_price,
                supports_json, resistances_json, indicators_json,
-               days_of_history, computed_at
+                    days_of_history, computed_at, risk_warning_score
         FROM   ee_ratings_cache
         WHERE  ticker = ?
         """,
@@ -603,6 +658,11 @@ def load_rating(ticker: str) -> Optional[dict]:
                 d[key] = json.loads(d[key])
             except Exception:
                 d[key] = []
+    indicators = d.get("indicators_json")
+    if isinstance(indicators, dict):
+        from app.services.eagle_eye.scoring.recommendation_engine import compute_continue_rising
+
+        d.update(compute_continue_rising(indicators, str(d.get("stage") or "")))
     return d
 
 

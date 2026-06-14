@@ -32,14 +32,39 @@ import logging
 import math
 import os
 import time
+import warnings
 from datetime import date, datetime, timedelta
-from typing import List, Optional
+from typing import Any, Callable, Dict, List, Optional
 import uuid
 
 import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
+
+try:
+    _LOOKBACK_BARS = int(os.getenv("EE_RATINGS_LOOKBACK_BARS", "320"))
+except (TypeError, ValueError):
+    _LOOKBACK_BARS = 320
+
+# Keep enough warmup for long-horizon rolling/EMA indicators while avoiding
+# full-history recompute cost on every ticker.
+RATINGS_INDICATOR_LOOKBACK_BARS = max(50, _LOOKBACK_BARS)
+
+ProgressPayload = Dict[str, Any]
+ProgressCallback = Callable[[ProgressPayload], None]
+
+
+def _emit_progress(
+    progress_callback: Optional[ProgressCallback],
+    payload: ProgressPayload,
+) -> None:
+    if not progress_callback:
+        return
+    try:
+        progress_callback(payload)
+    except Exception as exc:
+        logger.debug("Eagle Eye progress callback failed: %s", exc)
 
 
 def _safe_float(v) -> Optional[float]:
@@ -98,7 +123,10 @@ def init_schema() -> None:
 # Phase 1 — OHLCV ingestion
 # ---------------------------------------------------------------------------
 
-def ingest_all_ohlcv(verbose: bool = False) -> dict:
+def ingest_all_ohlcv(
+    verbose: bool = False,
+    progress_callback: Optional[ProgressCallback] = None,
+) -> dict:
     """
     Fetch and cache 3 years of daily OHLCV for every stock returned by
     TickerChartAdapter.list_stocks().
@@ -137,6 +165,17 @@ def ingest_all_ohlcv(verbose: bool = False) -> dict:
     history_start = today - timedelta(days=3 * 365 + 60)  # 3 years + buffer
     trailing_refresh_sessions = 10
     phase_t0 = time.time()
+
+    _emit_progress(
+        progress_callback,
+        {
+            "phase": "ohlcv",
+            "phase_label": "Refreshing price history",
+            "current": 0,
+            "total": total_stocks,
+            "message": "Preparing OHLCV ingest",
+        },
+    )
 
     stats: dict = {"ok": 0, "skipped": 0, "errors": 0, "insufficient": [], "gaps": []}
 
@@ -206,6 +245,19 @@ def ingest_all_ohlcv(verbose: bool = False) -> dict:
             if verbose:
                 print(f"  [{ticker}] ERROR: {exc}")
         finally:
+            _emit_progress(
+                progress_callback,
+                {
+                    "phase": "ohlcv",
+                    "phase_label": "Refreshing price history",
+                    "current": idx,
+                    "total": total_stocks,
+                    "message": f"OHLCV {idx}/{total_stocks}",
+                    "ok": stats["ok"],
+                    "skipped": stats["skipped"],
+                    "errors": stats["errors"],
+                },
+            )
             if verbose and (idx % 10 == 0 or idx == total_stocks):
                 elapsed = time.time() - phase_t0
                 print(
@@ -213,6 +265,20 @@ def ingest_all_ohlcv(verbose: bool = False) -> dict:
                     f"(ok={stats['ok']} skipped={stats['skipped']} errors={stats['errors']}) "
                     f"elapsed={elapsed:.1f}s"
                 )
+
+    _emit_progress(
+        progress_callback,
+        {
+            "phase": "ohlcv",
+            "phase_label": "Refreshing price history",
+            "current": total_stocks,
+            "total": total_stocks,
+            "message": "OHLCV ingest complete",
+            "ok": stats["ok"],
+            "skipped": stats["skipped"],
+            "errors": stats["errors"],
+        },
+    )
 
     if verbose:
         print(
@@ -272,6 +338,20 @@ def build_all_dna(verbose: bool = False) -> dict:
     ensure_tables()
     tickers = list_tickers_with_ohlcv()
 
+    market_proxy = None
+    try:
+        from app.services.eagle_eye.adapter import TickerChartAdapter
+
+        adapter = TickerChartAdapter()
+        stock_meta = {stock.ticker: stock for stock in adapter.list_stocks()}
+        premier_tickers = [
+            symbol for symbol, meta in stock_meta.items()
+            if str(getattr(meta, "market_tier", "premier") or "premier").strip().upper() == "PREMIER"
+        ]
+        market_proxy = _build_premier_market_proxy(premier_tickers)
+    except Exception as proxy_exc:
+        logger.warning("DNA batch build: market proxy unavailable: %s", proxy_exc)
+
     stats: dict = {"ok": 0, "skipped": 0, "errors": 0, "insufficient": []}
 
     if verbose:
@@ -299,7 +379,7 @@ def build_all_dna(verbose: bool = False) -> dict:
             if verbose:
                 print(f"  [{ticker}] {len(df)} bars ...", end=" ", flush=True)
 
-            ind_df = compute_all_indicators(df)
+            ind_df = compute_all_indicators(df, market_close=market_proxy)
 
             moves = detect_moves(ticker, df)
             fakeouts = detect_fakeouts(ticker, df)
@@ -395,6 +475,7 @@ def build_dna_for_ticker(ticker: str) -> Optional[dict]:
     # 1. Always try a live TickerChart fetch first — this guarantees the DNA
     #    chart bars contain accurate OHLC data from the authoritative source.
     df = None
+    market_proxy = None
     try:
         from app.services.eagle_eye.adapter import TickerChartAdapter
 
@@ -402,6 +483,15 @@ def build_dna_for_ticker(ticker: str) -> Optional[dict]:
         end_d = date.today()
         start_d = end_d - timedelta(days=3 * 365 + 90)
         fetched = adapter.get_ohlcv_daily(ticker, start_d, end_d)
+        try:
+            stock_meta = {stock.ticker: stock for stock in adapter.list_stocks()}
+            premier_tickers = [
+                symbol for symbol, meta in stock_meta.items()
+                if str(getattr(meta, "market_tier", "premier") or "premier").strip().upper() == "PREMIER"
+            ]
+            market_proxy = _build_premier_market_proxy(premier_tickers)
+        except Exception as proxy_exc:
+            logger.warning("DNA build [%s]: market proxy unavailable: %s", ticker, proxy_exc)
         if fetched is not None and len(fetched) >= CONFIG.MIN_HISTORY_DAYS_REQUIRED:
             df = fetched
             # Persist fresh data back to the OHLCV cache so other pipelines benefit
@@ -428,7 +518,7 @@ def build_dna_for_ticker(ticker: str) -> Optional[dict]:
         return None
 
     try:
-        ind_df = compute_all_indicators(df)
+        ind_df = compute_all_indicators(df, market_close=market_proxy)
         moves = detect_moves(ticker, df)
         fakeouts = detect_fakeouts(ticker, df)
         all_events = moves + fakeouts
@@ -521,7 +611,10 @@ def _build_premier_market_proxy(premier_tickers: List[str]) -> Optional[pd.Serie
     proxy = (weighted_sum / weight_sum.replace(0, np.nan)).where(weight_sum > 0, simple_mean).sort_index()
     return proxy.astype(float)
 
-def compute_all_ratings(verbose: bool = False) -> dict:
+def compute_all_ratings(
+    verbose: bool = False,
+    progress_callback: Optional[ProgressCallback] = None,
+) -> dict:
     """
     Rate every stock in ee_ohlcv_cache using the Eagle Eye rating engine.
 
@@ -544,7 +637,6 @@ def compute_all_ratings(verbose: bool = False) -> dict:
     from app.services.eagle_eye.scoring.recommendation_engine import generate_recommendation
     from app.services.eagle_eye import stage_classifier as stage_classifier_module
     from app.services.eagle_eye.stage_classifier import classify_stage_with_confidence
-    from app.core.database import exec_sql
     from app.services.eagle_eye.store import (
         ensure_tables, list_tickers_with_ohlcv, load_ohlcv,
         log_compute, save_rating,
@@ -575,8 +667,9 @@ def compute_all_ratings(verbose: bool = False) -> dict:
         f"run_id={run_id} run_started={run_started} code={code_fingerprint}",
     )
 
-    # Full refresh prevents stale rows from previous taxonomy/version runs.
-    exec_sql("DELETE FROM ee_ratings_cache", ())
+    # Do not clear ee_ratings_cache up front. If a run is interrupted
+    # (dev reload, process restart), preserving prior rows avoids collapsing
+    # the scanner to a partial universe.
     tickers = list_tickers_with_ohlcv()
     today_str = run_date
 
@@ -592,6 +685,18 @@ def compute_all_ratings(verbose: bool = False) -> dict:
     stats: dict = {"ok": 0, "skipped": 0, "errors": 0}
     total_tickers = len(tickers)
     phase_t0 = time.time()
+    verbose_per_ticker = os.getenv("EE_VERBOSE_PER_TICKER", "0").strip() == "1"
+
+    _emit_progress(
+        progress_callback,
+        {
+            "phase": "ratings",
+            "phase_label": "Scoring stocks",
+            "current": 0,
+            "total": total_tickers,
+            "message": "Preparing rating engine",
+        },
+    )
 
     def _save_placeholder_rating(symbol: str, reason: str, df=None) -> None:
         meta = stock_meta.get(symbol)
@@ -685,10 +790,99 @@ def compute_all_ratings(verbose: bool = False) -> dict:
         }
 
         save_rating(symbol, name_en, sector, result)
+
+    def _apply_riding_entry_fallback(
+        entry_plan: dict,
+        latest_row: dict,
+        support_resistance: dict,
+        *,
+        continue_rising: bool,
+    ) -> dict:
+        """Fill conservative Entry/TP levels when a stock is marked as Riding.
+
+        The main planner can decline a setup (null entry/tp fields) when current
+        risk/reward is not favorable. For continue-rising names we still want a
+        practical plan in the scanner instead of dashes.
+        """
+        if not continue_rising:
+            return entry_plan
+
+        if entry_plan.get("entry_primary") is not None and entry_plan.get("tp1") is not None:
+            return entry_plan
+
+        close = _safe_float(latest_row.get("close"))
+        if close is None or close <= 0:
+            return entry_plan
+
+        atr = _safe_float(latest_row.get("atr"))
+        if atr is None or atr <= 0:
+            atr = close * 0.02
+
+        supports = support_resistance.get("supports") or []
+        resistances = support_resistance.get("resistances") or []
+
+        below_supports = [
+            _safe_float(s.get("price"))
+            for s in supports
+            if _safe_float(s.get("price")) is not None and _safe_float(s.get("price")) < close
+        ]
+        above_resistances = [
+            _safe_float(r.get("price"))
+            for r in resistances
+            if _safe_float(r.get("price")) is not None and _safe_float(r.get("price")) > close
+        ]
+
+        nearest_support = max(below_supports) if below_supports else close - 1.25 * atr
+        nearest_resistance = min(above_resistances) if above_resistances else close + 1.5 * atr
+
+        entry_primary = close
+        min_stop_gap = max(0.75 * atr, close * 0.015)
+        stop_loss = min(nearest_support * 0.99, entry_primary - min_stop_gap)
+        if stop_loss >= entry_primary:
+            stop_loss = entry_primary - min_stop_gap
+        if stop_loss <= 0:
+            return entry_plan
+
+        tp1 = max(nearest_resistance, entry_primary + 1.0 * atr)
+        if tp1 <= entry_primary:
+            tp1 = entry_primary + 1.0 * atr
+
+        risk = entry_primary - stop_loss
+        reward = tp1 - entry_primary
+        rr_value = (reward / risk) if risk > 0 else None
+
+        fallback = dict(entry_plan)
+        fallback.update(
+            {
+                "plan_state": "FALLBACK_RIDING",
+                "plan_reason": "Continue-rising momentum active; using conservative fallback entry/targets.",
+                "entry_primary": round(entry_primary, 4),
+                "entry_aggressive": round(entry_primary, 4),
+                "entry_conservative": round(max(entry_primary - 0.5 * atr, stop_loss + 0.5 * atr), 4),
+                "stop_loss": round(stop_loss, 4),
+                "tp1": round(tp1, 4),
+                "tp1_probability": 0.55,
+                "tp2": round(tp1 + 0.75 * atr, 4),
+                "tp2_probability": 0.35,
+                "tp3": round(tp1 + 1.75 * atr, 4),
+                "tp3_probability": 0.15,
+                "risk_reward_ratio": round(rr_value, 4) if rr_value is not None else None,
+                "gain_pct_to_tp1": round((reward / entry_primary) * 100.0, 4) if entry_primary > 0 else None,
+            }
+        )
+        return fallback
         log_compute("rating_run", symbol, "skip", reason)
 
     if verbose:
         print(f"[EagleEye] Computing ratings for {total_tickers} tickers")
+        print(
+            f"[EagleEye] Indicator compute window: "
+            f"last {RATINGS_INDICATOR_LOOKBACK_BARS} bars per ticker"
+        )
+        if verbose_per_ticker:
+            print("[EagleEye] Verbose detail: per-ticker lines enabled")
+        else:
+            print("[EagleEye] Verbose detail: progress-only (set EE_VERBOSE_PER_TICKER=1 for per-ticker lines)")
         print("=" * 70)
 
     for idx, ticker in enumerate(tickers, start=1):
@@ -705,8 +899,16 @@ def compute_all_ratings(verbose: bool = False) -> dict:
                 _save_placeholder_rating(ticker, "inactive_or_delisted", df)
                 continue
 
+            indicator_input = (
+                df.tail(RATINGS_INDICATOR_LOOKBACK_BARS)
+                if len(df) > RATINGS_INDICATOR_LOOKBACK_BARS
+                else df
+            )
+
             try:
-                ind_df = compute_all_indicators(df, market_close=market_proxy)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=pd.errors.PerformanceWarning)
+                    ind_df = compute_all_indicators(indicator_input, market_close=market_proxy)
             except ValueError as exc:
                 if "Need at least 50 bars" in str(exc):
                     stats["skipped"] += 1
@@ -743,6 +945,12 @@ def compute_all_ratings(verbose: bool = False) -> dict:
 
             sr = compute_support_resistance(df, latest)
             et = compute_entry_stop_targets(df, latest, sr, stage=stage)
+            et = _apply_riding_entry_fallback(
+                et,
+                latest,
+                sr,
+                continue_rising=bool(recommendation_payload.get("continue_rising", False)),
+            )
             explanation = explain(recommendation_payload, latest, pattern_match=None)
             top_supporting = explanation.get("why_supporting", [])[:2]
             thesis = generate_thesis(
@@ -780,6 +988,14 @@ def compute_all_ratings(verbose: bool = False) -> dict:
                 "what_invalidates": explanation.get("what_invalidates", []),
                 "veto_reasons": recommendation_payload.get("veto_reasons", []),
                 "data_quality_score": recommendation_payload.get("data_quality_score"),
+                "continue_rising": recommendation_payload.get("continue_rising", False),
+                "continue_rising_badge": recommendation_payload.get("continue_rising_badge"),
+                "continue_rising_label": recommendation_payload.get("continue_rising_label"),
+                "continue_rising_reason": recommendation_payload.get("continue_rising_reason"),
+                "continue_rising_exhaustion_count": recommendation_payload.get("continue_rising_exhaustion_count", 0),
+                "continue_rising_exhaustion_signals": recommendation_payload.get("continue_rising_exhaustion_signals", []),
+                "risk_warning_score": int(recommendation_payload.get("risk_warning_score") or 0),
+                "risky_near_resistance": recommendation_payload.get("risky_near_resistance", False),
                 "volume_context": volume_context,
                 "days_of_history": len(df),
                 "computed_at": run_started,
@@ -853,7 +1069,7 @@ def compute_all_ratings(verbose: bool = False) -> dict:
                 f"confidence={confidence:.1f} rating={rating} stage={stage}"
             )
 
-            if verbose:
+            if verbose and verbose_per_ticker:
                 print(f"  [{ticker}] {rating} (conf={confidence:.0f}%) stage={stage}")
 
         except Exception as exc:
@@ -861,6 +1077,19 @@ def compute_all_ratings(verbose: bool = False) -> dict:
             stats["errors"] += 1
             log_compute("rating_run", ticker, "error", str(exc)[:300])
         finally:
+            _emit_progress(
+                progress_callback,
+                {
+                    "phase": "ratings",
+                    "phase_label": "Scoring stocks",
+                    "current": idx,
+                    "total": total_tickers,
+                    "message": f"Ratings {idx}/{total_tickers}",
+                    "ok": stats["ok"],
+                    "skipped": stats["skipped"],
+                    "errors": stats["errors"],
+                },
+            )
             if verbose and (idx % 10 == 0 or idx == total_tickers):
                 elapsed = time.time() - phase_t0
                 print(
@@ -868,6 +1097,20 @@ def compute_all_ratings(verbose: bool = False) -> dict:
                     f"(ok={stats['ok']} skipped={stats['skipped']} errors={stats['errors']}) "
                     f"elapsed={elapsed:.1f}s"
                 )
+
+    _emit_progress(
+        progress_callback,
+        {
+            "phase": "ratings",
+            "phase_label": "Scoring stocks",
+            "current": total_tickers,
+            "total": total_tickers,
+            "message": "Ratings complete",
+            "ok": stats["ok"],
+            "skipped": stats["skipped"],
+            "errors": stats["errors"],
+        },
+    )
 
     if verbose:
         print(
@@ -892,7 +1135,11 @@ def compute_all_ratings(verbose: bool = False) -> dict:
 # Nightly orchestrator — entry point for the APScheduler job
 # ---------------------------------------------------------------------------
 
-def run_nightly_recompute(dna_refresh: bool = False, verbose: bool = False) -> dict:
+def run_nightly_recompute(
+    dna_refresh: bool = False,
+    verbose: bool = False,
+    progress_callback: Optional[ProgressCallback] = None,
+) -> dict:
     """
     Nightly pipeline orchestrator called by the background scheduler.
 
@@ -918,12 +1165,23 @@ def run_nightly_recompute(dna_refresh: bool = False, verbose: bool = False) -> d
     if verbose:
         print(f"[EagleEye] Nightly recompute started (dna_refresh={dna_refresh})")
 
+    _emit_progress(
+        progress_callback,
+        {
+            "phase": "startup",
+            "phase_label": "Starting",
+            "current": 0,
+            "total": 1,
+            "message": "Starting Eagle Eye recompute",
+        },
+    )
+
     if verbose:
         print("[EagleEye] Phase 1/3: ingest_all_ohlcv ...")
     phase_t0 = time.time()
 
     try:
-        ohlcv_stats = ingest_all_ohlcv(verbose=verbose)
+        ohlcv_stats = ingest_all_ohlcv(verbose=verbose, progress_callback=progress_callback)
     except Exception as exc:
         logger.error("Eagle Eye OHLCV ingest failed: %s", exc)
         ohlcv_stats = {"error": str(exc)}
@@ -952,7 +1210,7 @@ def run_nightly_recompute(dna_refresh: bool = False, verbose: bool = False) -> d
         print("[EagleEye] Phase 3/3: compute_all_ratings ...")
     phase_t0 = time.time()
     try:
-        rating_stats = compute_all_ratings(verbose=verbose)
+        rating_stats = compute_all_ratings(verbose=verbose, progress_callback=progress_callback)
     except Exception as exc:
         logger.error("Eagle Eye rating run failed: %s", exc)
         rating_stats = {"error": str(exc)}
@@ -985,6 +1243,19 @@ def run_nightly_recompute(dna_refresh: bool = False, verbose: bool = False) -> d
     if verbose:
         print(f"[EagleEye] Nightly recompute complete in {elapsed:.1f}s")
         print(f"[EagleEye] Summary: {summary}")
+
+    _emit_progress(
+        progress_callback,
+        {
+            "phase": "done",
+            "phase_label": "Complete",
+            "current": 1,
+            "total": 1,
+            "message": f"Recompute complete in {elapsed:.1f}s",
+            "elapsed_sec": elapsed,
+            "cache_rows": cache_rows,
+        },
+    )
 
     return {
         "elapsed_sec": elapsed,

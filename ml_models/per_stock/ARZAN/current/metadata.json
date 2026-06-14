@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.40783624788127865,
-  "mae": 8.491303817913225,
-  "rmse": 9.097642526017689,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.052863168883843834,
+  "mae": 31.22318156886314,
+  "rmse": 35.379456281931866,
+  "auc": 0.052863168883843834,
+  "mean_auc": 0.052863168883843834,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 656,
+  "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-07-06",
-    "end": "2026-04-28"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.0529",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.28030193861165176,
-      "mae": 21.120036836234878,
-      "rmse": 21.581495371155388,
+      "spearman": -0.5485608843220074,
+      "mae": 38.135100482655744,
+      "rmse": 41.772894648757614,
       "fold": 1,
-      "train_size": 455,
-      "test_size": 61,
-      "best_iteration": 16
+      "train_size": 409,
+      "test_size": 69,
+      "best_iteration": 2
     },
     {
-      "spearman": 0.5330510212418469,
-      "mae": 3.5732587407833725,
-      "rmse": 4.68345578208994,
+      "spearman": 0.3193619340855006,
+      "mae": 32.86064864061049,
+      "rmse": 35.11066092348221,
       "fold": 2,
-      "train_size": 516,
-      "test_size": 38,
-      "best_iteration": 94
+      "train_size": 478,
+      "test_size": 68,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.9707596610136408,
-      "mae": 0.7806158767214265,
-      "rmse": 1.0279764248077357,
+      "spearman": 0.23478815854599808,
+      "mae": 28.59033683334146,
+      "rmse": 32.84033054693517,
+      "fold": 3,
+      "train_size": 546,
+      "test_size": 68,
+      "best_iteration": 10
+    },
+    {
+      "spearman": -0.05235341793451873,
+      "mae": 31.43645701265315,
+      "rmse": 38.247964884855584,
+      "fold": 4,
+      "train_size": 614,
+      "test_size": 34,
+      "best_iteration": 116
+    },
+    {
+      "spearman": 0.31108005404424666,
+      "mae": 25.093364875054867,
+      "rmse": 28.925430405628745,
       "fold": 5,
-      "train_size": 607,
-      "test_size": 49,
-      "best_iteration": 76
+      "train_size": 648,
+      "test_size": 35,
+      "best_iteration": 31
     }
   ],
   "tier": "per_stock",
   "identifier": "ARZAN",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": -0.04885354745677711,
-  "mae": 20.62678680414152,
-  "rmse": 23.364933647156377,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.2798393953944475,
+  "mae": 29.230130101877517,
+  "rmse": 32.33188726646727,
+  "auc": 0.2798393953944475,
+  "mean_auc": 0.2798393953944475,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 590,
+  "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-06-11",
-    "end": "2026-05-04"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_-0.0489",
+  "rejected_reason": "spearman_below_threshold_0.2798",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.1256573005565315,
-      "mae": 40.809096057250315,
-      "rmse": 42.84994226322646,
+      "spearman": 0.2915547520815376,
+      "mae": 25.97585345849841,
+      "rmse": 29.03709895146729,
       "fold": 1,
-      "train_size": 427,
-      "test_size": 81,
-      "best_iteration": 13
+      "train_size": 409,
+      "test_size": 69,
+      "best_iteration": 8
     },
     {
-      "spearman": -0.20165720116943764,
-      "mae": 18.52678206447186,
-      "rmse": 21.012874298231736,
+      "spearman": 0.6071727172424243,
+      "mae": 37.973977064980886,
+      "rmse": 41.22243873345884,
       "fold": 2,
-      "train_size": 508,
-      "test_size": 21,
-      "best_iteration": 15
+      "train_size": 478,
+      "test_size": 68,
+      "best_iteration": 35
     },
     {
-      "spearman": 0.18075385935563776,
-      "mae": 2.5444822907023816,
-      "rmse": 6.2319843800109345,
+      "spearman": 0.38586845539433107,
+      "mae": 33.68835427558947,
+      "rmse": 35.94221288761719,
+      "fold": 3,
+      "train_size": 546,
+      "test_size": 68,
+      "best_iteration": 1
+    },
+    {
+      "spearman": -0.17453097459362663,
+      "mae": 16.011207942676158,
+      "rmse": 19.855972149569713,
+      "fold": 4,
+      "train_size": 614,
+      "test_size": 34,
+      "best_iteration": 8
+    },
+    {
+      "spearman": 0.2891320268475712,
+      "mae": 32.50125776764268,
+      "rmse": 35.60171361022333,
       "fold": 5,
-      "train_size": 547,
-      "test_size": 43,
-      "best_iteration": 190
+      "train_size": 648,
+      "test_size": 35,
+      "best_iteration": 2
     }
   ],
   "tier": "per_stock",
   "identifier": "ALOLA",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

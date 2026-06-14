@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": -0.474220640011035,
-  "mae": 26.679438511649987,
-  "rmse": 29.525752834950328,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.06383802491960885,
+  "mae": 26.274878785098082,
+  "rmse": 30.079124118655606,
+  "auc": 0.06383802491960885,
+  "mean_auc": 0.06383802491960885,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 625,
+  "n_train_events": 694,
   "train_date_range": {
-    "start": "2023-07-10",
-    "end": "2026-04-26"
+    "start": "2023-05-28",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_-0.4742",
+  "rejected_reason": "spearman_below_threshold_0.0638",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.22186657159864082,
-      "mae": 64.12800965441139,
-      "rmse": 68.52731132074626,
+      "spearman": 0.45564799583126114,
+      "mae": 31.01185190387881,
+      "rmse": 34.4181782428756,
+      "fold": 1,
+      "train_size": 416,
+      "test_size": 69,
+      "best_iteration": 7
+    },
+    {
+      "spearman": 0.6882437478766537,
+      "mae": 23.330035521936303,
+      "rmse": 26.937412495054286,
       "fold": 2,
-      "train_size": 357,
-      "test_size": 136,
+      "train_size": 485,
+      "test_size": 70,
+      "best_iteration": 113
+    },
+    {
+      "spearman": -0.5186824808408796,
+      "mae": 28.000101252151758,
+      "rmse": 32.38933639520147,
+      "fold": 3,
+      "train_size": 555,
+      "test_size": 69,
+      "best_iteration": 2
+    },
+    {
+      "spearman": -0.6998734949408024,
+      "mae": 23.78090689022944,
+      "rmse": 27.715294682565347,
+      "fold": 4,
+      "train_size": 624,
+      "test_size": 35,
       "best_iteration": 1
     },
     {
-      "spearman": -0.6166970082435309,
-      "mae": 13.383198005106586,
-      "rmse": 15.157593774176897,
-      "fold": 3,
-      "train_size": 493,
-      "test_size": 89,
-      "best_iteration": 10
-    },
-    {
-      "spearman": -0.5840983401909331,
-      "mae": 2.5271078754319887,
-      "rmse": 4.892353409927827,
+      "spearman": 0.3938543566718115,
+      "mae": 25.25149835729411,
+      "rmse": 28.935398777581337,
       "fold": 5,
-      "train_size": 596,
-      "test_size": 29,
-      "best_iteration": 58
+      "train_size": 659,
+      "test_size": 35,
+      "best_iteration": 6
     }
   ],
   "tier": "per_stock",
   "identifier": "KAMCO",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

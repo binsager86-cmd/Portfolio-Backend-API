@@ -1,39 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.20687082197836243,
-  "mae": 7.773236591853033,
-  "rmse": 8.344493801972598,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.22583917017704788,
+  "mae": 19.091035953284397,
+  "rmse": 22.925748110636153,
+  "auc": 0.22583917017704788,
+  "mean_auc": 0.22583917017704788,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 190,
+  "n_train_events": 308,
   "train_date_range": {
-    "start": "2024-01-18",
-    "end": "2026-05-07"
+    "start": "2024-05-16",
+    "end": "2026-03-17"
   },
-  "rejected_reason": "spearman_below_threshold_0.2069",
+  "rejected_reason": "spearman_below_threshold_0.2258",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.1555427542095638,
-      "mae": 12.724031278544743,
-      "rmse": 12.74161404420816,
-      "fold": 4,
-      "train_size": 153,
-      "test_size": 33,
-      "best_iteration": 1
+      "spearman": 0.5495386728427468,
+      "mae": 32.22797969812132,
+      "rmse": 36.94649137058778,
+      "fold": 1,
+      "train_size": 184,
+      "test_size": 31,
+      "best_iteration": 42
     },
     {
-      "spearman": 0.2581988897471611,
-      "mae": 2.8224419051613228,
-      "rmse": 3.9473735597370383,
+      "spearman": -0.14233058541608593,
+      "mae": 22.77477359658145,
+      "rmse": 29.234354786291025,
+      "fold": 2,
+      "train_size": 215,
+      "test_size": 31,
+      "best_iteration": 8
+    },
+    {
+      "spearman": 0.46904831122153157,
+      "mae": 28.325951044138503,
+      "rmse": 32.29058939974101,
+      "fold": 3,
+      "train_size": 246,
+      "test_size": 31,
+      "best_iteration": 2
+    },
+    {
+      "spearman": 0.027100282059999065,
+      "mae": 9.124789118551726,
+      "rmse": 12.703955734391455,
+      "fold": 4,
+      "train_size": 277,
+      "test_size": 15,
+      "best_iteration": 14
+    },
+    {
+      "spearman": NaN,
+      "mae": 3.0016863090289774,
+      "rmse": 3.453349262169496,
       "fold": 5,
-      "train_size": 186,
-      "test_size": 4,
-      "best_iteration": 275
+      "train_size": 292,
+      "test_size": 16,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "KUWAITRE",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

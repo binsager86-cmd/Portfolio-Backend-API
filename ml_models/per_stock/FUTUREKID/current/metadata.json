@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.5305109070080261,
-  "mae": 6.198377689162991,
-  "rmse": 7.373006197364113,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.1533143309114984,
+  "mae": 25.812649939229154,
+  "rmse": 30.135313411571616,
+  "auc": 0.1533143309114984,
+  "mean_auc": 0.1533143309114984,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 608,
+  "n_train_events": 670,
   "train_date_range": {
-    "start": "2023-07-31",
-    "end": "2026-04-26"
+    "start": "2023-07-03",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.1533",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.9709195016324249,
-      "mae": 7.6587580818942875,
-      "rmse": 8.547252843990131,
+      "spearman": 0.7059740794904361,
+      "mae": 17.171028615736805,
+      "rmse": 21.805598210453653,
       "fold": 1,
-      "train_size": 399,
-      "test_size": 75,
-      "best_iteration": 17
+      "train_size": 402,
+      "test_size": 66,
+      "best_iteration": 31
     },
     {
-      "spearman": 0.2907284625668267,
-      "mae": 6.589938230362182,
-      "rmse": 7.7498782557606205,
+      "spearman": 0.15632650345013716,
+      "mae": 19.486662112073624,
+      "rmse": 24.171964106046524,
       "fold": 2,
-      "train_size": 474,
-      "test_size": 44,
-      "best_iteration": 30
+      "train_size": 468,
+      "test_size": 68,
+      "best_iteration": 15
     },
     {
-      "spearman": 0.3298847568248266,
-      "mae": 4.346436755232503,
-      "rmse": 5.821887492341587,
+      "spearman": 0.26092216034795906,
+      "mae": 34.6723086617554,
+      "rmse": 37.45644221213665,
+      "fold": 3,
+      "train_size": 536,
+      "test_size": 67,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.08080096626740572,
+      "mae": 35.76300293601651,
+      "rmse": 38.01667322386761,
+      "fold": 4,
+      "train_size": 603,
+      "test_size": 33,
+      "best_iteration": 1
+    },
+    {
+      "spearman": -0.43745205499844586,
+      "mae": 21.970247370563403,
+      "rmse": 29.22588930535364,
       "fold": 5,
-      "train_size": 554,
-      "test_size": 54,
-      "best_iteration": 20
+      "train_size": 636,
+      "test_size": 34,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "FUTUREKID",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

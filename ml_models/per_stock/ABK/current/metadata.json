@@ -1,39 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.19565717376837924,
-  "mae": 1.5146898846527632,
-  "rmse": 2.1370667625456483,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.2739928142305035,
+  "mae": 23.95663006716028,
+  "rmse": 28.314370189019304,
+  "auc": 0.2739928142305035,
+  "mean_auc": 0.2739928142305035,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 718,
+  "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-04-26",
-    "end": "2026-04-19"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_0.1957",
+  "rejected_reason": "spearman_below_threshold_0.2740",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.35319647889797195,
-      "mae": 2.101944271057084,
-      "rmse": 2.921816986699555,
+      "spearman": 0.31220583706864075,
+      "mae": 21.87376827513657,
+      "rmse": 26.972805395419165,
       "fold": 1,
-      "train_size": 515,
-      "test_size": 50,
-      "best_iteration": 132
+      "train_size": 409,
+      "test_size": 69,
+      "best_iteration": 150
     },
     {
-      "spearman": 0.7445108264347304,
-      "mae": 0.9274354982484425,
-      "rmse": 1.3523165383917417,
+      "spearman": -0.025795981703740183,
+      "mae": 26.499139112873646,
+      "rmse": 31.781919335821758,
+      "fold": 2,
+      "train_size": 478,
+      "test_size": 68,
+      "best_iteration": 19
+    },
+    {
+      "spearman": 0.3487816669620748,
+      "mae": 24.357743153843572,
+      "rmse": 28.17266971393733,
       "fold": 3,
-      "train_size": 611,
-      "test_size": 60,
-      "best_iteration": 263
+      "train_size": 546,
+      "test_size": 68,
+      "best_iteration": 6
+    },
+    {
+      "spearman": 0.16158039742249242,
+      "mae": 27.69508967838133,
+      "rmse": 31.924496757211386,
+      "fold": 4,
+      "train_size": 614,
+      "test_size": 34,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.5731921514030497,
+      "mae": 19.35741011556627,
+      "rmse": 22.719959742706866,
+      "fold": 5,
+      "train_size": 648,
+      "test_size": 35,
+      "best_iteration": 19
     }
   ],
   "tier": "per_stock",
   "identifier": "ABK",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

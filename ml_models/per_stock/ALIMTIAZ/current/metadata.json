@@ -1,39 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.9062273315924065,
-  "mae": 19.853197711469534,
-  "rmse": 20.592937787598352,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.49128720822178745,
+  "mae": 31.07807632623173,
+  "rmse": 34.10829717383183,
+  "auc": 0.49128720822178745,
+  "mean_auc": 0.49128720822178745,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 561,
+  "n_train_events": 661,
   "train_date_range": {
-    "start": "2023-06-14",
-    "end": "2026-05-20"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.9752254300377581,
-      "mae": 20.441496684314302,
-      "rmse": 21.85785336843617,
-      "fold": 2,
-      "train_size": 315,
-      "test_size": 130,
-      "best_iteration": 60
+      "spearman": 0.788723517249433,
+      "mae": 34.790713109964656,
+      "rmse": 36.761729671945254,
+      "fold": 1,
+      "train_size": 396,
+      "test_size": 66,
+      "best_iteration": 2
     },
     {
-      "spearman": 0.837229233147055,
-      "mae": 19.264898738624765,
-      "rmse": 19.328022206760533,
+      "spearman": 0.12311008745409699,
+      "mae": 40.05504027588252,
+      "rmse": 43.0910657951384,
+      "fold": 2,
+      "train_size": 462,
+      "test_size": 66,
+      "best_iteration": 22
+    },
+    {
+      "spearman": 0.21766462707737727,
+      "mae": 30.256179572413057,
+      "rmse": 33.854116450550414,
+      "fold": 3,
+      "train_size": 528,
+      "test_size": 66,
+      "best_iteration": 21
+    },
+    {
+      "spearman": 0.5972593582887701,
+      "mae": 23.966280131265563,
+      "rmse": 27.334022621050224,
+      "fold": 4,
+      "train_size": 594,
+      "test_size": 33,
+      "best_iteration": 295
+    },
+    {
+      "spearman": 0.72967845103926,
+      "mae": 26.32216854163287,
+      "rmse": 29.50055133047485,
       "fold": 5,
-      "train_size": 479,
-      "test_size": 82,
-      "best_iteration": 3
+      "train_size": 627,
+      "test_size": 34,
+      "best_iteration": 140
     }
   ],
   "tier": "per_stock",
   "identifier": "ALIMTIAZ",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

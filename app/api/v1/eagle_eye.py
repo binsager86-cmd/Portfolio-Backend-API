@@ -21,7 +21,7 @@ import threading
 import time
 import uuid
 from datetime import date, datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -31,6 +31,12 @@ from app.api.deps import get_current_user, require_admin
 from app.core.security import TokenData
 from app.schemas.eagle_eye import (
     BehavioralDNAResponse,
+    DNACycleProfileResponse,
+    DNAExitSignalProfileResponse,
+    DNAHistoricalTargetClusterResponse,
+    DNAPostDropBehaviorResponse,
+    DNAPreDropSignalResponse,
+    DNAPullbackEntryProfileResponse,
     DNAResponse,
     DNASetupBarResponse,
     DNASetupExampleResponse,
@@ -68,6 +74,19 @@ _DNA_BUILD_IN_PROGRESS: set[str] = set()
 _RECOMPUTE_LOCK = threading.Lock()
 _RECOMPUTE_IN_PROGRESS = False
 _RECOMPUTE_LAST_ATTEMPT_AT = 0.0
+_RECOMPUTE_PROGRESS_LOCK = threading.Lock()
+_RECOMPUTE_PROGRESS: Dict[str, Any] = {
+    "phase": "idle",
+    "phase_label": "Idle",
+    "message": "Idle",
+    "current": 0,
+    "total": 0,
+    "percent": 0,
+    "in_progress": False,
+    "started_at": None,
+    "updated_at": None,
+    "last_error": None,
+}
 
 _LOOKBACK_YEARS = 5
 _RECOMPUTE_COOLDOWN_SEC = 300
@@ -87,6 +106,11 @@ _FUNDAMENTALS_MAP_CACHE: Optional[Dict[str, Dict[str, Optional[float]]]] = None
 _FUNDAMENTALS_MAP_CACHE_AT: float = 0.0
 _FUNDAMENTALS_MAP_TTL_SEC: float = 600.0  # 10 minutes
 
+# Scanner PE guardrails: KSE prices are typically in fils, while EPS is KWD/share.
+_KSE_PRICE_DIVISOR: float = 1000.0
+_PE_RATIO_MAX_REASONABLE: float = 1000.0
+_PE_EPS_DRIFT_REFRESH_THRESHOLD: float = 0.35
+
 # Scanner response cache: assembled List[RatedStock] held for 30 s so
 # rapid re-fetches (focus events, filter clicks) return instantly.
 _SCANNER_RESP_CACHE: Optional[list] = None
@@ -98,6 +122,82 @@ _SCANNER_RESP_TTL_SEC: float = 30.0  # 30 seconds
 _REGIME_RESP_CACHE: Optional[dict] = None
 _REGIME_RESP_CACHE_AT: float = 0.0
 _REGIME_RESP_TTL_SEC: float = 600.0  # 10 minutes
+
+
+def _set_recompute_progress(
+    *,
+    phase: Optional[str] = None,
+    phase_label: Optional[str] = None,
+    message: Optional[str] = None,
+    current: Optional[int] = None,
+    total: Optional[int] = None,
+    percent: Optional[int] = None,
+    in_progress: Optional[bool] = None,
+    mark_started: bool = False,
+    clear_error: bool = False,
+    last_error: Optional[str] = None,
+) -> None:
+    now_iso = datetime.utcnow().isoformat(timespec="seconds")
+    with _RECOMPUTE_PROGRESS_LOCK:
+        if mark_started:
+            _RECOMPUTE_PROGRESS["started_at"] = now_iso
+        _RECOMPUTE_PROGRESS["updated_at"] = now_iso
+
+        if phase is not None:
+            _RECOMPUTE_PROGRESS["phase"] = phase
+        if phase_label is not None:
+            _RECOMPUTE_PROGRESS["phase_label"] = phase_label
+        if message is not None:
+            _RECOMPUTE_PROGRESS["message"] = message
+        if current is not None:
+            _RECOMPUTE_PROGRESS["current"] = max(0, int(current))
+        if total is not None:
+            _RECOMPUTE_PROGRESS["total"] = max(0, int(total))
+        if percent is not None:
+            pct = max(0, min(100, int(percent)))
+            _RECOMPUTE_PROGRESS["percent"] = pct
+        if in_progress is not None:
+            _RECOMPUTE_PROGRESS["in_progress"] = bool(in_progress)
+
+        if clear_error:
+            _RECOMPUTE_PROGRESS["last_error"] = None
+        if last_error is not None:
+            _RECOMPUTE_PROGRESS["last_error"] = last_error
+
+
+def _get_recompute_progress_snapshot() -> Dict[str, Any]:
+    with _RECOMPUTE_PROGRESS_LOCK:
+        return dict(_RECOMPUTE_PROGRESS)
+
+
+def _scanner_progress_fields(status: str, count: int) -> Dict[str, Any]:
+    if status == "ok":
+        return {
+            "progress_phase": "ready",
+            "progress_message": "Scanner cache ready",
+            "progress_current": count,
+            "progress_total": count,
+            "progress_percent": 100,
+        }
+
+    snap = _get_recompute_progress_snapshot()
+    current = int(snap.get("current") or 0)
+    total = int(snap.get("total") or 0)
+    percent = int(snap.get("percent") or 0)
+    message = str(snap.get("message") or "Preparing scanner cache")
+    phase = str(snap.get("phase") or "warming_up")
+    if status == "warming_up" and percent >= 100:
+        percent = 99
+    if status == "error" and snap.get("last_error"):
+        message = "Warmup encountered an internal error. Please retry shortly."
+
+    return {
+        "progress_phase": phase,
+        "progress_message": message,
+        "progress_current": current,
+        "progress_total": total,
+        "progress_percent": max(0, min(100, percent)),
+    }
 
 
 def _get_meta_map() -> Dict[str, object]:
@@ -125,16 +225,32 @@ def _normalize_symbol(raw: object) -> str:
     return sym
 
 
+def _sanitize_pe_ratio(v) -> Optional[float]:
+    """Return a scanner-safe PE ratio value or None for invalid/outlier inputs.
+
+    Negative PE values are valid for loss-making companies and should be surfaced
+    to the scanner instead of being hidden as N/A.
+    """
+    pe = _safe_float(v)
+    if pe is None:
+        return None
+    if pe == 0:
+        return None
+    if abs(pe) > _PE_RATIO_MAX_REASONABLE:
+        return None
+    return pe
+
+
 def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
     """Return cached ticker fundamentals used by scanner table columns.
 
     Source priority:
-    1) TickerChart QuotesSnapShot (P/E, LTM EPS, BVPS)
-    2) ``stocks.pe_ratio``
-    3) Latest ``stock_metrics`` values for:
+    1) Latest ``ml_fundamentals`` snapshot (StockAnalysis-first daily refresh for EPS/BVPS)
+    2) TickerChart QuotesSnapShot (P/E only)
+    3) ``stocks.pe_ratio``
+    4) Latest ``stock_metrics`` values for:
          - "Book Value / Share"
          - "EPS" (used to derive P/E when direct PE is missing)
-    4) Latest ``ml_fundamentals`` snapshot (fills remaining gaps)
     """
     global _FUNDAMENTALS_MAP_CACHE, _FUNDAMENTALS_MAP_CACHE_AT
 
@@ -151,7 +267,9 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
         from app.core.database import column_exists, query_all
         from app.services import tickerchart_service as tc
 
-        # Primary source: TickerChart QuotesSnapShot fundamentals.
+        # Primary PE source: TickerChart QuotesSnapShot fundamentals.
+        # EPS/BVPS are intentionally sourced from ml_fundamentals/stock_metrics,
+        # not from snapshot fields, to keep Eagle Eye aligned to StockAnalysis.
         # Scanner universe is Kuwait-focused, so symbols are resolved as KSE.
         for raw_ticker in _get_meta_map().keys():
             ticker = _normalize_symbol(raw_ticker)
@@ -168,19 +286,13 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
             )
 
             try:
-                pe_val = _safe_float(tc.read_quotes_snapshot_pe(ticker, "KSE"))
-                eps_val = _safe_float(tc.read_quotes_snapshot_ltm_eps(ticker, "KSE", price_divisor=1000.0))
-                bvps_val = _safe_float(tc.read_quotes_snapshot_bvps(ticker, "KSE", price_divisor=1000.0))
+                pe_val = _sanitize_pe_ratio(tc.read_quotes_snapshot_pe(ticker, "KSE"))
             except Exception as exc:
                 logger.debug("TickerChart snapshot fundamentals unavailable for %s: %s", ticker, exc)
                 continue
 
             if pe_val is not None:
                 fmap[ticker]["pe_ratio"] = pe_val
-            if eps_val is not None:
-                fmap[ticker]["eps"] = eps_val
-            if bvps_val is not None:
-                fmap[ticker]["book_value_per_share"] = bvps_val
 
         has_stocks_symbol = column_exists("stocks", "symbol")
         has_stocks_pe = column_exists("stocks", "pe_ratio")
@@ -200,7 +312,7 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
                         "eps": None,
                     },
                 )
-                pe_val = _safe_float(r.get("pe_ratio"))
+                pe_val = _sanitize_pe_ratio(r.get("pe_ratio"))
                 if fmap[ticker].get("pe_ratio") is None and pe_val is not None:
                     fmap[ticker]["pe_ratio"] = pe_val
 
@@ -342,10 +454,11 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
             except Exception as exc:
                 logger.warning("stock_metrics->stocks_master fundamentals query failed: %s", exc)
 
-        # Fill any remaining gaps from latest ml_fundamentals snapshots.
+        # ml_fundamentals overlay: prefer daily StockAnalysis-fed EPS/BVPS.
         has_mlf_ticker = column_exists("ml_fundamentals", "stock_ticker")
         has_mlf_disclosure = column_exists("ml_fundamentals", "disclosure_date")
         has_mlf_id = column_exists("ml_fundamentals", "id")
+        has_mlf_source = column_exists("ml_fundamentals", "source")
         has_mlf_period_end = column_exists("ml_fundamentals", "period_end_date")
         has_mlf_created = column_exists("ml_fundamentals", "created_at")
         has_mlf_pe = column_exists("ml_fundamentals", "pe_ratio")
@@ -355,6 +468,10 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
         mlf_order_parts: list[str] = []
         if has_mlf_disclosure:
             mlf_order_parts.append(_nulls_last_desc("disclosure_date"))
+        if has_mlf_source:
+            mlf_order_parts.append(
+                "CASE WHEN LOWER(COALESCE(source, '')) LIKE 'stockanalysis%' THEN 0 ELSE 1 END"
+            )
         if has_mlf_period_end:
             mlf_order_parts.append(_nulls_last_desc("period_end_date"))
         if has_mlf_created:
@@ -403,15 +520,18 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
                         },
                     )
 
-                    pe_val = _safe_float(r.get("pe_ratio"))
+                    pe_val = _sanitize_pe_ratio(r.get("pe_ratio"))
                     eps_val = _safe_float(r.get("eps"))
                     bvps_val = _safe_float(r.get("book_value_per_share"))
 
+                    # Keep PE conservative: only fill if missing.
                     if fmap[ticker].get("pe_ratio") is None and pe_val is not None:
                         fmap[ticker]["pe_ratio"] = pe_val
-                    if fmap[ticker].get("eps") is None and eps_val is not None:
+                    # EPS and BVPS are intentionally overridden by the latest
+                    # ml_fundamentals row (StockAnalysis-first daily source).
+                    if eps_val is not None:
                         fmap[ticker]["eps"] = eps_val
-                    if fmap[ticker].get("book_value_per_share") is None and bvps_val is not None:
+                    if bvps_val is not None:
                         fmap[ticker]["book_value_per_share"] = bvps_val
             except Exception as exc:
                 logger.warning("ml_fundamentals fallback query failed: %s", exc)
@@ -480,6 +600,32 @@ def _predict_ml_opportunity_score(ticker: str, ohlcv_df, as_of: date) -> Optiona
     """Retired compatibility wrapper for phase-regression output."""
     del ticker, ohlcv_df, as_of
     return None
+
+
+def _build_exit_signal_profile_response(
+    raw: Optional[dict],
+) -> Optional[DNAExitSignalProfileResponse]:
+    """Convert the serialised exit_signal_profile dict to an API response object."""
+    if not isinstance(raw, dict):
+        return None
+    try:
+        pre_drop_signals = [
+            DNAPreDropSignalResponse(**sig)
+            for sig in (raw.get("pre_drop_signals") or [])
+            if isinstance(sig, dict)
+        ]
+        pdb_raw = raw.get("post_drop_behavior")
+        post_drop = DNAPostDropBehaviorResponse(**pdb_raw) if isinstance(pdb_raw, dict) else None
+        return DNAExitSignalProfileResponse(
+            drop_threshold_pct=raw.get("drop_threshold_pct", -10.0),
+            historical_drop_events=raw.get("historical_drop_events", 0),
+            avg_drop_magnitude_pct=raw.get("avg_drop_magnitude_pct", 0.0),
+            avg_days_peak_to_trough=raw.get("avg_days_peak_to_trough", 0.0),
+            pre_drop_signals=pre_drop_signals,
+            post_drop_behavior=post_drop,
+        )
+    except Exception:
+        return None
 
 
 def _build_threshold_profile_response(
@@ -570,22 +716,123 @@ def _trigger_eagle_eye_recompute(reason: str, *, force: bool = False) -> bool:
     now = time.time()
     with _RECOMPUTE_LOCK:
         if _RECOMPUTE_IN_PROGRESS:
+            _set_recompute_progress(
+                phase="warming_up",
+                phase_label="Warming up",
+                message="Recompute already running",
+                in_progress=True,
+            )
             logger.info("Eagle Eye recompute already in progress; skip trigger (%s)", reason)
             return False
         if not force and (now - _RECOMPUTE_LAST_ATTEMPT_AT) < _RECOMPUTE_COOLDOWN_SEC:
+            _set_recompute_progress(
+                phase="cooldown",
+                phase_label="Cooldown",
+                message="Recent recompute attempt is in cooldown",
+                in_progress=False,
+            )
             logger.info("Eagle Eye recompute cooldown active; skip trigger (%s)", reason)
             return False
         _RECOMPUTE_IN_PROGRESS = True
         _RECOMPUTE_LAST_ATTEMPT_AT = now
 
+    _set_recompute_progress(
+        phase="queued",
+        phase_label="Queued",
+        message="Queued background recompute",
+        current=0,
+        total=1,
+        percent=1,
+        in_progress=True,
+        mark_started=True,
+        clear_error=True,
+    )
+
     def _runner() -> None:
         global _RECOMPUTE_IN_PROGRESS
+        phase_counts = {
+            "ohlcv_current": 0,
+            "ohlcv_total": 0,
+            "ratings_current": 0,
+            "ratings_total": 0,
+        }
+
+        def _derive_percent(phase: str) -> int:
+            if phase in {"done", "ready"}:
+                return 100
+
+            o_current = max(0, int(phase_counts["ohlcv_current"]))
+            o_total = max(0, int(phase_counts["ohlcv_total"]))
+            r_current = max(0, int(phase_counts["ratings_current"]))
+            r_total = max(0, int(phase_counts["ratings_total"]))
+
+            if o_total > 0 and r_total > 0:
+                done_steps = min(o_current, o_total) + min(r_current, r_total)
+                total_steps = o_total + r_total
+                pct = int(round((done_steps / max(total_steps, 1)) * 99.0))
+                return max(1, min(99, pct))
+
+            if o_total > 0:
+                pct = int(round((min(o_current, o_total) / max(o_total, 1)) * 49.0))
+                return max(1, min(49, pct))
+
+            if r_total > 0:
+                pct = 50 + int(round((min(r_current, r_total) / max(r_total, 1)) * 49.0))
+                return max(50, min(99, pct))
+
+            return 1
+
+        def _on_progress(payload: Dict[str, Any]) -> None:
+            phase = str(payload.get("phase") or "warming_up")
+            phase_label = str(payload.get("phase_label") or phase.replace("_", " ").title())
+            current = int(payload.get("current") or 0)
+            total = int(payload.get("total") or 0)
+
+            if phase == "ohlcv":
+                phase_counts["ohlcv_current"] = current
+                phase_counts["ohlcv_total"] = total
+            elif phase == "ratings":
+                phase_counts["ratings_current"] = current
+                phase_counts["ratings_total"] = total
+
+            message = str(payload.get("message") or f"{phase_label}...")
+            _set_recompute_progress(
+                phase=phase,
+                phase_label=phase_label,
+                message=message,
+                current=current,
+                total=total,
+                percent=_derive_percent(phase),
+                in_progress=phase not in {"done", "ready", "error"},
+            )
+
         try:
             from app.services.eagle_eye.ingest import run_nightly_recompute
 
-            result = run_nightly_recompute(dna_refresh=False, verbose=False)
+            result = run_nightly_recompute(
+                dna_refresh=False,
+                verbose=False,
+                progress_callback=_on_progress,
+            )
+            cache_rows = int(result.get("cache_rows") or 0)
+            _set_recompute_progress(
+                phase="ready",
+                phase_label="Ready",
+                message="Scanner cache refreshed",
+                current=cache_rows,
+                total=cache_rows,
+                percent=100,
+                in_progress=False,
+            )
             logger.info("Eagle Eye background recompute finished (%s): %s", reason, result)
-        except Exception:
+        except Exception as exc:
+            _set_recompute_progress(
+                phase="error",
+                phase_label="Error",
+                message="Background recompute failed",
+                in_progress=False,
+                last_error=str(exc),
+            )
             logger.exception("Eagle Eye background recompute failed (%s)", reason)
         finally:
             with _RECOMPUTE_LOCK:
@@ -603,6 +850,12 @@ def _trigger_eagle_eye_recompute(reason: str, *, force: bool = False) -> bool:
     except Exception:
         with _RECOMPUTE_LOCK:
             _RECOMPUTE_IN_PROGRESS = False
+        _set_recompute_progress(
+            phase="error",
+            phase_label="Error",
+            message="Could not start background recompute",
+            in_progress=False,
+        )
         logger.exception("Could not start Eagle Eye background recompute (%s)", reason)
         return False
 
@@ -665,7 +918,9 @@ def _run_analysis(ticker: str) -> Optional[dict]:
         from app.services.eagle_eye.store import load_ohlcv, load_rating
 
         cached_row = load_rating(ticker)
-        if cached_row and cached_row.get("computed_at") == date.today().isoformat():
+        cached_at = cached_row.get("computed_at") if cached_row else None
+        cached_date = str(cached_at)[:10] if cached_at else None
+        if cached_row and cached_date == date.today().isoformat():
             ohlcv_cached = load_ohlcv(ticker)
             if ohlcv_cached is None or len(ohlcv_cached) == 0:
                 raise ValueError(f"Missing cached OHLCV for {ticker}")
@@ -699,23 +954,33 @@ def _run_analysis(ticker: str) -> Optional[dict]:
                 "risk_reward_ratio": None,
                 "gain_pct_to_tp1": None,
             }
-            try:
-                from app.services.eagle_eye.adapter import TickerChartAdapter
-                from app.services.eagle_eye.rating_engine import compute_entry_stop_targets
+            # Performance fast path:
+            # Do NOT fetch live OHLCV on every request when cache already has
+            # plan fields. Only recompute trade plan if cache is missing
+            # essential fields (legacy/partial rows).
+            needs_entry_recompute = (
+                entry.get("entry_primary") is None
+                or entry.get("stop_loss") is None
+                or entry.get("tp1") is None
+            )
+            if needs_entry_recompute:
+                try:
+                    from app.services.eagle_eye.adapter import TickerChartAdapter
+                    from app.services.eagle_eye.rating_engine import compute_entry_stop_targets
 
-                adapter = TickerChartAdapter()
-                end_d = date.today()
-                start_d = end_d - timedelta(days=_LOOKBACK_YEARS * 365 + 60)
-                df = adapter.get_ohlcv_daily(ticker, start_d, end_d)
-                if df is not None and len(df) >= 30 and isinstance(indicators, dict):
-                    entry = compute_entry_stop_targets(
-                        df,
-                        indicators,
-                        {"supports": supports, "resistances": resistances},
-                        stage=cached_row.get("stage"),
-                    )
-            except Exception as exc:
-                logger.debug("Live trade-plan refresh miss for %s: %s", ticker, exc)
+                    adapter = TickerChartAdapter()
+                    end_d = date.today()
+                    start_d = end_d - timedelta(days=_LOOKBACK_YEARS * 365 + 60)
+                    df = adapter.get_ohlcv_daily(ticker, start_d, end_d)
+                    if df is not None and len(df) >= 30 and isinstance(indicators, dict):
+                        entry = compute_entry_stop_targets(
+                            df,
+                            indicators,
+                            {"supports": supports, "resistances": resistances},
+                            stage=cached_row.get("stage"),
+                        )
+                except Exception as exc:
+                    logger.debug("Deferred trade-plan recompute miss for %s: %s", ticker, exc)
             result = {
                 "ticker": ticker.upper(),
                 "stage": cached_row.get("stage"),
@@ -727,6 +992,13 @@ def _run_analysis(ticker: str) -> Optional[dict]:
                 "resistances": resistances,
                 "entry": entry,
                 "indicators": indicators,
+                "continue_rising": cached_row.get("continue_rising", False),
+                "continue_rising_badge": cached_row.get("continue_rising_badge"),
+                "continue_rising_label": cached_row.get("continue_rising_label"),
+                "continue_rising_reason": cached_row.get("continue_rising_reason"),
+                "continue_rising_exhaustion_count": cached_row.get("continue_rising_exhaustion_count", 0),
+                "continue_rising_exhaustion_signals": cached_row.get("continue_rising_exhaustion_signals", []),
+                "risk_warning_score": int(cached_row.get("risk_warning_score") or 0),
                 "days_of_history": cached_row.get("days_of_history"),
                 "computed_at": cached_row.get("computed_at"),
             }
@@ -813,6 +1085,14 @@ def _run_analysis(ticker: str) -> Optional[dict]:
             "why_conflicting": explanation.get("why_conflicting", []),
             "what_invalidates": explanation.get("what_invalidates", []),
             "veto_reasons": recommendation_payload.get("veto_reasons", []),
+            "continue_rising": recommendation_payload.get("continue_rising", False),
+            "continue_rising_badge": recommendation_payload.get("continue_rising_badge"),
+            "continue_rising_label": recommendation_payload.get("continue_rising_label"),
+            "continue_rising_reason": recommendation_payload.get("continue_rising_reason"),
+            "continue_rising_exhaustion_count": recommendation_payload.get("continue_rising_exhaustion_count", 0),
+            "continue_rising_exhaustion_signals": recommendation_payload.get("continue_rising_exhaustion_signals", []),
+            "risk_warning_score": int(recommendation_payload.get("risk_warning_score") or 0),
+            "risky_near_resistance": recommendation_payload.get("risky_near_resistance", False),
             "volume_context": volume_context,
             "days_of_history": len(df),
             "computed_at": datetime.utcnow().date().isoformat(),
@@ -863,7 +1143,12 @@ async def get_scanner(
     )
     if use_resp_cache:
         cached = _SCANNER_RESP_CACHE
-        return ScannerResponse(status="ok", count=len(cached), stocks=cached)
+        return ScannerResponse(
+            status="ok",
+            count=len(cached),
+            stocks=cached,
+            **_scanner_progress_fields("ok", len(cached)),
+        )
 
     # ── DB fast path: read pre-computed ratings ──────────────────────────────
     # NOTE: Live compute fallback removed — it fetched OHLCV for 100+ stocks
@@ -871,6 +1156,7 @@ async def get_scanner(
     # The background warmup (started at app startup) populates ee_ratings_cache.
     # Return warming_up immediately when cache is cold so the UI stays responsive.
     try:
+        from app.services import tickerchart_service as tc
         from app.services.eagle_eye.rating_engine import is_stock_active
         from app.services.eagle_eye.store import load_all_ratings, load_ohlcv
 
@@ -879,7 +1165,12 @@ async def get_scanner(
             # Cache is cold — retrigger a best-effort background warmup and respond immediately.
             _trigger_eagle_eye_recompute("scanner_cache_cold")
             logger.info("Eagle Eye scanner: cache cold, returning warming_up status")
-            return ScannerResponse(status="warming_up", count=0, stocks=[])
+            return ScannerResponse(
+                status="warming_up",
+                count=0,
+                stocks=[],
+                **_scanner_progress_fields("warming_up", 0),
+            )
 
         # ── Use cached meta map (rebuilt at most every 10 min) ───────────────
         meta_map = _get_meta_map()
@@ -927,14 +1218,43 @@ async def get_scanner(
 
             fmeta = fundamentals_map.get(t, {})
             bvps = _safe_float(fmeta.get("book_value_per_share"))
-            pe_ratio = _safe_float(fmeta.get("pe_ratio"))
+            pe_ratio = None
 
-            # Derive P/E from latest scanner price and EPS when direct PE is missing.
+            # Primary PE path: use TTM EPS with the latest scanner price so PE
+            # moves with daily/intraday price changes.
+            eps_latest = _safe_float(fmeta.get("eps"))
+            last_price = _safe_float(row.get("last_price"))
+
+            # If local snapshot PE diverges sharply from the scanner-price/TTM-EPS
+            # equation, refresh EPS from TickerChart FactSet feed (cacheserver path).
+            snapshot_pe = _sanitize_pe_ratio(fmeta.get("pe_ratio"))
+            if last_price is not None:
+                should_refresh_eps = eps_latest is None or eps_latest <= 0
+                if (
+                    not should_refresh_eps
+                    and snapshot_pe is not None
+                    and eps_latest is not None
+                    and eps_latest > 0
+                ):
+                    pe_from_eps = _sanitize_pe_ratio((last_price / _KSE_PRICE_DIVISOR) / eps_latest)
+                    if pe_from_eps is not None:
+                        drift = abs(pe_from_eps - snapshot_pe) / max(snapshot_pe, 1.0)
+                        should_refresh_eps = drift >= _PE_EPS_DRIFT_REFRESH_THRESHOLD
+
+                if should_refresh_eps:
+                    try:
+                        eps_live = _safe_float(tc.fetch_factset_ltm_eps(t, "KSE"))
+                        if eps_live is not None and eps_live > 0:
+                            eps_latest = eps_live
+                    except Exception as exc:
+                        logger.debug("FactSet EPS refresh skipped for %s: %s", t, exc)
+
+            if eps_latest is not None and eps_latest > 0 and last_price is not None:
+                pe_ratio = _sanitize_pe_ratio((last_price / _KSE_PRICE_DIVISOR) / eps_latest)
+
+            # Fallback only when TTM EPS is unavailable.
             if pe_ratio is None:
-                eps_latest = _safe_float(fmeta.get("eps"))
-                last_price = _safe_float(row.get("last_price"))
-                if eps_latest is not None and eps_latest > 0 and last_price is not None:
-                    pe_ratio = last_price / eps_latest
+                pe_ratio = snapshot_pe
 
             results.append(RatedStock(
                 ticker=t,
@@ -952,6 +1272,15 @@ async def get_scanner(
                 pe_ratio=round(pe_ratio, 2) if pe_ratio is not None else None,
                 computed_at=row.get("computed_at"),
                 volume_context=vc_summary,
+                continue_rising=bool(row.get("continue_rising", False)),
+                continue_rising_badge=row.get("continue_rising_badge"),
+                continue_rising_label=row.get("continue_rising_label"),
+                continue_rising_reason=row.get("continue_rising_reason"),
+                continue_rising_exhaustion_count=int(row.get("continue_rising_exhaustion_count") or 0),
+                continue_rising_exhaustion_signals=list(row.get("continue_rising_exhaustion_signals") or []),
+                risk_warning_score=int(row.get("risk_warning_score") or 0),
+                risky_near_resistance=bool(row.get("risky_near_resistance", False)),
+                risk_reward_ratio=_safe_float(row.get("risk_reward_ratio")),
             ))
 
         # Cache the unfiltered response for 30 s
@@ -959,11 +1288,21 @@ async def get_scanner(
             _SCANNER_RESP_CACHE = results
             _SCANNER_RESP_CACHE_AT = now
 
-        return ScannerResponse(status="ok", count=len(results), stocks=results)
+        return ScannerResponse(
+            status="ok",
+            count=len(results),
+            stocks=results,
+            **_scanner_progress_fields("ok", len(results)),
+        )
 
     except Exception as exc:
         logger.warning("DB scanner failed: %s", exc)
-        return ScannerResponse(status="error", count=0, stocks=[])
+        return ScannerResponse(
+            status="error",
+            count=0,
+            stocks=[],
+            **_scanner_progress_fields("error", 0),
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -981,7 +1320,9 @@ async def get_stock_analysis(
     Includes stage, rating, confidence, SR levels, entry/stop/targets, and signals.
     """
     t = ticker.upper().strip()
-    analysis = _run_analysis(t)
+    # _run_analysis is CPU/IO-heavy synchronous code; run it off the main
+    # event loop so concurrent API calls remain responsive.
+    analysis = await asyncio.to_thread(_run_analysis, t)
     if analysis is None:
         raise HTTPException(status_code=404, detail=f"No data found for ticker '{t}'")
 
@@ -1038,6 +1379,14 @@ async def get_stock_analysis(
         rating=analysis["rating"],
         confidence=analysis["confidence"],
         thesis=analysis["thesis"],
+        continue_rising=bool(analysis.get("continue_rising", False)),
+        continue_rising_badge=analysis.get("continue_rising_badge"),
+        continue_rising_label=analysis.get("continue_rising_label"),
+        continue_rising_reason=analysis.get("continue_rising_reason"),
+        continue_rising_exhaustion_count=int(analysis.get("continue_rising_exhaustion_count") or 0),
+        continue_rising_exhaustion_signals=list(analysis.get("continue_rising_exhaustion_signals") or []),
+        risk_warning_score=int(analysis.get("risk_warning_score") or 0),
+        risky_near_resistance=bool(analysis.get("risky_near_resistance", False)),
         supports=sr_supports,
         resistances=sr_resistances,
         entry_primary=et.get("entry_primary"),
@@ -1098,7 +1447,7 @@ async def get_stock_dna(
             status_code=200,
             content={
                 "status": "error",
-                "message": f"Failed to build DNA response for {t}: {exc}",
+                "message": f"Failed to build DNA response for {t}. Please retry shortly.",
                 "ticker": t,
             },
         )
@@ -1270,6 +1619,24 @@ async def _get_stock_dna_inner(t: str, cache_key: str, load_dna):
         setup_examples=setup_examples,
         dominant_pattern=stored.get("dominant_pattern"),
         computed_at=stored.get("computed_at", datetime.utcnow().date().isoformat()),
+        optimal_hold_window_days=stored.get("optimal_hold_window_days"),
+        avg_entry_quality_score=stored.get("avg_entry_quality_score"),
+        pullback_entry_profile=(
+            DNAPullbackEntryProfileResponse(**stored.get("pullback_entry_profile", {}))
+            if isinstance(stored.get("pullback_entry_profile"), dict)
+            else None
+        ),
+        historical_target_clusters=[
+            DNAHistoricalTargetClusterResponse(**cluster)
+            for cluster in (stored.get("historical_target_clusters") or [])
+            if isinstance(cluster, dict)
+        ],
+        cycle_profile=(
+            DNACycleProfileResponse(**stored.get("cycle_profile", {}))
+            if isinstance(stored.get("cycle_profile"), dict)
+            else None
+        ),
+        exit_signal_profile=_build_exit_signal_profile_response(stored.get("exit_signal_profile")),
     )
     _DNA_CACHE[cache_key] = dna_response.model_dump()
     return DNAResponse(status="ok", data=dna_response)
@@ -1336,7 +1703,10 @@ async def get_stock_events(
         raise
     except Exception as exc:
         logger.exception("Events detection failed for %s", t)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to fetch historical events right now.",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1346,7 +1716,7 @@ async def get_stock_events(
 @router.post("/refresh", response_model=RefreshResponse, summary="Queue background recompute")
 async def refresh_stocks(
     body: RefreshRequest,
-    _user: TokenData = Depends(get_current_user),
+    _admin: TokenData = Depends(require_admin),
 ):
     """
     Invalidate the in-memory cache for the specified tickers and queue a
@@ -1354,6 +1724,11 @@ async def refresh_stocks(
 
     Returns a job_id and estimated_minutes (0.5 min per ticker as a rough guide).
     """
+    global _SCANNER_RESP_CACHE, _SCANNER_RESP_CACHE_AT
+
+    _SCANNER_RESP_CACHE = None
+    _SCANNER_RESP_CACHE_AT = 0.0
+
     invalidated = 0
     for ticker in body.tickers:
         t = ticker.upper().strip()
@@ -1776,7 +2151,7 @@ async def get_simulator_performance(
 async def close_simulator_position(
     position_id: int,
     body: dict,
-    user: TokenData = Depends(get_current_user),
+    _admin: TokenData = Depends(require_admin),
 ):
     """Close an open simulator position at the provided price (manual override)."""
     current_price = body.get("current_price")
@@ -1787,11 +2162,14 @@ async def close_simulator_position(
         from app.services.eagle_eye.simulator import get_engine
         result = get_engine().manual_override_close(position_id, float(current_price))
         return {"status": "ok", **result}
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Position not found.")
     except Exception as exc:
         logger.exception("Simulator manual close failed: %s", exc)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to close simulator position right now.",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1852,7 +2230,10 @@ async def reset_simulator_now(
         return {"status": "ok", "result": result}
     except Exception as exc:
         logger.exception("Simulator reset failed: %s", exc)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to reset simulator right now.",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1861,7 +2242,7 @@ async def reset_simulator_now(
 
 @router.post("/simulator/run", summary="Manually trigger simulator daily run")
 async def run_simulator_now(
-    user: TokenData = Depends(get_current_user),
+    _admin: TokenData = Depends(require_admin),
 ):
     try:
         from app.services.eagle_eye.simulator import get_engine
@@ -1869,16 +2250,10 @@ async def run_simulator_now(
         return {"status": "ok", "result": result}
     except Exception as exc:
         logger.exception("Manual simulator run failed: %s", exc)
-        raise HTTPException(status_code=500, detail=str(exc))
-
-    job_id = str(uuid.uuid4())
-    est_minutes = round(len(body.tickers) * 0.5, 1)
-    return RefreshResponse(
-        status="ok",
-        job_id=job_id,
-        tickers_queued=len(body.tickers),
-        estimated_minutes=est_minutes,
-    )
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to run simulator right now.",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -2086,6 +2461,77 @@ def _resolve_ml_display_state() -> tuple[bool, bool, Optional[str], bool]:
     config_enabled = settings.ENABLE_ML_DISPLAY
     enabled = config_enabled and not auto_disabled
     return enabled, auto_disabled, disabled_reason, config_enabled
+
+
+# ── Similar historical setups (pattern-store nearest-neighbour query) ─────────
+
+@router.get("/stocks/{ticker}/similar-setups", summary="Similar historical setups via pattern store")
+async def get_similar_setups(
+    ticker: str,
+    top_k: int = 5,
+    _user: TokenData = Depends(get_current_user),
+):
+    """
+    Return the top-K historical dates for *ticker* whose indicator fingerprint
+    is most similar to today's — identified by cosine similarity in the ML
+    pattern store (NearestNeighbors index).
+
+    Each result includes:
+      - date: the historical setup date
+      - similarity: cosine similarity 0–1 (higher = more similar)
+      - primary_label: 1 if that setup led to a breakout, 0 if not
+      - max_excursion_pct: best forward gain achieved after that setup
+
+    Returns status="no_index" when the pattern index has not yet been built
+    for this ticker (run build_all_pattern_indices() to populate).
+    """
+    import numpy as np
+    from datetime import date as _date
+    from app.services.eagle_eye.store import load_ohlcv
+    from app.services.eagle_eye.ml.feature_builder import build_inference_row
+    from app.services.eagle_eye.ml.pattern_store import load_pattern_index, query_similar
+
+    t = ticker.upper().strip()
+    top_k = max(1, min(top_k, 20))
+
+    try:
+        ohlcv = load_ohlcv(t)
+    except Exception as exc:
+        raise HTTPException(status_code=404, detail=f"OHLCV data unavailable for {t}: {exc}") from exc
+
+    if ohlcv is None or ohlcv.empty:
+        raise HTTPException(status_code=404, detail=f"No OHLCV data found for {t}")
+
+    feature_row = build_inference_row(ticker=t, ohlcv=ohlcv)
+    if feature_row is None:
+        return {"ticker": t, "status": "insufficient_data", "setups": []}
+
+    bundle = load_pattern_index(t)
+    if bundle is None:
+        return {"ticker": t, "status": "no_index", "setups": []}
+
+    feature_cols: list = bundle["feature_cols"]
+    query_vec = np.array(
+        [float(feature_row.get(f, 0.0)) for f in feature_cols],
+        dtype=np.float32,
+    )
+
+    results = query_similar(
+        ticker=t,
+        query_vector=query_vec,
+        query_date=_date.today(),
+        top_k=top_k,
+        bundle=bundle,
+    )
+
+    return {
+        "ticker": t,
+        "status": "ok",
+        "as_of": _date.today().isoformat(),
+        "feature_count": len(feature_cols),
+        "setups": results,
+    }
+
 
 @router.get("/ml/display-state", summary="ML display kill-switch state")
 async def get_ml_display_state(

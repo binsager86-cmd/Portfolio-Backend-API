@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.42193350562290766,
-  "mae": 9.167960420048543,
-  "rmse": 13.177628737254883,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.06092211840298717,
+  "mae": 27.38826038383197,
+  "rmse": 30.895084794903966,
+  "auc": 0.06092211840298717,
+  "mean_auc": 0.06092211840298717,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 398,
+  "n_train_events": 597,
   "train_date_range": {
-    "start": "2023-10-02",
-    "end": "2026-05-12"
+    "start": "2023-07-10",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.0609",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.10410247851227128,
-      "mae": 14.951586726202747,
-      "rmse": 22.971086995076575,
+      "spearman": -0.14568514229939653,
+      "mae": 26.847268769174363,
+      "rmse": 30.792058742036172,
       "fold": 1,
-      "train_size": 290,
-      "test_size": 19,
-      "best_iteration": 145
+      "train_size": 358,
+      "test_size": 59,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.9970264578834981,
-      "mae": 0.7633955792721283,
-      "rmse": 1.0602274892348644,
+      "spearman": 0.13062822099052104,
+      "mae": 25.46797294274751,
+      "rmse": 30.35209746282848,
+      "fold": 2,
+      "train_size": 417,
+      "test_size": 60,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.04307205234851511,
+      "mae": 44.862648290118905,
+      "rmse": 47.51410723044897,
+      "fold": 3,
+      "train_size": 477,
+      "test_size": 60,
+      "best_iteration": 1
+    },
+    {
+      "spearman": -0.5176143855843022,
+      "mae": 24.131113535894023,
+      "rmse": 28.180113220108424,
       "fold": 4,
-      "train_size": 330,
-      "test_size": 31,
-      "best_iteration": 139
+      "train_size": 537,
+      "test_size": 30,
+      "best_iteration": 26
     },
     {
-      "spearman": 0.3728765374974961,
-      "mae": 11.788898954670753,
-      "rmse": 15.501571727453205,
+      "spearman": 0.7942098465595984,
+      "mae": 15.63229838122504,
+      "rmse": 17.637047319097764,
       "fold": 5,
-      "train_size": 361,
-      "test_size": 37,
-      "best_iteration": 226
+      "train_size": 567,
+      "test_size": 30,
+      "best_iteration": 174
     }
   ],
   "tier": "per_stock",
   "identifier": "ENERGYH",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

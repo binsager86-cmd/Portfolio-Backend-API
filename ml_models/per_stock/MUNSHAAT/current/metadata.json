@@ -1,57 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.6413875739370545,
-  "mae": 22.960790551174643,
-  "rmse": 25.27784526837882,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.3024687818299444,
+  "mae": 27.14391709609067,
+  "rmse": 31.92827181432882,
+  "auc": 0.3024687818299444,
+  "mean_auc": 0.3024687818299444,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 527,
+  "n_train_events": 671,
   "train_date_range": {
-    "start": "2023-05-11",
-    "end": "2026-05-10"
+    "start": "2023-07-05",
+    "end": "2026-03-30"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.7878169723634583,
-      "mae": 57.44787506650781,
-      "rmse": 61.24633604354205,
+      "spearman": 0.5478826200011109,
+      "mae": 26.87755239213425,
+      "rmse": 32.67282027733608,
       "fold": 1,
-      "train_size": 207,
-      "test_size": 180,
-      "best_iteration": 30
+      "train_size": 402,
+      "test_size": 67,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.042317483410239255,
-      "mae": 20.95687312023969,
-      "rmse": 22.557645224989407,
+      "spearman": -0.21704352233776544,
+      "mae": 23.68888870313095,
+      "rmse": 28.311902074447012,
       "fold": 2,
-      "train_size": 387,
-      "test_size": 65,
-      "best_iteration": 12
+      "train_size": 469,
+      "test_size": 67,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.7771009924746107,
-      "mae": 2.1653387582573274,
-      "rmse": 2.8550429337950596,
+      "spearman": 0.44333753388306146,
+      "mae": 24.0902215841932,
+      "rmse": 28.901007942141412,
       "fold": 3,
-      "train_size": 452,
-      "test_size": 36,
-      "best_iteration": 64
+      "train_size": 536,
+      "test_size": 67,
+      "best_iteration": 42
     },
     {
-      "spearman": 0.9583148474999099,
-      "mae": 11.273075259693751,
-      "rmse": 14.452356871188751,
+      "spearman": 0.08725313781358403,
+      "mae": 48.84658287058044,
+      "rmse": 49.5522112986458,
+      "fold": 4,
+      "train_size": 603,
+      "test_size": 34,
+      "best_iteration": 38
+    },
+    {
+      "spearman": 0.650914139789731,
+      "mae": 12.216339930414549,
+      "rmse": 20.20341747907382,
       "fold": 5,
-      "train_size": 501,
-      "test_size": 26,
-      "best_iteration": 85
+      "train_size": 637,
+      "test_size": 34,
+      "best_iteration": 128
     }
   ],
   "tier": "per_stock",
   "identifier": "MUNSHAAT",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

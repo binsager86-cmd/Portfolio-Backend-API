@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": -0.019534790952462383,
-  "mae": 6.184993509598379,
-  "rmse": 6.410832947094114,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.2688642306571915,
+  "mae": 27.76946516919977,
+  "rmse": 32.19645100836361,
+  "auc": 0.2688642306571915,
+  "mean_auc": 0.2688642306571915,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 713,
+  "n_train_events": 694,
   "train_date_range": {
-    "start": "2023-06-13",
-    "end": "2026-04-26"
+    "start": "2023-05-28",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "spearman_below_threshold_-0.0195",
+  "rejected_reason": "spearman_below_threshold_0.2689",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.44373203291589,
-      "mae": 10.142044774248758,
-      "rmse": 10.390535719920319,
+      "spearman": 0.28554126043484557,
+      "mae": 27.424992342826485,
+      "rmse": 32.66163343975344,
       "fold": 1,
-      "train_size": 385,
-      "test_size": 130,
-      "best_iteration": 1
+      "train_size": 416,
+      "test_size": 69,
+      "best_iteration": 2
     },
     {
-      "spearman": 0.5305191371154904,
-      "mae": 3.3900494164906303,
-      "rmse": 3.5793772038277987,
+      "spearman": -0.04225164252810105,
+      "mae": 23.852890788602306,
+      "rmse": 29.517264645640992,
+      "fold": 2,
+      "train_size": 485,
+      "test_size": 70,
+      "best_iteration": 2
+    },
+    {
+      "spearman": 0.30660320443175565,
+      "mae": 28.503977381052373,
+      "rmse": 33.243742652672346,
       "fold": 3,
-      "train_size": 553,
-      "test_size": 104,
-      "best_iteration": 10
+      "train_size": 555,
+      "test_size": 69,
+      "best_iteration": 63
     },
     {
-      "spearman": -0.14539147705698754,
-      "mae": 5.022886338055751,
-      "rmse": 5.262585917534228,
+      "spearman": 0.08974912144277185,
+      "mae": 40.736543466053604,
+      "rmse": 41.978502381217716,
+      "fold": 4,
+      "train_size": 624,
+      "test_size": 35,
+      "best_iteration": 18
+    },
+    {
+      "spearman": 0.7046792095046854,
+      "mae": 18.328921867464086,
+      "rmse": 23.58111192253358,
       "fold": 5,
-      "train_size": 676,
-      "test_size": 37,
-      "best_iteration": 10
+      "train_size": 659,
+      "test_size": 35,
+      "best_iteration": 62
     }
   ],
   "tier": "per_stock",
   "identifier": "NCCI",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

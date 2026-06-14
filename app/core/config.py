@@ -58,6 +58,7 @@ class Settings(BaseSettings):
     TECHNICAL_BATCH_MINUTE: int = 5
     TECHNICAL_BATCH_MAX_CONCURRENCY: int = 4
     TECHNICAL_BATCH_SEGMENT: str = "PREMIER"
+    STOCKANALYSIS_MAX_WORKERS: int = 4  # bounded concurrency for daily fundamentals scrape
     PUSH_NOTIFICATIONS_ENABLED: bool = True
 
     # App version gating
@@ -71,6 +72,8 @@ class Settings(BaseSettings):
     EODHD_API_TOKEN: str = ""           # EODHD token for /api/v1/trade-signals/whale-candles (legacy)
     TICKERCHART_USERNAME: str = ""     # TickerChart Live account (replaces EODHD)
     TICKERCHART_PASSWORD: str = ""     # TickerChart Live password (plaintext; sent base64-encoded)
+    TICKERCHART_MARKET_INFO_PATH: str = ""  # Optional full path to MarketInfo.json override
+    TICKERCHART_FLATFILES_PATH: str = ""    # Optional full path to TickerChart FlatFiles root
 
     # Eagle Eye — ML artifact paths (relative to backend-api/ or absolute)
     ML_MATRIX_ROOT: str = "./ml_training_matrix"

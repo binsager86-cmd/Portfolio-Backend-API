@@ -97,6 +97,14 @@ async def trigger_price_update(
 @router.get("/status")
 async def cron_status():
     """Return the last price-update and snapshot run info (no auth required)."""
+    last_fundamentals_run = None
+    try:
+        from app.cron.fundamentals_updater import get_last_run as get_fundamentals_last_run
+
+        last_fundamentals_run = get_fundamentals_last_run() or None
+    except Exception:
+        last_fundamentals_run = None
+
     return {
         "status": "ok",
         "cron_key_configured": bool(settings.CRON_SECRET_KEY),
@@ -104,6 +112,7 @@ async def cron_status():
         "schedule": f"{settings.PRICE_UPDATE_HOUR:02d}:{settings.PRICE_UPDATE_MINUTE:02d} Asia/Kuwait",
         "last_price_update": _last_run if _last_run else None,
         "last_snapshot_save": _last_snapshot_run if _last_snapshot_run else None,
+        "last_fundamentals_refresh": last_fundamentals_run,
     }
 
 
@@ -165,7 +174,10 @@ async def trigger_price_update_and_snapshot(
     """
     _verify_cron_key(x_cron_key, key)
 
+    from app.cron.fundamentals_updater import run_tickerchart_fundamentals_update
     from app.cron.snapshot_saver import run_snapshot_save
+
+    fundamentals_result = run_tickerchart_fundamentals_update()
 
     user_ids = _resolve_user_ids(user_id)
     logger.info("🚀 Price update + snapshot triggered via API for user_ids=%s", user_ids)
@@ -197,8 +209,12 @@ async def trigger_price_update_and_snapshot(
 
     return {
         "status": "ok",
-        "message": f"Prices updated ({total_updated}/{total_found}), snapshots saved for {len(user_ids)} user(s)",
+        "message": (
+            f"Fundamentals refreshed, prices updated ({total_updated}/{total_found}), "
+            f"snapshots saved for {len(user_ids)} user(s)"
+        ),
         "data": {
+            "fundamentals": fundamentals_result,
             "prices": all_price_results,
             "snapshots": all_snapshot_results,
         },
@@ -230,4 +246,70 @@ async def trigger_portfolio_alerts(
         "status": "ok",
         "message": f"Dispatched portfolio alerts to {len(user_ids)} user(s); {result.get('total_sent', 0)} push(es) sent",
         "data": result,
+    }
+
+
+@router.post("/update-fundamentals")
+async def trigger_fundamentals_update(
+    x_cron_key: Optional[str] = Header(None, alias="X-Cron-Key"),
+    key: Optional[str] = Query(None),
+):
+    """
+    Refresh Eagle Eye fundamentals (PE, EPS, BVPS) for the entire universe.
+
+    Reads fresh data from StockAnalysis/TickerChart and upserts into
+    ``ml_fundamentals``. Call this once on a fresh deployment to ensure
+    B/V and P/E columns are populated before the nightly scheduler fires.
+    """
+    _verify_cron_key(x_cron_key, key)
+
+    from app.cron.fundamentals_updater import run_tickerchart_fundamentals_update
+
+    logger.info("📘 Fundamentals update triggered via API")
+    result = run_tickerchart_fundamentals_update()
+    return {
+        "status": "ok" if result.get("success") else "error",
+        "message": (
+            f"Fundamentals refreshed: {result.get('upserted', 0)} upserted, "
+            f"{result.get('skipped_existing', 0)} skipped, "
+            f"{result.get('failed', 0)} failed"
+        ),
+        "data": result,
+    }
+
+
+@router.post("/eagle-eye-recompute")
+async def trigger_eagle_eye_recompute(
+    x_cron_key: Optional[str] = Header(None, alias="X-Cron-Key"),
+    key: Optional[str] = Query(None),
+    dna_refresh: bool = Query(False, description="Also rebuild DNA profiles (slow)"),
+):
+    """
+    Trigger a full Eagle Eye nightly recompute (OHLCV fetch + ratings).
+
+    Equivalent to the scheduled 14:05 job. Use this to force a refresh
+    immediately after deploying a code change or after populating the
+    fundamentals table for the first time.
+    """
+    _verify_cron_key(x_cron_key, key)
+
+    import threading
+    from app.services.eagle_eye.ingest import run_nightly_recompute
+
+    logger.info("👁️ Eagle Eye recompute triggered via API (dna_refresh=%s)", dna_refresh)
+
+    def _run() -> None:
+        try:
+            run_nightly_recompute(dna_refresh=dna_refresh, verbose=False)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("👁️ Eagle Eye recompute via API failed: %s", exc)
+
+    threading.Thread(target=_run, daemon=True).start()
+
+    return {
+        "status": "accepted",
+        "message": (
+            "Eagle Eye recompute started in background. "
+            "Ratings will update progressively over the next ~20 minutes."
+        ),
     }

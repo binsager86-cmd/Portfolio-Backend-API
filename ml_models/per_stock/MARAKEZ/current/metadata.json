@@ -1,57 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.3543672639907399,
-  "mae": 17.828795726645325,
-  "rmse": 22.618800293189043,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.1032674750230275,
+  "mae": 30.59964094968234,
+  "rmse": 33.715993649650095,
+  "auc": 0.1032674750230275,
+  "mean_auc": 0.1032674750230275,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 427,
+  "n_train_events": 614,
   "train_date_range": {
-    "start": "2023-07-16",
-    "end": "2026-04-16"
+    "start": "2023-06-15",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.1033",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.30276503540974914,
-      "mae": 5.817758901043742,
-      "rmse": 12.469093507458629,
+      "spearman": -0.2425745998280378,
+      "mae": 39.098001533457655,
+      "rmse": 40.189943536026796,
       "fold": 1,
-      "train_size": 353,
-      "test_size": 11,
-      "best_iteration": 135
+      "train_size": 368,
+      "test_size": 61,
+      "best_iteration": 1
     },
     {
-      "spearman": 0.019779024913809135,
-      "mae": 18.286058706033536,
-      "rmse": 25.533901899011642,
-      "fold": 3,
-      "train_size": 371,
-      "test_size": 23,
+      "spearman": -0.2704000794190836,
+      "mae": 31.96636945728707,
+      "rmse": 36.3153737839823,
+      "fold": 2,
+      "train_size": 429,
+      "test_size": 62,
       "best_iteration": 40
     },
     {
-      "spearman": 0.9949874371066199,
-      "mae": 11.816065397109242,
-      "rmse": 13.87543957615454,
-      "fold": 4,
-      "train_size": 394,
-      "test_size": 11,
-      "best_iteration": 25
+      "spearman": 0.5129696715085513,
+      "mae": 19.683037857245907,
+      "rmse": 24.33452300177715,
+      "fold": 3,
+      "train_size": 491,
+      "test_size": 61,
+      "best_iteration": 170
     },
     {
-      "spearman": 0.09993755853278154,
-      "mae": 35.395299902394775,
-      "rmse": 38.59676619013136,
+      "spearman": 0.5782258064516129,
+      "mae": 27.383578660550526,
+      "rmse": 29.509599467049313,
+      "fold": 4,
+      "train_size": 552,
+      "test_size": 31,
+      "best_iteration": 78
+    },
+    {
+      "spearman": -0.061883423597905364,
+      "mae": 34.86721723987055,
+      "rmse": 38.2305284594149,
       "fold": 5,
-      "train_size": 405,
-      "test_size": 22,
-      "best_iteration": 76
+      "train_size": 583,
+      "test_size": 31,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "MARAKEZ",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

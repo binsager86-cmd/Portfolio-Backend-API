@@ -225,6 +225,15 @@ async def lifespan(app: FastAPI):
                     logger.info("Corrected yf_ticker for %d stock(s)", corrected)
         except Exception as e:
             logger.warning("yf_ticker correction skipped: %s", e)
+
+    # ── Warm FX cache once at startup to avoid first-request cold fetch cost ──
+    try:
+        from app.services.fx_service import get_usd_kwd_rate
+        fx_rate = await asyncio.to_thread(get_usd_kwd_rate)
+        logger.info("✅  FX cache warmed at startup (USD/KWD=%s)", round(float(fx_rate), 6))
+    except Exception as fx_err:
+        logger.warning("⚠️  FX startup warmup skipped: %s", fx_err)
+
     start_scheduler()
 
     # ── Production security audit ────────────────────────────────────

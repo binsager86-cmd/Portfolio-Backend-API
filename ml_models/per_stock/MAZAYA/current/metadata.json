@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.9499007661652071,
-  "mae": 10.701753838296073,
-  "rmse": 12.026773686627996,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.1822853360681037,
+  "mae": 29.983011410698214,
+  "rmse": 33.68698975053668,
+  "auc": 0.1822853360681037,
+  "mean_auc": 0.1822853360681037,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 567,
+  "n_train_events": 683,
   "train_date_range": {
-    "start": "2023-05-31",
-    "end": "2026-04-26"
+    "start": "2023-06-13",
+    "end": "2026-03-30"
   },
-  "rejected_reason": "",
+  "rejected_reason": "spearman_below_threshold_0.1823",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.9714595134891968,
-      "mae": 25.160228858871303,
-      "rmse": 28.67848716209843,
+      "spearman": 0.6486989627007174,
+      "mae": 21.536696980406262,
+      "rmse": 26.863097152255513,
+      "fold": 1,
+      "train_size": 409,
+      "test_size": 69,
+      "best_iteration": 300
+    },
+    {
+      "spearman": -0.29955576832882597,
+      "mae": 28.879382716742825,
+      "rmse": 31.979587288928062,
       "fold": 2,
-      "train_size": 324,
-      "test_size": 114,
-      "best_iteration": 14
+      "train_size": 478,
+      "test_size": 68,
+      "best_iteration": 3
     },
     {
-      "spearman": 0.9198071897145027,
-      "mae": 5.404519596077791,
-      "rmse": 5.681794485460898,
+      "spearman": 0.35265314049135593,
+      "mae": 32.39224752789171,
+      "rmse": 35.62535807434341,
       "fold": 3,
-      "train_size": 438,
-      "test_size": 66,
-      "best_iteration": 16
+      "train_size": 546,
+      "test_size": 68,
+      "best_iteration": 40
     },
     {
-      "spearman": 0.9584355952919218,
-      "mae": 1.5405130599391237,
-      "rmse": 1.7200394123246494,
+      "spearman": 0.43781051099942275,
+      "mae": 38.627790730931274,
+      "rmse": 40.59701915129377,
+      "fold": 4,
+      "train_size": 614,
+      "test_size": 34,
+      "best_iteration": 1
+    },
+    {
+      "spearman": -0.22818016552215145,
+      "mae": 28.478939097519003,
+      "rmse": 33.369887085862665,
       "fold": 5,
-      "train_size": 522,
-      "test_size": 45,
-      "best_iteration": 72
+      "train_size": 648,
+      "test_size": 35,
+      "best_iteration": 1
     }
   ],
   "tier": "per_stock",
   "identifier": "MAZAYA",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

@@ -1,39 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.8535533905932737,
-  "mae": 0.39093499234424794,
-  "rmse": 0.5442077712338698,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.7225641428622761,
+  "mae": 14.645612328334725,
+  "rmse": 17.901493728819865,
+  "auc": 0.7225641428622761,
+  "mean_auc": 0.7225641428622761,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 294,
+  "n_train_events": 240,
   "train_date_range": {
-    "start": "2024-10-09",
-    "end": "2026-05-21"
+    "start": "2024-06-23",
+    "end": "2026-03-17"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 1.0,
-      "mae": 0.192366666914405,
-      "rmse": 0.28631223887958757,
-      "fold": 4,
-      "train_size": 285,
-      "test_size": 4,
-      "best_iteration": 1
+      "spearman": 0.800959403659161,
+      "mae": 14.399287078946896,
+      "rmse": 18.259334368471517,
+      "fold": 1,
+      "train_size": 144,
+      "test_size": 24,
+      "best_iteration": 283
     },
     {
-      "spearman": 0.7071067811865475,
-      "mae": 0.5895033177740909,
-      "rmse": 0.8021033035881521,
+      "spearman": 0.6326391067559284,
+      "mae": 11.244800716747735,
+      "rmse": 13.651567367788392,
+      "fold": 2,
+      "train_size": 168,
+      "test_size": 24,
+      "best_iteration": 103
+    },
+    {
+      "spearman": 0.7769319071873654,
+      "mae": 21.826996780440027,
+      "rmse": 23.82060690732979,
+      "fold": 3,
+      "train_size": 192,
+      "test_size": 24,
+      "best_iteration": 231
+    },
+    {
+      "spearman": 0.5866053989743822,
+      "mae": 15.349755445619872,
+      "rmse": 17.773396370297267,
+      "fold": 4,
+      "train_size": 216,
+      "test_size": 12,
+      "best_iteration": 108
+    },
+    {
+      "spearman": 0.8156848977345432,
+      "mae": 10.407221619919087,
+      "rmse": 16.00256363021235,
       "fold": 5,
-      "train_size": 289,
-      "test_size": 5,
-      "best_iteration": 11
+      "train_size": 228,
+      "test_size": 12,
+      "best_iteration": 223
     }
   ],
   "tier": "per_stock",
   "identifier": "QIC",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

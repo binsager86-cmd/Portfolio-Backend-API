@@ -1,39 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.3024094956736234,
-  "mae": 8.092575910463946,
-  "rmse": 10.025066275673266,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.3038128682323228,
+  "mae": 24.735423877294448,
+  "rmse": 29.427928470864725,
+  "auc": 0.3038128682323228,
+  "mean_auc": 0.3038128682323228,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 603,
+  "n_train_events": 648,
   "train_date_range": {
-    "start": "2023-05-03",
-    "end": "2026-04-26"
+    "start": "2023-07-11",
+    "end": "2026-03-29"
   },
   "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": 0.22097053747426648,
-      "mae": 13.936184650664895,
-      "rmse": 14.528131926704148,
+      "spearman": 0.7202220796386966,
+      "mae": 25.51931594382074,
+      "rmse": 30.906622904689705,
       "fold": 1,
-      "train_size": 314,
-      "test_size": 98,
+      "train_size": 388,
+      "test_size": 65,
+      "best_iteration": 19
+    },
+    {
+      "spearman": 0.7612188771288954,
+      "mae": 18.59240474716371,
+      "rmse": 24.787405071680435,
+      "fold": 2,
+      "train_size": 453,
+      "test_size": 65,
+      "best_iteration": 267
+    },
+    {
+      "spearman": 0.4640752225449015,
+      "mae": 28.86157518153351,
+      "rmse": 32.27690859581276,
+      "fold": 3,
+      "train_size": 518,
+      "test_size": 65,
       "best_iteration": 1
     },
     {
-      "spearman": 0.38384845387298033,
-      "mae": 2.248967170262995,
-      "rmse": 5.522000624642385,
+      "spearman": -0.8525675553608212,
+      "mae": 27.186757785856678,
+      "rmse": 31.710561222885048,
+      "fold": 4,
+      "train_size": 583,
+      "test_size": 32,
+      "best_iteration": 1
+    },
+    {
+      "spearman": 0.4261157172099416,
+      "mae": 23.51706572809761,
+      "rmse": 27.458144559255683,
       "fold": 5,
-      "train_size": 478,
-      "test_size": 125,
-      "best_iteration": 27
+      "train_size": 615,
+      "test_size": 33,
+      "best_iteration": 2
     }
   ],
   "tier": "per_stock",
   "identifier": "WINSRE",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }

@@ -1,48 +1,72 @@
 {
   "task": "regression",
-  "target_col": "y_opportunity_score",
-  "spearman": 0.2557658623348179,
-  "mae": 7.826133975706739,
-  "rmse": 9.359119024733731,
-  "auc": NaN,
+  "label_space": "target_score_0_100",
+  "objective": "regression",
+  "target_col": "target_score",
+  "target_min": 0.0,
+  "target_max": 100.0,
+  "spearman": 0.4552113061100781,
+  "mae": 22.65225801836791,
+  "rmse": 26.825718500358,
+  "auc": 0.4552113061100781,
+  "mean_auc": 0.4552113061100781,
   "log_loss": NaN,
   "calibration_error": NaN,
-  "n_train_events": 416,
+  "n_train_events": 517,
   "train_date_range": {
-    "start": "2023-09-20",
-    "end": "2026-05-21"
+    "start": "2023-07-23",
+    "end": "2026-03-24"
   },
-  "rejected_reason": "spearman_below_threshold_0.2558",
+  "rejected_reason": "",
+  "fallback_eligible": false,
   "fold_metrics": [
     {
-      "spearman": -0.7971043236488264,
-      "mae": 4.9756274524453845,
-      "rmse": 7.594326263158395,
+      "spearman": -0.12832084431949883,
+      "mae": 35.8263737824461,
+      "rmse": 38.86064731404726,
+      "fold": 1,
+      "train_size": 310,
+      "test_size": 51,
+      "best_iteration": 149
+    },
+    {
+      "spearman": 0.4053160392702307,
+      "mae": 24.29849166604219,
+      "rmse": 30.14741153228794,
       "fold": 2,
-      "train_size": 226,
-      "test_size": 98,
-      "best_iteration": 16
+      "train_size": 361,
+      "test_size": 52,
+      "best_iteration": 26
     },
     {
-      "spearman": 0.8124861830867097,
-      "mae": 6.060136321801159,
-      "rmse": 7.893478116436342,
+      "spearman": 0.6832729932302037,
+      "mae": 14.936691763099889,
+      "rmse": 17.602071621644892,
       "fold": 3,
-      "train_size": 324,
-      "test_size": 69,
-      "best_iteration": 15
+      "train_size": 413,
+      "test_size": 52,
+      "best_iteration": 92
     },
     {
-      "spearman": 0.7519157275665704,
-      "mae": 12.442638152873672,
-      "rmse": 12.589552694606454,
+      "spearman": 0.6460392165567708,
+      "mae": 22.04865691122249,
+      "rmse": 25.82289794713774,
+      "fold": 4,
+      "train_size": 465,
+      "test_size": 26,
+      "best_iteration": 300
+    },
+    {
+      "spearman": 0.669749125812684,
+      "mae": 16.151075969028888,
+      "rmse": 21.695564086672157,
       "fold": 5,
-      "train_size": 401,
-      "test_size": 15,
-      "best_iteration": 15
+      "train_size": 491,
+      "test_size": 26,
+      "best_iteration": 151
     }
   ],
   "tier": "per_stock",
   "identifier": "NICBM",
-  "version": "2026-05-26"
+  "version": "2026-05-29"
 }
