@@ -49,7 +49,13 @@ def compute_continue_rising(
     di_spread = plus_di - minus_di
     volume_ratio_20d = _safe_float(ind.get("volume_ratio_20d"), 1.0)
     macd_hist_slope = _safe_float(ind.get("macd_histogram_slope_5d"), 0.0)
-    stage_eligible = stage in {"MARKUP", "EARLY_MARKUP"}
+    stage_eligible = stage in {
+        "MARKUP",
+        "EARLY_MARKUP",
+        "EARLY_BREAKOUT",
+        "MARKUP_TRENDING",
+        "TURNING_UP",
+    }
     di_ok = di_spread > 5.0
     above_ema_10 = close > ema_10
     above_ema_20 = close > ema_20
@@ -70,7 +76,7 @@ def compute_continue_rising(
     if qualifies:
         reason = (
             f"Advancing stage with buyers in control (+DI spread {di_spread:.1f}), "
-            f"price above EMA10/20/30, exhaustion {exhaustion_count}/4."
+            f"price above EMA10/20/30, exhaustion {exhaustion_count}/3."
         )
     elif not stage_eligible:
         reason = f"Stage {stage} is not eligible for the continuation lane."
