@@ -226,13 +226,17 @@ def _normalize_symbol(raw: object) -> str:
 
 
 def _sanitize_pe_ratio(v) -> Optional[float]:
-    """Return a scanner-safe PE ratio value or None for invalid/outlier inputs."""
+    """Return a scanner-safe PE ratio value or None for invalid/outlier inputs.
+
+    Negative PE values are valid for loss-making companies and should be surfaced
+    to the scanner instead of being hidden as N/A.
+    """
     pe = _safe_float(v)
     if pe is None:
         return None
-    if pe <= 0:
+    if pe == 0:
         return None
-    if pe > _PE_RATIO_MAX_REASONABLE:
+    if abs(pe) > _PE_RATIO_MAX_REASONABLE:
         return None
     return pe
 
