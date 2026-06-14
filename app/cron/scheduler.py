@@ -345,13 +345,13 @@ def start_scheduler() -> None:
             """Weekly full recompute including DNA profiles (Sundays)."""
             run_nightly_recompute(dna_refresh=True, verbose=False)
 
-        # Sun–Thu at 14:10 Asia/Kuwait — secondary refresh 5 min after nightly recompute
+        # Sun–Thu at 14:35 Asia/Kuwait — secondary refresh after nightly recompute (~14:05–14:25)
         _scheduler.add_job(
             _run_eagle_eye_intraday_refresh,
             trigger=CronTrigger(
                 day_of_week="sun,mon,tue,wed,thu",
                 hour=14,
-                minute=10,
+                minute=35,
                 timezone="Asia/Kuwait",
             ),
             id="eagle_eye_intraday_refresh",
@@ -420,7 +420,7 @@ def start_scheduler() -> None:
 
         logger.info(
             "Eagle Eye jobs scheduled "
-            "(Sun–Thu 14:05 nightly; Sun–Thu 14:10 secondary refresh; DNA rebuild Sun 14:30; Simulator 14:20 Asia/Kuwait)"
+            "(Sun–Thu 14:05 nightly; Sun–Thu 14:35 secondary refresh; DNA rebuild Sun 14:30; Simulator 14:20 Asia/Kuwait)"
         )
     except Exception as exc:
         logger.warning("Could not schedule Eagle Eye jobs: %s", exc)
