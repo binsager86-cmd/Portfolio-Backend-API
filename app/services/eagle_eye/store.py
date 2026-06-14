@@ -124,6 +124,7 @@ def ensure_tables() -> None:
     _acim("ee_ratings_cache", "code_fingerprint", "TEXT")
     _acim("ee_ratings_cache", "risky_near_resistance", "INTEGER")
     _acim("ee_ratings_cache", "risk_reward_ratio", "REAL")
+    _acim("ee_ratings_cache", "risk_warning_score", "INTEGER")
 
     exec_sql(
         """
@@ -464,8 +465,8 @@ def save_rating(
             stop_loss, tp1, tp1_probability, tp2, tp2_probability, tp3, tp3_probability,
             last_price, supports_json, resistances_json, signals_json, indicators_json,
             days_of_history, computed_at, computed_date, run_id, run_started_at, code_fingerprint,
-            updated_at, volume_context_json, risky_near_resistance, risk_reward_ratio
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            updated_at, volume_context_json, risky_near_resistance, risk_reward_ratio, risk_warning_score
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT (ticker) DO UPDATE SET
             name_en = excluded.name_en,
             sector = excluded.sector,
@@ -499,7 +500,8 @@ def save_rating(
             updated_at = excluded.updated_at,
             volume_context_json = excluded.volume_context_json,
             risky_near_resistance = excluded.risky_near_resistance,
-            risk_reward_ratio = excluded.risk_reward_ratio
+            risk_reward_ratio = excluded.risk_reward_ratio,
+            risk_warning_score = excluded.risk_warning_score
         """,
         (
             ticker.upper(),
@@ -536,6 +538,7 @@ def save_rating(
             json.dumps(result.get("volume_context") or {}),
             int(result.get("risky_near_resistance", False)),
             rr_cached,
+            int(result.get("risk_warning_score") or 0),
         ),
     )
 
@@ -561,7 +564,7 @@ def load_all_ratings(
     sql = """
            SELECT ticker, name_en, sector, market_tier, stage, rating, confidence, ml_score, thesis,
                entry_primary, stop_loss, tp1, last_price, computed_at, computed_date,
-               volume_context_json, indicators_json, risky_near_resistance, risk_reward_ratio
+               volume_context_json, indicators_json, risky_near_resistance, risk_reward_ratio, risk_warning_score
         FROM   ee_ratings_cache
         WHERE  confidence >= ?
     """
@@ -620,9 +623,11 @@ def load_all_ratings(
                 rr = _safe_float(indicators.get("risk_reward_ratio"))
             d["risk_reward_ratio"] = rr
             d["risky_near_resistance"] = bool(d.get("risky_near_resistance", False))
+            d["risk_warning_score"] = int(d.get("risk_warning_score") or 0)
         else:
             d["risk_reward_ratio"] = None
             d["risky_near_resistance"] = False
+            d["risk_warning_score"] = 0
         result.append(d)
     return result
 
@@ -638,7 +643,7 @@ def load_rating(ticker: str) -> Optional[dict]:
                stop_loss, tp1, tp1_probability, tp2, tp2_probability,
                tp3, tp3_probability, last_price,
                supports_json, resistances_json, indicators_json,
-               days_of_history, computed_at
+                    days_of_history, computed_at, risk_warning_score
         FROM   ee_ratings_cache
         WHERE  ticker = ?
         """,

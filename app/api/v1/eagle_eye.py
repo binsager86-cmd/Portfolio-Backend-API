@@ -994,6 +994,7 @@ def _run_analysis(ticker: str) -> Optional[dict]:
                 "continue_rising_reason": cached_row.get("continue_rising_reason"),
                 "continue_rising_exhaustion_count": cached_row.get("continue_rising_exhaustion_count", 0),
                 "continue_rising_exhaustion_signals": cached_row.get("continue_rising_exhaustion_signals", []),
+                "risk_warning_score": int(cached_row.get("risk_warning_score") or 0),
                 "days_of_history": cached_row.get("days_of_history"),
                 "computed_at": cached_row.get("computed_at"),
             }
@@ -1086,6 +1087,7 @@ def _run_analysis(ticker: str) -> Optional[dict]:
             "continue_rising_reason": recommendation_payload.get("continue_rising_reason"),
             "continue_rising_exhaustion_count": recommendation_payload.get("continue_rising_exhaustion_count", 0),
             "continue_rising_exhaustion_signals": recommendation_payload.get("continue_rising_exhaustion_signals", []),
+            "risk_warning_score": int(recommendation_payload.get("risk_warning_score") or 0),
             "risky_near_resistance": recommendation_payload.get("risky_near_resistance", False),
             "volume_context": volume_context,
             "days_of_history": len(df),
@@ -1272,6 +1274,7 @@ async def get_scanner(
                 continue_rising_reason=row.get("continue_rising_reason"),
                 continue_rising_exhaustion_count=int(row.get("continue_rising_exhaustion_count") or 0),
                 continue_rising_exhaustion_signals=list(row.get("continue_rising_exhaustion_signals") or []),
+                risk_warning_score=int(row.get("risk_warning_score") or 0),
                 risky_near_resistance=bool(row.get("risky_near_resistance", False)),
                 risk_reward_ratio=_safe_float(row.get("risk_reward_ratio")),
             ))
@@ -1378,6 +1381,7 @@ async def get_stock_analysis(
         continue_rising_reason=analysis.get("continue_rising_reason"),
         continue_rising_exhaustion_count=int(analysis.get("continue_rising_exhaustion_count") or 0),
         continue_rising_exhaustion_signals=list(analysis.get("continue_rising_exhaustion_signals") or []),
+        risk_warning_score=int(analysis.get("risk_warning_score") or 0),
         risky_near_resistance=bool(analysis.get("risky_near_resistance", False)),
         supports=sr_supports,
         resistances=sr_resistances,

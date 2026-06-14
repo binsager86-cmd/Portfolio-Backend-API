@@ -60,6 +60,7 @@ class RatedStock(BaseModel):
     continue_rising_reason: Optional[str] = None
     continue_rising_exhaustion_count: int = 0
     continue_rising_exhaustion_signals: List[str] = []
+    risk_warning_score: int = 0
     risky_near_resistance: bool = False
     risk_reward_ratio: Optional[float] = None
 
@@ -95,6 +96,7 @@ class FullStockAnalysis(BaseModel):
     continue_rising_reason: Optional[str] = None
     continue_rising_exhaustion_count: int = 0
     continue_rising_exhaustion_signals: List[str] = []
+    risk_warning_score: int = 0
     risky_near_resistance: bool = False
 
     # SR levels

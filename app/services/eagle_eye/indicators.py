@@ -1143,6 +1143,19 @@ def compute_all_indicators(
     if 'rsi_14' in out.columns:
         out['rsi_14_change_5d'] = out['rsi_14'] - out['rsi_14'].shift(5)
 
+    # Phase 3 disclosure overlays: warning flags used only for Action/risk meter.
+    if 'adx' in out.columns:
+        adx_prev = out['adx'].shift(1)
+        out['adx_rollover'] = (
+            (adx_prev > 25.0) & (out['adx'] < adx_prev)
+        ).astype(int)
+
+    if 'bb_pct_b' in out.columns:
+        out['bb_pct_b_reversal'] = (
+            (out['bb_pct_b'].shift(1).rolling(3).max() > 1.0)
+            & (out['bb_pct_b'] < 0.85)
+        ).astype(int)
+
     if 'close' in out.columns:
         up_close = (out['close'] > out['close'].shift(1)).astype(int)
         up_groups = (up_close == 0).cumsum()

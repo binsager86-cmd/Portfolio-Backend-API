@@ -100,6 +100,39 @@ def compute_continue_rising(
     }
 
 
+def compute_risk_warning_score(ind: Mapping[str, object]) -> Dict[str, object]:
+    """Disclosure-only risk warning ladder input. Does not change recommendation."""
+
+    signals: List[str] = []
+
+    if int(_safe_float(ind.get("red_cluster_at_high"), 0.0)) == 1:
+        signals.append("red_cluster_at_high")
+
+    if int(_safe_float(ind.get("distribution_at_high_flag"), 0.0)) == 1:
+        signals.append("distribution_at_high_flag")
+
+    if int(_safe_float(ind.get("macd_hist_declining_3d"), 0.0)) == 1:
+        signals.append("macd_hist_declining_3d")
+
+    if int(_safe_float(ind.get("ema_bearish_cross_10_30"), 0.0)) == 1:
+        signals.append("ema_bearish_cross_10_30")
+
+    if int(_safe_float(ind.get("vol_spike_on_red_at_high"), 0.0)) == 1:
+        signals.append("vol_spike_on_red_at_high")
+
+    if int(_safe_float(ind.get("adx_rollover"), 0.0)) == 1:
+        signals.append("adx_rollover")
+
+    if int(_safe_float(ind.get("failed_breakout_flag"), 0.0)) == 1:
+        signals.append("failed_breakout_flag")
+
+    risk_warning_score = len(signals)
+    return {
+        "risk_warning_score": risk_warning_score,
+        "risk_warning_signals": signals,
+    }
+
+
 def generate_recommendation(
     ind: Mapping[str, object],
     family_scores: Mapping[str, float],
@@ -221,6 +254,8 @@ def generate_recommendation(
         base_rec = "WATCHLIST"
         veto_reasons.append("Pattern memory: resembles pre-crash setups")
 
+    risk_warning = compute_risk_warning_score(ind)
+
     return {
         "recommendation": base_rec,
         "confidence": round(final_confidence, 1),
@@ -236,5 +271,6 @@ def generate_recommendation(
         "family_scores": dict(family_scores),
         "data_quality_score": round(dq, 1),
         "risky_near_resistance": risky_near_resistance,
+        **risk_warning,
         **continue_rising,
     }

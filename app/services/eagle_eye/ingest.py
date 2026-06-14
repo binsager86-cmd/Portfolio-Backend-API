@@ -338,6 +338,20 @@ def build_all_dna(verbose: bool = False) -> dict:
     ensure_tables()
     tickers = list_tickers_with_ohlcv()
 
+    market_proxy = None
+    try:
+        from app.services.eagle_eye.adapter import TickerChartAdapter
+
+        adapter = TickerChartAdapter()
+        stock_meta = {stock.ticker: stock for stock in adapter.list_stocks()}
+        premier_tickers = [
+            symbol for symbol, meta in stock_meta.items()
+            if str(getattr(meta, "market_tier", "premier") or "premier").strip().upper() == "PREMIER"
+        ]
+        market_proxy = _build_premier_market_proxy(premier_tickers)
+    except Exception as proxy_exc:
+        logger.warning("DNA batch build: market proxy unavailable: %s", proxy_exc)
+
     stats: dict = {"ok": 0, "skipped": 0, "errors": 0, "insufficient": []}
 
     if verbose:
@@ -365,7 +379,7 @@ def build_all_dna(verbose: bool = False) -> dict:
             if verbose:
                 print(f"  [{ticker}] {len(df)} bars ...", end=" ", flush=True)
 
-            ind_df = compute_all_indicators(df)
+            ind_df = compute_all_indicators(df, market_close=market_proxy)
 
             moves = detect_moves(ticker, df)
             fakeouts = detect_fakeouts(ticker, df)
@@ -461,6 +475,7 @@ def build_dna_for_ticker(ticker: str) -> Optional[dict]:
     # 1. Always try a live TickerChart fetch first — this guarantees the DNA
     #    chart bars contain accurate OHLC data from the authoritative source.
     df = None
+    market_proxy = None
     try:
         from app.services.eagle_eye.adapter import TickerChartAdapter
 
@@ -468,6 +483,15 @@ def build_dna_for_ticker(ticker: str) -> Optional[dict]:
         end_d = date.today()
         start_d = end_d - timedelta(days=3 * 365 + 90)
         fetched = adapter.get_ohlcv_daily(ticker, start_d, end_d)
+        try:
+            stock_meta = {stock.ticker: stock for stock in adapter.list_stocks()}
+            premier_tickers = [
+                symbol for symbol, meta in stock_meta.items()
+                if str(getattr(meta, "market_tier", "premier") or "premier").strip().upper() == "PREMIER"
+            ]
+            market_proxy = _build_premier_market_proxy(premier_tickers)
+        except Exception as proxy_exc:
+            logger.warning("DNA build [%s]: market proxy unavailable: %s", ticker, proxy_exc)
         if fetched is not None and len(fetched) >= CONFIG.MIN_HISTORY_DAYS_REQUIRED:
             df = fetched
             # Persist fresh data back to the OHLCV cache so other pipelines benefit
@@ -494,7 +518,7 @@ def build_dna_for_ticker(ticker: str) -> Optional[dict]:
         return None
 
     try:
-        ind_df = compute_all_indicators(df)
+        ind_df = compute_all_indicators(df, market_close=market_proxy)
         moves = detect_moves(ticker, df)
         fakeouts = detect_fakeouts(ticker, df)
         all_events = moves + fakeouts
@@ -970,6 +994,7 @@ def compute_all_ratings(
                 "continue_rising_reason": recommendation_payload.get("continue_rising_reason"),
                 "continue_rising_exhaustion_count": recommendation_payload.get("continue_rising_exhaustion_count", 0),
                 "continue_rising_exhaustion_signals": recommendation_payload.get("continue_rising_exhaustion_signals", []),
+                "risk_warning_score": int(recommendation_payload.get("risk_warning_score") or 0),
                 "risky_near_resistance": recommendation_payload.get("risky_near_resistance", False),
                 "volume_context": volume_context,
                 "days_of_history": len(df),
