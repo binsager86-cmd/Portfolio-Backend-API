@@ -1,1130 +1,1144 @@
 {
-  "AAYAN": {
-    "confidence": 79.4,
-    "continue_rising": true,
-    "rating": "BUY",
-    "risk_reward_ratio": 3.0,
-    "risky_near_resistance": false,
-    "stage": "MARKUP"
-  },
-  "AAYANRE": {
-    "confidence": 78.0,
-    "continue_rising": true,
-    "rating": "BUY",
-    "risk_reward_ratio": 3.0,
-    "risky_near_resistance": false,
-    "stage": "MARKUP"
-  },
-  "ABAR": {
-    "confidence": 71.7,
-    "continue_rising": true,
-    "rating": "BUY",
-    "risk_reward_ratio": 0.82,
-    "risky_near_resistance": true,
-    "stage": "MARKUP"
-  },
-  "ABK": {
-    "confidence": 56.9,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 8.82,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "ACICO": {
-    "confidence": 58.8,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 3.37,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "AINS": {
-    "confidence": 24.4,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 4.61,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "ALAQARIA": {
-    "confidence": 66.0,
-    "continue_rising": true,
-    "rating": "BUY",
-    "risk_reward_ratio": 1.33,
-    "risky_near_resistance": true,
-    "stage": "MARKUP"
-  },
-  "ALDEERA": {
-    "confidence": 70.6,
-    "continue_rising": false,
-    "rating": "HOLD",
-    "risk_reward_ratio": 3.0,
-    "risky_near_resistance": false,
-    "stage": "MARKUP"
-  },
-  "ALEID": {
-    "confidence": 0.0,
-    "continue_rising": false,
-    "rating": "AVOID",
-    "risk_reward_ratio": null,
-    "risky_near_resistance": false,
-    "stage": "INACTIVE_OR_DELISTED"
-  },
-  "ALFTAQA": {
-    "confidence": 38.0,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 0.0,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "ALG": {
-    "confidence": 25.9,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 10.0,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "ALIMTIAZ": {
-    "confidence": 61.1,
-    "continue_rising": true,
-    "rating": "BUY",
-    "risk_reward_ratio": 0.82,
-    "risky_near_resistance": true,
-    "stage": "MARKUP"
-  },
-  "ALKOUT": {
-    "confidence": 56.0,
-    "continue_rising": false,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 10.0,
-    "risky_near_resistance": false,
-    "stage": "ACCUMULATION"
-  },
-  "ALMANAR": {
-    "confidence": 72.9,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 1.67,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "ALOLA": {
-    "confidence": 60.0,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 0.98,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "ALSAFAT": {
-    "confidence": 41.1,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 4.99,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "ALTIJARIA": {
-    "confidence": 70.7,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 3.77,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "AMAR": {
-    "confidence": 39.0,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 3.06,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "AQAR": {
-    "confidence": 57.1,
-    "continue_rising": false,
-    "rating": "HOLD",
-    "risk_reward_ratio": 2.45,
-    "risky_near_resistance": false,
-    "stage": "MARKUP"
-  },
-  "ARABREC": {
-    "confidence": 38.3,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 5.21,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "AREEC": {
-    "confidence": 54.5,
-    "continue_rising": false,
-    "rating": "REDUCE",
-    "risk_reward_ratio": 2.91,
-    "risky_near_resistance": false,
-    "stage": "DISTRIBUTION"
-  },
-  "ARGAN": {
-    "confidence": 54.2,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 1.14,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "ARKAN": {
-    "confidence": 59.2,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 5.04,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "ARZAN": {
-    "confidence": 34.3,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 2.91,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "ASC": {
-    "confidence": 52.1,
-    "continue_rising": false,
-    "rating": "HOLD",
-    "risk_reward_ratio": 0.33,
-    "risky_near_resistance": true,
-    "stage": "MARKUP"
-  },
-  "ASIYA": {
-    "confidence": 47.3,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 5.95,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "ATC": {
-    "confidence": 53.6,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 3.36,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "AZNOULA": {
-    "confidence": 28.6,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 4.44,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "BAYANINV": {
-    "confidence": 37.8,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 6.88,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "BEYOUT": {
-    "confidence": 30.6,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 7.33,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "BKIKWT": {
-    "confidence": 48.4,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 2.56,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "BOUBYAN": {
-    "confidence": 26.4,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 8.54,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "BOURSA": {
-    "confidence": 70.7,
-    "continue_rising": false,
-    "rating": "HOLD",
-    "risk_reward_ratio": 7.34,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "BPCC": {
-    "confidence": 64.0,
-    "continue_rising": false,
-    "rating": "HOLD",
-    "risk_reward_ratio": 0.43,
-    "risky_near_resistance": true,
-    "stage": "MARKUP"
-  },
-  "BURG": {
-    "confidence": 25.0,
-    "continue_rising": false,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 9.67,
-    "risky_near_resistance": false,
-    "stage": "ACCUMULATION"
-  },
-  "CABLE": {
-    "confidence": 43.0,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 3.27,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "CATTL": {
-    "confidence": 62.0,
-    "continue_rising": false,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 4.54,
-    "risky_near_resistance": false,
-    "stage": "ACCUMULATION"
-  },
-  "CBK": {
-    "confidence": 0.0,
-    "continue_rising": false,
-    "rating": "AVOID",
-    "risk_reward_ratio": null,
-    "risky_near_resistance": false,
-    "stage": "INACTIVE_OR_DELISTED"
-  },
-  "CGC": {
-    "confidence": 47.6,
-    "continue_rising": false,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 6.07,
-    "risky_near_resistance": false,
-    "stage": "ACCUMULATION"
-  },
-  "CLEANING": {
-    "confidence": 56.2,
-    "continue_rising": false,
-    "rating": "HOLD",
-    "risk_reward_ratio": 0.46,
-    "risky_near_resistance": true,
-    "stage": "MARKUP"
-  },
-  "COAST": {
-    "confidence": 79.2,
-    "continue_rising": true,
-    "rating": "BUY",
-    "risk_reward_ratio": 3.0,
-    "risky_near_resistance": false,
-    "stage": "MARKUP"
-  },
-  "DALQANRE": {
-    "confidence": 0.0,
-    "continue_rising": false,
-    "rating": "AVOID",
-    "risk_reward_ratio": null,
-    "risky_near_resistance": false,
-    "stage": "INACTIVE_OR_DELISTED"
-  },
-  "DIGITUS": {
-    "confidence": 43.1,
-    "continue_rising": false,
-    "rating": "REDUCE",
-    "risk_reward_ratio": 5.38,
-    "risky_near_resistance": false,
-    "stage": "DISTRIBUTION"
-  },
-  "EKTTITAB": {
-    "confidence": 36.5,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 5.16,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "EMIRATES": {
-    "confidence": 46.9,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 3.39,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "ENERGYH": {
-    "confidence": 64.7,
-    "continue_rising": false,
-    "rating": "REDUCE",
-    "risk_reward_ratio": 1.59,
-    "risky_near_resistance": false,
-    "stage": "DISTRIBUTION"
-  },
-  "EQUIPMENT": {
-    "confidence": 34.5,
-    "continue_rising": false,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 10.0,
-    "risky_near_resistance": false,
-    "stage": "ACCUMULATION"
-  },
-  "ERESCO": {
-    "confidence": 62.2,
-    "continue_rising": true,
-    "rating": "BUY",
-    "risk_reward_ratio": 0.76,
-    "risky_near_resistance": true,
-    "stage": "MARKUP"
-  },
-  "FACIL": {
-    "confidence": 53.1,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 1.88,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "FTI": {
-    "confidence": 45.3,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 1.95,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "FUTUREKID": {
-    "confidence": 36.8,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 3.45,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "GBK": {
-    "confidence": 66.3,
-    "continue_rising": true,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 3.06,
-    "risky_near_resistance": false,
-    "stage": "EARLY_MARKUP"
-  },
-  "GFC": {
-    "confidence": 39.5,
-    "continue_rising": false,
-    "rating": "REDUCE",
-    "risk_reward_ratio": 2.35,
-    "risky_near_resistance": false,
-    "stage": "DISTRIBUTION"
-  },
-  "GFH": {
-    "confidence": 41.3,
-    "continue_rising": false,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 3.27,
-    "risky_near_resistance": false,
-    "stage": "ACCUMULATION"
-  },
-  "GIH": {
-    "confidence": 54.2,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 2.27,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "GINS": {
-    "confidence": 27.4,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 3.39,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "HUMANSOFT": {
-    "confidence": 50.0,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 5.9,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "IFA": {
-    "confidence": 63.0,
-    "continue_rising": false,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 4.54,
-    "risky_near_resistance": false,
-    "stage": "ACCUMULATION"
-  },
-  "IFAHR": {
-    "confidence": 58.4,
-    "continue_rising": false,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 10.0,
-    "risky_near_resistance": false,
-    "stage": "ACCUMULATION"
-  },
-  "INJAZZAT": {
-    "confidence": 67.5,
-    "continue_rising": false,
-    "rating": "BUY",
-    "risk_reward_ratio": 2.71,
-    "risky_near_resistance": false,
-    "stage": "EARLY_MARKUP"
-  },
-  "INOVEST": {
-    "confidence": 42.4,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 6.16,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "INTEGRATED": {
-    "confidence": 68.4,
-    "continue_rising": true,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 5.83,
-    "risky_near_resistance": false,
-    "stage": "EARLY_MARKUP"
-  },
-  "IPG": {
-    "confidence": 32.4,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 4.92,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "JAZEERA": {
-    "confidence": 46.0,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 3.69,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "JTC": {
-    "confidence": 41.7,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 2.51,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "KAMCO": {
-    "confidence": 50.5,
-    "continue_rising": false,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 4.77,
-    "risky_near_resistance": false,
-    "stage": "ACCUMULATION"
-  },
-  "KBT": {
-    "confidence": 65.9,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 3.22,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "KCEM": {
-    "confidence": 49.1,
-    "continue_rising": false,
-    "rating": "HOLD",
-    "risk_reward_ratio": 0.72,
-    "risky_near_resistance": false,
-    "stage": "MARKUP"
-  },
-  "KCIN": {
-    "confidence": 49.2,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 2.46,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "KCPC": {
-    "confidence": 53.9,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 3.39,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "KFH": {
-    "confidence": 30.3,
-    "continue_rising": false,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 8.79,
-    "risky_near_resistance": false,
-    "stage": "ACCUMULATION"
-  },
-  "KFIC": {
-    "confidence": 37.4,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 1.82,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "KFOUC": {
-    "confidence": 37.7,
-    "continue_rising": false,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 9.91,
-    "risky_near_resistance": false,
-    "stage": "ACCUMULATION"
-  },
-  "KGL": {
-    "confidence": 0.0,
-    "continue_rising": false,
-    "rating": "AVOID",
-    "risk_reward_ratio": null,
-    "risky_near_resistance": false,
-    "stage": "INACTIVE_OR_DELISTED"
-  },
-  "KHOT": {
-    "confidence": 29.1,
-    "continue_rising": false,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 7.8,
-    "risky_near_resistance": false,
-    "stage": "ACCUMULATION"
-  },
-  "KIB": {
-    "confidence": 30.2,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 6.83,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "KINS": {
-    "confidence": 40.2,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 10.0,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "KINV": {
-    "confidence": 30.3,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 9.39,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "KMEFIC": {
-    "confidence": 56.2,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 1.42,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "KPPC": {
-    "confidence": 57.4,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 1.28,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "KPROJ": {
-    "confidence": 31.0,
-    "continue_rising": false,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 4.95,
-    "risky_near_resistance": false,
-    "stage": "ACCUMULATION"
-  },
-  "KRE": {
-    "confidence": 61.7,
-    "continue_rising": false,
-    "rating": "HOLD",
-    "risk_reward_ratio": 2.7,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "KUWAITRE": {
-    "confidence": 56.9,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 6.91,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "MABANEE": {
-    "confidence": 49.8,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 7.27,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "MADAR": {
-    "confidence": 58.1,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 0.13,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "MANAZEL": {
-    "confidence": 64.1,
-    "continue_rising": false,
-    "rating": "HOLD",
-    "risk_reward_ratio": 5.65,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "MARAKEZ": {
-    "confidence": 38.0,
-    "continue_rising": false,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 10.0,
-    "risky_near_resistance": false,
-    "stage": "ACCUMULATION"
-  },
-  "MARKAZ": {
-    "confidence": 34.0,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 6.26,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "MASAKEN": {
-    "confidence": 0.0,
-    "continue_rising": false,
-    "rating": "AVOID",
-    "risk_reward_ratio": null,
-    "risky_near_resistance": false,
-    "stage": "INACTIVE_OR_DELISTED"
-  },
-  "MASHAER": {
-    "confidence": 57.7,
-    "continue_rising": false,
-    "rating": "HOLD",
-    "risk_reward_ratio": 1.79,
-    "risky_near_resistance": false,
-    "stage": "MARKUP"
-  },
-  "MAZAYA": {
-    "confidence": 56.4,
-    "continue_rising": false,
-    "rating": "BUY",
-    "risk_reward_ratio": 0.98,
-    "risky_near_resistance": true,
-    "stage": "MARKUP"
-  },
-  "MENA": {
-    "confidence": 51.0,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 4.49,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "MEZZAN": {
-    "confidence": 37.8,
-    "continue_rising": false,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 7.71,
-    "risky_near_resistance": false,
-    "stage": "ACCUMULATION"
-  },
-  "MIDAN": {
-    "confidence": 66.2,
-    "continue_rising": false,
-    "rating": "HOLD",
-    "risk_reward_ratio": 1.87,
-    "risky_near_resistance": false,
-    "stage": "MARKUP"
-  },
-  "MKHZN": {
-    "confidence": 30.3,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 5.12,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "MRC": {
-    "confidence": 54.3,
-    "continue_rising": false,
-    "rating": "HOLD",
-    "risk_reward_ratio": 0.94,
-    "risky_near_resistance": true,
-    "stage": "MARKUP"
-  },
-  "MUBARRAD": {
-    "confidence": 53.2,
-    "continue_rising": false,
-    "rating": "REDUCE",
-    "risk_reward_ratio": 1.88,
-    "risky_near_resistance": false,
-    "stage": "DISTRIBUTION"
-  },
-  "MUNSHAAT": {
-    "confidence": 44.1,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 4.11,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "MUNTAZAHAT": {
-    "confidence": 62.5,
-    "continue_rising": false,
-    "rating": "HOLD",
-    "risk_reward_ratio": 1.23,
-    "risky_near_resistance": true,
-    "stage": "MARKUP"
-  },
-  "NAPESCO": {
-    "confidence": 46.7,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 5.52,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "NBK": {
-    "confidence": 30.3,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 10.0,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "NCCI": {
-    "confidence": 48.3,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 5.32,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "NICBM": {
-    "confidence": 32.0,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 3.58,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "NIH": {
-    "confidence": 64.0,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 3.13,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "NIND": {
-    "confidence": 25.2,
-    "continue_rising": false,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 9.8,
-    "risky_near_resistance": false,
-    "stage": "ACCUMULATION"
-  },
-  "NINV": {
-    "confidence": 75.3,
-    "continue_rising": true,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 2.14,
-    "risky_near_resistance": false,
-    "stage": "EARLY_MARKUP"
-  },
-  "NOOR": {
-    "confidence": 72.6,
-    "continue_rising": true,
-    "rating": "BUY",
-    "risk_reward_ratio": 4.37,
-    "risky_near_resistance": false,
-    "stage": "EARLY_MARKUP"
-  },
-  "NRE": {
-    "confidence": 61.7,
-    "continue_rising": false,
-    "rating": "HOLD",
-    "risk_reward_ratio": 0.41,
-    "risky_near_resistance": true,
-    "stage": "MARKUP"
-  },
-  "OOREDOO": {
-    "confidence": 53.6,
-    "continue_rising": true,
-    "rating": "BUY",
-    "risk_reward_ratio": 1.13,
-    "risky_near_resistance": true,
-    "stage": "MARKUP"
-  },
-  "OSOS": {
-    "confidence": 61.0,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 2.89,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "OSOUL": {
-    "confidence": 55.3,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 2.87,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "OULAFUEL": {
-    "confidence": 56.5,
-    "continue_rising": false,
-    "rating": "REDUCE",
-    "risk_reward_ratio": 0.88,
-    "risky_near_resistance": false,
-    "stage": "DISTRIBUTION"
-  },
-  "PAPCO": {
-    "confidence": 60.7,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 1.56,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "PAPER": {
-    "confidence": 65.2,
-    "continue_rising": true,
-    "rating": "BUY",
-    "risk_reward_ratio": 3.19,
-    "risky_near_resistance": false,
-    "stage": "EARLY_MARKUP"
-  },
-  "PCEM": {
-    "confidence": 24.5,
-    "continue_rising": false,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 6.37,
-    "risky_near_resistance": false,
-    "stage": "ACCUMULATION"
-  },
-  "QIC": {
-    "confidence": 46.3,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 0.84,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "RASIYAT": {
-    "confidence": 58.1,
-    "continue_rising": false,
-    "rating": "HOLD",
-    "risk_reward_ratio": 1.21,
-    "risky_near_resistance": false,
-    "stage": "MARKUP"
-  },
-  "SANAM": {
-    "confidence": 70.7,
-    "continue_rising": true,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 1.79,
-    "risky_near_resistance": true,
-    "stage": "MARKUP"
-  },
-  "SECH": {
-    "confidence": 63.8,
-    "continue_rising": false,
-    "rating": "REDUCE",
-    "risk_reward_ratio": 1.76,
-    "risky_near_resistance": false,
-    "stage": "DISTRIBUTION"
-  },
-  "SENERGY": {
-    "confidence": 56.5,
-    "continue_rising": true,
-    "rating": "BUY",
-    "risk_reward_ratio": 0.55,
-    "risky_near_resistance": true,
-    "stage": "MARKUP"
-  },
-  "SHIP": {
-    "confidence": 31.8,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 10.0,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "SOKOUK": {
-    "confidence": 48.4,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 1.15,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "SOOR": {
-    "confidence": 44.7,
-    "continue_rising": false,
-    "rating": "REDUCE",
-    "risk_reward_ratio": 4.49,
-    "risky_near_resistance": false,
-    "stage": "DISTRIBUTION"
-  },
-  "SPEC": {
-    "confidence": 75.1,
-    "continue_rising": true,
-    "rating": "BUY",
-    "risk_reward_ratio": 3.0,
-    "risky_near_resistance": false,
-    "stage": "MARKUP"
-  },
-  "SRE": {
-    "confidence": 54.7,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 1.82,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "STC": {
-    "confidence": 75.5,
-    "continue_rising": false,
-    "rating": "HOLD",
-    "risk_reward_ratio": 5.72,
-    "risky_near_resistance": false,
-    "stage": "MARKUP"
-  },
-  "TAHSSILAT": {
-    "confidence": 36.8,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 3.7,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "TAM": {
-    "confidence": 36.4,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 1.82,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "TAMINV": {
-    "confidence": 54.1,
-    "continue_rising": false,
-    "rating": "HOLD",
-    "risk_reward_ratio": 1.63,
-    "risky_near_resistance": false,
-    "stage": "MARKUP"
-  },
-  "THURAYA": {
-    "confidence": 64.4,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 2.14,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "TIJARA": {
-    "confidence": 61.7,
-    "continue_rising": false,
-    "rating": "HOLD",
-    "risk_reward_ratio": 1.18,
-    "risky_near_resistance": true,
-    "stage": "MARKUP"
-  },
-  "TROLLEY": {
-    "confidence": 42.4,
-    "continue_rising": false,
-    "rating": "HOLD",
-    "risk_reward_ratio": 0.0,
-    "risky_near_resistance": false,
-    "stage": "MARKUP"
-  },
-  "UNICAP": {
-    "confidence": 58.5,
-    "continue_rising": true,
-    "rating": "BUY",
-    "risk_reward_ratio": 1.03,
-    "risky_near_resistance": true,
-    "stage": "MARKUP"
-  },
-  "UPAC": {
-    "confidence": 51.9,
-    "continue_rising": false,
-    "rating": "SELL",
-    "risk_reward_ratio": 7.14,
-    "risky_near_resistance": false,
-    "stage": "MARKDOWN"
-  },
-  "URC": {
-    "confidence": 66.1,
-    "continue_rising": false,
-    "rating": "HOLD",
-    "risk_reward_ratio": 2.85,
-    "risky_near_resistance": false,
-    "stage": "MARKUP"
-  },
-  "VALMORE": {
-    "confidence": 41.9,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 4.84,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "WARBABANK": {
-    "confidence": 26.6,
-    "continue_rising": false,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 7.94,
-    "risky_near_resistance": false,
-    "stage": "ACCUMULATION"
-  },
-  "WARBACAP": {
-    "confidence": 63.4,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 0.79,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "WETHAQ": {
-    "confidence": 42.1,
-    "continue_rising": false,
-    "rating": "NEUTRAL",
-    "risk_reward_ratio": 3.16,
-    "risky_near_resistance": false,
-    "stage": "NEUTRAL_AMBIGUOUS"
-  },
-  "WINSRE": {
-    "confidence": 38.8,
-    "continue_rising": false,
-    "rating": "WATCHLIST",
-    "risk_reward_ratio": 4.1,
-    "risky_near_resistance": false,
-    "stage": "ACCUMULATION"
-  },
-  "ZAIN": {
-    "confidence": 54.8,
-    "continue_rising": true,
-    "rating": "BUY",
-    "risk_reward_ratio": 0.59,
-    "risky_near_resistance": true,
-    "stage": "MARKUP"
-  }
+  "as_of": "2026-06-10",
+  "distribution": {
+    "AVOID": 5,
+    "BUY": 13,
+    "HOLD": 20,
+    "NEUTRAL": 46,
+    "REDUCE": 8,
+    "SELL": 24,
+    "WATCHLIST": 25
+  },
+  "generated_at": "2026-06-14T17:09:24Z",
+  "ratings": {
+    "AAYAN": {
+      "confidence": 56.9,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 3.0,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "AAYANRE": {
+      "confidence": 57.9,
+      "continue_rising": true,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 0.86,
+      "risky_near_resistance": true,
+      "stage": "MARKUP"
+    },
+    "ABAR": {
+      "confidence": 73.4,
+      "continue_rising": false,
+      "rating": "BUY",
+      "risk_reward_ratio": 1.73,
+      "risky_near_resistance": true,
+      "stage": "MARKUP"
+    },
+    "ABK": {
+      "confidence": 56.9,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 8.67,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "ACICO": {
+      "confidence": 58.8,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 3.18,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "AINS": {
+      "confidence": 32.3,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 5.15,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "ALAQARIA": {
+      "confidence": 66.0,
+      "continue_rising": true,
+      "rating": "BUY",
+      "risk_reward_ratio": 1.48,
+      "risky_near_resistance": true,
+      "stage": "MARKUP"
+    },
+    "ALDEERA": {
+      "confidence": 69.7,
+      "continue_rising": false,
+      "rating": "HOLD",
+      "risk_reward_ratio": 2.78,
+      "risky_near_resistance": false,
+      "stage": "MARKUP"
+    },
+    "ALEID": {
+      "confidence": 0.0,
+      "continue_rising": false,
+      "rating": "AVOID",
+      "risk_reward_ratio": null,
+      "risky_near_resistance": false,
+      "stage": "INACTIVE_OR_DELISTED"
+    },
+    "ALFTAQA": {
+      "confidence": 29.5,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 0.0,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "ALG": {
+      "confidence": 22.0,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 10.0,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "ALIMTIAZ": {
+      "confidence": 71.2,
+      "continue_rising": false,
+      "rating": "HOLD",
+      "risk_reward_ratio": 3.0,
+      "risky_near_resistance": false,
+      "stage": "MARKUP"
+    },
+    "ALKOUT": {
+      "confidence": 54.1,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 10.0,
+      "risky_near_resistance": false,
+      "stage": "ACCUMULATION"
+    },
+    "ALMANAR": {
+      "confidence": 50.4,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 2.27,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "ALOLA": {
+      "confidence": 60.7,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 0.83,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "ALSAFAT": {
+      "confidence": 38.4,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 5.15,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "ALTIJARIA": {
+      "confidence": 77.5,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 3.58,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "AMAR": {
+      "confidence": 42.0,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 2.87,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "AQAR": {
+      "confidence": 60.6,
+      "continue_rising": false,
+      "rating": "HOLD",
+      "risk_reward_ratio": 2.49,
+      "risky_near_resistance": false,
+      "stage": "MARKUP"
+    },
+    "ARABREC": {
+      "confidence": 55.6,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 4.87,
+      "risky_near_resistance": false,
+      "stage": "ACCUMULATION"
+    },
+    "AREEC": {
+      "confidence": 54.2,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 2.1,
+      "risky_near_resistance": false,
+      "stage": "ACCUMULATION"
+    },
+    "ARGAN": {
+      "confidence": 53.2,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 1.4,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "ARKAN": {
+      "confidence": 55.9,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 4.48,
+      "risky_near_resistance": false,
+      "stage": "ACCUMULATION"
+    },
+    "ARZAN": {
+      "confidence": 34.3,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 2.65,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "ASC": {
+      "confidence": 58.6,
+      "continue_rising": true,
+      "rating": "BUY",
+      "risk_reward_ratio": 0.35,
+      "risky_near_resistance": true,
+      "stage": "MARKUP"
+    },
+    "ASIYA": {
+      "confidence": 44.5,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 6.18,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "ATC": {
+      "confidence": 53.6,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 3.15,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "AZNOULA": {
+      "confidence": 31.8,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 4.11,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "BAYANINV": {
+      "confidence": 39.0,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 6.54,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "BEYOUT": {
+      "confidence": 25.2,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 7.25,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "BKIKWT": {
+      "confidence": 48.4,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 2.55,
+      "risky_near_resistance": false,
+      "stage": "ACCUMULATION"
+    },
+    "BOUBYAN": {
+      "confidence": 30.3,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 8.34,
+      "risky_near_resistance": false,
+      "stage": "ACCUMULATION"
+    },
+    "BOURSA": {
+      "confidence": 70.7,
+      "continue_rising": false,
+      "rating": "HOLD",
+      "risk_reward_ratio": 7.28,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "BPCC": {
+      "confidence": 74.8,
+      "continue_rising": true,
+      "rating": "BUY",
+      "risk_reward_ratio": 3.0,
+      "risky_near_resistance": false,
+      "stage": "MARKUP"
+    },
+    "BURG": {
+      "confidence": 22.7,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 9.93,
+      "risky_near_resistance": false,
+      "stage": "ACCUMULATION"
+    },
+    "CABLE": {
+      "confidence": 39.4,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 3.25,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "CATTL": {
+      "confidence": 58.4,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 4.59,
+      "risky_near_resistance": false,
+      "stage": "ACCUMULATION"
+    },
+    "CBK": {
+      "confidence": 0.0,
+      "continue_rising": false,
+      "rating": "AVOID",
+      "risk_reward_ratio": null,
+      "risky_near_resistance": false,
+      "stage": "INACTIVE_OR_DELISTED"
+    },
+    "CGC": {
+      "confidence": 46.8,
+      "continue_rising": false,
+      "rating": "REDUCE",
+      "risk_reward_ratio": 5.79,
+      "risky_near_resistance": false,
+      "stage": "DISTRIBUTION"
+    },
+    "CLEANING": {
+      "confidence": 62.2,
+      "continue_rising": false,
+      "rating": "HOLD",
+      "risk_reward_ratio": 0.49,
+      "risky_near_resistance": true,
+      "stage": "MARKUP"
+    },
+    "COAST": {
+      "confidence": 54.7,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 1.6,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "DALQANRE": {
+      "confidence": 0.0,
+      "continue_rising": false,
+      "rating": "AVOID",
+      "risk_reward_ratio": null,
+      "risky_near_resistance": false,
+      "stage": "INACTIVE_OR_DELISTED"
+    },
+    "DIGITUS": {
+      "confidence": 52.9,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 5.39,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "EKTTITAB": {
+      "confidence": 41.5,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 5.06,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "EMIRATES": {
+      "confidence": 46.5,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 3.25,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "ENERGYH": {
+      "confidence": 58.2,
+      "continue_rising": false,
+      "rating": "HOLD",
+      "risk_reward_ratio": 0.97,
+      "risky_near_resistance": true,
+      "stage": "MARKUP"
+    },
+    "EQUIPMENT": {
+      "confidence": 30.1,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 10.0,
+      "risky_near_resistance": false,
+      "stage": "ACCUMULATION"
+    },
+    "ERESCO": {
+      "confidence": 58.4,
+      "continue_rising": false,
+      "rating": "HOLD",
+      "risk_reward_ratio": 0.92,
+      "risky_near_resistance": true,
+      "stage": "MARKUP"
+    },
+    "FACIL": {
+      "confidence": 54.9,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 0.83,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "FTI": {
+      "confidence": 48.3,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 1.95,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "FUTUREKID": {
+      "confidence": 39.8,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 3.41,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "GBK": {
+      "confidence": 55.8,
+      "continue_rising": true,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 3.31,
+      "risky_near_resistance": false,
+      "stage": "EARLY_MARKUP"
+    },
+    "GFC": {
+      "confidence": 42.4,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 2.18,
+      "risky_near_resistance": false,
+      "stage": "ACCUMULATION"
+    },
+    "GFH": {
+      "confidence": 48.8,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 2.88,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "GIH": {
+      "confidence": 54.2,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 2.41,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "GINS": {
+      "confidence": 27.4,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 3.39,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "HUMANSOFT": {
+      "confidence": 52.9,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 5.61,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "IFA": {
+      "confidence": 64.5,
+      "continue_rising": false,
+      "rating": "HOLD",
+      "risk_reward_ratio": 4.25,
+      "risky_near_resistance": false,
+      "stage": "ACCUMULATION"
+    },
+    "IFAHR": {
+      "confidence": 57.3,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 10.0,
+      "risky_near_resistance": false,
+      "stage": "ACCUMULATION"
+    },
+    "INJAZZAT": {
+      "confidence": 67.5,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 2.93,
+      "risky_near_resistance": false,
+      "stage": "EARLY_MARKUP"
+    },
+    "INOVEST": {
+      "confidence": 36.5,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 5.8,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "INTEGRATED": {
+      "confidence": 60.8,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 6.49,
+      "risky_near_resistance": false,
+      "stage": "EARLY_MARKUP"
+    },
+    "IPG": {
+      "confidence": 36.3,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 4.76,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "JAZEERA": {
+      "confidence": 58.2,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 3.41,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "JTC": {
+      "confidence": 46.4,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 2.27,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "KAMCO": {
+      "confidence": 56.4,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 4.91,
+      "risky_near_resistance": false,
+      "stage": "ACCUMULATION"
+    },
+    "KBT": {
+      "confidence": 51.1,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 3.44,
+      "risky_near_resistance": false,
+      "stage": "ACCUMULATION"
+    },
+    "KCEM": {
+      "confidence": 47.6,
+      "continue_rising": false,
+      "rating": "HOLD",
+      "risk_reward_ratio": 0.61,
+      "risky_near_resistance": false,
+      "stage": "MARKUP"
+    },
+    "KCIN": {
+      "confidence": 49.2,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 2.46,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "KCPC": {
+      "confidence": 50.6,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 2.86,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "KFH": {
+      "confidence": 27.8,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 8.66,
+      "risky_near_resistance": false,
+      "stage": "ACCUMULATION"
+    },
+    "KFIC": {
+      "confidence": 39.6,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 1.51,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "KFOUC": {
+      "confidence": 37.7,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 9.91,
+      "risky_near_resistance": false,
+      "stage": "ACCUMULATION"
+    },
+    "KGL": {
+      "confidence": 0.0,
+      "continue_rising": false,
+      "rating": "AVOID",
+      "risk_reward_ratio": null,
+      "risky_near_resistance": false,
+      "stage": "INACTIVE_OR_DELISTED"
+    },
+    "KHOT": {
+      "confidence": 39.9,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 7.11,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "KIB": {
+      "confidence": 25.7,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 6.5,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "KINS": {
+      "confidence": 32.9,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 10.0,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "KINV": {
+      "confidence": 27.4,
+      "continue_rising": false,
+      "rating": "REDUCE",
+      "risk_reward_ratio": 10.0,
+      "risky_near_resistance": false,
+      "stage": "DISTRIBUTION"
+    },
+    "KMEFIC": {
+      "confidence": 57.1,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 1.33,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "KPPC": {
+      "confidence": 51.1,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 1.24,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "KPROJ": {
+      "confidence": 31.0,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 4.48,
+      "risky_near_resistance": false,
+      "stage": "ACCUMULATION"
+    },
+    "KRE": {
+      "confidence": 66.2,
+      "continue_rising": false,
+      "rating": "HOLD",
+      "risk_reward_ratio": 2.67,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "KUWAITRE": {
+      "confidence": 50.5,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 6.67,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "MABANEE": {
+      "confidence": 43.4,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 7.33,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "MADAR": {
+      "confidence": 61.2,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 0.42,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "MANAZEL": {
+      "confidence": 63.2,
+      "continue_rising": false,
+      "rating": "HOLD",
+      "risk_reward_ratio": 5.3,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "MARAKEZ": {
+      "confidence": 39.2,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 10.0,
+      "risky_near_resistance": false,
+      "stage": "ACCUMULATION"
+    },
+    "MARKAZ": {
+      "confidence": 33.0,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 6.15,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "MASAKEN": {
+      "confidence": 0.0,
+      "continue_rising": false,
+      "rating": "AVOID",
+      "risk_reward_ratio": null,
+      "risky_near_resistance": false,
+      "stage": "INACTIVE_OR_DELISTED"
+    },
+    "MASHAER": {
+      "confidence": 56.7,
+      "continue_rising": false,
+      "rating": "HOLD",
+      "risk_reward_ratio": 1.9,
+      "risky_near_resistance": false,
+      "stage": "MARKUP"
+    },
+    "MAZAYA": {
+      "confidence": 53.4,
+      "continue_rising": false,
+      "rating": "BUY",
+      "risk_reward_ratio": 0.94,
+      "risky_near_resistance": true,
+      "stage": "MARKUP"
+    },
+    "MENA": {
+      "confidence": 51.8,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 4.16,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "MEZZAN": {
+      "confidence": 40.7,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 7.3,
+      "risky_near_resistance": false,
+      "stage": "ACCUMULATION"
+    },
+    "MIDAN": {
+      "confidence": 81.6,
+      "continue_rising": false,
+      "rating": "HOLD",
+      "risk_reward_ratio": 2.32,
+      "risky_near_resistance": false,
+      "stage": "MARKUP"
+    },
+    "MKHZN": {
+      "confidence": 30.3,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 5.38,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "MRC": {
+      "confidence": 57.5,
+      "continue_rising": true,
+      "rating": "BUY",
+      "risk_reward_ratio": 0.52,
+      "risky_near_resistance": true,
+      "stage": "MARKUP"
+    },
+    "MUBARRAD": {
+      "confidence": 47.6,
+      "continue_rising": false,
+      "rating": "REDUCE",
+      "risk_reward_ratio": 2.28,
+      "risky_near_resistance": false,
+      "stage": "DISTRIBUTION"
+    },
+    "MUNSHAAT": {
+      "confidence": 43.6,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 3.68,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "MUNTAZAHAT": {
+      "confidence": 57.0,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 1.45,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "NAPESCO": {
+      "confidence": 46.7,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 5.52,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "NBK": {
+      "confidence": 26.6,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 10.0,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "NCCI": {
+      "confidence": 34.4,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 5.12,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "NICBM": {
+      "confidence": 33.2,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 3.24,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "NIH": {
+      "confidence": 42.6,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 3.51,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "NIND": {
+      "confidence": 25.2,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 9.78,
+      "risky_near_resistance": false,
+      "stage": "ACCUMULATION"
+    },
+    "NINV": {
+      "confidence": 72.8,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 4.55,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "NOOR": {
+      "confidence": 75.6,
+      "continue_rising": true,
+      "rating": "BUY",
+      "risk_reward_ratio": 4.18,
+      "risky_near_resistance": false,
+      "stage": "EARLY_MARKUP"
+    },
+    "NRE": {
+      "confidence": 62.4,
+      "continue_rising": false,
+      "rating": "REDUCE",
+      "risk_reward_ratio": 0.3,
+      "risky_near_resistance": true,
+      "stage": "DISTRIBUTION"
+    },
+    "OOREDOO": {
+      "confidence": 61.7,
+      "continue_rising": true,
+      "rating": "BUY",
+      "risk_reward_ratio": 1.28,
+      "risky_near_resistance": true,
+      "stage": "MARKUP"
+    },
+    "OSOS": {
+      "confidence": 64.0,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 3.19,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "OSOUL": {
+      "confidence": 54.4,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 1.95,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "OULAFUEL": {
+      "confidence": 40.4,
+      "continue_rising": false,
+      "rating": "REDUCE",
+      "risk_reward_ratio": 3.49,
+      "risky_near_resistance": false,
+      "stage": "DISTRIBUTION"
+    },
+    "PAPCO": {
+      "confidence": 51.1,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 1.1,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "PAPER": {
+      "confidence": 65.2,
+      "continue_rising": true,
+      "rating": "BUY",
+      "risk_reward_ratio": 3.19,
+      "risky_near_resistance": false,
+      "stage": "EARLY_MARKUP"
+    },
+    "PCEM": {
+      "confidence": 28.4,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 6.43,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "QIC": {
+      "confidence": 36.3,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 1.19,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "RASIYAT": {
+      "confidence": 58.6,
+      "continue_rising": false,
+      "rating": "HOLD",
+      "risk_reward_ratio": 1.2,
+      "risky_near_resistance": true,
+      "stage": "MARKUP"
+    },
+    "SANAM": {
+      "confidence": 74.7,
+      "continue_rising": false,
+      "rating": "HOLD",
+      "risk_reward_ratio": 2.36,
+      "risky_near_resistance": false,
+      "stage": "MARKUP"
+    },
+    "SECH": {
+      "confidence": 55.7,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 1.8,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "SENERGY": {
+      "confidence": 77.0,
+      "continue_rising": true,
+      "rating": "BUY",
+      "risk_reward_ratio": 3.0,
+      "risky_near_resistance": false,
+      "stage": "MARKUP"
+    },
+    "SHIP": {
+      "confidence": 31.8,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 10.0,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "SOKOUK": {
+      "confidence": 52.5,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 0.76,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "SOOR": {
+      "confidence": 40.0,
+      "continue_rising": false,
+      "rating": "REDUCE",
+      "risk_reward_ratio": 5.6,
+      "risky_near_resistance": false,
+      "stage": "DISTRIBUTION"
+    },
+    "SPEC": {
+      "confidence": 62.4,
+      "continue_rising": true,
+      "rating": "BUY",
+      "risk_reward_ratio": 0.22,
+      "risky_near_resistance": true,
+      "stage": "MARKUP"
+    },
+    "SRE": {
+      "confidence": 61.6,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 1.71,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "STC": {
+      "confidence": 71.0,
+      "continue_rising": false,
+      "rating": "HOLD",
+      "risk_reward_ratio": 5.28,
+      "risky_near_resistance": false,
+      "stage": "MARKUP"
+    },
+    "TAHSSILAT": {
+      "confidence": 42.8,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 3.71,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "TAM": {
+      "confidence": 43.4,
+      "continue_rising": false,
+      "rating": "REDUCE",
+      "risk_reward_ratio": 1.8,
+      "risky_near_resistance": false,
+      "stage": "DISTRIBUTION"
+    },
+    "TAMINV": {
+      "confidence": 54.1,
+      "continue_rising": false,
+      "rating": "HOLD",
+      "risk_reward_ratio": 1.63,
+      "risky_near_resistance": false,
+      "stage": "MARKUP"
+    },
+    "THURAYA": {
+      "confidence": 63.0,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 1.55,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "TIJARA": {
+      "confidence": 58.7,
+      "continue_rising": false,
+      "rating": "HOLD",
+      "risk_reward_ratio": 1.37,
+      "risky_near_resistance": true,
+      "stage": "MARKUP"
+    },
+    "TROLLEY": {
+      "confidence": 45.4,
+      "continue_rising": false,
+      "rating": "HOLD",
+      "risk_reward_ratio": 0.0,
+      "risky_near_resistance": false,
+      "stage": "MARKUP"
+    },
+    "UNICAP": {
+      "confidence": 44.4,
+      "continue_rising": false,
+      "rating": "BUY",
+      "risk_reward_ratio": 1.27,
+      "risky_near_resistance": true,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "UPAC": {
+      "confidence": 62.0,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 6.8,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "URC": {
+      "confidence": 69.2,
+      "continue_rising": false,
+      "rating": "HOLD",
+      "risk_reward_ratio": 2.6,
+      "risky_near_resistance": false,
+      "stage": "MARKUP"
+    },
+    "VALMORE": {
+      "confidence": 43.9,
+      "continue_rising": false,
+      "rating": "NEUTRAL",
+      "risk_reward_ratio": 4.7,
+      "risky_near_resistance": false,
+      "stage": "NEUTRAL_AMBIGUOUS"
+    },
+    "WARBABANK": {
+      "confidence": 26.6,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 7.93,
+      "risky_near_resistance": false,
+      "stage": "ACCUMULATION"
+    },
+    "WARBACAP": {
+      "confidence": 65.4,
+      "continue_rising": false,
+      "rating": "WATCHLIST",
+      "risk_reward_ratio": 4.72,
+      "risky_near_resistance": false,
+      "stage": "ACCUMULATION"
+    },
+    "WETHAQ": {
+      "confidence": 38.5,
+      "continue_rising": false,
+      "rating": "SELL",
+      "risk_reward_ratio": 3.37,
+      "risky_near_resistance": false,
+      "stage": "MARKDOWN"
+    },
+    "WINSRE": {
+      "confidence": 32.0,
+      "continue_rising": false,
+      "rating": "REDUCE",
+      "risk_reward_ratio": 4.48,
+      "risky_near_resistance": false,
+      "stage": "DISTRIBUTION"
+    },
+    "ZAIN": {
+      "confidence": 79.8,
+      "continue_rising": true,
+      "rating": "BUY",
+      "risk_reward_ratio": 3.0,
+      "risky_near_resistance": false,
+      "stage": "MARKUP"
+    }
+  },
+  "universe_size": 141
 }

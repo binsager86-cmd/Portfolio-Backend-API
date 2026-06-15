@@ -4,12 +4,15 @@ import importlib
 import json
 import math
 import os
+import sqlite3
 import warnings
 from collections import Counter
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
 
 import pandas as pd
+import pytest
 
 from app.services.eagle_eye.adapter import TickerChartAdapter
 from app.services.eagle_eye.indicators import compute_all_indicators
@@ -29,16 +32,28 @@ FIXTURE_PATH = (
     / "fixtures"
     / "phase0_ratings_golden.json"
 )
+BASELINE_DB_PATH = Path(__file__).resolve().parents[3] / "dev_portfolio.db"
+# Frozen as-of date to make characterization deterministic and independent of
+# newly arrived market bars in ee_ohlcv_cache.
+AS_OF = "2026-06-10"
+AS_OF_TS = pd.Timestamp(AS_OF)
 
-EXPECTED_DISTRIBUTION = {
-    "NEUTRAL": 43,
-    "SELL": 26,
-    "WATCHLIST": 23,
-    "HOLD": 20,
-    "BUY": 16,
-    "REDUCE": 8,
-    "AVOID": 5,
-}
+
+def _is_baseline_available() -> bool:
+    if not BASELINE_DB_PATH.exists():
+        return False
+    try:
+        conn = sqlite3.connect(str(BASELINE_DB_PATH))
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT COUNT(*) FROM ee_ohlcv_cache WHERE bar_date <= ?",
+            (AS_OF,),
+        )
+        count = int(cur.fetchone()[0])
+        conn.close()
+        return count > 0
+    except Exception:
+        return False
 
 
 def _safe_float(value: object) -> Optional[float]:
@@ -97,7 +112,7 @@ def _placeholder_record(reason: str) -> dict:
 def _recompute_snapshot() -> Dict[str, dict]:
     # tests/conftest.py redirects DATABASE_PATH to a temporary DB; characterization
     # must pin to the shared baseline snapshot used by ingest recompute.
-    os.environ["DATABASE_PATH"] = "../dev_portfolio.db"
+    os.environ["DATABASE_PATH"] = str(BASELINE_DB_PATH)
     from app.core.config import get_settings
     import app.core.database as db_module
 
@@ -108,6 +123,8 @@ def _recompute_snapshot() -> Dict[str, dict]:
     snapshot: Dict[str, dict] = {}
     for ticker in list_tickers_with_ohlcv():
         df = load_ohlcv(ticker)
+        if df is not None and len(df) > 0:
+            df = df[df.index <= AS_OF_TS]
         if df is None or len(df) < 50:
             snapshot[ticker.upper()] = _placeholder_record("insufficient_history")
             continue
@@ -150,25 +167,27 @@ def _recompute_snapshot() -> Dict[str, dict]:
 
 
 def test_rating_engine_characterization_baseline() -> None:
+    if not _is_baseline_available():
+        pytest.skip("baseline DB / as-of bars not present")
+
     fixture = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+    expected = fixture["ratings"]
     current = _recompute_snapshot()
 
-    assert current == fixture
+    assert current == expected
 
     distribution = Counter(v["rating"] for v in current.values())
-    assert dict(distribution) == EXPECTED_DISTRIBUTION
-    assert sum(distribution.values()) == 141
+    assert fixture["as_of"] == AS_OF
+    assert dict(distribution) == fixture["distribution"]
+    assert sum(distribution.values()) == int(fixture["universe_size"])
 
-    assert current["ALTIJARIA"]["stage"] == "NEUTRAL_AMBIGUOUS"
-    assert current["ALTIJARIA"]["rating"] == "NEUTRAL"
 
-    assert current["ZAIN"]["stage"] == "MARKUP"
-    assert current["ZAIN"]["rating"] == "BUY"
-    assert current["ZAIN"]["continue_rising"] is True
-    assert current["ZAIN"]["risky_near_resistance"] is True
-
-    assert current["WARBACAP"]["stage"] == "NEUTRAL_AMBIGUOUS"
-    assert current["WARBACAP"]["rating"] == "NEUTRAL"
-
-    assert current["HUMANSOFT"]["stage"] == "NEUTRAL_AMBIGUOUS"
-    assert current["HUMANSOFT"]["rating"] == "NEUTRAL"
+def _build_fixture_document(snapshot: Dict[str, dict]) -> dict:
+    distribution = Counter(v["rating"] for v in snapshot.values())
+    return {
+        "as_of": AS_OF,
+        "generated_at": datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+        "distribution": dict(distribution),
+        "universe_size": len(snapshot),
+        "ratings": snapshot,
+    }
