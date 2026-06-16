@@ -37,7 +37,7 @@ dependencies = [
     "openpyxl>=3.1.0",
 
     # Finance
-    "yfinance>=0.2.40",
+    "yfinance>=1.4.1",
 
     # Scheduling
     "apscheduler>=3.10.0",
