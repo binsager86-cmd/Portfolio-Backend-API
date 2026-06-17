@@ -44,7 +44,8 @@ class RatedStock(BaseModel):
     sector: str
     stage: str
     rating: str
-    confidence: float         # 0-100
+    confidence: float         # 0-100 - latest/live confidence (fresh computation or today's cache)
+    confidence_yesterday: Optional[float] = None  # 0-100 - yesterday's cached confidence (before today's refresh)
     thesis: str
     entry_primary: Optional[float] = None
     stop_loss: Optional[float] = None

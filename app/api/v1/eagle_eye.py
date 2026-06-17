@@ -1308,6 +1308,7 @@ async def get_scanner(
                 stage=row.get("stage"),
                 rating=row.get("rating"),
                 confidence=conf,
+                confidence_yesterday=_safe_float(row.get("confidence_yesterday")),
                 thesis=row.get("thesis"),
                 entry_primary=row.get("entry_primary"),
                 stop_loss=row.get("stop_loss"),
