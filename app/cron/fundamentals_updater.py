@@ -114,19 +114,27 @@ def run_tickerchart_fundamentals_update() -> dict:
         max_workers=settings.STOCKANALYSIS_MAX_WORKERS,
     )
 
+    read_last_price = getattr(tc, "read_quotes_snapshot_last_price", None)
+
     for ticker in to_fetch:
+        pe_snapshot = None
+        last_price = None
 
         try:
             pe_snapshot = _round_or_none(tc.read_quotes_snapshot_pe(ticker, "KSE"), 3)
-            last_price = _round_or_none(tc.read_quotes_snapshot_last_price(ticker, "KSE", price_divisor=1000.0), 6)
-            sa = sa_batch.get(ticker) or {}
-            eps_stockanalysis = _round_or_none(sa.get("eps"), 3)
-            bvps_stockanalysis = _round_or_none(sa.get("book_value_per_share"), 3)
-            pe_stockanalysis = _round_or_none(sa.get("pe_ratio"), 3)
         except Exception as exc:
-            failed += 1
-            logger.debug("TickerChart snapshot read failed for %s: %s", ticker, exc)
-            continue
+            logger.debug("TickerChart snapshot PE read failed for %s: %s", ticker, exc)
+
+        if callable(read_last_price):
+            try:
+                last_price = _round_or_none(read_last_price(ticker, "KSE", price_divisor=1000.0), 6)
+            except Exception as exc:
+                logger.debug("TickerChart snapshot last-price read failed for %s: %s", ticker, exc)
+
+        sa = sa_batch.get(ticker) or {}
+        eps_stockanalysis = _round_or_none(sa.get("eps"), 3)
+        bvps_stockanalysis = _round_or_none(sa.get("book_value_per_share"), 3)
+        pe_stockanalysis = _round_or_none(sa.get("pe_ratio"), 3)
 
         eps = eps_stockanalysis
         bvps = bvps_stockanalysis
