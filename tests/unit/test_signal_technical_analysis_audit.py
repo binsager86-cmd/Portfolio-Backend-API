@@ -1009,13 +1009,15 @@ class TestSignalGates:
         )
 
     @staticmethod
-    def _sell_gates(total_score: int, trend: float, volume: float,
-                    liquidity: bool = True) -> bool:
+    def _sell_gates(total_score: int, trend: float, volume: float, rr: float,
+                    liquidity: bool = True, support_blocked: bool = False) -> bool:
         return (
             total_score <= SIGNAL_MAX_TOTAL_SELL
             and trend <= (100.0 - SIGNAL_MIN_TREND_RAW_PCT)
             and volume <= (100.0 - SIGNAL_MIN_VOLFLOW_RAW_PCT)
+            and rr >= SIGNAL_MIN_RR
             and liquidity
+            and not support_blocked
         )
 
     # ── BUY gate boundary conditions ──────────────────────────────────────────
@@ -1059,22 +1061,28 @@ class TestSignalGates:
     # ── SELL gate boundary conditions ─────────────────────────────────────────
 
     def test_all_sell_gates_pass(self):
-        assert self._sell_gates(total_score=20, trend=35, volume=45)
+        assert self._sell_gates(total_score=20, trend=35, volume=45, rr=2.3)
 
     def test_sell_blocked_score_above_25(self):
-        assert not self._sell_gates(total_score=26, trend=35, volume=45)
+        assert not self._sell_gates(total_score=26, trend=35, volume=45, rr=2.3)
 
     def test_sell_blocked_trend_above_40(self):
-        assert not self._sell_gates(total_score=20, trend=41, volume=45)
+        assert not self._sell_gates(total_score=20, trend=41, volume=45, rr=2.3)
 
     def test_sell_blocked_volume_above_50(self):
-        assert not self._sell_gates(total_score=20, trend=35, volume=51)
+        assert not self._sell_gates(total_score=20, trend=35, volume=51, rr=2.3)
+
+    def test_sell_blocked_rr_below_2(self):
+        assert not self._sell_gates(total_score=20, trend=35, volume=45, rr=1.9)
 
     def test_sell_blocked_liquidity_fail(self):
-        assert not self._sell_gates(total_score=20, trend=35, volume=45, liquidity=False)
+        assert not self._sell_gates(total_score=20, trend=35, volume=45, rr=2.3, liquidity=False)
+
+    def test_sell_blocked_support_within_1_5r(self):
+        assert not self._sell_gates(total_score=20, trend=35, volume=45, rr=2.3, support_blocked=True)
 
     def test_exact_sell_boundaries_pass(self):
-        assert self._sell_gates(total_score=25, trend=40, volume=50)
+        assert self._sell_gates(total_score=25, trend=40, volume=50, rr=2.0)
 
     def test_exact_buy_boundaries_pass(self):
         assert self._buy_gates(total_score=70, trend=60, volume=50, rr=2.0)

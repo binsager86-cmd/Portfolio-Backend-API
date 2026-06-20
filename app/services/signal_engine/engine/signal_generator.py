@@ -480,6 +480,12 @@ async def generate_kuwait_signal(
         if nearest_resistance - levels["entry_mid"] < one_half_r:
             resistance_within_1_5r = True
 
+    support_within_1_5r = False
+    if nearest_support and levels.get("entry_mid") and levels.get("risk_per_share"):
+        one_half_r = levels["risk_per_share"] * 1.5
+        if levels["entry_mid"] - nearest_support < one_half_r:
+            support_within_1_5r = True
+
     buy_gates = (
         total_score >= SIGNAL_MIN_TOTAL_SCORE
         and trend_pct >= SIGNAL_MIN_TREND_RAW_PCT
@@ -493,7 +499,9 @@ async def generate_kuwait_signal(
         total_score <= SIGNAL_MAX_TOTAL_SELL
         and trend_pct <= (100.0 - SIGNAL_MIN_TREND_RAW_PCT)
         and vol_pct <= (100.0 - SIGNAL_MIN_VOLFLOW_RAW_PCT)
+        and rr >= SIGNAL_MIN_RR
         and liquidity_passed
+        and not support_within_1_5r
         and post_decay_p_tp1 >= SIGNAL_MIN_P_TP1_SELL
     )
 
@@ -511,6 +519,8 @@ async def generate_kuwait_signal(
 
     if resistance_within_1_5r and direction == "BUY":
         alerts.append("Major resistance detected within 1.5R — BUY signal blocked")
+    if support_within_1_5r and direction == "SELL":
+        alerts.append("Major support detected within 1.5R — SELL signal blocked")
 
     # ── 16b. Entry trigger evaluation ─────────────────────────────────────
     if final_signal in ("BUY", "STRONG_BUY"):
