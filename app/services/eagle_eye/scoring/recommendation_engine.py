@@ -141,8 +141,17 @@ def generate_recommendation(
     stage_conf: float,
     pattern_match: Optional[Mapping[str, object]] = None,
     data_quality: Optional[float] = None,
+    ride_quality: Optional[Mapping[str, object]] = None,
 ) -> Dict[str, object]:
-    """Generate rules-first recommendation; pattern matching is advisory only."""
+    """Generate rules-first recommendation; pattern matching and ride quality are advisory only.
+
+    Parameters
+    ----------
+    ride_quality : Optional dict from ``ride_evaluator.RideQualityResult.to_dict()``.
+        When provided and the stock is in an active position, the ride model
+        can upgrade HOLD → BUY (healthy pullback ADD signal) or add context
+        for EXIT guidance.  It never overrides hard veto conditions.
+    """
 
     veto_reasons: List[str] = []
 
@@ -256,6 +265,53 @@ def generate_recommendation(
 
     risk_warning = compute_risk_warning_score(ind)
 
+    # ── Ride Quality Model integration ────────────────────────────────────
+    # The ride model answers "should I hold/add/exit an ACTIVE position?"
+    # It never overrides hard veto reasons (liquidity, markdown, etc.).
+    # It can:
+    #   ADD signal  → upgrade HOLD → BUY (healthy pullback continuation)
+    #   EXIT signal → downgrade BUY/HOLD → REDUCE (trend weakening)
+    ride_quality_out: Dict[str, object] = {}
+    if ride_quality is not None and buy_allowed:
+        rq_action = str(ride_quality.get("ride_action") or "")
+        p_add = _safe_float(ride_quality.get("p_add"), 0.0)
+        p_exit = _safe_float(ride_quality.get("p_exit"), 0.0)
+        remaining_upside = _safe_float(ride_quality.get("remaining_upside_est"), 0.0)
+        ride_conf = _safe_float(ride_quality.get("ride_confidence"), 0.0)
+        days_held = int(_safe_float(ride_quality.get("days_held"), 0.0))
+        drawdown = _safe_float(ride_quality.get("drawdown_from_peak"), 0.0)
+        model_available = bool(ride_quality.get("model_available", False))
+
+        if model_available:
+            # ADD upgrade: stock is in healthy pullback during confirmed uptrend
+            if rq_action == "ADD" and p_add > 0.60 and base_rec == "HOLD":
+                base_rec = "BUY"
+                veto_reasons_note = "Ride model: healthy pullback ADD signal"
+                final_confidence = min(_clip(final_confidence + 8.0), 92.0)
+
+            # EXIT advisory: ride model sees weakening trend
+            elif rq_action == "EXIT" and p_exit > 0.70 and base_rec in ("BUY", "HOLD"):
+                base_rec = "REDUCE"
+                veto_reasons.append(
+                    f"Ride model: EXIT signal (p_exit={p_exit:.0%}, "
+                    f"drawdown={drawdown:.1f}% from peak)"
+                )
+                final_confidence = min(final_confidence, 50.0)
+
+        ride_quality_out = {
+            "ride_action": rq_action,
+            "ride_confidence": round(ride_conf, 1),
+            "p_hold": round(_safe_float(ride_quality.get("p_hold"), 0.0), 4),
+            "p_add": round(p_add, 4),
+            "p_exit": round(p_exit, 4),
+            "remaining_upside_est": round(remaining_upside, 2),
+            "days_held": days_held,
+            "drawdown_from_peak": round(drawdown, 2),
+            "peak_gain_pct": round(_safe_float(ride_quality.get("peak_gain_pct"), 0.0), 2),
+            "model_source": str(ride_quality.get("model_source") or ""),
+            "ride_summary": str(ride_quality.get("summary") or ""),
+        }
+
     return {
         "recommendation": base_rec,
         "confidence": round(final_confidence, 1),
@@ -271,6 +327,7 @@ def generate_recommendation(
         "family_scores": dict(family_scores),
         "data_quality_score": round(dq, 1),
         "risky_near_resistance": risky_near_resistance,
+        "ride_quality": ride_quality_out if ride_quality_out else None,
         **risk_warning,
         **continue_rising,
     }

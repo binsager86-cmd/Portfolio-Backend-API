@@ -302,6 +302,51 @@ _DDL: list[str] = [
     """,
     "CREATE INDEX IF NOT EXISTS idx_cs_ticker_date ON considered_signals(stock_ticker, signal_date)",
     "CREATE INDEX IF NOT EXISTS idx_cs_outcome_filled ON considered_signals(outcome_filled)",
+
+    # ── Ride Quality Model: active position state ─────────────────────────
+    # Tracks entry price and running peak for each open position so the ride
+    # evaluator can compute drawdown_from_peak without replaying full history.
+    """
+    CREATE TABLE IF NOT EXISTS ee_ride_state (
+        ticker               TEXT    NOT NULL,
+        entry_date           TEXT    NOT NULL,
+        entry_price          REAL    NOT NULL,
+        running_peak_price   REAL,
+        last_evaluated       TEXT,
+        last_action          TEXT    CHECK(last_action IN ('HOLD','ADD','EXIT')),
+        created_at           TEXT    DEFAULT (datetime('now')),
+        PRIMARY KEY (ticker, entry_date)
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_ride_state_ticker ON ee_ride_state(ticker)",
+
+    # ── Ride Quality Model: evaluation log ────────────────────────────────
+    # One row per ticker per day for active ride evaluations — audit trail
+    # and for future A/B comparison vs rules-only decisions.
+    """
+    CREATE TABLE IF NOT EXISTS ride_quality_log (
+        id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+        ticker                TEXT    NOT NULL,
+        eval_date             TEXT    NOT NULL,
+        entry_date            TEXT    NOT NULL,
+        entry_price           REAL    NOT NULL,
+        current_price         REAL,
+        days_held             INTEGER,
+        unrealized_pct        REAL,
+        peak_gain_pct         REAL,
+        drawdown_from_peak    REAL,
+        ride_action           TEXT    CHECK(ride_action IN ('HOLD','ADD','EXIT')),
+        ride_confidence       REAL,
+        p_hold                REAL,
+        p_add                 REAL,
+        p_exit                REAL,
+        remaining_upside_est  REAL,
+        model_source          TEXT,
+        created_at            TEXT    DEFAULT (datetime('now')),
+        UNIQUE (ticker, eval_date, entry_date)
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_rql_ticker_date ON ride_quality_log(ticker, eval_date)",
 ]
 
 
