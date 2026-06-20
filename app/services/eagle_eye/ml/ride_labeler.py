@@ -45,11 +45,36 @@ LOGGER = logging.getLogger(__name__)
 # Label-forward windows (trading days)
 HOLD_DD_LIMIT_DEFAULT: float = 5.0     # max drawdown before HOLD → EXIT
 EXIT_DD_LIMIT_DEFAULT: float = 8.0     # drawdown that forces EXIT label
-ADD_PULLBACK_MIN: float = 2.0          # min pullback from peak to qualify ADD
+ADD_PULLBACK_ATR_MULT: float = 2.0     # approved global default multiplier
+ADD_PULLBACK_FLOOR: float = 2.5        # approved minimum pullback floor (%)
 ADD_RECOVERY_DAYS: int = 20            # window to recover and make new high
 REMAINING_UPSIDE_WINDOW: int = 40      # days over which remaining_upside is measured
 MAX_RIDE_DAYS: int = 180               # cap ride duration for labeling
 MIN_RIDE_DAYS: int = 10                # skip rides shorter than this
+
+
+def _atr_percent_series(ohlcv: pd.DataFrame, period: int = 14) -> np.ndarray:
+    """Compute ATR% (ATR / close * 100) with Wilder-style smoothing."""
+    if ohlcv.empty:
+        return np.array([], dtype=float)
+
+    high = pd.to_numeric(ohlcv["high"], errors="coerce")
+    low = pd.to_numeric(ohlcv["low"], errors="coerce")
+    close = pd.to_numeric(ohlcv["close"], errors="coerce")
+
+    prev_close = close.shift(1)
+    tr = pd.concat(
+        [
+            (high - low).abs(),
+            (high - prev_close).abs(),
+            (low - prev_close).abs(),
+        ],
+        axis=1,
+    ).max(axis=1)
+
+    atr = tr.ewm(alpha=1.0 / float(period), adjust=False, min_periods=period).mean()
+    atr_pct = (atr / close.replace(0, np.nan)) * 100.0
+    return atr_pct.to_numpy(dtype=float)
 
 
 @dataclass
@@ -263,6 +288,7 @@ def label_ride_days(
     lows = ohlcv["low"].to_numpy(dtype=float)
     dates_arr = ohlcv.index.date
     n = len(ohlcv)
+    atr_pct_arr = _atr_percent_series(ohlcv, period=14)
 
     end_idx = min(ride.peak_idx, ride.entry_idx + MAX_RIDE_DAYS)
     labeled: List[LabeledRideDay] = []
@@ -321,11 +347,19 @@ def label_ride_days(
         # ── Label logic (DNA-calibrated) ──────────────────────────────────
         hold_dd = ride.hold_dd_limit
         exit_dd = ride.exit_dd_limit
+        atr_pct = float("nan")
+        if day_idx < len(atr_pct_arr):
+            atr_pct = float(atr_pct_arr[day_idx])
+
+        if math.isfinite(atr_pct) and atr_pct > 0:
+            add_pullback_min = max(ADD_PULLBACK_FLOOR, ADD_PULLBACK_ATR_MULT * atr_pct)
+        else:
+            add_pullback_min = ADD_PULLBACK_FLOOR
 
         if remaining_max_dd > exit_dd:
             label = "EXIT"
         elif makes_new_high_20d and remaining_max_dd < hold_dd:
-            if drawdown_from_peak > ADD_PULLBACK_MIN and remaining_max_gain > 5.0:
+            if drawdown_from_peak > add_pullback_min and remaining_max_gain > 5.0:
                 label = "ADD"
             else:
                 label = "HOLD"
