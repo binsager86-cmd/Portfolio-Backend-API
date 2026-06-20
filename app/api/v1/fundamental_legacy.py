@@ -1001,6 +1001,14 @@ async def delete_stock(
     if not row:
         raise NotFoundError("Analysis Stock", str(stock_id))
 
+    # extraction_cache is created by extraction_service, not _ensure_schema().
+    # Make best effort to ensure it exists, but do not block stock hard-delete.
+    try:
+        from app.services.extraction_service import _ensure_cache_table
+        _ensure_cache_table()
+    except Exception as exc:
+        logger.warning("delete_stock: extraction_cache ensure skipped for stock_id=%s: %s", stock_id, exc)
+
     with get_connection() as conn:
         cur = conn.cursor()
         stmt_ids = [
@@ -1027,7 +1035,10 @@ async def delete_stock(
         cur.execute("DELETE FROM cashflow_extraction_runs WHERE stock_id = ?", (stock_id,))
         cur.execute("DELETE FROM pdf_uploads WHERE stock_id = ?", (stock_id,))
         cur.execute("DELETE FROM peer_companies WHERE stock_id = ?", (stock_id,))
-        cur.execute("DELETE FROM extraction_cache WHERE stock_id = ?", (stock_id,))
+        try:
+            cur.execute("DELETE FROM extraction_cache WHERE stock_id = ?", (stock_id,))
+        except Exception as exc:
+            logger.warning("delete_stock: extraction_cache cleanup skipped for stock_id=%s: %s", stock_id, exc)
         cur.execute("DELETE FROM financial_statements WHERE stock_id = ?", (stock_id,))
         cur.execute("DELETE FROM stock_metrics WHERE stock_id = ?", (stock_id,))
         cur.execute("DELETE FROM valuation_models WHERE stock_id = ?", (stock_id,))
@@ -2290,9 +2301,16 @@ async def fetch_statements_online(
     resolved = _resolve_yf_ticker(symbol, current_user.user_id)
     is_kuwait = resolved.upper().endswith(".KW")
 
-    # Route US stocks to stockanalysis.com (/stocks/ path)
+    # Route US stocks to stockanalysis.com (/stocks/ path).
+    # Use the resolved ticker first so renamed symbols keep working.
     if not is_kuwait:
-        return _fetch_us_statements(stock_id, symbol, current_user.user_id)
+        us_symbol = (resolved or symbol or "").strip().upper()
+        # StockAnalysis uses canonical symbols without exchange suffixes.
+        if "." in us_symbol:
+            us_symbol = us_symbol.split(".", 1)[0]
+        if not us_symbol:
+            us_symbol = (symbol or "").strip().upper()
+        return _fetch_us_statements(stock_id, us_symbol, current_user.user_id)
 
     base = resolved.replace(".KW", "").upper()
     headers = {
