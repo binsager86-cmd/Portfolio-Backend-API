@@ -422,7 +422,7 @@ def _parse_date(raw: str) -> str:
         dt = datetime.strptime(raw[:14], "%Y%m%d%H%M%S")
         return dt.isoformat()
     except Exception:
-        return datetime.utcnow().isoformat()
+        return datetime.now(timezone.utc).isoformat()
 
 
 def _classify_category(news_type: str, title: str) -> str:
@@ -663,7 +663,7 @@ def _persist_articles(db: Session, items: list[dict]) -> int:
         try:
             pub_dt = datetime.fromisoformat(it["publishedAt"])
         except (ValueError, TypeError):
-            pub_dt = datetime.utcnow()
+            pub_dt = datetime.now(timezone.utc)
 
         article = NewsArticle(
             news_id=nid,
@@ -679,7 +679,7 @@ def _persist_articles(db: Session, items: list[dict]) -> int:
             language=it.get("language", "en"),
             is_verified=1 if it.get("isVerified", True) else 0,
             attachments_json=attachments_str,
-            fetched_at=datetime.utcnow(),
+            fetched_at=datetime.now(timezone.utc),
             content_hash=chash,
         )
         db.add(article)
@@ -928,7 +928,7 @@ async def news_feed(
         "items": items,
         "nextPageCursor": next_cursor,
         "totalAvailable": total,
-        "updatedAt": datetime.utcnow().isoformat(),
+        "updatedAt": datetime.now(timezone.utc).isoformat(),
     }
     set_cached(news_cache, feed_cache_key, payload)
     return payload
@@ -999,7 +999,7 @@ async def news_history(
         "page": page,
         "totalPages": total_pages,
         "totalItems": total,
-        "updatedAt": datetime.utcnow().isoformat(),
+        "updatedAt": datetime.now(timezone.utc).isoformat(),
     }
 
 
