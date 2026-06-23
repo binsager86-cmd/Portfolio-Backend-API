@@ -97,12 +97,16 @@ ml_models/per_stock/*
 !ml_models/per_stock/WARBACAP_y_10pct_20d/current/**
 ml_training_matrix/
 ml_feature_store/
+ml_models/cache/
+ml_models/ride_quality/
+ml_models/ride_upside/
 
 # ─────────────────────────────────────────────
 # Diagnostic / scratch outputs
 # ─────────────────────────────────────────────
 ml_models/diagnostics/
 reports/weekly_flagged_review_*.md
+reports/ride_quality_r1/
 census_raw.json
 
 # ─────────────────────────────────────────────
