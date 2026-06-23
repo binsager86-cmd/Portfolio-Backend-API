@@ -1128,6 +1128,20 @@ def compute_all_ratings(
         ),
     )
 
+    # --- Recommendation tracking (append-only snapshot + signal detection) ---
+    try:
+        from app.services.eagle_eye.recommendation_tracker import post_compute_snapshot
+
+        tracker_stats = post_compute_snapshot(run_id=run_id, run_date=run_date)
+        logger.info(
+            "Tracker: %d snapshots, %d new signals, %d outcomes updated",
+            tracker_stats.get("snapshots_saved", 0),
+            tracker_stats.get("new_signals", 0),
+            tracker_stats.get("outcomes_updated", 0),
+        )
+    except Exception as exc:
+        logger.warning("Recommendation tracker failed (non-fatal): %s", exc)
+
     return stats
 
 
