@@ -221,6 +221,12 @@ def _capture_daily_snapshot(run_id: str, run_date: str) -> int:
         except (json.JSONDecodeError, TypeError):
             pass
 
+        liq = ind.get("family_liquidity", ind.get("liquidity"))
+        trd = ind.get("family_trend", ind.get("trend"))
+        mom = ind.get("family_momentum", ind.get("momentum"))
+        geo = ind.get("family_geometry", ind.get("geometry"))
+        rr = ind.get("family_risk_reward", ind.get("risk_reward"))
+
         exec_sql(
             """
             INSERT INTO ee_rating_snapshots (
@@ -246,11 +252,11 @@ def _capture_daily_snapshot(run_id: str, run_date: str) -> int:
                 _sf(row.get("tp2")),
                 _sf(row.get("risk_reward_ratio")),
                 _sf(row.get("ml_score")),
-                _sf(ind.get("liquidity")),
-                _sf(ind.get("trend")),
-                _sf(ind.get("momentum")),
-                _sf(ind.get("geometry")),
-                _sf(ind.get("risk_reward")),
+                _sf(liq),
+                _sf(trd),
+                _sf(mom),
+                _sf(geo),
+                _sf(rr),
                 int(row.get("risky_near_resistance") or 0),
                 row.get("indicators_json"),
                 now_ts,

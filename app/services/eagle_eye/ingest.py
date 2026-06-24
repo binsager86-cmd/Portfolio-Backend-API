@@ -1005,6 +1005,21 @@ def compute_all_ratings(
                 "code_fingerprint": code_fingerprint,
             }
 
+            # Persist family scores into the indicators payload so downstream
+            # consumers (recommendation tracker snapshots) can read them.
+            try:
+                _fam = result.get("family_scores") or {}
+                _ind = result.get("indicators")
+                if isinstance(_ind, dict) and isinstance(_fam, dict):
+                    _ind["family_liquidity"] = _fam.get("liquidity")
+                    _ind["family_trend"] = _fam.get("trend")
+                    _ind["family_momentum"] = _fam.get("momentum")
+                    _ind["family_geometry"] = _fam.get("geometry")
+                    _ind["family_risk_reward"] = _fam.get("risk_reward")
+                    _ind["family_total_score"] = _fam.get("total_score")
+            except Exception:
+                pass
+
             save_rating(ticker, name_en, sector, result)
 
             # ── Signal logger (observation only — must not block rating) ─────
