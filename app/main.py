@@ -340,9 +340,15 @@ _dev_origins = [
 # In production, match any *.ondigitalocean.app subdomain + explicit CORS_ORIGINS
 _prod_origin_regex = r"https://.*\.ondigitalocean\.app"
 
-# In development, allow localhost/127.0.0.1 on any port so Expo can
-# run on alternate ports (8083, 8084, etc.) without CORS failures.
-_dev_origin_regex = r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$"
+# In development, allow localhost/loopback and private LAN ranges on any port
+# so Expo web served from a LAN host (for example 192.168.x.x:8081) can call
+# the local API without browser CORS failures.
+_dev_origin_regex = (
+    r"^https?://(localhost|127\.0\.0\.1|"
+    r"192\.168\.\d{1,3}\.\d{1,3}|"
+    r"10\.\d{1,3}\.\d{1,3}\.\d{1,3}|"
+    r"172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$"
+)
 
 app.add_middleware(
     CORSMiddleware,
