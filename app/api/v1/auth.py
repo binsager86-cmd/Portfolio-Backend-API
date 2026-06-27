@@ -56,6 +56,18 @@ _settings = get_settings()
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
+class UpdateMeRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        trimmed = value.strip()
+        if not trimmed:
+            raise ValueError("Name is required")
+        return trimmed
+
+
 # ── Lockout helpers ──────────────────────────────────────────────────
 
 def _check_lockout(username: str) -> None:
@@ -276,6 +288,16 @@ async def me(current_user=Depends(get_current_user)):
         name=name,
         is_admin=is_admin,
     )
+
+
+@router.put("/me")
+async def update_me(body: UpdateMeRequest, current_user=Depends(get_current_user)):
+    """Update the authenticated user's profile fields."""
+    exec_sql(
+        "UPDATE users SET name = ? WHERE id = ?",
+        (body.name, current_user.user_id),
+    )
+    return {"status": "ok", "data": {"message": "Name updated successfully"}}
 
 
 # ── Register ─────────────────────────────────────────────────────────
