@@ -45,6 +45,12 @@ CASCADE_ROLLBACK_THRESHOLD = 3  # trigger C
 FAILURE_CONSECUTIVE_DAYS = 2    # trigger D
 
 
+def _is_kuwait_trading_day(check_date: date) -> bool:
+    """Kuwait market trading days are Sunday-Thursday."""
+    # Python weekday: Mon=0 ... Sun=6
+    return check_date.weekday() in {6, 0, 1, 2, 3}
+
+
 def _safe_float(value: Any) -> Optional[float]:
     try:
         numeric = float(value)
@@ -398,11 +404,21 @@ def _check_trigger_c(today_str: str, query_all) -> tuple:
 
 def _check_trigger_d(today_str: str, query_all) -> tuple:
     """2+ consecutive trading days with zero shadow rows (scoring job failures)."""
+    # Nothing to monitor if there are no SHADOW models.
+    shadow_model_rows = query_all(
+        "SELECT COUNT(*) AS n FROM ml_models WHERE status = 'SHADOW'",
+        (),
+    )
+    shadow_model_count = int(shadow_model_rows[0]["n"]) if shadow_model_rows else 0
+    if shadow_model_count <= 0:
+        return None, None
+
     # Check last FAILURE_CONSECUTIVE_DAYS trading days (skip today, look at history)
     check_date = date.fromisoformat(today_str) - timedelta(days=1)
     consecutive_failures = 0
-    for _ in range(FAILURE_CONSECUTIVE_DAYS + 2):  # scan a few extra days to skip weekends
-        if check_date.weekday() >= 5:  # skip Sat/Sun (KSE is Sun-Thu but keep simple)
+    # Scan extra calendar days to safely skip non-trading days (Fri/Sat).
+    for _ in range(FAILURE_CONSECUTIVE_DAYS + 4):
+        if not _is_kuwait_trading_day(check_date):
             check_date -= timedelta(days=1)
             continue
         ds = check_date.isoformat()
