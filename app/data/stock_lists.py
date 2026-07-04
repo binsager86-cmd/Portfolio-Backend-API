@@ -312,6 +312,15 @@ def resolve_yf_ticker_from_lists(symbol: str, currency: str) -> str | None:
     if not sym_upper:
         return None
 
+    # Common legacy/alt symbols seen in user imports.
+    symbol_aliases = {
+        "ALGHANIM": "ALG",
+        "MABNEE": "MABANEE",
+        "AGILITY": "AGLTY",
+        "AGILITY PLC": "AGLTY",
+        "H-SOFT": "HUMANSOFT",
+    }
+
     kw_map = {entry["symbol"].upper(): entry["yf_ticker"] for entry in KUWAIT_STOCKS}
     us_map = {entry["symbol"].upper(): entry["yf_ticker"] for entry in US_STOCKS}
 
@@ -323,4 +332,15 @@ def resolve_yf_ticker_from_lists(symbol: str, currency: str) -> str | None:
         return kw_map[sym_upper]
     if sym_upper in us_map:
         return us_map[sym_upper]
+
+    canonical = symbol_aliases.get(sym_upper)
+    if canonical:
+        if ccy_upper == "KWD" and canonical in kw_map:
+            return kw_map[canonical]
+        if ccy_upper == "USD" and canonical in us_map:
+            return us_map[canonical]
+        if canonical in kw_map:
+            return kw_map[canonical]
+        if canonical in us_map:
+            return us_map[canonical]
     return None

@@ -5119,8 +5119,56 @@ async def get_valuation_defaults(
         low = code_str.lower()
         return 'fils' in low or 'cents' in low or 'halala' in low
 
-    eps_ttm = latest.get("EPS")
-    # Fallback: get EPS directly from income statement line items
+    eps_ttm = None
+    eps_source = None
+
+    # Preferred source: Trailing-12M EPS from the latest 4 quarterly income statements.
+    eps_q_rows = query_all(
+        """SELECT fs.fiscal_year, fs.fiscal_quarter, li.line_item_code, li.amount
+           FROM financial_line_items li
+           JOIN financial_statements fs ON fs.id = li.statement_id
+           WHERE fs.stock_id = ? AND fs.statement_type = 'income'
+             AND fs.fiscal_quarter IS NOT NULL
+             AND fs.period_end_date NOT LIKE '%/_6M' ESCAPE '/'
+             AND fs.period_end_date NOT LIKE '%/_9M' ESCAPE '/'
+             AND (UPPER(li.line_item_code) IN ('EPS_DILUTED','EPS_BASIC')
+                  OR LOWER(li.line_item_code) LIKE '%earnings_per_share%'
+                  OR LOWER(li.line_item_code) LIKE '%eps_%')
+             AND li.amount IS NOT NULL
+           ORDER BY fs.fiscal_year DESC, fs.fiscal_quarter DESC""",
+        (stock_id,),
+    )
+    eps_by_quarter: Dict[Tuple[int, int], Dict[str, float]] = {}
+    for r in (eps_q_rows or []):
+        fy = r[0] if isinstance(r, (tuple, list)) else r.get("fiscal_year")
+        fq = r[1] if isinstance(r, (tuple, list)) else r.get("fiscal_quarter")
+        code = r[2] if isinstance(r, (tuple, list)) else r.get("line_item_code", "")
+        val = r[3] if isinstance(r, (tuple, list)) else r.get("amount")
+        if fy is None or fq is None or val is None:
+            continue
+        code_s = str(code or "")
+        val_f = float(val)
+        if _is_subunit_code(code_s):
+            val_f = val_f / 1000.0
+        # Prefer diluted EPS over basic when both are present for same quarter.
+        prio = 2 if "DILUT" in code_s.upper() else 1
+        key = (int(fy), int(fq))
+        prev = eps_by_quarter.get(key)
+        if prev is None or prio > prev["prio"]:
+            eps_by_quarter[key] = {"eps": val_f, "prio": float(prio)}
+
+    if len(eps_by_quarter) >= 4:
+        last4_keys = sorted(eps_by_quarter.keys(), reverse=True)[:4]
+        eps_ttm = round(sum(eps_by_quarter[k]["eps"] for k in last4_keys), 4)
+        eps_source = "statement_ttm_quarters"
+
+    # Secondary source: computed metric table.
+    if eps_ttm is None:
+        eps_ttm = latest.get("EPS")
+        if eps_ttm is not None:
+            eps_source = "metric_latest"
+
+    # Fallback: get EPS directly from annual income statement line items
     if eps_ttm is None:
         eps_li_row = query_one(
             """SELECT li.line_item_code, li.amount FROM financial_line_items li
@@ -5142,6 +5190,7 @@ async def get_valuation_defaults(
             if val is not None and _is_subunit_code(code):
                 val = val / 1000.0
             eps_ttm = val
+            eps_source = "statement_latest_annual"
     # Last fallback: compute from Net Income / Shares Outstanding
     if eps_ttm is None and shares and shares > 0:
         ni_row = query_one(
@@ -5160,6 +5209,7 @@ async def get_valuation_defaults(
             ni_val = ni_row[0] if isinstance(ni_row, (tuple, list)) else ni_row.get("amount")
             if ni_val is not None:
                 eps_ttm = round(ni_val / shares, 4)
+                eps_source = "net_income_over_shares"
     graham_growth_avg = None
     eps_history = []
     # Fetch multi-year EPS from stock_metrics
@@ -5314,6 +5364,7 @@ async def get_valuation_defaults(
 
     defaults = {
         "eps": eps_ttm,
+        "eps_source": eps_source,
         "book_value_per_share": latest.get("Book Value / Share"),
         "dividends_per_share": latest.get("Dividends / Share"),
         "fcf": fcf_val,

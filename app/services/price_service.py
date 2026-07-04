@@ -48,6 +48,7 @@ _VARIATIONS: Dict[str, str] = {
     "AGILITY PLC": "AGLTY",
     "MABNEE": "MABANEE",
     "H-SOFT": "HUMANSOFT",
+    "ALGHANIM": "ALG",
     "INCYTE": "INCY",
 }
 
@@ -383,10 +384,35 @@ def update_all_prices(
                         hist.columns = hist.columns.get_level_values(0)
 
                     if hist is None or hist.empty or "Close" not in hist.columns:
-                        logger.warning("No data for %s (yahoo: %s)", symbol, yahoo_sym)
-                        result.skipped += 1
-                        result.details.append({"symbol": symbol, "status": "no_data"})
-                        continue
+                        # If stored yf_ticker is stale/mismapped, retry once with
+                        # alias-aware derived symbol and auto-correct the DB field.
+                        derived_sym = _yahoo_symbol(symbol, currency)
+                        if stored_yf_ticker and derived_sym != stored_yf_ticker:
+                            logger.warning(
+                                "No data for %s (stored yahoo: %s). Retrying with derived ticker %s",
+                                symbol,
+                                yahoo_sym,
+                                derived_sym,
+                            )
+                            ticker = yf.Ticker(derived_sym)
+                            hist = ticker.history(period="5d", interval="1d")
+                            if hist is not None and hist.columns.nlevels > 1:
+                                hist.columns = hist.columns.get_level_values(0)
+                            if hist is not None and not hist.empty and "Close" in hist.columns:
+                                yahoo_sym = derived_sym
+                                try:
+                                    cur.execute(
+                                        "UPDATE stocks SET yf_ticker = ?, updated_at = ? WHERE id = ?",
+                                        (derived_sym, int(time.time()), stock_id),
+                                    )
+                                except Exception as _upd_exc:
+                                    logger.debug("Failed to auto-correct yf_ticker for %s: %s", symbol, _upd_exc)
+
+                        if hist is None or hist.empty or "Close" not in hist.columns:
+                            logger.warning("No data for %s (yahoo: %s)", symbol, yahoo_sym)
+                            result.skipped += 1
+                            result.details.append({"symbol": symbol, "status": "no_data"})
+                            continue
 
                     closes = hist["Close"].dropna()
                     raw_price = float(closes.iloc[-1])

@@ -27,6 +27,12 @@ from app.schemas.cash import (
     CashDepositListResponse,
 )
 from app.schemas.analytics import PerformanceMetrics
+from app.schemas.eagle_eye_audit import (
+    AuditEventCreate,
+    ChangeRequestCreate,
+    ChangeReviewRequest,
+    ChangeTransitionRequest,
+)
 
 __all__ = [
     "ApiResponse",
@@ -50,4 +56,8 @@ __all__ = [
     "CashDepositResponse",
     "CashDepositListResponse",
     "PerformanceMetrics",
+    "AuditEventCreate",
+    "ChangeRequestCreate",
+    "ChangeReviewRequest",
+    "ChangeTransitionRequest",
 ]

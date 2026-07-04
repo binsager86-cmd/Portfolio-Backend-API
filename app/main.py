@@ -113,6 +113,22 @@ async def lifespan(app: FastAPI):
         except Exception as ee_err:
             logger.warning("⚠️  Eagle Eye schema init failed: %s", ee_err)
 
+        # ── Eagle Eye audit/change-management tables ─────────────────────
+        try:
+            from app.services.eagle_eye.audit_service import ensure_schema as _ee_audit_init
+            _ee_audit_init()
+            logger.info("✅  Eagle Eye audit schema ensured (idempotent)")
+        except Exception as ee_audit_err:
+            logger.warning("⚠️  Eagle Eye audit schema init failed: %s", ee_audit_err)
+
+        # ── Eagle Eye accumulation engine tables ──────────────────────────
+        try:
+            from app.services.eagle_eye.market_data_service import ensure_schema as _ee_engine_init
+            _ee_engine_init()
+            logger.info("✅  Eagle Eye engine schema ensured (idempotent)")
+        except Exception as ee_engine_err:
+            logger.warning("⚠️  Eagle Eye engine schema init failed: %s", ee_engine_err)
+
         # ── Simulator tables (idempotent — must exist before first request) ──
         try:
             from app.services.eagle_eye.simulator import ensure_simulator_tables as _sim_init
