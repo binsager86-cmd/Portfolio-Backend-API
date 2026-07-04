@@ -88,8 +88,21 @@ def send_push_notifications(
     if not tokens:
         return {"sent": 0, "failed": 0}
 
+    # Filter obviously invalid tokens early to avoid unnecessary API calls.
+    valid_tokens = [
+        t for t in tokens
+        if isinstance(t, str)
+        and (t.startswith("ExpoPushToken[") or t.startswith("ExponentPushToken["))
+    ]
+    invalid_local = len(tokens) - len(valid_tokens)
+    if invalid_local:
+        logger.warning("Push notifications: skipped %d locally invalid token(s)", invalid_local)
+
+    if not valid_tokens:
+        return {"sent": 0, "failed": len(tokens)}
+
     messages = []
-    for token in tokens:
+    for token in valid_tokens:
         msg = {
             "to": token,
             "title": title,
@@ -107,11 +120,17 @@ def send_push_notifications(
         messages.append(msg)
 
     sent = 0
-    failed = 0
+    failed = invalid_local
     chunk_size = 100
+    stop_due_to_invalid_credentials = False
 
     with httpx.Client(timeout=30.0) as client:
         for i in range(0, len(messages), chunk_size):
+            if stop_due_to_invalid_credentials:
+                # App-level credentials issue: remaining tickets will fail too.
+                failed += len(messages) - i
+                break
+
             chunk = messages[i: i + chunk_size]
             try:
                 resp = client.post(
@@ -125,13 +144,29 @@ def send_push_notifications(
                 resp.raise_for_status()
                 result = resp.json()
                 tickets = result.get("data", [])
+                if isinstance(tickets, dict):
+                    tickets = [tickets]
+
+                invalid_credentials_hits = 0
                 for ticket in tickets:
                     if ticket.get("status") == "ok":
                         sent += 1
                     else:
                         failed += 1
                         err = ticket.get("details", {}).get("error", "unknown")
-                        logger.warning("Push ticket error: %s", err)
+                        if err == "InvalidCredentials":
+                            invalid_credentials_hits += 1
+                        else:
+                            logger.warning("Push ticket error: %s", err)
+
+                if invalid_credentials_hits:
+                    logger.error(
+                        "Expo Push InvalidCredentials (%d ticket(s) in chunk). "
+                        "Check Expo project push credentials (FCM/APNs) for the app. "
+                        "Suppressing repeated chunk logs for this send call.",
+                        invalid_credentials_hits,
+                    )
+                    stop_due_to_invalid_credentials = True
             except Exception as e:
                 logger.warning("Expo push send failed: %s", e)
                 failed += len(chunk)
