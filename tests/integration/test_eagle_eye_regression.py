@@ -20,6 +20,11 @@ SYNTHETIC_OVERRIDES = {
     "rsi_regime": 50,
     "adx_trigger": 15,
     "cmf_floor": 0.0,
+    "accumulation_cmf_hits_min": 3,
+    "accumulation_price_slope_max": 0.20,
+    "accumulation_volume_slope_min": 0.02,
+    "accumulation_min_score": 55,
+    "breakout_min_score": 65,
     "min_daily_value_kwd": 1000.0,
 }
 

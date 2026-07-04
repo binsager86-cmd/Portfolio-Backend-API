@@ -313,20 +313,22 @@ def evaluate_symbol(
         if state["phase"] == "BASE_FORMING":
             cmf_hist = [float(h.get("cmf_10") or 0.0) for h in history[-10:]]
             cmf_hits = sum(1 for x in cmf_hist if x > float(config.get("cmf_floor", 0.05)))
+            accumulation_price_slope_max = float(config.get("accumulation_price_slope_max", 0.03))
+            accumulation_volume_slope_min = float(config.get("accumulation_volume_slope_min", 0.10))
             accumulation_gate = bool(payload.get("accumulation_divergence")) or (
-                abs(float(payload.get("price_slope_40") or 0.0)) < 0.03
+                abs(float(payload.get("price_slope_40") or 0.0)) < accumulation_price_slope_max
                 and (
-                    float(payload.get("obv_slope_40") or 0.0) > 0.10
-                    or float(payload.get("anv_slope_40") or 0.0) > 0.10
+                    float(payload.get("obv_slope_40") or 0.0) > accumulation_volume_slope_min
+                    or float(payload.get("anv_slope_40") or 0.0) > accumulation_volume_slope_min
                 )
             )
             if (
                 accumulation_gate
-                and cmf_hits >= 5
+                and cmf_hits >= int(config.get("accumulation_cmf_hits_min", 5))
                 and (atr_pct_pctile <= float(config.get("atr_squeeze_pctile", 0.20)) or float(payload.get("bb_width") or 1.0) <= 0.12)
                 and (close >= ema30 or close >= 0.97 * sma200)
                 and liquidity_ok
-                and score >= 60
+                and score >= int(config.get("accumulation_min_score", 60))
             ):
                 prev_phase = state["phase"]
                 _phase_set(state, "ACCUMULATION", trade_date)
@@ -376,7 +378,7 @@ def evaluate_symbol(
             )
             if breakout:
                 ml_ok, ml_prob = apply_ml_gate(payload, config)
-                if ml_ok and score >= 70:
+                if ml_ok and score >= int(config.get("breakout_min_score", 70)):
                     prev_phase = state["phase"]
                     _phase_set(state, "BREAKOUT_CONFIRMED", trade_date)
                     transition = (prev_phase, state["phase"])
