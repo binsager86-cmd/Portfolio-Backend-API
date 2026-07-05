@@ -4,12 +4,12 @@ import json
 import uuid
 from typing import Any
 
-from app.core.database import exec_sql, query_all, query_one
+from app.core.database import exec_sql, query_all, query_one, query_val
 from app.core.security import TokenData
 from app.services.eagle_eye.audit_service import create_event
 from app.services.eagle_eye.entry_exit_service import close_open_position, maybe_open_or_add_position, update_trailing_stop
 from app.services.eagle_eye.indicator_service import load_latest_indicator
-from app.services.eagle_eye.market_data_service import CONCEPT_VERSION, get_config_hash
+from app.services.eagle_eye.market_data_service import CONCEPT_VERSION, get_cfg, get_config_hash
 from app.services.eagle_eye.ml_service import apply_ml_gate
 from app.services.eagle_eye.risk_service import can_open_new_position, liquidity_filter_at
 
@@ -26,8 +26,8 @@ PHASES = {
 }
 
 ALLOWED_PHASE_TRANSITIONS = {
-    "NEUTRAL": {"BASE_FORMING", "AVOID", "NEUTRAL"},
-    "BASE_FORMING": {"ACCUMULATION", "NEUTRAL", "AVOID", "BASE_FORMING"},
+    "NEUTRAL": {"BASE_FORMING", "MARKUP", "AVOID", "NEUTRAL"},
+    "BASE_FORMING": {"ACCUMULATION", "BREAKOUT_WATCH", "NEUTRAL", "AVOID", "BASE_FORMING"},
     "ACCUMULATION": {"BREAKOUT_WATCH", "NEUTRAL", "AVOID", "ACCUMULATION"},
     "BREAKOUT_WATCH": {"BREAKOUT_CONFIRMED", "ACCUMULATION", "NEUTRAL", "AVOID", "BREAKOUT_WATCH"},
     "BREAKOUT_CONFIRMED": {"MARKUP", "ACCUMULATION", "EXIT", "AVOID", "BREAKOUT_CONFIRMED"},
@@ -138,6 +138,10 @@ def _upsert_state(state: dict[str, Any]) -> None:
     )
 
 
+def upsert_symbol_state(state: dict[str, Any]) -> None:
+    _upsert_state(state)
+
+
 def _risk_level(signal_type: str) -> str:
     if signal_type in {"BREAKOUT_CONFIRMED", "EXIT"}:
         return "high"
@@ -215,19 +219,26 @@ def evaluate_symbol(
     score: float,
     config: dict[str, Any],
     trace_id: str | None = None,
+    indicator_payload: dict[str, Any] | None = None,
+    indicator_history: list[dict[str, Any]] | None = None,
+    state_override: dict[str, Any] | None = None,
+    persist_state: bool = True,
+    liquidity_snapshot: tuple[bool, dict[str, Any]] | None = None,
+    coverage_start_date: int | None = None,
+    coverage_sessions: int | None = None,
 ) -> dict[str, Any]:
     trace_id = trace_id or str(uuid.uuid4())
-    payload = load_latest_indicator(symbol, trade_date)
+    payload = indicator_payload if indicator_payload is not None else load_latest_indicator(symbol, trade_date)
     if not payload:
         return {"symbol": symbol, "status": "no_indicator"}
 
-    history = _load_recent_indicators(symbol, trade_date, 140)
+    history = indicator_history if indicator_history is not None else _load_recent_indicators(symbol, trade_date, 140)
     if not history:
         return {"symbol": symbol, "status": "no_history"}
 
     prev = history[-2] if len(history) >= 2 else None
 
-    state = get_symbol_state(symbol) or {
+    state = state_override or get_symbol_state(symbol) or {
         "symbol": symbol,
         "phase": "NEUTRAL",
         "phase_since": trade_date,
@@ -255,15 +266,20 @@ def evaluate_symbol(
     range_high_120 = float(payload.get("range_high_120") or payload.get("range_high_60") or 0.0)
     range_low_60 = float(payload.get("range_low_60") or 0.0)
     width = float(payload.get("range_width_pct") or 9.0)
-    atr_pct_pctile = float(payload.get("atr_pct_percentile_252") or 1.0)
+    atr_pct_pctile_raw = payload.get("atr_pct_percentile_252")
+    atr_pct_pctile = float(atr_pct_pctile_raw) if atr_pct_pctile_raw is not None else None
 
-    liquidity_ok, liquidity_meta = liquidity_filter_at(
-        symbol,
-        trade_date,
-        float(config.get("min_daily_value_kwd", 100000.0)),
-    )
+    if liquidity_snapshot is not None:
+        liquidity_ok, liquidity_meta = liquidity_snapshot
+    else:
+        liquidity_ok, liquidity_meta = liquidity_filter_at(
+            symbol,
+            trade_date,
+            float(get_cfg(config, "min_daily_value_kwd")),
+        )
 
     state_json = state.get("state_json", {})
+    state_json.pop("last_phase_reason", None)
     avoid = close < sma200 and sma200_slope < 0 and ema10 < ema30
     if avoid:
         state_json["avoid_clear_streak"] = 0
@@ -276,12 +292,12 @@ def evaluate_symbol(
 
     transition = None
     signal_type = None
-    base_min_sessions = int(config.get("base_min_sessions", 60))
+    base_min_sessions = int(get_cfg(config, "base_min_sessions"))
     range_low_120 = float(payload.get("range_low_120") or range_low_60 or 0.0)
     low = float(payload.get("low") or close)
     high = float(payload.get("high") or close)
     atr = float(payload.get("atr_14") or 0.0)
-    base_high_ref = float(state.get("base_high") or range_high_120 or 0.0)
+    base_high_ref = float(state.get("base_high") or payload.get("range_high_60") or 0.0)
     base_low_ref = float(state.get("base_low") or range_low_60 or 0.0)
 
     if old_phase != state["phase"]:
@@ -295,55 +311,57 @@ def evaluate_symbol(
         base_low_60 = float(payload.get("range_low_60") or 0.0)
         sessions_in_range = sum(1 for c in closes_60 if base_low_60 <= c <= base_high_60)
 
-        if state["phase"] == "NEUTRAL":
-            if (
-                width <= float(config.get("base_max_width_pct", 0.18))
-                and sessions_in_range >= base_min_sessions
-                and base_low_60 <= close <= base_high_60
-            ):
-                prev_phase = state["phase"]
-                _phase_set(state, "BASE_FORMING", trade_date)
-                transition = (prev_phase, state["phase"])
-                state["base_high"] = range_high_120
-                state["base_low"] = range_low_60
-                state["base_start"] = trade_date
-                base_high_ref = float(state.get("base_high") or base_high_ref)
-                base_low_ref = float(state.get("base_low") or base_low_ref)
+        # 2) Active-position exit logic first if already in distribution warning.
+        if transition is None and state["phase"] == "DISTRIBUTION_WARNING":
+            below = close < ema30
+            if below:
+                state_json["below_ema30_streak"] = int(state_json.get("below_ema30_streak") or 0) + 1
+            else:
+                state_json["below_ema30_streak"] = 0
 
-        if state["phase"] == "BASE_FORMING":
-            cmf_hist = [float(h.get("cmf_10") or 0.0) for h in history[-10:]]
-            cmf_hits = sum(1 for x in cmf_hist if x > float(config.get("cmf_floor", 0.05)))
-            accumulation_price_slope_max = float(config.get("accumulation_price_slope_max", 0.03))
-            accumulation_volume_slope_min = float(config.get("accumulation_volume_slope_min", 0.10))
-            accumulation_gate = bool(payload.get("accumulation_divergence")) or (
-                abs(float(payload.get("price_slope_40") or 0.0)) < accumulation_price_slope_max
-                and (
-                    float(payload.get("obv_slope_40") or 0.0) > accumulation_volume_slope_min
-                    or float(payload.get("anv_slope_40") or 0.0) > accumulation_volume_slope_min
-                )
+            two_close_exit = (
+                bool(state_json.get("ema30_armed"))
+                and int(state_json.get("below_ema30_streak") or 0) >= 2
+                and rel_volume >= 1.2
             )
-            if (
-                accumulation_gate
-                and cmf_hits >= int(config.get("accumulation_cmf_hits_min", 5))
-                and (atr_pct_pctile <= float(config.get("atr_squeeze_pctile", 0.20)) or float(payload.get("bb_width") or 1.0) <= 0.12)
-                and (close >= ema30 or close >= 0.97 * sma200)
-                and liquidity_ok
-                and score >= int(config.get("accumulation_min_score", 60))
-            ):
-                prev_phase = state["phase"]
-                _phase_set(state, "ACCUMULATION", trade_date)
-                transition = (prev_phase, state["phase"])
-                signal_type = "ACCUMULATION_ALERT"
 
-        if state["phase"] == "ACCUMULATION":
+            confirmed_at = int(state_json.get("breakout_confirmed_at") or 0)
+            time_stop = False
+            if confirmed_at:
+                post = [h for h in history if int(h.get("trade_date") or 0) >= confirmed_at]
+                if len(post) >= 40:
+                    entry = float(state_json.get("breakout_entry_price") or close)
+                    time_stop = close < (entry + atr)
+
+            exit_now = (
+                two_close_exit
+                or close < float(state.get("state_json", {}).get("trail_price") or 0.0)
+                or (ema10 < ema30 and bool(payload.get("distribution_divergence")))
+                or (close < sma200 and sma200_slope < 0)
+                or time_stop
+            )
+            if exit_now:
+                prev_phase = state["phase"]
+                _phase_set(state, "EXIT", trade_date)
+                transition = (prev_phase, state["phase"])
+                signal_type = "EXIT"
+                state_json["last_phase_reason"] = "distribution_exit"
+
+        # 3) Watch trigger from ACCUMULATION.
+        if transition is None and state["phase"] == "ACCUMULATION":
             recent_5 = history[-5:]
             rv_hits = sum(1 for h in recent_5 if float(h.get("rel_volume") or 0.0) >= 1.5)
-            if close >= (0.97 * base_high_ref) and rv_hits >= 2:
+            near_base_with_build = close >= (0.97 * base_high_ref) and rv_hits >= 2
+            if near_base_with_build:
                 prev_phase = state["phase"]
                 _phase_set(state, "BREAKOUT_WATCH", trade_date)
                 transition = (prev_phase, state["phase"])
+                state_json["last_phase_reason"] = "watch_trigger"
 
-        if state["phase"] == "BREAKOUT_WATCH":
+        # 4) Breakout confirmation with two-tier mandatory + confirmatory scoring.
+        if transition is None and state["phase"] == "BREAKOUT_WATCH":
+            confirming = state_json.get("confirming") if isinstance(state_json.get("confirming"), dict) else None
+
             adx_5_back = float(history[-5].get("adx_19") or adx) if len(history) >= 5 else adx
             macd_cross_recent = False
             if len(history) >= 6:
@@ -356,41 +374,161 @@ def evaluate_symbol(
                     ):
                         macd_cross_recent = True
                         break
+
             day_range = max(0.0, high - low)
             close_top40 = True if day_range == 0 else close >= (low + 0.6 * day_range)
             rsi_rising = True if prev is None else rsi > float(prev.get("rsi_14") or rsi)
-            gap_pct = 0.0 if range_high_120 <= 0 else max(0.0, (float(payload.get("open") or close) - range_high_120) / range_high_120)
-            chase_guard = gap_pct <= 0.08
-            breakout = (
-                close > base_high_ref
-                and rel_volume >= float(config.get("volume_breakout_mult", 2.5))
-                and ema10 > ema30
-                and float(payload.get("ema10_slope") or 0.0) > 0
-                and rsi >= float(config.get("rsi_regime", 55))
-                and rsi_rising
-                and adx >= float(config.get("adx_trigger", 22))
-                and plus_di > minus_di
-                and adx > adx_5_back
-                and (float(payload.get("macd_hist") or 0.0) > 0 or macd_cross_recent)
-                and close_top40
-                and chase_guard
-                and liquidity_ok
+            gap_pct_base = 0.0 if base_high_ref <= 0 else max(0.0, (float(payload.get("open") or close) - base_high_ref) / base_high_ref)
+
+            mandatory = {
+                "M1_close_gt_base": close > base_high_ref,
+                "M2_rel_volume": rel_volume >= float(get_cfg(config, "volume_breakout_mult")),
+                "M3_ema10_gt_ema30": ema10 > ema30,
+                "M4_chase_guard": gap_pct_base <= 0.08,
+                "M5_liquidity": liquidity_ok,
+            }
+
+            confirm_flags = {
+                "C1_rsi": rsi >= float(get_cfg(config, "rsi_regime")),
+                "C2_rsi_rising": rsi_rising,
+                "C3_adx_di": adx >= float(get_cfg(config, "adx_trigger")) and plus_di > minus_di,
+                "C4_adx_accel": adx > adx_5_back,
+                "C5_macd": (float(payload.get("macd_hist") or 0.0) > 0) or macd_cross_recent,
+                "C6_close_top40": close_top40,
+            }
+            c_score = sum(1 for v in confirm_flags.values() if v)
+
+            if confirming is None and all(mandatory.values()):
+                confirming = {
+                    "start_trade_date": trade_date,
+                    "bars": 0,
+                    "scores": [],
+                }
+
+            if confirming is not None:
+                bars = int(confirming.get("bars") or 0) + 1
+                confirming["bars"] = bars
+                scores = confirming.get("scores") if isinstance(confirming.get("scores"), list) else []
+                scores.append({"trade_date": trade_date, "c_score": c_score, "flags": confirm_flags})
+                confirming["scores"] = scores[-3:]
+                state_json["confirming"] = confirming
+
+                if close < (base_high_ref * 0.99):
+                    state_json.pop("confirming", None)
+                    state_json["last_phase_reason"] = "confirming_revert_below_base"
+                else:
+                    ml_ok, ml_prob = apply_ml_gate(payload, config)
+                    if c_score >= 4 and ml_ok and score >= 70:
+                        prev_phase = state["phase"]
+                        _phase_set(state, "BREAKOUT_CONFIRMED", trade_date)
+                        transition = (prev_phase, state["phase"])
+                        signal_type = "BREAKOUT_CONFIRMED"
+                        state_json["breakout_confirmed_at"] = trade_date
+                        state_json["breakout_base_high"] = base_high_ref
+                        state_json["breakout_entry_price"] = close
+                        state_json["last_phase_reason"] = "confirming_success"
+                        state_json.pop("confirming", None)
+                        if ml_prob is not None:
+                            payload["ml_prob"] = ml_prob
+                    elif bars >= 3:
+                        state_json.pop("confirming", None)
+                        state_json["last_phase_reason"] = "confirming_expired"
+
+            payload["confirming_mandatory"] = mandatory
+            payload["confirming_c_flags"] = confirm_flags
+            payload["confirming_c_score"] = c_score
+
+        # 5) Accumulation from BASE.
+        if transition is None and state["phase"] == "BASE_FORMING":
+            cmf_hist = [float(h.get("cmf_10") or 0.0) for h in history[-10:]]
+            cmf_hits = sum(1 for x in cmf_hist if x > float(get_cfg(config, "cmf_floor")))
+            accumulation_gate = bool(payload.get("accumulation_divergence")) or (
+                abs(float(payload.get("price_slope_40") or 0.0)) < 0.02
+                and (
+                    float(payload.get("obv_slope_40") or 0.0) > 0.10
+                    or float(payload.get("anv_slope_40") or 0.0) > 0.10
+                )
             )
-            if breakout:
-                ml_ok, ml_prob = apply_ml_gate(payload, config)
-                if ml_ok and score >= int(config.get("breakout_min_score", 70)):
-                    prev_phase = state["phase"]
-                    _phase_set(state, "BREAKOUT_CONFIRMED", trade_date)
-                    transition = (prev_phase, state["phase"])
-                    signal_type = "BREAKOUT_CONFIRMED"
-                    state_json["breakout_confirmed_at"] = trade_date
-                    state_json["breakout_base_high"] = base_high_ref
-                    state_json["breakout_entry_price"] = close
-                    if ml_prob is not None:
-                        payload["ml_prob"] = ml_prob
+            squeeze_ok = float(payload.get("bb_width") or 1.0) <= 0.12
+            if atr_pct_pctile is not None:
+                squeeze_ok = squeeze_ok or (atr_pct_pctile <= float(get_cfg(config, "atr_squeeze_pctile")))
+            if (
+                accumulation_gate
+                and cmf_hits >= 5
+                and squeeze_ok
+                and (close >= ema30 or close >= 0.97 * sma200)
+                and liquidity_ok
+                and score >= 60
+            ):
+                prev_phase = state["phase"]
+                _phase_set(state, "ACCUMULATION", trade_date)
+                transition = (prev_phase, state["phase"])
+                signal_type = "ACCUMULATION_ALERT"
+                state_json["had_accumulation_phase"] = True
+                state_json["last_phase_reason"] = "accumulation_gate"
+
+        # 6) Pass-2 ordering amendment: while NEUTRAL, evaluate trend-join before
+        # base detection inside the join window.
+        if transition is None and state["phase"] == "NEUTRAL":
+            trend_join_window = int(get_cfg(config, "trend_join_window"))
+            if coverage_sessions is not None:
+                sessions_since_start = int(coverage_sessions)
+            elif coverage_start_date is not None:
+                sessions_since_start = int(
+                    query_val(
+                        "SELECT COUNT(1) FROM ee_ohlcv WHERE symbol = ? AND trade_date BETWEEN ? AND ?",
+                        (symbol, int(coverage_start_date), trade_date),
+                    )
+                    or 0
+                )
+            else:
+                sessions_since_start = int(
+                    query_val(
+                        "SELECT COUNT(1) FROM ee_ohlcv WHERE symbol = ? AND trade_date <= ?",
+                        (symbol, trade_date),
+                    )
+                    or 0
+                )
+
+            if (
+                sessions_since_start <= trend_join_window
+                and close > sma200
+                and sma200_slope > 0
+                and ema10 > ema30
+                and range_low_120 > 0
+                and close >= (range_low_120 * 1.15)
+            ):
+                prev_phase = state["phase"]
+                _phase_set(state, "MARKUP", trade_date)
+                transition = (prev_phase, state["phase"])
+                state_json["joined_externally"] = True
+                state_json["warmup_ready_date"] = int(coverage_start_date or 0) if coverage_start_date else None
+                state_json["warmup_sessions"] = int(sessions_since_start)
+                state_json["max_close"] = max(float(state_json.get("max_close") or close), close)
+                state_json["last_phase_reason"] = "trend_join_early_coverage"
+
+        # 7) Base detection from NEUTRAL (after trend-join check; freeze bounds on entry).
+        if transition is None and state["phase"] == "NEUTRAL":
+            if (
+                sma200 > 0
+                and ema30 > 0
+                and
+                width <= float(get_cfg(config, "base_max_width_pct"))
+                and sessions_in_range >= base_min_sessions
+                and base_low_60 <= close <= base_high_60
+            ):
+                prev_phase = state["phase"]
+                _phase_set(state, "BASE_FORMING", trade_date)
+                transition = (prev_phase, state["phase"])
+                state["base_high"] = base_high_60
+                state["base_low"] = range_low_60
+                state["base_start"] = trade_date
+                base_high_ref = float(state.get("base_high") or base_high_ref)
+                base_low_ref = float(state.get("base_low") or base_low_ref)
+                state_json["last_phase_reason"] = "base_detected"
 
         confirmed_at = int(state_json.get("breakout_confirmed_at") or 0)
-        if confirmed_at:
+        if transition is None and confirmed_at:
             confirm_ix = None
             for i, h in enumerate(history):
                 if int(h.get("trade_date") or 0) == confirmed_at:
@@ -407,7 +545,7 @@ def evaluate_symbol(
                         signal_type = "BREAKOUT_FAILED"
                         close_open_position(symbol, trade_date, "breakout_failed", close)
 
-        if state["phase"] == "BREAKOUT_CONFIRMED":
+        if transition is None and state["phase"] == "BREAKOUT_CONFIRMED":
             confirmed_at = int(state_json.get("breakout_confirmed_at") or 0)
             if confirmed_at:
                 post = [h for h in history if int(h.get("trade_date") or 0) >= confirmed_at]
@@ -418,7 +556,7 @@ def evaluate_symbol(
                         _phase_set(state, "MARKUP", trade_date)
                         transition = (prev_phase, state["phase"])
 
-    if state["phase"] == "MARKUP":
+    if transition is None and state["phase"] == "MARKUP":
         day_range = max(0.0, high - low)
         close_bottom40 = True if day_range == 0 else close <= (low + 0.4 * day_range)
         climax = rel_volume >= 4 and day_range >= (2.5 * atr) and close_bottom40
@@ -438,40 +576,6 @@ def evaluate_symbol(
             signal_type = "DISTRIBUTION_WARNING"
             state_json["ema30_armed"] = True
             state_json["below_ema30_streak"] = 0
-
-    if state["phase"] == "DISTRIBUTION_WARNING":
-        below = close < ema30
-        if below:
-            state_json["below_ema30_streak"] = int(state_json.get("below_ema30_streak") or 0) + 1
-        else:
-            state_json["below_ema30_streak"] = 0
-
-        two_close_exit = (
-            bool(state_json.get("ema30_armed"))
-            and int(state_json.get("below_ema30_streak") or 0) >= 2
-            and rel_volume >= 1.2
-        )
-
-        confirmed_at = int(state_json.get("breakout_confirmed_at") or 0)
-        time_stop = False
-        if confirmed_at:
-            post = [h for h in history if int(h.get("trade_date") or 0) >= confirmed_at]
-            if len(post) >= 40:
-                entry = float(state_json.get("breakout_entry_price") or close)
-                time_stop = close < (entry + atr)
-
-        exit_now = (
-            two_close_exit
-            or close < float(state.get("state_json", {}).get("trail_price") or 0.0)
-            or (ema10 < ema30 and bool(payload.get("distribution_divergence")))
-            or (close < sma200 and sma200_slope < 0)
-            or time_stop
-        )
-        if exit_now:
-            prev_phase = state["phase"]
-            _phase_set(state, "EXIT", trade_date)
-            transition = (prev_phase, state["phase"])
-            signal_type = "EXIT"
 
     if state["phase"] == "MARKUP":
         anchor = float(state.get("state_json", {}).get("max_close") or close)
@@ -494,9 +598,11 @@ def evaluate_symbol(
     state["last_score"] = score
     state["updated_at"] = trade_date
     state["state_json"] = state_json
-    _upsert_state(state)
+    if persist_state:
+        _upsert_state(state)
 
     signal_id = 0
+    emitted_signal_type: str | None = None
     if transition:
         config_hash = get_config_hash(config)
         stop_price = None
@@ -505,23 +611,39 @@ def evaluate_symbol(
         if signal_type == "BREAKOUT_CONFIRMED":
             stop_price = max(0.0, min(base_high_ref * 0.97, close - 2.0 * float(payload.get("atr_14") or 0.0)))
 
+        effective_signal_type = signal_type or "PHASE_ONLY"
+        suppression_reason: str | None = None
+        if signal_type in {"ACCUMULATION_ALERT", "BREAKOUT_CONFIRMED", "ADD_ON_PULLBACK"}:
+            allowed, reason = can_open_new_position(score, int(get_cfg(config, "max_positions")))
+            if not allowed:
+                effective_signal_type = "SIGNAL_SUPPRESSED_RISK"
+                suppression_reason = reason
+
         signal_id = _emit_signal(
             symbol=symbol,
             trade_date=trade_date,
-            signal_type=signal_type or "PHASE_ONLY",
+            signal_type=effective_signal_type,
             phase_from=transition[0],
             phase_to=transition[1],
             score=score,
             price=close,
             stop_price=stop_price,
-            evidence={**payload, "liquidity": liquidity_meta, "score": score},
+            evidence={
+                **payload,
+                "liquidity": liquidity_meta,
+                "score": score,
+                "had_accumulation_phase": bool(state_json.get("had_accumulation_phase")),
+                "joined_externally": bool(state_json.get("joined_externally")),
+                "suppressed_reason": suppression_reason,
+                "attempted_signal_type": signal_type,
+            },
             config_hash=config_hash,
             trace_id=trace_id,
         )
+        emitted_signal_type = effective_signal_type
 
         if signal_type in {"ACCUMULATION_ALERT", "BREAKOUT_CONFIRMED", "ADD_ON_PULLBACK"}:
-            allowed, reason = can_open_new_position(score, int(config.get("max_positions", 8)))
-            if allowed:
+            if emitted_signal_type != "SIGNAL_SUPPRESSED_RISK":
                 maybe_open_or_add_position(
                     symbol,
                     signal_type,
@@ -529,21 +651,7 @@ def evaluate_symbol(
                     trade_date,
                     close,
                     stop_price or 0.0,
-                    bool(config.get("pilot_enabled", True)),
-                )
-            else:
-                _emit_signal(
-                    symbol=symbol,
-                    trade_date=trade_date,
-                    signal_type="SIGNAL_SUPPRESSED_RISK",
-                    phase_from=transition[0],
-                    phase_to=transition[1],
-                    score=score,
-                    price=close,
-                    stop_price=stop_price,
-                    evidence={"reason": reason, "score": score},
-                    config_hash=config_hash,
-                    trace_id=trace_id,
+                    bool(get_cfg(config, "pilot_enabled")),
                 )
 
         if signal_type == "EXIT":
@@ -554,7 +662,10 @@ def evaluate_symbol(
         "phase": state["phase"],
         "transition": transition,
         "signal_id": signal_id,
+        "signal_type": emitted_signal_type,
         "score": score,
+        "state": state,
+        "reason": state_json.get("last_phase_reason"),
     }
 
 
