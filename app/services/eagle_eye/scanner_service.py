@@ -138,6 +138,37 @@ def _upsert_state(state: dict[str, Any]) -> None:
     )
 
 
+def _resolve_warmup_context(
+    history: list[dict[str, Any]],
+    trade_date: int,
+    coverage_start_date: int | None,
+    coverage_sessions: int | None,
+) -> tuple[int | None, int]:
+    warmup_ready_date: int | None = None
+    if coverage_start_date is not None and int(coverage_start_date) > 0:
+        warmup_ready_date = int(coverage_start_date)
+    else:
+        for row in history:
+            td = int(row.get("trade_date") or 0)
+            if td <= 0 or td > trade_date:
+                continue
+            sma200 = float(row.get("sma200") or 0.0)
+            range_low_120 = float(row.get("range_low_120") or 0.0)
+            range_high_120 = float(row.get("range_high_120") or 0.0)
+            if sma200 > 0 and range_low_120 > 0 and range_high_120 > 0:
+                warmup_ready_date = td
+                break
+
+    if warmup_ready_date is None:
+        return None, 0
+
+    if coverage_sessions is not None:
+        sessions = max(0, int(coverage_sessions))
+    else:
+        sessions = sum(1 for row in history if warmup_ready_date <= int(row.get("trade_date") or 0) <= trade_date)
+    return warmup_ready_date, sessions
+
+
 def upsert_symbol_state(state: dict[str, Any]) -> None:
     _upsert_state(state)
 
@@ -250,6 +281,62 @@ def evaluate_symbol(
         "updated_at": trade_date,
         "state_json": {},
     }
+
+    warmup_ready_date, sessions_since_warmup = _resolve_warmup_context(
+        history,
+        trade_date,
+        coverage_start_date,
+        coverage_sessions,
+    )
+
+    if warmup_ready_date is None or trade_date < warmup_ready_date:
+        state_json = state.get("state_json", {})
+        state["phase"] = "NEUTRAL"
+        state["phase_since"] = trade_date
+        state["last_score"] = score
+        state["updated_at"] = trade_date
+        state_json["warmup_ready_date"] = warmup_ready_date
+        state_json["warmup_sessions"] = 0
+        state_json["last_phase_reason"] = "warmup_pending"
+
+        signal_id = 0
+        emitted_signal_type: str | None = None
+        if not bool(state_json.get("warmup_note_emitted")):
+            state_json["warmup_note_emitted"] = True
+            config_hash = get_config_hash(config)
+            signal_id = _emit_signal(
+                symbol=symbol,
+                trade_date=trade_date,
+                signal_type="PHASE_ONLY",
+                phase_from="NEUTRAL",
+                phase_to="NEUTRAL",
+                score=score,
+                price=float(payload.get("close") or 0.0),
+                stop_price=None,
+                evidence={
+                    **payload,
+                    "warmup": True,
+                    "reason": "warmup_pending",
+                    "warmup_ready_date": warmup_ready_date,
+                },
+                config_hash=config_hash,
+                trace_id=trace_id,
+            )
+            emitted_signal_type = "PHASE_ONLY"
+
+        state["state_json"] = state_json
+        if persist_state:
+            _upsert_state(state)
+        return {
+            "symbol": symbol,
+            "phase": "NEUTRAL",
+            "transition": None,
+            "signal_id": signal_id,
+            "signal_type": emitted_signal_type,
+            "score": score,
+            "state": state,
+            "reason": "warmup_pending",
+        }
 
     old_phase = str(state["phase"])
     close = float(payload.get("close") or 0.0)
@@ -526,6 +613,18 @@ def evaluate_symbol(
                 base_high_ref = float(state.get("base_high") or base_high_ref)
                 base_low_ref = float(state.get("base_low") or base_low_ref)
                 state_json["last_phase_reason"] = "base_detected"
+
+        # 8) Exit is not terminal; re-arm to NEUTRAL after cooldown sessions.
+        if transition is None and state["phase"] == "EXIT":
+            cooldown_sessions = int(get_cfg(config, "exit_cooldown_sessions"))
+            exit_start = int(state.get("phase_since") or trade_date)
+            bars_since_exit = sum(1 for h in history if exit_start <= int(h.get("trade_date") or 0) <= trade_date)
+            elapsed_sessions = max(0, bars_since_exit - 1)
+            if elapsed_sessions >= cooldown_sessions:
+                prev_phase = state["phase"]
+                _phase_set(state, "NEUTRAL", trade_date)
+                transition = (prev_phase, state["phase"])
+                state_json["last_phase_reason"] = "exit_cooldown_rearm"
 
         confirmed_at = int(state_json.get("breakout_confirmed_at") or 0)
         if transition is None and confirmed_at:

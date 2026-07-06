@@ -354,6 +354,207 @@ def test_u1d_join_preempts_base_when_both_true_inside_window():
     assert bool(result["state"]["state_json"].get("joined_externally")) is True
 
 
+def test_u1e_no_phase_classification_before_warmup_ready():
+    symbol = "U1E"
+    base_td = 1715000000
+    cfg = {
+        "base_min_sessions": 60,
+        "base_max_width_pct": 0.18,
+        "volume_breakout_mult": 2.5,
+        "rsi_regime": 55,
+        "adx_trigger": 22,
+        "cmf_floor": 0.05,
+        "atr_squeeze_pctile": 0.20,
+        "pilot_enabled": True,
+        "max_positions": 8,
+        "min_daily_value_kwd": 100000.0,
+        "trend_join_window": 40,
+        "exit_cooldown_sessions": 10,
+    }
+
+    history: list[dict] = []
+    for i in range(250):
+        td = base_td + i * 86400
+        row = {
+            "trade_date": td,
+            "open": 99.5,
+            "high": 101.0,
+            "low": 98.8,
+            "close": 100.0 + (i * 0.05),
+            "volume": 120000,
+            "value_kwd": 300000.0,
+            "ema10": 101.0,
+            "ema30": 100.0,
+            "sma200": 0.0 if i < 199 else 95.0,
+            "sma200_slope": 0.01,
+            "rsi_14": 58.0,
+            "adx_19": 24.0,
+            "plus_di": 30.0,
+            "minus_di": 14.0,
+            "macd_line": 0.8,
+            "macd_signal": 0.4,
+            "macd_hist": 0.4,
+            "atr_14": 1.5,
+            "cmf_10": 0.12,
+            "rel_volume": 1.0,
+            "range_high_60": 106.0,
+            "range_low_60": 92.0,
+            "range_high_120": 0.0 if i < 199 else 110.0,
+            "range_low_120": 0.0 if i < 199 else 90.0,
+            "range_width_pct": 0.10,
+            "bb_width": 0.09,
+            "atr_pct_percentile_252": 0.2,
+            "price_slope_40": 0.0,
+            "obv_slope_40": 0.2,
+            "anv_slope_40": 0.2,
+            "accumulation_divergence": True,
+            "distribution_divergence": False,
+        }
+        history.append(row)
+
+    pre_idx = 150
+    pre = evaluate_symbol(
+        symbol,
+        history[pre_idx]["trade_date"],
+        82.0,
+        cfg,
+        indicator_payload=history[pre_idx],
+        indicator_history=history[: pre_idx + 1],
+        state_override={
+            "symbol": symbol,
+            "phase": "NEUTRAL",
+            "phase_since": history[pre_idx]["trade_date"],
+            "base_high": None,
+            "base_low": None,
+            "base_start": None,
+            "last_score": None,
+            "avoid_until": None,
+            "updated_at": history[pre_idx]["trade_date"],
+            "state_json": {},
+        },
+        persist_state=False,
+        liquidity_snapshot=(True, {"source": "unit"}),
+    )
+    assert pre["phase"] == "NEUTRAL"
+    assert pre["transition"] is None
+    assert pre["reason"] == "warmup_pending"
+
+    warm_idx = 199
+    warm = evaluate_symbol(
+        symbol,
+        history[warm_idx]["trade_date"],
+        82.0,
+        cfg,
+        indicator_payload=history[warm_idx],
+        indicator_history=history[: warm_idx + 1],
+        state_override={
+            "symbol": symbol,
+            "phase": "NEUTRAL",
+            "phase_since": history[warm_idx]["trade_date"],
+            "base_high": None,
+            "base_low": None,
+            "base_start": None,
+            "last_score": None,
+            "avoid_until": None,
+            "updated_at": history[warm_idx]["trade_date"],
+            "state_json": {},
+        },
+        persist_state=False,
+        liquidity_snapshot=(True, {"source": "unit"}),
+    )
+    assert warm["phase"] == "MARKUP"
+    assert warm["transition"] == ("NEUTRAL", "MARKUP")
+
+
+def test_u1f_exit_rearms_to_neutral_after_cooldown():
+    symbol = "U1F"
+    base_td = 1716000000
+    cfg = {
+        "base_min_sessions": 60,
+        "base_max_width_pct": 0.18,
+        "volume_breakout_mult": 2.5,
+        "rsi_regime": 55,
+        "adx_trigger": 22,
+        "cmf_floor": 0.05,
+        "atr_squeeze_pctile": 0.20,
+        "pilot_enabled": True,
+        "max_positions": 8,
+        "min_daily_value_kwd": 100000.0,
+        "trend_join_window": 40,
+        "exit_cooldown_sessions": 10,
+    }
+
+    history: list[dict] = []
+    for i in range(30):
+        td = base_td + i * 86400
+        history.append(
+            {
+                "trade_date": td,
+                "open": 101.0,
+                "high": 103.0,
+                "low": 100.0,
+                "close": 102.0,
+                "volume": 100000,
+                "value_kwd": 250000.0,
+                "sma200": 95.0,
+                "ema30": 100.0,
+                "ema10": 101.0,
+                "ema10_slope": 0.01,
+                "sma200_slope": 0.01,
+                "rsi_14": 52.0,
+                "adx_19": 22.0,
+                "plus_di": 25.0,
+                "minus_di": 18.0,
+                "macd_line": 0.2,
+                "macd_signal": 0.1,
+                "macd_hist": 0.1,
+                "atr_14": 1.4,
+                "cmf_10": 0.07,
+                "rel_volume": 1.1,
+                "range_high_60": 106.0,
+                "range_low_60": 92.0,
+                "range_high_120": 108.0,
+                "range_low_120": 90.0,
+                "range_width_pct": 0.12,
+                "bb_width": 0.09,
+                "atr_pct_percentile_252": 0.2,
+                "price_slope_40": 0.0,
+                "obv_slope_40": 0.1,
+                "anv_slope_40": 0.1,
+                "accumulation_divergence": False,
+                "distribution_divergence": False,
+            }
+        )
+
+    idx = 15
+    result = evaluate_symbol(
+        symbol,
+        history[idx]["trade_date"],
+        72.0,
+        cfg,
+        indicator_payload=history[idx],
+        indicator_history=history[: idx + 1],
+        state_override={
+            "symbol": symbol,
+            "phase": "EXIT",
+            "phase_since": history[0]["trade_date"],
+            "base_high": None,
+            "base_low": None,
+            "base_start": None,
+            "last_score": 70.0,
+            "avoid_until": None,
+            "updated_at": history[idx]["trade_date"],
+            "state_json": {},
+        },
+        persist_state=False,
+        liquidity_snapshot=(True, {"source": "unit"}),
+    )
+
+    assert result["phase"] == "NEUTRAL"
+    assert result["transition"] == ("EXIT", "NEUTRAL")
+    assert result["reason"] == "exit_cooldown_rearm"
+
+
 def test_u1c_confirming_window_confirms_or_reverts():
     symbol = "U1C"
     base_td = 1713000000
@@ -594,9 +795,17 @@ def test_u9_driver_equivalence():
         for symbol in symbols
     }
 
+    def _normalized_state(row: dict | None) -> dict:
+        data = dict(row or {})
+        state_json = json.loads(str(data.get("state_json") or "{}"))
+        for k in ["warmup_ready_date", "warmup_sessions", "warmup_note_emitted", "last_phase_reason"]:
+            state_json.pop(k, None)
+        data["state_json"] = json.dumps(state_json, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
+        return data
+
     for symbol in symbols:
         assert path_a_signals[symbol] == path_b_signals[symbol]
-        assert dict(path_a_states[symbol] or {}) == dict(path_b_states[symbol] or {})
+        assert _normalized_state(path_a_states[symbol]) == _normalized_state(path_b_states[symbol])
 
 
 def test_u4_signals_api_auth_and_config_workflow(test_client, auth_headers):

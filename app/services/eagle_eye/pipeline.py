@@ -1,20 +1,129 @@
 """
-Phase 1 Pipeline Orchestrator.
-Runs the full forensic learning pipeline for Kuwait stocks.
+Canonical Eagle Eye bar-processing pipeline.
 """
 import json
 from datetime import date, timedelta
 from pathlib import Path
-from typing import List, Dict
-import pandas as pd
-import numpy as np
+from typing import Any, Dict, List
 
-from app.services.eagle_eye.config import CONFIG
+import numpy as np
+import pandas as pd
+
+from app.core.database import query_all
 from app.services.eagle_eye.adapter import DataAdapter
+from app.services.eagle_eye.config import CONFIG
+from app.services.eagle_eye.dna_extractor import dna_to_dict, extract_dna
 from app.services.eagle_eye.indicators import compute_all_indicators
-from app.services.eagle_eye.move_detector import detect_moves, detect_fakeouts
+from app.services.eagle_eye.indicator_service import load_latest_indicator
+from app.services.eagle_eye.market_data_service import get_active_config, get_cfg
+from app.services.eagle_eye.move_detector import detect_fakeouts, detect_moves
 from app.services.eagle_eye.recorder import record_all_events
-from app.services.eagle_eye.dna_extractor import extract_dna, dna_to_dict
+from app.services.eagle_eye.rating_service import compute_rating_from_indicator, store_rating
+from app.services.eagle_eye.risk_service import liquidity_filter_at
+from app.services.eagle_eye.scanner_service import evaluate_symbol
+
+
+def _load_recent_indicators(symbol: str, trade_date: int, limit: int = 140) -> list[dict[str, Any]]:
+    rows = query_all(
+        """
+        SELECT trade_date, payload_json
+        FROM ee_indicators
+        WHERE symbol = ? AND trade_date <= ?
+        ORDER BY trade_date DESC
+        LIMIT ?
+        """,
+        (symbol, trade_date, limit),
+    )
+    out: list[dict[str, Any]] = []
+    for row in reversed(rows or []):
+        try:
+            payload = json.loads(str(row.get("payload_json") or "{}"))
+        except Exception:
+            payload = {}
+        payload["trade_date"] = int(row.get("trade_date") or 0)
+        out.append(payload)
+    return out
+
+
+def _derive_warmup_coverage(history: list[dict[str, Any]], trade_date: int) -> tuple[int | None, int | None]:
+    warmup_start: int | None = None
+    for row in history:
+        td = int(row.get("trade_date") or 0)
+        if td <= 0 or td > trade_date:
+            continue
+        sma200 = float(row.get("sma200") or 0.0)
+        range_low_120 = float(row.get("range_low_120") or 0.0)
+        range_high_120 = float(row.get("range_high_120") or 0.0)
+        if sma200 > 0 and range_low_120 > 0 and range_high_120 > 0:
+            warmup_start = td
+            break
+
+    if warmup_start is None:
+        return None, None
+
+    sessions = sum(1 for row in history if warmup_start <= int(row.get("trade_date") or 0) <= trade_date)
+    return warmup_start, sessions
+
+
+def process_bar(
+    symbol: str,
+    trade_date: int,
+    cfg: dict[str, Any] | None = None,
+    *,
+    trace_id: str | None = None,
+    indicator_payload: dict[str, Any] | None = None,
+    indicator_history: list[dict[str, Any]] | None = None,
+    state_override: dict[str, Any] | None = None,
+    persist_state: bool = True,
+    liquidity_snapshot: tuple[bool, dict[str, Any]] | None = None,
+    coverage_start_date: int | None = None,
+    coverage_sessions: int | None = None,
+    score: float | None = None,
+    band: str | None = None,
+    components: dict[str, Any] | None = None,
+    persist_rating: bool = False,
+) -> dict[str, Any]:
+    cfg = cfg or get_active_config()
+    payload = indicator_payload if indicator_payload is not None else load_latest_indicator(symbol, trade_date)
+    if not payload:
+        return {"symbol": symbol, "status": "no_indicator"}
+
+    history = indicator_history if indicator_history is not None else _load_recent_indicators(symbol, trade_date, 140)
+    if not history:
+        return {"symbol": symbol, "status": "no_history"}
+
+    if coverage_start_date is None or coverage_sessions is None:
+        inferred_start, inferred_sessions = _derive_warmup_coverage(history, trade_date)
+        if coverage_start_date is None:
+            coverage_start_date = inferred_start
+        if coverage_sessions is None:
+            coverage_sessions = inferred_sessions
+
+    if liquidity_snapshot is None:
+        min_daily_value_kwd = float(get_cfg(cfg, "min_daily_value_kwd"))
+        liquidity_snapshot = liquidity_filter_at(symbol, trade_date, min_daily_value_kwd)
+
+    if score is None or band is None or components is None:
+        liquidity_score = 100.0 if liquidity_snapshot[0] else 20.0
+        score, band, components = compute_rating_from_indicator(payload, liquidity_score=liquidity_score)
+
+    if persist_rating:
+        store_rating(symbol, trade_date, float(score), str(band), components or {})
+
+    return evaluate_symbol(
+        symbol,
+        trade_date,
+        float(score),
+        cfg,
+        trace_id=trace_id,
+        indicator_payload=payload,
+        indicator_history=history,
+        state_override=state_override,
+        persist_state=persist_state,
+        liquidity_snapshot=liquidity_snapshot,
+        coverage_start_date=coverage_start_date,
+        coverage_sessions=coverage_sessions,
+    )
 
 
 def run_phase1(

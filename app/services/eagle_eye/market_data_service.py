@@ -16,7 +16,7 @@ from app.services.eagle_eye.audit_service import create_event
 
 logger = logging.getLogger(__name__)
 
-CONCEPT_VERSION = "ee-2.1.0-verification"
+CONCEPT_VERSION = "ee-2.1.2"
 _NOW_TS_OVERRIDE: int | None = None
 
 KEY_TARGET_AREAS: dict[str, str] = {
@@ -28,11 +28,8 @@ KEY_TARGET_AREAS: dict[str, str] = {
     "adx_trigger": "scanner",
     "cmf_floor": "scanner",
     "atr_squeeze_pctile": "scanner",
-    "accumulation_cmf_hits_min": "scanner",
-    "accumulation_price_slope_max": "scanner",
-    "accumulation_volume_slope_min": "scanner",
-    "accumulation_min_score": "scanner",
-    "breakout_min_score": "scanner",
+    "trend_join_window": "scanner",
+    "exit_cooldown_sessions": "scanner",
     "pilot_enabled": "entry_exit",
     "climax_partial": "entry_exit",
     "ml_gate_enabled": "ml_overlay",
@@ -57,11 +54,8 @@ DEFAULT_ENGINE_CONFIG: dict[str, Any] = {
     "adx_trigger": 22,
     "cmf_floor": 0.05,
     "atr_squeeze_pctile": 0.20,
-    "accumulation_cmf_hits_min": 5,
-    "accumulation_price_slope_max": 0.03,
-    "accumulation_volume_slope_min": 0.10,
-    "accumulation_min_score": 60,
-    "breakout_min_score": 70,
+    "trend_join_window": 40,
+    "exit_cooldown_sessions": 10,
     "pilot_enabled": True,
     "climax_partial": True,
     "ml_gate_enabled": False,
@@ -76,6 +70,54 @@ DEFAULT_ENGINE_CONFIG: dict[str, Any] = {
     "bt_commission_bps": 25,
     "bt_slippage_bps": 30,
 }
+
+REQUIRED_CONFIG_KEYS: set[str] = {
+    "base_min_sessions",
+    "base_max_width_pct",
+    "volume_breakout_mult",
+    "rsi_regime",
+    "adx_trigger",
+    "cmf_floor",
+    "atr_squeeze_pctile",
+    "trend_join_window",
+    "exit_cooldown_sessions",
+    "pilot_enabled",
+    "min_daily_value_kwd",
+    "max_positions",
+    "ml_gate_enabled",
+    "ml_min_labeled_signals",
+    "ml_prob_min",
+    "bt_commission_bps",
+    "bt_slippage_bps",
+}
+
+
+class ConfigKeyMissing(KeyError):
+    def __init__(self, key: str):
+        super().__init__(f"Missing required config key: {key}")
+        self.key = key
+
+
+def get_cfg(cfg: dict[str, Any], key: str) -> Any:
+    if key not in cfg:
+        raise ConfigKeyMissing(key)
+    return cfg[key]
+
+
+def validate_runtime_config_keys(cfg: dict[str, Any], required_keys: set[str] | None = None) -> None:
+    required = required_keys or REQUIRED_CONFIG_KEYS
+    missing = [k for k in sorted(required) if k not in cfg]
+    if missing:
+        raise ConfigKeyMissing(", ".join(missing))
+
+
+def validate_engine_config_presence(required_keys: set[str] | None = None) -> None:
+    required = required_keys or REQUIRED_CONFIG_KEYS
+    rows = query_all("SELECT key FROM ee_engine_config", ())
+    present = {str(r.get("key")) for r in rows or []}
+    missing = [k for k in sorted(required) if k not in present]
+    if missing:
+        raise ConfigKeyMissing(", ".join(missing))
 
 
 def now_ts() -> int:
@@ -195,6 +237,7 @@ def ensure_schema() -> None:
         exec_sql(stmt, ())
 
     _seed_default_config()
+    validate_engine_config_presence()
 
 
 def _seed_default_config() -> None:
@@ -227,6 +270,7 @@ def get_active_config() -> dict[str, Any]:
             cfg[key] = json.loads(str(raw))
         except Exception:
             logger.warning("Invalid ee_engine_config JSON for key=%s", key)
+    validate_runtime_config_keys(cfg)
     return cfg
 
 
