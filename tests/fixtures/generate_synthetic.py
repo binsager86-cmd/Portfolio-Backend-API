@@ -11,6 +11,7 @@ OUT_DIR = Path(__file__).resolve().parent
 START_DATE = "2021-01-01"
 MASTER_SEED = 20260704
 NOISE_SIGMA = 0.004  # 0.4%
+PREFIX_SESSIONS = 220
 
 
 @dataclass
@@ -19,6 +20,79 @@ class SeriesBundle:
     volume: np.ndarray
     range_frac: np.ndarray
     accumulation_windows: list[tuple[int, int]] = field(default_factory=list)
+
+
+def _neutral_prefix(
+    rng: np.random.Generator,
+    n: int,
+    start_price: float,
+    base_vol: float,
+    range_level: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    shocks = rng.normal(0.0, 0.006, size=n)
+    log_path = np.cumsum(shocks)
+    # Remove end drift so total move remains near-flat over the prefix.
+    log_path = log_path - np.linspace(0.0, float(log_path[-1]), n)
+    close = np.maximum(start_price * np.exp(log_path), 0.1)
+    volume = base_vol * rng.uniform(0.85, 1.15, size=n)
+    range_frac = np.full(n, range_level)
+    return close, volume, range_frac
+
+
+def _prepend_prefix(
+    rng: np.random.Generator,
+    close: np.ndarray,
+    volume: np.ndarray,
+    range_frac: np.ndarray,
+    accumulation_windows: list[tuple[int, int]],
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[tuple[int, int]]]:
+    pref_close, pref_vol, pref_range = _neutral_prefix(
+        rng,
+        PREFIX_SESSIONS,
+        float(close[0]) * 0.98,
+        float(np.mean(volume)),
+        float(np.median(range_frac)),
+    )
+    scale = float(pref_close[-1]) / max(float(close[0]), 1e-9)
+    scaled_close = close * scale
+    out_close = np.concatenate([pref_close, scaled_close])
+    out_volume = np.concatenate([pref_vol, volume])
+    out_range = np.concatenate([pref_range, range_frac])
+    shifted_windows = [(s + PREFIX_SESSIONS, e + PREFIX_SESSIONS) for s, e in accumulation_windows]
+    return out_close, out_volume, out_range, shifted_windows
+
+
+def _assert_warmup_alignment(df: pd.DataFrame, symbol: str, first_pattern_idx: int, is_joiner: bool = False) -> None:
+    close = df["close"].to_numpy(dtype=float)
+    ema10 = _ema(close, 10)
+    ema30 = _ema(close, 30)
+    sma200 = pd.Series(close).rolling(200).mean().to_numpy()
+    range_low_120 = pd.Series(close).rolling(120).min().to_numpy()
+    range_high_120 = pd.Series(close).rolling(120).max().to_numpy()
+
+    ready = np.where(
+        (~np.isnan(sma200))
+        & (~np.isnan(range_low_120))
+        & (~np.isnan(range_high_120))
+        & (range_low_120 > 0)
+        & (range_high_120 > 0)
+    )[0]
+    assert len(ready) > 0, f"{symbol}: warmup_ready_date not found"
+    warmup_idx = int(ready[0])
+
+    if not is_joiner:
+        assert warmup_idx < first_pattern_idx, (
+            f"{symbol}: warmup_ready ({warmup_idx}) must precede first pattern segment ({first_pattern_idx})"
+        )
+        return
+
+    # JOINER requirement: join conditions hold on >=5 bars inside warmup window.
+    end = min(len(close), warmup_idx + 41)
+    hits = 0
+    for i in range(warmup_idx, end):
+        if close[i] > sma200[i] and ema10[i] > ema30[i] and close[i] >= (range_low_120[i] * 1.15):
+            hits += 1
+    assert hits >= 5, f"{symbol}: expected >=5 join-eligible bars in [warmup, warmup+40], got {hits}"
 
 
 def _business_dates(n: int) -> pd.DatetimeIndex:
@@ -213,12 +287,14 @@ def _build_tijara(rng: np.random.Generator) -> SeriesBundle:
     volume[base_end + 24] = base_vol * 1.8
     volume[base_end + 56] = base_vol * 1.8
 
-    return SeriesBundle(
-        close=close,
-        volume=volume,
-        range_frac=range_frac,
-        accumulation_windows=[(base_end - 40, base_end)],
+    close, volume, range_frac, windows = _prepend_prefix(
+        rng,
+        close,
+        volume,
+        range_frac,
+        [(base_end - 40, base_end)],
     )
+    return SeriesBundle(close=close, volume=volume, range_frac=range_frac, accumulation_windows=windows)
 
 
 def _build_bpcc(rng: np.random.Generator) -> SeriesBundle:
@@ -254,12 +330,14 @@ def _build_bpcc(rng: np.random.Generator) -> SeriesBundle:
             volume[k] = base_vol * 3.3
             range_frac[k] = 0.010
 
-    return SeriesBundle(
-        close=close,
-        volume=volume,
-        range_frac=range_frac,
-        accumulation_windows=[(base_start, base_end)],
+    close, volume, range_frac, windows = _prepend_prefix(
+        rng,
+        close,
+        volume,
+        range_frac,
+        [(base_start, base_end)],
     )
+    return SeriesBundle(close=close, volume=volume, range_frac=range_frac, accumulation_windows=windows)
 
 
 def _build_zain(rng: np.random.Generator) -> SeriesBundle:
@@ -304,12 +382,14 @@ def _build_zain(rng: np.random.Generator) -> SeriesBundle:
     for j in [len(rise) + len(base) + 20, len(rise) + len(base) + 46, len(rise) + len(base) + 74]:
         volume[j] = base_vol * 1.8
 
-    return SeriesBundle(
-        close=close,
-        volume=volume,
-        range_frac=range_frac,
-        accumulation_windows=[(base_start, base_end)],
+    close, volume, range_frac, windows = _prepend_prefix(
+        rng,
+        close,
+        volume,
+        range_frac,
+        [(base_start, base_end)],
     )
+    return SeriesBundle(close=close, volume=volume, range_frac=range_frac, accumulation_windows=windows)
 
 
 def _build_sanam(rng: np.random.Generator) -> SeriesBundle:
@@ -343,12 +423,14 @@ def _build_sanam(rng: np.random.Generator) -> SeriesBundle:
     range_frac[brk_i] = 0.018
     range_frac[brk_i + 1] = 0.019
 
-    return SeriesBundle(
-        close=close,
-        volume=volume,
-        range_frac=range_frac,
-        accumulation_windows=[(base_start, base_end)],
+    close, volume, range_frac, windows = _prepend_prefix(
+        rng,
+        close,
+        volume,
+        range_frac,
+        [(base_start, base_end)],
     )
+    return SeriesBundle(close=close, volume=volume, range_frac=range_frac, accumulation_windows=windows)
 
 
 def _build_mabanee(rng: np.random.Generator) -> SeriesBundle:
@@ -394,12 +476,14 @@ def _build_mabanee(rng: np.random.Generator) -> SeriesBundle:
     for i in range(decline_start, len(close)):
         volume[i] = base_vol * rng.uniform(1.05, 1.35)
 
-    return SeriesBundle(
-        close=close,
-        volume=volume,
-        range_frac=range_frac,
-        accumulation_windows=[(0, base_end)],
+    close, volume, range_frac, windows = _prepend_prefix(
+        rng,
+        close,
+        volume,
+        range_frac,
+        [(0, base_end)],
     )
+    return SeriesBundle(close=close, volume=volume, range_frac=range_frac, accumulation_windows=windows)
 
 
 def _build_joiner(rng: np.random.Generator) -> SeriesBundle:
@@ -431,7 +515,7 @@ def _self_check_tijara(df: pd.DataFrame) -> None:
     rv = vol / pd.Series(vol).rolling(20).mean().to_numpy()
     obv = _obv(close, vol)
 
-    pre = 40
+    pre = PREFIX_SESSIONS + 40
     base_len = 140
     base_last_40 = slice(pre + base_len - 40, pre + base_len)
 
@@ -449,22 +533,23 @@ def _self_check_bpcc(df: pd.DataFrame) -> None:
     vol = df["volume"].to_numpy(dtype=float)
     obv = _obv(close, vol)
 
-    decline = close[:120]
+    decline = close[PREFIX_SESSIONS : PREFIX_SESSIONS + 120]
     assert decline[-1] < decline[0] * 0.84, "BPCC: decline segment is not steep enough"
 
-    base_window = slice(120 + 40, 120 + 80)
+    base_window = slice(PREFIX_SESSIONS + 120 + 40, PREFIX_SESSIONS + 120 + 80)
     flow = _norm_flow_window(obv[base_window], vol[base_window])
     assert flow > 0.10, f"BPCC: base OBV flow should be >0.10, got {flow:.4f}"
 
     rv = vol / pd.Series(vol).rolling(20).mean().to_numpy()
-    assert rv[200] >= 3.0, f"BPCC: breakout rel_volume < 3.0 ({rv[200]:.3f})"
+    brk_i = PREFIX_SESSIONS + 200
+    assert rv[brk_i] >= 3.0, f"BPCC: breakout rel_volume < 3.0 ({rv[brk_i]:.3f})"
 
 
 def _self_check_zain(df: pd.DataFrame) -> None:
     close = df["close"].to_numpy(dtype=float)
     vol = df["volume"].to_numpy(dtype=float)
 
-    base = close[30 : 30 + 110]
+    base = close[PREFIX_SESSIONS + 30 : PREFIX_SESSIONS + 30 + 110]
     max_drift = 0.0
     for i in range(40, len(base) + 1):
         win = base[i - 40 : i]
@@ -473,7 +558,8 @@ def _self_check_zain(df: pd.DataFrame) -> None:
     assert max_drift <= 0.015, f"ZAIN: 40-session base drift too high ({max_drift:.4f})"
 
     rv = vol / pd.Series(vol).rolling(20).mean().to_numpy()
-    assert rv[140] >= 3.0, f"ZAIN: breakout rel_volume < 3.0 ({rv[140]:.3f})"
+    brk_i = PREFIX_SESSIONS + 140
+    assert rv[brk_i] >= 3.0, f"ZAIN: breakout rel_volume < 3.0 ({rv[brk_i]:.3f})"
 
 
 def _self_check_sanam(df: pd.DataFrame) -> None:
@@ -499,7 +585,7 @@ def _self_check_mabanee(df: pd.DataFrame) -> None:
     climax_i = int(np.argmax(vol))
     top_start = max(0, climax_i - 40)
     top = close[top_start:climax_i]
-    assert top.max() > close[59], "MABANEE: top segment missing higher highs"
+    assert top.max() > close[PREFIX_SESSIONS + 59], "MABANEE: top segment missing higher highs"
 
     top_obv = obv[top_start:climax_i]
     assert top_obv[-1] < top_obv[10], "MABANEE: OBV should fade in top segment"
@@ -526,12 +612,13 @@ def _self_check_joiner(df: pd.DataFrame) -> None:
     warmup_idx = int(warmup_ready[0])
 
     join_window_end = min(len(close), warmup_idx + 41)
-    joined_eligible = False
+    joined_hits = 0
     for i in range(warmup_idx, join_window_end):
         if close[i] > sma200[i] and ema10[i] > ema30[i] and close[i] >= (range_low_120[i] * 1.15):
-            joined_eligible = True
-            break
-    assert joined_eligible, "JOINER: no trend-join eligibility inside first 40 sessions after warmup_ready_date"
+            joined_hits += 1
+    assert joined_hits >= 5, (
+        "JOINER: expected >=5 trend-join eligible bars inside first 40 sessions after warmup_ready_date"
+    )
 
     upper = float(np.nanmax(close[warmup_idx + 20 : warmup_idx + 140]))
     assert upper > 1150.0, "JOINER: expected late-cycle strong markup"
@@ -569,6 +656,14 @@ def main() -> None:
         "MABANEE": _self_check_mabanee,
         "JOINER": _self_check_joiner,
     }
+    first_pattern_index = {
+        "TIJARA": PREFIX_SESSIONS,
+        "BPCC": PREFIX_SESSIONS,
+        "ZAIN": PREFIX_SESSIONS,
+        "SANAM": PREFIX_SESSIONS,
+        "MABANEE": PREFIX_SESSIONS,
+        "JOINER": 0,
+    }
 
     for symbol in ["TIJARA", "BPCC", "ZAIN", "SANAM", "MABANEE", "JOINER"]:
         local_rng = np.random.default_rng(rng.integers(0, 1_000_000_000))
@@ -579,6 +674,12 @@ def main() -> None:
             bundle.volume,
             bundle.range_frac,
             accumulation_windows=bundle.accumulation_windows,
+        )
+        _assert_warmup_alignment(
+            df,
+            symbol,
+            first_pattern_idx=first_pattern_index[symbol],
+            is_joiner=(symbol == "JOINER"),
         )
         for window in bundle.accumulation_windows:
             _assert_accumulation_cmf_window(df, window, symbol)
