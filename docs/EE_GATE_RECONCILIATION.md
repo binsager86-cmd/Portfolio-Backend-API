@@ -69,3 +69,81 @@ Pass-2 amendment applied in code semantics/tests:
 
 - Required WATCH cleanup is satisfied: no EMA condition remains in WATCH trigger.
 - All listed detector conditions are now reconciled with explicit status and disposition.
+
+## Pass 5 Addendum (Frozen Order + Disclosure)
+
+### G1.1 Test Assertion Disclosure (verbatim diff)
+
+Observed diff from `tests/unit/test_eagle_eye_phase_e.py` in prior pass window:
+
+```diff
+@@
+ def test_u1c_confirming_window_confirms_or_reverts():
+@@
+	assert r_revert["signal_type"] is None
+
+
++def test_u1d_breakout_uses_frozen_base_high_not_rolling_120_high():
++    ...
++    r_watch = evaluate_symbol(symbol, base_td + 4 * 86400, 80.0, cfg)
++    assert r_watch["phase"] == "BREAKOUT_WATCH"
++    assert r_watch["transition"] == ("BASE_FORMING", "BREAKOUT_WATCH")
++    ...
++    r_confirm = evaluate_symbol(symbol, base_td + 7 * 86400, 80.0, cfg)
++    assert r_confirm["signal_type"] == "BREAKOUT_CONFIRMED"
+
+@@ def test_u5_risk_suppression_emits_signal_and_skips_position():
+-    exec_sql(
+-        "INSERT INTO ee_symbol_state (symbol, phase, phase_since, updated_at, state_json) VALUES (?, 'BREAKOUT_WATCH', ?, ?, '{}')",
+-        (symbol, latest - 86400, latest),
+-    )
++    exec_sql(
++        "INSERT INTO ee_symbol_state (symbol, phase, phase_since, base_high, base_low, updated_at, state_json) VALUES (?, 'BREAKOUT_WATCH', ?, 110.0, 90.0, ?, '{}')",
++        (symbol, latest - 86400, latest),
++    )
+```
+
+Justification per change:
+
+1. `test_u1d...` was added to enforce frozen-base breakout reference semantics (state `base_high`, not rolling `range_high_120`).
+2. `test_u5...` setup was adjusted to seed `base_high/base_low` so BREAKOUT_WATCH mandatory checks remain meaningful after frozen-base migration.
+3. No U5 assertion was weakened; assertion lines in U5 are unchanged.
+
+Ruling:
+
+1. No assertion weakening accepted in this disclosure set.
+2. If any future assertion relaxation appears without directive-approved contract change, it must be reverted in-pass.
+
+### G1.2 Mid-pass order flips and frozen evaluation order
+
+Recorded flips during prior pass:
+
+1. Flip A: WATCH evaluation moved ahead of BASE_FORMING->ACCUMULATION.
+2. Flip B: order restored to ACCUMULATION before WATCH.
+
+FROZEN order (change-controlled):
+
+1. Distribution-warning exit checks.
+2. BREAKOUT_WATCH confirm window.
+3. BASE_FORMING -> ACCUMULATION gate.
+4. BASE_FORMING/ACCUMULATION -> BREAKOUT_WATCH trigger.
+5. NEUTRAL trend-join gate.
+6. NEUTRAL base-detection gate.
+
+Policy:
+
+1. This order is now frozen.
+2. Any future order change requires a formal change request before code edits.
+
+### G1.3 Config-channel ruling (env var path)
+
+Ruling:
+
+1. Detector runtime config enters only via `ee_engine_config` plus explicit `config_overrides`.
+2. `os.environ`/`os.getenv` reads under `app/services/eagle_eye/**` are prohibited for detector knobs.
+
+Verification snapshot:
+
+1. Grep over `app/services/eagle_eye/**` found no `os.environ`/`os.getenv` reads.
+2. Grep over whole repo found no `EE_MIN_DAILY_VALUE_KWD` token in source files.
+3. Conclusion: prior command-line env export was superstition (not consumed by Eagle Eye engine path).
