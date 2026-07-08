@@ -881,6 +881,18 @@ async def get_scanner(
             logger.info("Eagle Eye scanner: cache cold, returning warming_up status")
             return ScannerResponse(status="warming_up", count=0, stocks=[])
 
+        # Keep scanner consistent with detail endpoint freshness policy.
+        # Detail view only trusts same-day ee_ratings_cache rows before falling
+        # back to live compute. Apply the same rule here to avoid CONF mismatch
+        # between list and detail screens.
+        today_iso = date.today().isoformat()
+        fresh_rows = [row for row in db_rows if str(row.get("computed_at") or "") == today_iso]
+        if not fresh_rows:
+            _trigger_eagle_eye_recompute("scanner_cache_stale")
+            logger.info("Eagle Eye scanner: cache stale, returning warming_up status")
+            return ScannerResponse(status="warming_up", count=0, stocks=[])
+        db_rows = fresh_rows
+
         # ── Use cached meta map (rebuilt at most every 10 min) ───────────────
         meta_map = _get_meta_map()
         fundamentals_map = _get_fundamentals_map()
