@@ -429,6 +429,17 @@ def _cache_key(ticker: str, as_of: Optional[date] = None) -> str:
     return f"{ticker.upper()}:{d}"
 
 
+def _is_computed_today(computed_at: object, today_iso: Optional[str] = None) -> bool:
+    """Treat both date-only and timestamp values as fresh for the same day."""
+    if computed_at is None:
+        return False
+    value = str(computed_at).strip()
+    if not value:
+        return False
+    day = today_iso or date.today().isoformat()
+    return (value[:10] == day) if len(value) >= 10 else (value == day)
+
+
 def _safe_float(v) -> Optional[float]:
     """Coerce to float; return None for NaN, Inf, or anything non-numeric."""
     if v is None:
@@ -665,7 +676,7 @@ def _run_analysis(ticker: str) -> Optional[dict]:
         from app.services.eagle_eye.store import load_ohlcv, load_rating
 
         cached_row = load_rating(ticker)
-        if cached_row and cached_row.get("computed_at") == date.today().isoformat():
+        if cached_row and _is_computed_today(cached_row.get("computed_at")):
             ohlcv_cached = load_ohlcv(ticker)
             if ohlcv_cached is None or len(ohlcv_cached) == 0:
                 raise ValueError(f"Missing cached OHLCV for {ticker}")
@@ -886,7 +897,7 @@ async def get_scanner(
         # back to live compute. Apply the same rule here to avoid CONF mismatch
         # between list and detail screens.
         today_iso = date.today().isoformat()
-        fresh_rows = [row for row in db_rows if str(row.get("computed_at") or "") == today_iso]
+        fresh_rows = [row for row in db_rows if _is_computed_today(row.get("computed_at"), today_iso)]
         if not fresh_rows:
             _trigger_eagle_eye_recompute("scanner_cache_stale")
             logger.info("Eagle Eye scanner: cache stale, returning warming_up status")
