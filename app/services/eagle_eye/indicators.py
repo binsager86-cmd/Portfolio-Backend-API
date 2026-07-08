@@ -24,11 +24,20 @@ def _ema(series: pd.Series, period: int) -> pd.Series:
 
 
 def _rolling_pctile(series: pd.Series, window: int) -> pd.Series:
-    """Percentile rank of last value within the rolling window (0-100)."""
-    def _pctile_of_last(x):
-        last = x[-1]
-        return 100.0 * (x <= last).sum() / len(x)
-    return series.rolling(window).apply(_pctile_of_last, raw=True)
+    """Percentile rank against prior values using expanding history once enough data exists (0-100)."""
+    vals = series.to_numpy(dtype=float)
+    out = np.full(len(vals), np.nan, dtype=float)
+    min_history = min(60, max(1, window - 1))
+    for i in range(len(vals)):
+        cur = vals[i]
+        if not np.isfinite(cur):
+            continue
+        prior = vals[:i]
+        prior = prior[np.isfinite(prior)]
+        if len(prior) < min_history:
+            continue
+        out[i] = 100.0 * float((prior <= cur).sum()) / float(len(prior))
+    return pd.Series(out, index=series.index, dtype=float)
 
 
 # =============================================================================
@@ -1015,11 +1024,7 @@ def compute_all_indicators(
     out['atr_14'] = out['atr']
     out['atr_percent'] = out['atr_14'] / df['close'].replace(0, np.nan)
     out['bb_width_20'] = out['bb_bandwidth']
-    out['bb_width_percentile_252d'] = (
-        out['bb_width_20'].rolling(252).apply(
-            lambda x: (x <= x.iloc[-1]).sum() / len(x), raw=False
-        )
-    )
+    out['bb_width_percentile_252d'] = _rolling_pctile(out['bb_width_20'], 252) / 100.0
     out['donchian_breakout_50d'] = (df['close'] > df['high'].shift(1).rolling(50).max()).astype(int)
 
     sr_lookback = 120

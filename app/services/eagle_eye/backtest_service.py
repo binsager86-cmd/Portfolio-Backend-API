@@ -3,20 +3,25 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from typing import Any
+from collections import deque
+import statistics
 
 from app.core.database import exec_sql, query_all, query_one
 from app.core.security import TokenData
 from app.services.eagle_eye.audit_service import create_event
-from app.services.eagle_eye.indicator_service import compute_and_store_symbol, load_latest_indicator
+from app.services.eagle_eye.indicator_service import compute_and_store_symbol
 from app.services.eagle_eye.market_data_service import (
     CONCEPT_VERSION,
     get_active_config,
     get_config_hash,
     now_ts,
     set_now_ts_override,
+    validate_engine_config_presence,
+    validate_runtime_config_keys,
 )
 from app.services.eagle_eye.rating_service import compute_rating_from_indicator, store_rating
-from app.services.eagle_eye.scanner_service import evaluate_symbol
+from app.services.eagle_eye.pipeline import process_bar
+from app.services.eagle_eye.scanner_service import upsert_symbol_state
 
 
 @dataclass
@@ -87,6 +92,59 @@ def _load_bars(symbol: str, start: int, end: int) -> list[dict[str, Any]]:
     )
 
 
+def _load_indicator_map(symbol: str, start: int, end: int) -> dict[int, dict[str, Any]]:
+    rows = query_all(
+        """
+        SELECT trade_date, payload_json
+        FROM ee_indicators
+        WHERE symbol = ? AND trade_date BETWEEN ? AND ?
+        ORDER BY trade_date ASC
+        """,
+        (symbol, start, end),
+    )
+    out: dict[int, dict[str, Any]] = {}
+    for row in rows or []:
+        trade_date = int(row.get("trade_date") or 0)
+        try:
+            payload = json.loads(str(row.get("payload_json") or "{}"))
+        except Exception:
+            payload = {}
+        payload["trade_date"] = trade_date
+        out[trade_date] = payload
+    return out
+
+
+def _precompute_liquidity_map(
+    bars: list[dict[str, Any]],
+    min_daily_value_kwd: float,
+) -> dict[int, tuple[bool, dict[str, Any]]]:
+    value_q: deque[float] = deque(maxlen=60)
+    close_q: deque[float] = deque(maxlen=60)
+    vol_q: deque[float] = deque(maxlen=60)
+    out: dict[int, tuple[bool, dict[str, Any]]] = {}
+    for bar in bars:
+        td = int(bar.get("trade_date") or 0)
+        value_q.append(float(bar.get("value_kwd") or 0.0))
+        close_q.append(float(bar.get("close") or 0.0))
+        vol_q.append(float(bar.get("volume") or 0.0))
+        values = list(value_q)
+        closes = list(close_q)
+        vols = list(vol_q)
+        median_val = float(statistics.median(values)) if values else 0.0
+        min_price = min(closes) if closes else 0.0
+        zero_vol = sum(1 for v in vols if v <= 0)
+        ok = median_val >= float(min_daily_value_kwd) and min_price >= 50.0 and zero_vol <= 3
+        out[td] = (
+            ok,
+            {
+                "median_daily_value_kwd_20": median_val,
+                "min_price_fils_60": min_price,
+                "zero_volume_sessions_60": zero_vol,
+            },
+        )
+    return out
+
+
 def run_backtest(
     symbols: list[str],
     start: int,
@@ -94,10 +152,12 @@ def run_backtest(
     config_overrides: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     _ensure_backtest_tables()
+    validate_engine_config_presence()
     symbols_sorted = sorted({s.upper().strip() for s in symbols if s})
     cfg = get_active_config()
     if config_overrides:
         cfg.update(config_overrides)
+    validate_runtime_config_keys(cfg)
 
     run_started = now_ts()
     config_hash = get_config_hash(cfg)
@@ -130,9 +190,26 @@ def run_backtest(
         run_id = int(run_id_row.get("id") or 0)
 
     bars_by_symbol: dict[str, list[dict[str, Any]]] = {}
+    indicators_by_symbol: dict[str, dict[int, dict[str, Any]]] = {}
+    liquidity_by_symbol: dict[str, dict[int, tuple[bool, dict[str, Any]]]] = {}
+    coverage_start_by_symbol: dict[str, int] = {}
     for symbol in symbols_sorted:
         compute_and_store_symbol(symbol)
         bars_by_symbol[symbol] = _load_bars(symbol, start, end)
+        indicators_by_symbol[symbol] = _load_indicator_map(symbol, start, end)
+        liquidity_by_symbol[symbol] = _precompute_liquidity_map(
+            bars_by_symbol[symbol],
+            float(cfg.get("min_daily_value_kwd", 100000.0)),
+        )
+        coverage_start = int(bars_by_symbol[symbol][0].get("trade_date") or start) if bars_by_symbol[symbol] else int(start)
+        for td in sorted(indicators_by_symbol[symbol].keys()):
+            p = indicators_by_symbol[symbol].get(td) or {}
+            sma200 = float(p.get("sma200") or 0.0)
+            range_low_120 = float(p.get("range_low_120") or 0.0)
+            if sma200 > 0 and range_low_120 > 0:
+                coverage_start = int(td)
+                break
+        coverage_start_by_symbol[symbol] = coverage_start
 
     pending: list[PendingFill] = []
     open_trades: dict[str, dict[str, Any]] = {}
@@ -146,6 +223,13 @@ def run_backtest(
         s: {int(x.get("trade_date") or 0): x for x in rows}
         for s, rows in bars_by_symbol.items()
     }
+    history_cache: dict[str, list[dict[str, Any]]] = {s: [] for s in symbols_sorted}
+    coverage_count: dict[str, int] = {s: 0 for s in symbols_sorted}
+    state_cache: dict[str, dict[str, Any]] = {}
+    next_date_map: dict[str, dict[int, int]] = {}
+    for symbol, rows in bars_by_symbol.items():
+        dates = [int(x.get("trade_date") or 0) for x in rows if x.get("trade_date")]
+        next_date_map[symbol] = {dates[i]: dates[i + 1] for i in range(len(dates) - 1)}
 
     for dt in global_dates:
         set_now_ts_override(dt)
@@ -204,29 +288,47 @@ def run_backtest(
             if not bar:
                 continue
 
-            payload = load_latest_indicator(symbol, dt)
+            payload = indicators_by_symbol.get(symbol, {}).get(dt)
             if not payload:
                 continue
             feature_max_ts = int(payload.get("trade_date") or 0)
             assert feature_max_ts <= dt, f"No-lookahead violated for {symbol} at {dt}"  # nosec B101
 
+            history_cache[symbol].append(payload)
+            if dt >= int(coverage_start_by_symbol.get(symbol) or dt):
+                coverage_count[symbol] = int(coverage_count.get(symbol, 0)) + 1
+            if len(history_cache[symbol]) > 140:
+                history_cache[symbol] = history_cache[symbol][-140:]
+
             score, band, components = compute_rating_from_indicator(payload)
             store_rating(symbol, dt, score, band, components)
 
-            signal_result = evaluate_symbol(symbol, dt, score, cfg, trace_id=f"bt-{run_id}")
+            signal_result = process_bar(
+                symbol,
+                dt,
+                cfg,
+                trace_id=f"bt-{run_id}",
+                indicator_payload=payload,
+                indicator_history=history_cache[symbol],
+                state_override=state_cache.get(symbol),
+                persist_state=False,
+                liquidity_snapshot=liquidity_by_symbol.get(symbol, {}).get(dt),
+                coverage_start_date=coverage_start_by_symbol.get(symbol),
+                coverage_sessions=coverage_count.get(symbol) if coverage_count.get(symbol, 0) > 0 else None,
+                score=score,
+                band=band,
+                components=components,
+                persist_rating=False,
+            )
+            if isinstance(signal_result.get("state"), dict):
+                state_cache[symbol] = signal_result["state"]
             signal_id = int(signal_result.get("signal_id") or 0)
             if signal_id <= 0:
                 continue
-            srow = query_one("SELECT signal_type FROM ee_signals WHERE id = ?", (signal_id,))
-            stype = str((srow or {}).get("signal_type") or "")
+            stype = str(signal_result.get("signal_type") or "")
 
             # Queue fills on t+1 open only.
-            symbol_dates = sorted(bar_index.get(symbol, {}).keys())
-            try:
-                pos = symbol_dates.index(dt)
-                next_dt = symbol_dates[pos + 1]
-            except Exception:
-                next_dt = None
+            next_dt = next_date_map.get(symbol, {}).get(dt)
             if next_dt is None:
                 continue
 
@@ -240,6 +342,9 @@ def run_backtest(
                 pending.append(PendingFill(symbol, "sell", "EXIT", signal_id, stype, dt, next_dt))
 
     set_now_ts_override(None)
+
+    for state in state_cache.values():
+        upsert_symbol_state(state)
 
     # Force-close at final close for open trades.
     for symbol, trade in list(open_trades.items()):

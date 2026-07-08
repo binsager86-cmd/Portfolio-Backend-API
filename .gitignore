@@ -123,3 +123,9 @@ verification_script.py
 calib_analysis.py
 net_liq_verify.py
 reset_ckpt.py
+
+# Local scratch workspace
+scratch/
+_tmp_*.py
+trace_watch_*.txt
+_tmp_command_execution_report.ipynb

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -7,25 +8,16 @@ import pytest
 from app.core.database import exec_sql, query_all, query_one, query_val
 from app.services.eagle_eye.backtest_service import run_backtest
 from app.services.eagle_eye.indicator_service import compute_and_store_symbol
-from app.services.eagle_eye.market_data_service import ensure_schema, load_ohlcv_csv
+from app.services.eagle_eye.market_data_service import DEFAULT_ENGINE_CONFIG, ensure_schema, load_ohlcv_csv, now_ts
 from app.services.eagle_eye.audit_service import ensure_schema as ensure_audit_schema
 
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 REAL_DATA = Path(__file__).resolve().parents[2] / "data" / "kse"
 SYMBOLS = ["TIJARA", "BPCC", "ZAIN", "SANAM", "MABANEE"]
+JOINER_SYMBOL = "JOINER"
 SYNTHETIC_OVERRIDES = {
-    "base_max_width_pct": 0.25,
-    "volume_breakout_mult": 1.2,
-    "rsi_regime": 50,
-    "adx_trigger": 15,
-    "cmf_floor": 0.0,
-    "accumulation_cmf_hits_min": 3,
-    "accumulation_price_slope_max": 0.20,
-    "accumulation_volume_slope_min": 0.02,
-    "accumulation_min_score": 55,
-    "breakout_min_score": 65,
-    "min_daily_value_kwd": 1000.0,
+    "min_daily_value_kwd": 100000.0,
 }
 
 
@@ -50,11 +42,23 @@ def _reset_regression_tables():
             exec_sql(f"DELETE FROM {t}", ())
         except Exception:
             pass
+
+    exec_sql("DELETE FROM ee_engine_config", ())
+    ts = now_ts()
+    for key, value in DEFAULT_ENGINE_CONFIG.items():
+        exec_sql(
+            """
+            INSERT INTO ee_engine_config (key, value_json, updated_at, updated_by_user_id, change_request_id)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (key, json.dumps(value, ensure_ascii=True), ts, 0, None),
+        )
     yield
 
 
-def _load_synthetic() -> tuple[int, int]:
-    for s in SYMBOLS:
+def _load_synthetic(symbols: list[str] | None = None) -> tuple[int, int]:
+    symbols = symbols or SYMBOLS
+    for s in symbols:
         load_ohlcv_csv(str(FIXTURES / f"synthetic_{s.lower()}.csv"), s)
         compute_and_store_symbol(s)
     row = query_one("SELECT MIN(trade_date) mn, MAX(trade_date) mx FROM ee_ohlcv", ())
@@ -186,6 +190,24 @@ def test_r5_mabanee_regression_gate():
     mn, mx = _load_synthetic()
     _run_fixture_backtest(mn, mx)
 
+    brk = _signal_dates("MABANEE", "BREAKOUT_CONFIRMED")
+    assert brk, "R5a: BREAKOUT_CONFIRMED missing for MABANEE"
+
+    first_brk = min(brk)
+    pre_exit = query_all(
+        """
+        SELECT id
+        FROM ee_signals
+        WHERE symbol = 'MABANEE'
+          AND trade_date >= ?
+          AND signal_type IN ('EXIT', 'AVOID_SET')
+        ORDER BY trade_date ASC
+        LIMIT 1
+        """,
+        (first_brk,),
+    )
+    assert pre_exit, "R5b: expected EXIT/AVOID after breakout lifecycle"
+
     top_date = int(
         query_val(
             "SELECT trade_date FROM ee_ohlcv WHERE symbol = 'MABANEE' ORDER BY close DESC, trade_date ASC LIMIT 1",
@@ -199,32 +221,123 @@ def test_r5_mabanee_regression_gate():
     assert warn
     assert (_index_date("MABANEE", warn[0]) - _index_date("MABANEE", top_date)) <= 15
 
-    longs_after_top = query_all(
-        """
-        SELECT id FROM ee_signals
-        WHERE symbol = 'MABANEE'
-          AND trade_date >= ?
-          AND signal_type IN ('ACCUMULATION_ALERT', 'BREAKOUT_CONFIRMED')
-        """,
-        (top_date,),
-    )
-    assert longs_after_top == []
-
     exit_dates = _signal_dates("MABANEE", "EXIT")
-    assert exit_dates
-    peak = float(query_val("SELECT MAX(close) FROM ee_ohlcv WHERE symbol = 'MABANEE'", ()) or 0.0)
-    ten_down_date = int(
-        query_val(
-            "SELECT trade_date FROM ee_ohlcv WHERE symbol = 'MABANEE' AND close <= ? ORDER BY trade_date ASC LIMIT 1",
-            (peak * 0.90,),
-        )
-        or 0
+    assert exit_dates, "R5d: EXIT missing for MABANEE"
+
+    rows = query_all(
+        "SELECT trade_date, close FROM ee_ohlcv WHERE symbol = 'MABANEE' AND trade_date >= ? ORDER BY trade_date ASC",
+        (first_brk,),
     )
+    running_peak = 0.0
+    ten_down_date = 0
+    for r in rows:
+        c = float(r["close"] or 0.0)
+        running_peak = max(running_peak, c)
+        if running_peak > 0 and c < (running_peak * 0.90):
+            ten_down_date = int(r["trade_date"])
+            break
     assert ten_down_date > 0
     assert min(exit_dates) <= ten_down_date
 
+    t = _trade("MABANEE")
+    assert t is not None
+    assert float(t["net_return"] or 0.0) >= 0.18, "R5e: net return below +0.18"
+
     end_state = query_one("SELECT phase FROM ee_symbol_state WHERE symbol = 'MABANEE'", ())
     assert end_state and end_state["phase"] == "AVOID"
+
+    reentries = query_all(
+        """
+        SELECT id
+        FROM ee_signals
+        WHERE symbol = 'MABANEE'
+          AND trade_date > ?
+          AND signal_type IN ('ACCUMULATION_ALERT', 'BREAKOUT_CONFIRMED')
+        """,
+        (min(exit_dates),),
+    )
+    assert reentries == [], "R5f: re-entry occurred after exit"
+
+
+def test_r7_synthetic_joiner_trend_join_gate():
+    mn, mx = _load_synthetic([JOINER_SYMBOL])
+    run_backtest([JOINER_SYMBOL], mn, mx, config_overrides=SYNTHETIC_OVERRIDES)
+
+    joined = query_all(
+        """
+        SELECT trade_date
+        FROM ee_signals
+        WHERE symbol = ?
+          AND signal_type = 'PHASE_ONLY'
+          AND phase_from = 'NEUTRAL'
+          AND phase_to = 'MARKUP'
+          AND COALESCE(json_extract(evidence_json, '$.joined_externally'), 0) = 1
+        ORDER BY trade_date ASC
+        LIMIT 1
+        """,
+        (JOINER_SYMBOL,),
+    )
+    assert joined, "R7: expected joined_externally trend join for synthetic_joiner"
+    join_date = int(joined[0]["trade_date"])
+
+    entries = query_all(
+        """
+        SELECT id
+        FROM ee_signals
+        WHERE symbol = ?
+          AND signal_type IN ('ACCUMULATION_ALERT', 'BREAKOUT_CONFIRMED', 'ADD_ON_PULLBACK')
+        """,
+        (JOINER_SYMBOL,),
+    )
+    assert entries == [], "R7: trend-join path should not emit entry stack signals"
+
+    warn = query_all(
+        """
+        SELECT trade_date
+        FROM ee_signals
+        WHERE symbol = ?
+          AND signal_type = 'DISTRIBUTION_WARNING'
+          AND trade_date > ?
+        ORDER BY trade_date ASC
+        LIMIT 1
+        """,
+        (JOINER_SYMBOL, join_date),
+    )
+    assert warn, "R7: expected DISTRIBUTION_WARNING after joined MARKUP"
+
+    exit_row = query_all(
+        """
+        SELECT trade_date
+        FROM ee_signals
+        WHERE symbol = ?
+          AND signal_type = 'EXIT'
+          AND trade_date > ?
+        ORDER BY trade_date ASC
+        LIMIT 1
+        """,
+        (JOINER_SYMBOL, int(warn[0]["trade_date"])),
+    )
+    assert exit_row, "R7: expected EXIT after DISTRIBUTION_WARNING"
+
+    avoid = query_all(
+        """
+        SELECT trade_date
+        FROM ee_signals
+        WHERE symbol = ?
+          AND signal_type = 'AVOID_SET'
+          AND trade_date > ?
+        ORDER BY trade_date ASC
+        LIMIT 1
+        """,
+        (JOINER_SYMBOL, int(exit_row[0]["trade_date"])),
+    )
+    assert avoid, "R7: expected AVOID_SET after EXIT"
+
+    end_state = query_one("SELECT phase FROM ee_symbol_state WHERE symbol = ?", (JOINER_SYMBOL,))
+    assert end_state and end_state["phase"] == "AVOID"
+
+    src = (Path(__file__).resolve().parents[2] / "app" / "services" / "eagle_eye" / "scanner_service.py").read_text(encoding="utf-8")
+    assert "MABANEE" not in src and "TIJARA" not in src and "BPCC" not in src
 
 
 def test_real_data_statistical_gate_optional():

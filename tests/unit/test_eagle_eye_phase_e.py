@@ -246,20 +246,546 @@ def test_u1b_trend_join_order_scope_and_avoid_precedence():
         "sma200": 100.0,
         "sma200_slope": -0.02,
         "ema10": 94.0,
-        "ema30": 96.0,
-        "rel_volume": 3.0,
+        "ema30": 95.0,
+        "ema10_slope": 0.03,
+        "range_high_60": 102.0,
+        "range_low_60": 88.0,
+        "range_high_120": 104.0,
+        "range_low_120": 86.0,
+        "rel_volume": 1.0,
+        "accumulation_divergence": False,
+        "distribution_divergence": False,
     })
+    symbol = "U1I"
+    base_td = 1712500000
+    cfg = {
+        "base_min_sessions": 60,
+        "base_max_width_pct": 0.18,
+        "volume_breakout_mult": 2.5,
+        "rsi_regime": 55,
+        "adx_trigger": 22,
+        "cmf_floor": 0.05,
+        "atr_squeeze_pctile": 0.20,
+        "avoid_reclaim_clear_closes": 2,
+        "pilot_enabled": True,
+        "max_positions": 8,
+        "min_daily_value_kwd": 100000.0,
+        "trend_join_window": 40,
+    }
+
+    for i in range(220):
+        td = base_td + i * 86400
+        close = 160.0 - (i * 0.45)
+        if i in {140, 155, 170}:
+            close = 132.0 - (i * 0.02)
+        payload = {
+            "trade_date": td,
+            "open": close + 0.4,
+            "high": close + 1.0,
+            "low": close - 1.2,
+            "close": close,
+            "volume": 110000,
+            "value_kwd": 220000.0,
+            "sma200": 150.0,
+            "ema30": 148.0,
+            "ema10": 147.0,
+            "ema10_slope": -0.02,
+            "sma200_slope": -0.03,
+            "rsi_14": 42.0,
+            "adx_19": 19.0,
+            "plus_di": 18.0,
+            "minus_di": 24.0,
+            "macd_line": -0.2,
+            "macd_signal": -0.1,
+            "macd_hist": -0.1,
+            "atr_14": 1.4,
+            "cmf_10": -0.05,
+            "rel_volume": 1.0,
+            "range_high_60": close + 2.0,
+            "range_low_60": close - 4.0,
+            "range_high_120": close + 2.0,
+            "range_low_120": close - 6.0,
+            "range_width_pct": 0.08,
+            "bb_width": 0.07,
+            "atr_pct_percentile_252": 0.15,
+            "price_slope_40": -0.03,
+            "obv_slope_40": -0.2,
+            "anv_slope_40": -0.2,
+            "accumulation_divergence": False,
+            "distribution_divergence": False,
+        }
+        exec_sql(
+            "INSERT INTO ee_indicators (symbol, trade_date, payload_json, concept_version) VALUES (?, ?, ?, ?) ON CONFLICT(symbol, trade_date) DO UPDATE SET payload_json = excluded.payload_json",
+            (symbol, td, json.dumps(payload), "ee-2.1.2"),
+        )
+        exec_sql(
+            "INSERT INTO ee_ohlcv (symbol, trade_date, open, high, low, close, volume, value_kwd, source, ingested_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'test', ?) ON CONFLICT(symbol, trade_date) DO UPDATE SET open=excluded.open, high=excluded.high, low=excluded.low, close=excluded.close, volume=excluded.volume, value_kwd=excluded.value_kwd",
+            (symbol, td, close + 0.4, close + 1.0, close - 1.2, close, 110000, 220000.0, td),
+        )
+
     exec_sql(
-        "INSERT INTO ee_indicators (symbol, trade_date, payload_json, concept_version) VALUES (?, ?, ?, ?) ON CONFLICT(symbol, trade_date) DO UPDATE SET payload_json = excluded.payload_json",
-        (symbol, td, json.dumps(avoid_payload), "ee-2.1.2"),
+        "INSERT INTO ee_symbol_state (symbol, phase, phase_since, base_high, base_low, updated_at, state_json) VALUES (?, 'AVOID', ?, 125.0, 118.0, ?, '{}')",
+        (symbol, base_td, base_td),
     )
-    exec_sql("DELETE FROM ee_symbol_state WHERE symbol = ?", (symbol,))
+
+    td = base_td + 219 * 86400
+    res = evaluate_symbol(symbol, td, 68.0, cfg)
+    assert res["phase"] == "AVOID"
+    st = query_one("SELECT phase, state_json FROM ee_symbol_state WHERE symbol = ?", (symbol,))
+    assert st is not None
+    sj = json.loads(st["state_json"] or "{}")
+    assert int(sj.get("avoid_clear_streak") or 0) == 0
+
+
+def test_u1j_avoid_clears_on_two_consecutive_reclaim_closes_and_base_remains_reachable():
+    symbol = "U1J"
+    base_td = 1712600000
+    cfg = {
+        "base_min_sessions": 60,
+        "base_max_width_pct": 0.18,
+        "volume_breakout_mult": 2.5,
+        "rsi_regime": 55,
+        "adx_trigger": 22,
+        "cmf_floor": 0.05,
+        "atr_squeeze_pctile": 0.20,
+        "avoid_reclaim_clear_closes": 2,
+        "pilot_enabled": True,
+        "max_positions": 8,
+        "min_daily_value_kwd": 100000.0,
+        "trend_join_window": 40,
+    }
+
+    for i in range(221):
+        td = base_td + i * 86400
+        close = 160.0 - (i * 0.55)
+        if i in {218, 219}:
+            close = 151.0 + ((i - 218) * 0.4)
+        payload = {
+            "trade_date": td,
+            "open": close - 0.1,
+            "high": close + 1.0,
+            "low": close - 1.0,
+            "close": close,
+            "volume": 110000,
+            "value_kwd": 220000.0,
+            "sma200": 150.0,
+            "ema30": 148.0,
+            "ema10": 147.0,
+            "ema10_slope": -0.02,
+            "sma200_slope": -0.03,
+            "rsi_14": 45.0,
+            "adx_19": 19.0,
+            "plus_di": 18.0,
+            "minus_di": 24.0,
+            "macd_line": -0.2,
+            "macd_signal": -0.1,
+            "macd_hist": -0.1,
+            "atr_14": 1.4,
+            "cmf_10": -0.05,
+            "rel_volume": 1.0,
+            "range_high_60": close + 2.0,
+            "range_low_60": close - 4.0,
+            "range_high_120": close + 2.0,
+            "range_low_120": close - 6.0,
+            "range_width_pct": 0.08,
+            "bb_width": 0.07,
+            "atr_pct_percentile_252": 0.15,
+            "price_slope_40": -0.03,
+            "obv_slope_40": -0.2,
+            "anv_slope_40": -0.2,
+            "accumulation_divergence": False,
+            "distribution_divergence": False,
+        }
+        exec_sql(
+            "INSERT INTO ee_indicators (symbol, trade_date, payload_json, concept_version) VALUES (?, ?, ?, ?) ON CONFLICT(symbol, trade_date) DO UPDATE SET payload_json = excluded.payload_json",
+            (symbol, td, json.dumps(payload), "ee-2.1.2"),
+        )
+        exec_sql(
+            "INSERT INTO ee_ohlcv (symbol, trade_date, open, high, low, close, volume, value_kwd, source, ingested_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'test', ?) ON CONFLICT(symbol, trade_date) DO UPDATE SET open=excluded.open, high=excluded.high, low=excluded.low, close=excluded.close, volume=excluded.volume, value_kwd=excluded.value_kwd",
+            (symbol, td, close - 0.1, close + 1.0, close - 1.0, close, 110000, 220000.0, td),
+        )
+
     exec_sql(
-        "INSERT INTO ee_symbol_state (symbol, phase, phase_since, base_high, base_low, updated_at, state_json) VALUES (?, 'BREAKOUT_WATCH', ?, 89.0, 82.0, ?, '{}')",
-        (symbol, td - 86400, td),
+        "INSERT INTO ee_symbol_state (symbol, phase, phase_since, base_high, base_low, updated_at, state_json) VALUES (?, 'AVOID', ?, 125.0, 118.0, ?, '{}')",
+        (symbol, base_td, base_td),
     )
-    res_avoid = evaluate_symbol(symbol, td, 82.0, cfg)
-    assert res_avoid["signal_type"] == "AVOID_SET"
+
+    res_1 = evaluate_symbol(symbol, base_td + 218 * 86400, 70.0, cfg)
+    res_2 = evaluate_symbol(symbol, base_td + 219 * 86400, 70.0, cfg)
+
+    st = query_one("SELECT phase, base_high, base_low, state_json FROM ee_symbol_state WHERE symbol = ?", (symbol,))
+    assert st is not None
+    assert st["phase"] == "BASE_FORMING"
+    assert st["base_high"] == 125.0
+    sj = json.loads(st["state_json"] or "{}")
+    assert int(sj.get("avoid_reclaim_streak") or 0) == 0
+    assert any(e.get("action") == "avoid_cleared_resume" for e in (sj.get("phase_lifecycle_log") or []))
+
+
+def test_u1i_avoid_persists_through_monotonic_decline_even_with_single_sma200_touches():
+    symbol = "U1I"
+    base_td = 1712500000
+    cfg = {
+        "base_min_sessions": 60,
+        "base_max_width_pct": 0.18,
+        "volume_breakout_mult": 2.5,
+        "rsi_regime": 55,
+        "adx_trigger": 22,
+        "cmf_floor": 0.05,
+        "atr_squeeze_pctile": 0.20,
+        "avoid_reclaim_clear_closes": 2,
+        "pilot_enabled": True,
+        "max_positions": 8,
+        "min_daily_value_kwd": 100000.0,
+        "trend_join_window": 40,
+    }
+
+    for i in range(220):
+        td = base_td + i * 86400
+        close = 160.0 - (i * 0.45)
+        if i in {140, 155, 170}:
+            close = 132.0 - (i * 0.02)
+        payload = {
+            "trade_date": td,
+            "open": close + 0.4,
+            "high": close + 1.0,
+            "low": close - 1.2,
+            "close": close,
+            "volume": 110000,
+            "value_kwd": 220000.0,
+            "sma200": 150.0,
+            "ema30": 148.0,
+            "ema10": 147.0,
+            "ema10_slope": -0.02,
+            "sma200_slope": -0.03,
+            "rsi_14": 42.0,
+            "adx_19": 19.0,
+            "plus_di": 18.0,
+            "minus_di": 24.0,
+            "macd_line": -0.2,
+            "macd_signal": -0.1,
+            "macd_hist": -0.1,
+            "atr_14": 1.4,
+            "cmf_10": -0.05,
+            "rel_volume": 1.0,
+            "range_high_60": close + 2.0,
+            "range_low_60": close - 4.0,
+            "range_high_120": close + 2.0,
+            "range_low_120": close - 6.0,
+            "range_width_pct": 0.08,
+            "bb_width": 0.07,
+            "atr_pct_percentile_252": 0.15,
+            "price_slope_40": -0.03,
+            "obv_slope_40": -0.2,
+            "anv_slope_40": -0.2,
+            "accumulation_divergence": False,
+            "distribution_divergence": False,
+        }
+        exec_sql(
+            "INSERT INTO ee_indicators (symbol, trade_date, payload_json, concept_version) VALUES (?, ?, ?, ?) ON CONFLICT(symbol, trade_date) DO UPDATE SET payload_json = excluded.payload_json",
+            (symbol, td, json.dumps(payload), "ee-2.1.2"),
+        )
+        exec_sql(
+            "INSERT INTO ee_ohlcv (symbol, trade_date, open, high, low, close, volume, value_kwd, source, ingested_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'test', ?) ON CONFLICT(symbol, trade_date) DO UPDATE SET open=excluded.open, high=excluded.high, low=excluded.low, close=excluded.close, volume=excluded.volume, value_kwd=excluded.value_kwd",
+            (symbol, td, close + 0.4, close + 1.0, close - 1.2, close, 110000, 220000.0, td),
+        )
+
+    exec_sql(
+        "INSERT INTO ee_symbol_state (symbol, phase, phase_since, base_high, base_low, updated_at, state_json) VALUES (?, 'AVOID', ?, 125.0, 118.0, ?, ?)",
+        (symbol, base_td, base_td, json.dumps({"pre_avoid_phase": "BASE_FORMING", "pre_avoid_base_high": 125.0, "pre_avoid_base_low": 118.0})),
+    )
+
+    r = evaluate_symbol(symbol, base_td + 219 * 86400, 68.0, cfg)
+    assert r["phase"] == "AVOID"
+    st = query_one("SELECT phase, state_json FROM ee_symbol_state WHERE symbol = ?", (symbol,))
+    assert st is not None
+    sj = json.loads(st["state_json"] or "{}")
+    assert int(sj.get("avoid_clear_streak") or 0) == 0 or int(sj.get("avoid_clear_streak") or 0) == 1
+
+
+def test_u1l_avoid_lands_neutral_when_base_invalidated_during_avoid():
+    symbol = "U1L"
+    base_td = 1712800000
+    cfg = {
+        "base_min_sessions": 60,
+        "base_max_width_pct": 0.18,
+        "volume_breakout_mult": 2.5,
+        "rsi_regime": 55,
+        "adx_trigger": 22,
+        "cmf_floor": 0.05,
+        "atr_squeeze_pctile": 0.20,
+        "base_drift_invalidate_sessions": 3,
+        "avoid_reclaim_clear_closes": 2,
+        "pilot_enabled": True,
+        "max_positions": 8,
+        "min_daily_value_kwd": 100000.0,
+        "trend_join_window": 40,
+    }
+
+    for i in range(12):
+        td = base_td + i * 86400
+        if i < 8:
+            close = 124.0 - (i * 0.2)
+        elif i in {8, 9}:
+            close = 115.0 - ((i - 8) * 0.6)
+        else:
+            close = 125.5 + ((i - 10) * 0.2)
+        payload = {
+            "trade_date": td,
+            "open": 124.5,
+            "high": 125.0,
+            "low": 123.0,
+            "close": close,
+            "volume": 110000,
+            "value_kwd": 220000.0,
+            "sma200": 125.0,
+            "ema30": 124.0,
+            "ema10": 123.5,
+            "ema10_slope": -0.02,
+            "sma200_slope": -0.02,
+            "rsi_14": 41.0,
+            "adx_19": 19.0,
+            "plus_di": 18.0,
+            "minus_di": 24.0,
+            "macd_line": -0.2,
+            "macd_signal": -0.1,
+            "macd_hist": -0.1,
+            "atr_14": 1.4,
+            "cmf_10": -0.05,
+            "rel_volume": 1.0,
+            "range_high_60": 126.0,
+            "range_low_60": 118.0,
+            "range_high_120": 127.0,
+            "range_low_120": 117.0,
+            "range_width_pct": 0.08,
+            "bb_width": 0.07,
+            "atr_pct_percentile_252": 0.15,
+            "price_slope_40": -0.03,
+            "obv_slope_40": -0.2,
+            "anv_slope_40": -0.2,
+            "accumulation_divergence": False,
+            "distribution_divergence": False,
+        }
+        exec_sql(
+            "INSERT INTO ee_indicators (symbol, trade_date, payload_json, concept_version) VALUES (?, ?, ?, ?) ON CONFLICT(symbol, trade_date) DO UPDATE SET payload_json = excluded.payload_json",
+            (symbol, td, json.dumps(payload), "ee-2.1.2"),
+        )
+        exec_sql(
+            "INSERT INTO ee_ohlcv (symbol, trade_date, open, high, low, close, volume, value_kwd, source, ingested_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'test', ?) ON CONFLICT(symbol, trade_date) DO UPDATE SET open=excluded.open, high=excluded.high, low=excluded.low, close=excluded.close, volume=excluded.volume, value_kwd=excluded.value_kwd",
+            (symbol, td, 124.5, 125.0, 123.0, close, 110000, 220000.0, td),
+        )
+
+    exec_sql(
+        "INSERT INTO ee_symbol_state (symbol, phase, phase_since, base_high, base_low, updated_at, state_json) VALUES (?, 'AVOID', ?, 125.0, 118.0, ?, ?)",
+        (symbol, base_td, base_td, json.dumps({"pre_avoid_phase": "BASE_FORMING", "pre_avoid_base_high": 125.0, "pre_avoid_base_low": 118.0})),
+    )
+
+    r1 = evaluate_symbol(symbol, base_td + 9 * 86400, 68.0, cfg)
+    r_mid = evaluate_symbol(symbol, base_td + 10 * 86400, 68.0, cfg)
+    r2 = evaluate_symbol(symbol, base_td + 11 * 86400, 68.0, cfg)
+    assert r1["phase"] == "AVOID"
+    assert r_mid["phase"] == "AVOID"
+    assert r2["phase"] == "NEUTRAL"
+    st = query_one("SELECT phase, base_high, base_low, state_json FROM ee_symbol_state WHERE symbol = ?", (symbol,))
+    assert st is not None
+    assert st["phase"] == "NEUTRAL"
+    assert st["base_high"] is None and st["base_low"] is None
+
+
+def test_u1k_reversal_entry_after_avoid_clear():
+    symbol = "U1K"
+    base_td = 1712700000
+    cfg = {
+        "base_min_sessions": 60,
+        "base_max_width_pct": 0.18,
+        "volume_breakout_mult": 2.5,
+        "rsi_regime": 55,
+        "adx_trigger": 22,
+        "cmf_floor": 0.05,
+        "atr_squeeze_pctile": 0.20,
+        "avoid_reclaim_clear_closes": 2,
+        "pilot_enabled": True,
+        "max_positions": 8,
+        "min_daily_value_kwd": 100000.0,
+        "trend_join_window": 40,
+    }
+
+    for i in range(223):
+        td = base_td + i * 86400
+        if i < 150:
+            close = 160.0 - (i * 0.55)
+        elif i < 180:
+            close = 98.0 + ((i - 150) * 0.25)
+        elif i < 220:
+            close = 126.0 + ((i - 180) * 0.8)
+        else:
+            close = 158.0 + ((i - 220) * 0.6)
+        payload = {
+            "trade_date": td,
+            "open": close - 0.2,
+            "high": close + 1.1,
+            "low": close - 1.1,
+            "close": close,
+            "volume": 120000,
+            "value_kwd": 260000.0,
+            "sma200": 150.0 if i < 140 else 124.0,
+            "ema30": 148.0,
+            "ema10": 147.0,
+            "ema10_slope": 0.02,
+            "sma200_slope": -0.02 if i < 40 else 0.02,
+            "rsi_14": 50.0 + min(10, i * 0.1),
+            "adx_19": 24.0,
+            "plus_di": 30.0,
+            "minus_di": 18.0,
+            "macd_line": 0.3,
+            "macd_signal": 0.2,
+            "macd_hist": 0.1,
+            "atr_14": 1.5,
+            "cmf_10": 0.08,
+            "rel_volume": 2.8 if i >= 220 else 1.0,
+            "range_high_60": close + 2.0,
+            "range_low_60": close - 4.0,
+            "range_high_120": close + 2.0,
+            "range_low_120": close - 6.0,
+            "range_width_pct": 0.08,
+            "bb_width": 0.07,
+            "atr_pct_percentile_252": 0.15,
+            "price_slope_40": 0.01,
+            "obv_slope_40": 0.2,
+            "anv_slope_40": 0.2,
+            "accumulation_divergence": True,
+            "distribution_divergence": False,
+        }
+        exec_sql(
+            "INSERT INTO ee_indicators (symbol, trade_date, payload_json, concept_version) VALUES (?, ?, ?, ?) ON CONFLICT(symbol, trade_date) DO UPDATE SET payload_json = excluded.payload_json",
+            (symbol, td, json.dumps(payload), "ee-2.1.2"),
+        )
+        exec_sql(
+            "INSERT INTO ee_ohlcv (symbol, trade_date, open, high, low, close, volume, value_kwd, source, ingested_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'test', ?) ON CONFLICT(symbol, trade_date) DO UPDATE SET open=excluded.open, high=excluded.high, low=excluded.low, close=excluded.close, volume=excluded.volume, value_kwd=excluded.value_kwd",
+            (symbol, td, close - 0.2, close + 1.1, close - 1.1, close, 120000, 260000.0, td),
+        )
+
+    exec_sql(
+        "INSERT INTO ee_symbol_state (symbol, phase, phase_since, base_high, base_low, updated_at, state_json) VALUES (?, 'AVOID', ?, 125.0, 118.0, ?, ?)",
+        (symbol, base_td, base_td, json.dumps({"pre_avoid_phase": "BASE_FORMING", "pre_avoid_base_high": 125.0, "pre_avoid_base_low": 118.0})),
+    )
+
+    p_watch = {
+        "trade_date": base_td + 220 * 86400,
+        "open": 125.9,
+        "high": 127.1,
+        "low": 125.2,
+        "close": 126.4,
+        "volume": 120000,
+        "value_kwd": 260000.0,
+        "sma200": 124.0,
+        "ema30": 124.0,
+        "ema10": 125.0,
+        "ema10_slope": 0.04,
+        "sma200_slope": 0.01,
+        "rsi_14": 56.0,
+        "adx_19": 24.5,
+        "plus_di": 30.0,
+        "minus_di": 18.0,
+        "macd_line": 0.35,
+        "macd_signal": 0.20,
+        "macd_hist": 0.15,
+        "atr_14": 1.5,
+        "cmf_10": 0.09,
+        "rel_volume": 2.9,
+        "range_high_60": 127.0,
+        "range_low_60": 120.0,
+        "range_high_120": 128.0,
+        "range_low_120": 118.0,
+        "range_width_pct": 0.08,
+        "bb_width": 0.07,
+        "atr_pct_percentile_252": 0.15,
+        "price_slope_40": 0.01,
+        "obv_slope_40": 0.2,
+        "anv_slope_40": 0.2,
+        "accumulation_divergence": True,
+        "distribution_divergence": False,
+    }
+    p_confirm1 = dict(p_watch)
+    p_confirm1.update({"trade_date": base_td + 221 * 86400, "open": 126.5, "close": 127.1, "high": 127.6, "low": 126.1, "rsi_14": 57.0, "adx_19": 25.0, "macd_hist": 0.18})
+    p_confirm2 = dict(p_watch)
+    p_confirm2.update({"trade_date": base_td + 222 * 86400, "open": 127.0, "close": 127.8, "high": 128.3, "low": 126.6, "rsi_14": 58.0, "adx_19": 26.0, "macd_hist": 0.22})
+    for p in [p_watch, p_confirm1, p_confirm2]:
+        exec_sql(
+            "INSERT INTO ee_indicators (symbol, trade_date, payload_json, concept_version) VALUES (?, ?, ?, ?) ON CONFLICT(symbol, trade_date) DO UPDATE SET payload_json = excluded.payload_json",
+            (symbol, p["trade_date"], json.dumps(p), "ee-2.1.2"),
+        )
+
+    for td, rv, close in [
+        (base_td + 218 * 86400, 1.7, 125.2),
+        (base_td + 219 * 86400, 2.9, 125.8),
+    ]:
+        payload = {
+            "trade_date": td,
+            "open": close - 0.1,
+            "high": close + 1.0,
+            "low": close - 1.0,
+            "close": close,
+            "volume": 120000,
+            "value_kwd": 260000.0,
+            "sma200": 124.0,
+            "ema30": 124.0,
+            "ema10": 125.0,
+            "ema10_slope": 0.03,
+            "sma200_slope": 0.01,
+            "rsi_14": 55.0,
+            "adx_19": 24.0,
+            "plus_di": 30.0,
+            "minus_di": 18.0,
+            "macd_line": 0.30,
+            "macd_signal": 0.20,
+            "macd_hist": 0.10,
+            "atr_14": 1.5,
+            "cmf_10": 0.08,
+            "rel_volume": rv,
+            "range_high_60": 127.0,
+            "range_low_60": 120.0,
+            "range_high_120": 128.0,
+            "range_low_120": 118.0,
+            "range_width_pct": 0.08,
+            "bb_width": 0.07,
+            "atr_pct_percentile_252": 0.15,
+            "price_slope_40": 0.01,
+            "obv_slope_40": 0.2,
+            "anv_slope_40": 0.2,
+            "accumulation_divergence": True,
+            "distribution_divergence": False,
+        }
+        exec_sql(
+            "INSERT INTO ee_indicators (symbol, trade_date, payload_json, concept_version) VALUES (?, ?, ?, ?) ON CONFLICT(symbol, trade_date) DO UPDATE SET payload_json = excluded.payload_json",
+            (symbol, td, json.dumps(payload), "ee-2.1.2"),
+        )
+
+    r_clear = evaluate_symbol(symbol, base_td + 218 * 86400, 78.0, cfg, liquidity_snapshot=(True, {"source": "unit"}))
+    assert r_clear["phase"] == "AVOID"
+    assert r_clear["transition"] is None
+
+    r_resume = evaluate_symbol(symbol, base_td + 219 * 86400, 78.0, cfg, liquidity_snapshot=(True, {"source": "unit"}))
+    assert r_resume["phase"] == "BREAKOUT_WATCH"
+    assert r_resume["transition"] == ("ACCUMULATION", "BREAKOUT_WATCH")
+
+    r_watch = evaluate_symbol(symbol, base_td + 220 * 86400, 78.0, cfg, liquidity_snapshot=(True, {"source": "unit"}))
+    assert r_watch["phase"] == "BREAKOUT_CONFIRMED"
+    assert r_watch["signal_type"] == "BREAKOUT_CONFIRMED"
+
+    r_confirm1 = evaluate_symbol(symbol, base_td + 221 * 86400, 78.0, cfg, liquidity_snapshot=(True, {"source": "unit"}))
+    assert r_confirm1["phase"] == "BREAKOUT_CONFIRMED"
+
+    r_confirm2 = evaluate_symbol(symbol, base_td + 222 * 86400, 78.0, cfg, liquidity_snapshot=(True, {"source": "unit"}))
+    assert r_confirm2["phase"] == "BREAKOUT_CONFIRMED"
+
+    st = query_one("SELECT phase, base_high, base_low, state_json FROM ee_symbol_state WHERE symbol = ?", (symbol,))
+    assert st is not None
+    assert st["phase"] == "BREAKOUT_CONFIRMED"
+    sj = json.loads(st["state_json"] or "{}")
+    log = sj.get("phase_lifecycle_log") if isinstance(sj.get("phase_lifecycle_log"), list) else []
+    assert any(e.get("action") == "avoid_cleared_resume" for e in log)
+    assert any((e.get("old") or {}).get("phase") == "AVOID" and (e.get("new") or {}).get("phase") == "BASE_FORMING" for e in log)
 
 
 def test_u1d_join_preempts_base_when_both_true_inside_window():
@@ -647,6 +1173,433 @@ def test_u1c_confirming_window_confirms_or_reverts():
     assert r_revert["signal_type"] is None
 
 
+def test_u1d_breakout_uses_frozen_base_high_not_rolling_120_high():
+    symbol = "U1D"
+    base_td = 1715000000
+    cfg = {
+        "base_min_sessions": 60,
+        "base_max_width_pct": 0.18,
+        "volume_breakout_mult": 2.5,
+        "rsi_regime": 55,
+        "adx_trigger": 22,
+        "cmf_floor": 0.05,
+        "atr_squeeze_pctile": 0.20,
+        "pilot_enabled": True,
+        "max_positions": 8,
+        "min_daily_value_kwd": 100000.0,
+        "trend_join_window": 40,
+    }
+
+    for i in range(80):
+        td = base_td + i * 86400
+        exec_sql(
+            "INSERT INTO ee_ohlcv (symbol, trade_date, open, high, low, close, volume, value_kwd, source, ingested_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'test', ?)",
+            (symbol, td, 100.0, 106.0, 96.0, 100.0, 120000, 300000.0, td),
+        )
+
+    exec_sql(
+        "INSERT INTO ee_symbol_state (symbol, phase, phase_since, base_high, base_low, updated_at, state_json) VALUES (?, 'BASE_FORMING', ?, 100.0, 90.0, ?, '{}')",
+        (symbol, base_td, base_td),
+    )
+
+    def put_indicator(td: int, payload: dict) -> None:
+        exec_sql(
+            "INSERT INTO ee_indicators (symbol, trade_date, payload_json, concept_version) VALUES (?, ?, ?, ?) ON CONFLICT(symbol, trade_date) DO UPDATE SET payload_json = excluded.payload_json",
+            (symbol, td, json.dumps(payload), "ee-2.1.2"),
+        )
+
+    base_payload = {
+        "open": 99.5,
+        "high": 100.8,
+        "low": 98.8,
+        "close": 99.2,
+        "volume": 160000.0,
+        "value_kwd": 250000.0,
+        "sma200": 95.0,
+        "ema30": 98.5,
+        "ema10": 99.4,
+        "ema10_slope": 0.01,
+        "sma200_slope": 0.01,
+        "rsi_14": 54.0,
+        "adx_19": 23.0,
+        "plus_di": 27.0,
+        "minus_di": 20.0,
+        "macd_line": 0.2,
+        "macd_signal": 0.1,
+        "macd_hist": 0.1,
+        "atr_14": 1.5,
+        "cmf_10": 0.1,
+        "rel_volume": 1.1,
+        "range_high_60": 100.0,
+        "range_low_60": 90.0,
+        "range_high_120": 106.0,
+        "range_low_120": 88.0,
+        "range_width_pct": 0.1,
+        "bb_width": 0.08,
+        "atr_pct_percentile_252": 0.2,
+        "price_slope_40": 0.0,
+        "obv_slope_40": 0.2,
+        "anv_slope_40": 0.2,
+        "accumulation_divergence": True,
+        "distribution_divergence": False,
+    }
+
+    # Build rv-hit history so watch can open at close ~= 99 against frozen base_high=100.
+    rel_vols = [1.0, 1.7, 1.2, 1.6, 1.1]
+    for i, rv in enumerate(rel_vols):
+        p = dict(base_payload)
+        p["rel_volume"] = rv
+        p["close"] = 99.0 + 0.05 * i
+        p["open"] = p["close"] - 0.2
+        p["high"] = p["close"] + 0.8
+        p["low"] = p["close"] - 0.7
+        put_indicator(base_td + i * 86400, p)
+
+    r_acc = evaluate_symbol(symbol, base_td + 4 * 86400, 80.0, cfg)
+    assert r_acc["phase"] == "ACCUMULATION"
+    assert r_acc["transition"] == ("BASE_FORMING", "ACCUMULATION")
+
+    # Order is frozen: BASE_FORMING->ACCUMULATION is evaluated before WATCH trigger.
+    p_watch = dict(base_payload)
+    p_watch.update({"open": 99.4, "close": 99.4, "high": 100.0, "low": 98.8, "rel_volume": 1.8})
+    put_indicator(base_td + 5 * 86400, p_watch)
+    r_watch = evaluate_symbol(symbol, base_td + 5 * 86400, 80.0, cfg)
+    assert r_watch["phase"] == "BREAKOUT_WATCH"
+    assert r_watch["transition"] == ("ACCUMULATION", "BREAKOUT_WATCH")
+
+    # Next bars: close breaks frozen base_high(100) but remains below rolling 120-high(106).
+    p_break = dict(base_payload)
+    p_break.update({"open": 100.4, "close": 101.0, "high": 101.4, "low": 99.8, "rel_volume": 2.8})
+    put_indicator(base_td + 6 * 86400, p_break)
+    p_break2 = dict(p_break)
+    p_break2.update({"open": 100.8, "close": 101.3, "high": 101.8, "low": 100.2, "rsi_14": 56.0, "macd_hist": 0.12})
+    put_indicator(base_td + 7 * 86400, p_break2)
+    p_break3 = dict(p_break)
+    p_break3.update({"open": 101.0, "close": 101.6, "high": 102.0, "low": 100.4, "rsi_14": 57.0, "macd_hist": 0.15})
+    put_indicator(base_td + 8 * 86400, p_break3)
+
+    evaluate_symbol(symbol, base_td + 6 * 86400, 80.0, cfg)
+    r_confirm = evaluate_symbol(symbol, base_td + 7 * 86400, 80.0, cfg)
+    assert r_confirm["signal_type"] == "BREAKOUT_CONFIRMED"
+
+
+def test_u1e_base_breakdown_invalidation_clears_frozen_base():
+    symbol = "U1E"
+    base_td = 1717000000
+    cfg = {
+        "base_min_sessions": 60,
+        "base_max_width_pct": 0.18,
+        "volume_breakout_mult": 2.5,
+        "rsi_regime": 55,
+        "adx_trigger": 22,
+        "cmf_floor": 0.05,
+        "atr_squeeze_pctile": 0.20,
+        "base_drift_invalidate_sessions": 10,
+        "pilot_enabled": True,
+        "max_positions": 8,
+        "min_daily_value_kwd": 100000.0,
+        "trend_join_window": 40,
+    }
+
+    exec_sql(
+        "INSERT INTO ee_symbol_state (symbol, phase, phase_since, base_high, base_low, updated_at, state_json) VALUES (?, 'BASE_FORMING', ?, 100.0, 90.0, ?, '{}')",
+        (symbol, base_td, base_td),
+    )
+
+    payload = {
+        "open": 88.5,
+        "high": 89.0,
+        "low": 86.0,
+        "close": 87.5,
+        "volume": 100000.0,
+        "value_kwd": 200000.0,
+        "sma200": 80.0,
+        "ema30": 86.0,
+        "ema10": 87.0,
+        "sma200_slope": 0.01,
+        "rsi_14": 52.0,
+        "adx_19": 23.0,
+        "plus_di": 26.0,
+        "minus_di": 18.0,
+        "macd_line": 0.1,
+        "macd_signal": 0.05,
+        "macd_hist": 0.05,
+        "atr_14": 1.2,
+        "cmf_10": 0.02,
+        "rel_volume": 1.0,
+        "range_high_60": 100.0,
+        "range_low_60": 90.0,
+        "range_high_120": 102.0,
+        "range_low_120": 88.0,
+        "range_width_pct": 0.1,
+        "bb_width": 0.08,
+        "atr_pct_percentile_252": 0.15,
+        "price_slope_40": 0.0,
+        "obv_slope_40": 0.0,
+        "anv_slope_40": 0.0,
+        "accumulation_divergence": False,
+        "distribution_divergence": False,
+    }
+
+    for i, c in enumerate([87.5, 87.0]):
+        td = base_td + i * 86400
+        p = dict(payload)
+        p["close"] = c
+        p["open"] = c + 0.2
+        p["high"] = c + 1.0
+        p["low"] = c - 1.3
+        exec_sql(
+            "INSERT INTO ee_indicators (symbol, trade_date, payload_json, concept_version) VALUES (?, ?, ?, ?) ON CONFLICT(symbol, trade_date) DO UPDATE SET payload_json = excluded.payload_json",
+            (symbol, td, json.dumps(p), "ee-2.1.2"),
+        )
+
+    evaluate_symbol(symbol, base_td, 72.0, cfg, liquidity_snapshot=(True, {"source": "unit"}))
+    r2 = evaluate_symbol(symbol, base_td + 86400, 72.0, cfg, liquidity_snapshot=(True, {"source": "unit"}))
+    assert r2["phase"] == "NEUTRAL"
+    assert r2["signal_type"] == "PHASE_ONLY"
+
+    st = query_one("SELECT phase, base_high, base_low, state_json FROM ee_symbol_state WHERE symbol = ?", (symbol,))
+    assert st is not None
+    assert st["phase"] == "NEUTRAL"
+    assert st["base_high"] is None and st["base_low"] is None
+
+
+def test_u1f_base_structure_invalidation_after_upward_drift_without_qualifying_breakout():
+    symbol = "U1F"
+    base_td = 1718000000
+    cfg = {
+        "base_min_sessions": 60,
+        "base_max_width_pct": 0.18,
+        "volume_breakout_mult": 2.5,
+        "rsi_regime": 55,
+        "adx_trigger": 22,
+        "cmf_floor": 0.05,
+        "atr_squeeze_pctile": 0.20,
+        "base_drift_invalidate_sessions": 3,
+        "pilot_enabled": True,
+        "max_positions": 8,
+        "min_daily_value_kwd": 100000.0,
+        "trend_join_window": 40,
+    }
+
+    exec_sql(
+        "INSERT INTO ee_symbol_state (symbol, phase, phase_since, base_high, base_low, updated_at, state_json) VALUES (?, 'ACCUMULATION', ?, 100.0, 90.0, ?, '{}')",
+        (symbol, base_td, base_td),
+    )
+
+    payload = {
+        "open": 100.7,
+        "high": 101.8,
+        "low": 100.2,
+        "close": 101.2,
+        "volume": 100000.0,
+        "value_kwd": 220000.0,
+        "sma200": 95.0,
+        "ema30": 99.0,
+        "ema10": 100.5,
+        "sma200_slope": 0.01,
+        "rsi_14": 53.0,
+        "adx_19": 24.0,
+        "plus_di": 26.0,
+        "minus_di": 18.0,
+        "macd_line": 0.1,
+        "macd_signal": 0.05,
+        "macd_hist": 0.05,
+        "atr_14": 1.1,
+        "cmf_10": 0.01,
+        "rel_volume": 1.0,
+        "range_high_60": 100.0,
+        "range_low_60": 90.0,
+        "range_high_120": 103.0,
+        "range_low_120": 88.0,
+        "range_width_pct": 0.1,
+        "bb_width": 0.08,
+        "atr_pct_percentile_252": 0.15,
+        "price_slope_40": 0.0,
+        "obv_slope_40": 0.0,
+        "anv_slope_40": 0.0,
+        "accumulation_divergence": False,
+        "distribution_divergence": False,
+    }
+
+    for i in range(3):
+        td = base_td + i * 86400
+        p = dict(payload)
+        p["close"] = 101.1 + (0.1 * i)
+        p["open"] = p["close"] - 0.2
+        p["high"] = p["close"] + 0.8
+        p["low"] = p["close"] - 0.7
+        exec_sql(
+            "INSERT INTO ee_indicators (symbol, trade_date, payload_json, concept_version) VALUES (?, ?, ?, ?) ON CONFLICT(symbol, trade_date) DO UPDATE SET payload_json = excluded.payload_json",
+            (symbol, td, json.dumps(p), "ee-2.1.2"),
+        )
+
+    evaluate_symbol(symbol, base_td, 74.0, cfg, liquidity_snapshot=(True, {"source": "unit"}))
+    evaluate_symbol(symbol, base_td + 86400, 74.0, cfg, liquidity_snapshot=(True, {"source": "unit"}))
+    r3 = evaluate_symbol(symbol, base_td + 2 * 86400, 74.0, cfg, liquidity_snapshot=(True, {"source": "unit"}))
+    assert r3["phase"] == "NEUTRAL"
+    assert r3["signal_type"] == "PHASE_ONLY"
+
+
+def test_u1g_exit_rearm_clears_frozen_base_and_breakout_state():
+    symbol = "U1G"
+    base_td = 1719000000
+    cfg = {
+        "base_min_sessions": 60,
+        "base_max_width_pct": 0.18,
+        "volume_breakout_mult": 2.5,
+        "rsi_regime": 55,
+        "adx_trigger": 22,
+        "cmf_floor": 0.05,
+        "atr_squeeze_pctile": 0.20,
+        "base_drift_invalidate_sessions": 10,
+        "exit_cooldown_sessions": 2,
+        "pilot_enabled": True,
+        "max_positions": 8,
+        "min_daily_value_kwd": 100000.0,
+        "trend_join_window": 40,
+    }
+
+    state_json = {
+        "breakout_confirmed_at": base_td - 86400,
+        "breakout_base_high": 100.0,
+        "breakout_entry_price": 102.0,
+        "confirming": {"bars": 1, "scores": []},
+        "ema30_armed": True,
+        "below_ema30_streak": 1,
+    }
+    exec_sql(
+        "INSERT INTO ee_symbol_state (symbol, phase, phase_since, base_high, base_low, updated_at, state_json) VALUES (?, 'EXIT', ?, 100.0, 90.0, ?, ?)",
+        (symbol, base_td, base_td, json.dumps(state_json)),
+    )
+
+    payload = {
+        "open": 100.0,
+        "high": 101.0,
+        "low": 99.0,
+        "close": 100.5,
+        "volume": 100000.0,
+        "value_kwd": 220000.0,
+        "sma200": 95.0,
+        "ema30": 99.0,
+        "ema10": 100.0,
+        "sma200_slope": 0.01,
+        "rsi_14": 55.0,
+        "adx_19": 22.0,
+        "plus_di": 24.0,
+        "minus_di": 20.0,
+        "macd_line": 0.1,
+        "macd_signal": 0.05,
+        "macd_hist": 0.05,
+        "atr_14": 1.0,
+        "cmf_10": 0.01,
+        "rel_volume": 1.0,
+        "range_high_60": 101.0,
+        "range_low_60": 90.0,
+        "range_high_120": 103.0,
+        "range_low_120": 88.0,
+        "range_width_pct": 0.1,
+        "bb_width": 0.08,
+        "atr_pct_percentile_252": 0.15,
+        "price_slope_40": 0.0,
+        "obv_slope_40": 0.0,
+        "anv_slope_40": 0.0,
+        "accumulation_divergence": False,
+        "distribution_divergence": False,
+    }
+
+    for i in range(3):
+        td = base_td + i * 86400
+        exec_sql(
+            "INSERT INTO ee_indicators (symbol, trade_date, payload_json, concept_version) VALUES (?, ?, ?, ?) ON CONFLICT(symbol, trade_date) DO UPDATE SET payload_json = excluded.payload_json",
+            (symbol, td, json.dumps(payload), "ee-2.1.2"),
+        )
+
+    evaluate_symbol(symbol, base_td, 75.0, cfg, liquidity_snapshot=(True, {"source": "unit"}))
+    evaluate_symbol(symbol, base_td + 86400, 75.0, cfg, liquidity_snapshot=(True, {"source": "unit"}))
+    r3 = evaluate_symbol(symbol, base_td + 2 * 86400, 75.0, cfg, liquidity_snapshot=(True, {"source": "unit"}))
+    assert r3["phase"] == "NEUTRAL"
+
+    st = query_one("SELECT base_high, base_low, state_json FROM ee_symbol_state WHERE symbol = ?", (symbol,))
+    assert st is not None
+    assert st["base_high"] is None and st["base_low"] is None
+    sj = json.loads(st["state_json"] or "{}")
+    assert sj.get("breakout_confirmed_at") is None
+    assert sj.get("breakout_base_high") is None
+    assert sj.get("confirming") is None
+
+
+def test_u1h_base_freeze_logs_provenance_event():
+    symbol = "U1H"
+    base_td = 1720000000
+    cfg = {
+        "base_min_sessions": 60,
+        "base_max_width_pct": 0.18,
+        "volume_breakout_mult": 2.5,
+        "rsi_regime": 55,
+        "adx_trigger": 22,
+        "cmf_floor": 0.05,
+        "atr_squeeze_pctile": 0.20,
+        "base_drift_invalidate_sessions": 10,
+        "pilot_enabled": True,
+        "max_positions": 8,
+        "min_daily_value_kwd": 100000.0,
+        "trend_join_window": 40,
+    }
+
+    for i in range(60):
+        td = base_td + i * 86400
+        payload = {
+            "open": 95.0,
+            "high": 96.0,
+            "low": 94.0,
+            "close": 95.0,
+            "volume": 100000.0,
+            "value_kwd": 220000.0,
+            "sma200": 100.0,
+            "ema30": 96.0,
+            "ema10": 95.5,
+            "sma200_slope": 0.01,
+            "rsi_14": 50.0,
+            "adx_19": 20.0,
+            "plus_di": 24.0,
+            "minus_di": 20.0,
+            "macd_line": 0.1,
+            "macd_signal": 0.05,
+            "macd_hist": 0.05,
+            "atr_14": 1.0,
+            "cmf_10": 0.01,
+            "rel_volume": 1.0,
+            "range_high_60": 100.0,
+            "range_low_60": 90.0,
+            "range_high_120": 102.0,
+            "range_low_120": 88.0,
+            "range_width_pct": 0.1,
+            "bb_width": 0.08,
+            "atr_pct_percentile_252": 0.15,
+            "price_slope_40": 0.0,
+            "obv_slope_40": 0.0,
+            "anv_slope_40": 0.0,
+            "accumulation_divergence": False,
+            "distribution_divergence": False,
+        }
+        exec_sql(
+            "INSERT INTO ee_indicators (symbol, trade_date, payload_json, concept_version) VALUES (?, ?, ?, ?) ON CONFLICT(symbol, trade_date) DO UPDATE SET payload_json = excluded.payload_json",
+            (symbol, td, json.dumps(payload), "ee-2.1.2"),
+        )
+
+    result = evaluate_symbol(symbol, base_td + 59 * 86400, 72.0, cfg, liquidity_snapshot=(True, {"source": "unit"}))
+    assert result["phase"] == "BASE_FORMING"
+    assert result["transition"] == ("NEUTRAL", "BASE_FORMING")
+
+    st = query_one("SELECT state_json FROM ee_symbol_state WHERE symbol = ?", (symbol,))
+    assert st is not None
+    sj = json.loads(st["state_json"] or "{}")
+    ev = sj.get("base_lifecycle_last_event") or {}
+    assert ev.get("action") == "base_freeze"
+    assert ev.get("new", {}).get("base_high") == 100.0
+
+
 def test_u2_no_lookahead_mutating_future_bar_keeps_prior_signals_identical():
     _load_fixture("TIJARA")
     compute_and_store_symbol("TIJARA")
@@ -959,7 +1912,7 @@ def test_u5_risk_suppression_emits_signal_and_skips_position():
     latest = query_val("SELECT MAX(trade_date) FROM ee_indicators WHERE symbol = ?", (symbol,))
 
     exec_sql(
-        "INSERT INTO ee_symbol_state (symbol, phase, phase_since, updated_at, state_json) VALUES (?, 'BREAKOUT_WATCH', ?, ?, '{}')",
+        "INSERT INTO ee_symbol_state (symbol, phase, phase_since, base_high, base_low, updated_at, state_json) VALUES (?, 'BREAKOUT_WATCH', ?, 110.0, 90.0, ?, '{}')",
         (symbol, latest - 86400, latest),
     )
 

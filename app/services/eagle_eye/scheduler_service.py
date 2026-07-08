@@ -19,7 +19,7 @@ from app.services.eagle_eye.market_data_service import (
 from app.services.eagle_eye.ml_service import resolve_labels
 from app.services.eagle_eye.rating_service import compute_rating_from_indicator, store_rating
 from app.services.eagle_eye.risk_service import liquidity_filter
-from app.services.eagle_eye.scanner_service import evaluate_symbol
+from app.services.eagle_eye.pipeline import process_bar
 
 
 def _system_actor() -> TokenData:
@@ -36,6 +36,29 @@ def run_eod_pipeline(source: str = "scheduler", actor: TokenData | None = None) 
     run_date = latest_trade_date()
     if run_date is None:
         return {"status": "ok", "data": {"trace_id": trace_id, "symbols": 0, "advice": False}}
+
+    existing_summary = query_all(
+        "SELECT id FROM ee_audit_events WHERE action = 'eod_pipeline_run' AND entity_type = 'pipeline' AND entity_id = ? LIMIT 1",
+        (f"eagle_eye:{run_date}",),
+    )
+    if existing_summary:
+        return {
+            "status": "ok",
+            "data": {
+                "trace_id": trace_id,
+                "run_date": run_date,
+                "source": source,
+                "symbols": len(list_symbols()),
+                "copied_ohlcv_rows": copied,
+                "indicator_updates": 0,
+                "rating_updates": 0,
+                "transitions": 0,
+                "labels_updated": 0,
+                "errors": [],
+                "summary_audit_event_id": int(existing_summary[0].get("id") or 0),
+                "advice": False,
+            },
+        }
 
     exec_sql("DELETE FROM ee_signals WHERE trade_date = ?", (run_date,))
     exec_sql(
@@ -66,7 +89,18 @@ def run_eod_pipeline(source: str = "scheduler", actor: TokenData | None = None) 
             store_rating(symbol, run_date, score, band, components)
             rating_updates += 1
 
-            result = evaluate_symbol(symbol, run_date, score, cfg, trace_id=trace_id)
+            result = process_bar(
+                symbol,
+                run_date,
+                cfg,
+                trace_id=trace_id,
+                indicator_payload=payload,
+                liquidity_snapshot=(liq_ok, liq_meta),
+                score=score,
+                band=band,
+                components=components,
+                persist_rating=False,
+            )
             if result.get("transition"):
                 transitions += 1
         except Exception as exc:

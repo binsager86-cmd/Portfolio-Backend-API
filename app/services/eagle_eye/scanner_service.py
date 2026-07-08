@@ -34,7 +34,7 @@ ALLOWED_PHASE_TRANSITIONS = {
     "MARKUP": {"DISTRIBUTION_WARNING", "EXIT", "AVOID", "MARKUP"},
     "DISTRIBUTION_WARNING": {"EXIT", "MARKUP", "AVOID", "DISTRIBUTION_WARNING"},
     "EXIT": {"NEUTRAL", "AVOID", "EXIT"},
-    "AVOID": {"AVOID", "NEUTRAL"},
+    "AVOID": {"AVOID", "NEUTRAL", "BASE_FORMING", "ACCUMULATION", "BREAKOUT_WATCH"},
 }
 
 
@@ -179,6 +179,101 @@ def _risk_level(signal_type: str) -> str:
     if signal_type == "ACCUMULATION_ALERT":
         return "medium"
     return "low"
+
+
+_BREAKOUT_STATE_KEYS = {
+    "confirming",
+    "breakout_confirmed_at",
+    "breakout_base_high",
+    "breakout_entry_price",
+    "ema30_armed",
+    "below_ema30_streak",
+    "max_close",
+    "trail_price",
+}
+
+
+def _clear_avoid_state(state_json: dict[str, Any]) -> None:
+    state_json.pop("avoid_clear_streak", None)
+    state_json.pop("avoid_reclaim_streak", None)
+    state_json.pop("avoid_until", None)
+    state_json.pop("pre_avoid_phase", None)
+    state_json.pop("pre_avoid_base_high", None)
+    state_json.pop("pre_avoid_base_low", None)
+
+
+def _append_phase_lifecycle_event(
+    state_json: dict[str, Any],
+    trade_date: int,
+    action: str,
+    old_phase: str | None,
+    new_phase: str | None,
+    reason: str,
+) -> dict[str, Any]:
+    event = {
+        "bar": int(trade_date),
+        "action": str(action),
+        "old": {"phase": old_phase},
+        "new": {"phase": new_phase},
+        "reason": str(reason),
+    }
+    log = state_json.get("phase_lifecycle_log") if isinstance(state_json.get("phase_lifecycle_log"), list) else []
+    log.append(event)
+    state_json["phase_lifecycle_log"] = log[-200:]
+    state_json["phase_lifecycle_last_event"] = event
+    return event
+
+
+def _append_base_lifecycle_event(
+    state_json: dict[str, Any],
+    trade_date: int,
+    action: str,
+    old_high: float | None,
+    old_low: float | None,
+    new_high: float | None,
+    new_low: float | None,
+    reason: str,
+) -> dict[str, Any]:
+    event = {
+        "bar": int(trade_date),
+        "action": str(action),
+        "old": {"base_high": old_high, "base_low": old_low},
+        "new": {"base_high": new_high, "base_low": new_low},
+        "reason": str(reason),
+    }
+    log = state_json.get("base_lifecycle_log") if isinstance(state_json.get("base_lifecycle_log"), list) else []
+    log.append(event)
+    state_json["base_lifecycle_log"] = log[-200:]
+    state_json["base_lifecycle_last_event"] = event
+    return event
+
+
+def _clear_base_breakout_state(
+    state: dict[str, Any],
+    state_json: dict[str, Any],
+    trade_date: int,
+    action: str,
+    reason: str,
+) -> dict[str, Any]:
+    old_high = float(state.get("base_high") or 0.0) if state.get("base_high") is not None else None
+    old_low = float(state.get("base_low") or 0.0) if state.get("base_low") is not None else None
+    state["base_high"] = None
+    state["base_low"] = None
+    state["base_start"] = None
+    for key in _BREAKOUT_STATE_KEYS:
+        state_json.pop(key, None)
+    state_json["base_breakdown_streak"] = 0
+    state_json["base_drift_up_streak"] = 0
+    return _append_base_lifecycle_event(
+        state_json,
+        trade_date,
+        action,
+        old_high,
+        old_low,
+        None,
+        None,
+        reason,
+    )
 
 
 def _emit_signal(
@@ -367,15 +462,106 @@ def evaluate_symbol(
 
     state_json = state.get("state_json", {})
     state_json.pop("last_phase_reason", None)
+    resumed_after_avoid = False
+    state_base_high = state.get("base_high")
+    state_base_low = state.get("base_low")
+
+    if state["phase"] == "AVOID" and state_base_high is not None and state_base_low is not None:
+        avoid_base_high_ref = float(state_base_high or 0.0)
+        avoid_base_low_ref = float(state_base_low or 0.0)
+
+        if avoid_base_low_ref > 0 and close < (avoid_base_low_ref * 0.98):
+            state_json["base_breakdown_streak"] = int(state_json.get("base_breakdown_streak") or 0) + 1
+        else:
+            state_json["base_breakdown_streak"] = 0
+        if int(state_json.get("base_breakdown_streak") or 0) >= 2:
+            state_json["last_phase_reason"] = "base_invalidated_during_avoid"
+            payload["base_invalidation_reason"] = "breakdown"
+            _clear_base_breakout_state(
+                state,
+                state_json,
+                trade_date,
+                "base_invalidated",
+                "breakdown_2x_close_lt_base_low_98pct_during_avoid",
+            )
+
+        if state_base_high is not None:
+            gap_pct_base = max(0.0, (float(payload.get("open") or close) - avoid_base_high_ref) / avoid_base_high_ref) if avoid_base_high_ref > 0 else 0.0
+            qualifying_breakout = (
+                close > avoid_base_high_ref
+                and rel_volume >= float(get_cfg(config, "volume_breakout_mult"))
+                and ema10 > ema30
+                and gap_pct_base <= 0.08
+                and bool(liquidity_ok)
+            )
+            if close > avoid_base_high_ref and not qualifying_breakout:
+                state_json["base_drift_up_streak"] = int(state_json.get("base_drift_up_streak") or 0) + 1
+            else:
+                state_json["base_drift_up_streak"] = 0
+            if int(state_json.get("base_drift_up_streak") or 0) >= int(config.get("base_drift_invalidate_sessions", 10)):
+                state_json["last_phase_reason"] = "base_invalidated_during_avoid"
+                payload["base_invalidation_reason"] = "structure"
+                _clear_base_breakout_state(
+                    state,
+                    state_json,
+                    trade_date,
+                    "base_invalidated",
+                    "structure_drift_outside_base_without_qual_breakout_during_avoid",
+                )
+
     avoid = close < sma200 and sma200_slope < 0 and ema10 < ema30
     if avoid:
+        if old_phase in {"BASE_FORMING", "ACCUMULATION"}:
+            state_json["pre_avoid_phase"] = old_phase
+            state_json["pre_avoid_base_high"] = state.get("base_high")
+            state_json["pre_avoid_base_low"] = state.get("base_low")
         state_json["avoid_clear_streak"] = 0
+        state_json["avoid_reclaim_streak"] = 0
         _phase_set(state, "AVOID", trade_date)
     elif old_phase == "AVOID":
         clear_streak = int(state_json.get("avoid_clear_streak") or 0) + 1
         state_json["avoid_clear_streak"] = clear_streak
-        if clear_streak >= 20:
-            _phase_set(state, "NEUTRAL", trade_date)
+        reclaim_close = close > sma200
+        if reclaim_close:
+            state_json["avoid_reclaim_streak"] = int(state_json.get("avoid_reclaim_streak") or 0) + 1
+        else:
+            state_json["avoid_reclaim_streak"] = 0
+
+        clear_rule: str | None = None
+        if int(state_json.get("avoid_reclaim_streak") or 0) >= int(config.get("avoid_reclaim_clear_closes", 2)):
+            clear_rule = "reclaim"
+        elif clear_streak >= 20:
+            clear_rule = "fallback"
+
+        if clear_rule is not None:
+            prev_phase = state["phase"]
+            retained_base = state.get("base_high") is not None and state.get("base_low") is not None
+            pre_avoid_phase = str(state_json.get("pre_avoid_phase") or "BASE_FORMING")
+            if retained_base:
+                _phase_set(state, pre_avoid_phase, trade_date)
+                resumed_after_avoid = True
+                state_json["last_phase_reason"] = "avoid_reclaimed" if clear_rule == "reclaim" else "avoid_fallback_resume"
+                _append_phase_lifecycle_event(
+                    state_json,
+                    trade_date,
+                    "avoid_cleared_resume",
+                    prev_phase,
+                    state["phase"],
+                    f"rule={clear_rule}",
+                )
+            else:
+                _phase_set(state, "NEUTRAL", trade_date)
+                state_json["last_phase_reason"] = "avoid_cleared_invalidated"
+                _append_phase_lifecycle_event(
+                    state_json,
+                    trade_date,
+                    "avoid_cleared_neutral",
+                    prev_phase,
+                    state["phase"],
+                    f"rule={clear_rule}",
+                )
+            transition = (prev_phase, state["phase"])
+            _clear_avoid_state(state_json)
 
     transition = None
     signal_type = None
@@ -384,7 +570,7 @@ def evaluate_symbol(
     low = float(payload.get("low") or close)
     high = float(payload.get("high") or close)
     atr = float(payload.get("atr_14") or 0.0)
-    base_high_ref = float(state.get("base_high") or payload.get("range_high_60") or 0.0)
+    base_high_ref = float(state.get("base_high") or 0.0)
     base_low_ref = float(state.get("base_low") or range_low_60 or 0.0)
 
     if old_phase != state["phase"]:
@@ -398,8 +584,76 @@ def evaluate_symbol(
         base_low_60 = float(payload.get("range_low_60") or 0.0)
         sessions_in_range = sum(1 for c in closes_60 if base_low_60 <= c <= base_high_60)
 
+        if (transition is None or resumed_after_avoid) and state["phase"] in {"BASE_FORMING", "ACCUMULATION", "BREAKOUT_WATCH"}:
+            if base_low_ref > 0 and close < (base_low_ref * 0.98):
+                state_json["base_breakdown_streak"] = int(state_json.get("base_breakdown_streak") or 0) + 1
+            else:
+                state_json["base_breakdown_streak"] = 0
+            if int(state_json.get("base_breakdown_streak") or 0) >= 2:
+                prev_phase = state["phase"]
+                _phase_set(state, "NEUTRAL", trade_date)
+                transition = (prev_phase, state["phase"])
+                signal_type = None
+                state_json["last_phase_reason"] = "base_invalidated"
+                payload["base_invalidation_reason"] = "breakdown"
+                _clear_base_breakout_state(
+                    state,
+                    state_json,
+                    trade_date,
+                    "base_invalidated",
+                    "breakdown_2x_close_lt_base_low_98pct",
+                )
+
+        if state["phase"] in {"BASE_FORMING", "ACCUMULATION"} and base_high_ref > 0:
+            gap_pct_base = max(0.0, (float(payload.get("open") or close) - base_high_ref) / base_high_ref)
+            qualifying_breakout = (
+                close > base_high_ref
+                and rel_volume >= float(get_cfg(config, "volume_breakout_mult"))
+                and ema10 > ema30
+                and gap_pct_base <= 0.08
+                and bool(liquidity_ok)
+            )
+            if close > base_high_ref and not qualifying_breakout:
+                state_json["base_drift_up_streak"] = int(state_json.get("base_drift_up_streak") or 0) + 1
+            else:
+                state_json["base_drift_up_streak"] = 0
+
+            if int(state_json.get("base_drift_up_streak") or 0) >= int(config.get("base_drift_invalidate_sessions", 10)):
+                prev_phase = state["phase"]
+                _phase_set(state, "NEUTRAL", trade_date)
+                transition = (prev_phase, state["phase"])
+                signal_type = None
+                state_json["last_phase_reason"] = "base_invalidated"
+                payload["base_invalidation_reason"] = "structure"
+                _clear_base_breakout_state(
+                    state,
+                    state_json,
+                    trade_date,
+                    "base_invalidated",
+                    "structure_drift_outside_base_without_qual_breakout",
+                )
+
+        if (transition is None or resumed_after_avoid) and state["phase"] in {"BASE_FORMING", "ACCUMULATION", "BREAKOUT_WATCH"} and base_high_ref > 0 and base_low_ref > 0:
+            if base_high_60 > 0 and base_low_60 > 0 and base_high_60 < base_high_ref and base_low_60 > base_low_ref:
+                old_high = base_high_ref
+                old_low = base_low_ref
+                state["base_high"] = base_high_60
+                state["base_low"] = base_low_60
+                base_high_ref = float(state.get("base_high") or base_high_ref)
+                base_low_ref = float(state.get("base_low") or base_low_ref)
+                _append_base_lifecycle_event(
+                    state_json,
+                    trade_date,
+                    "base_ratchet",
+                    old_high,
+                    old_low,
+                    base_high_ref,
+                    base_low_ref,
+                    "tightened_60_session_band",
+                )
+
         # 2) Active-position exit logic first if already in distribution warning.
-        if transition is None and state["phase"] == "DISTRIBUTION_WARNING":
+        if (transition is None or resumed_after_avoid) and state["phase"] == "DISTRIBUTION_WARNING":
             below = close < ema30
             if below:
                 state_json["below_ema30_streak"] = int(state_json.get("below_ema30_streak") or 0) + 1
@@ -434,19 +688,8 @@ def evaluate_symbol(
                 signal_type = "EXIT"
                 state_json["last_phase_reason"] = "distribution_exit"
 
-        # 3) Watch trigger from ACCUMULATION.
-        if transition is None and state["phase"] == "ACCUMULATION":
-            recent_5 = history[-5:]
-            rv_hits = sum(1 for h in recent_5 if float(h.get("rel_volume") or 0.0) >= 1.5)
-            near_base_with_build = close >= (0.97 * base_high_ref) and rv_hits >= 2
-            if near_base_with_build:
-                prev_phase = state["phase"]
-                _phase_set(state, "BREAKOUT_WATCH", trade_date)
-                transition = (prev_phase, state["phase"])
-                state_json["last_phase_reason"] = "watch_trigger"
-
-        # 4) Breakout confirmation with two-tier mandatory + confirmatory scoring.
-        if transition is None and state["phase"] == "BREAKOUT_WATCH":
+        # 3) Breakout confirmation with two-tier mandatory + confirmatory scoring.
+        if (transition is None or resumed_after_avoid) and state["phase"] == "BREAKOUT_WATCH":
             confirming = state_json.get("confirming") if isinstance(state_json.get("confirming"), dict) else None
 
             adx_5_back = float(history[-5].get("adx_19") or adx) if len(history) >= 5 else adx
@@ -468,10 +711,10 @@ def evaluate_symbol(
             gap_pct_base = 0.0 if base_high_ref <= 0 else max(0.0, (float(payload.get("open") or close) - base_high_ref) / base_high_ref)
 
             mandatory = {
-                "M1_close_gt_base": close > base_high_ref,
+                "M1_close_gt_base": base_high_ref > 0 and close > base_high_ref,
                 "M2_rel_volume": rel_volume >= float(get_cfg(config, "volume_breakout_mult")),
                 "M3_ema10_gt_ema30": ema10 > ema30,
-                "M4_chase_guard": gap_pct_base <= 0.08,
+                "M4_chase_guard": base_high_ref > 0 and gap_pct_base <= 0.08,
                 "M5_liquidity": liquidity_ok,
             }
 
@@ -524,9 +767,11 @@ def evaluate_symbol(
             payload["confirming_mandatory"] = mandatory
             payload["confirming_c_flags"] = confirm_flags
             payload["confirming_c_score"] = c_score
+            payload["confirming_base_high_ref"] = base_high_ref
+            payload["confirming_base_high_source"] = "state"
 
-        # 5) Accumulation from BASE.
-        if transition is None and state["phase"] == "BASE_FORMING":
+        # 4) Accumulation from BASE.
+        if (transition is None or resumed_after_avoid) and state["phase"] == "BASE_FORMING":
             cmf_hist = [float(h.get("cmf_10") or 0.0) for h in history[-10:]]
             cmf_hits = sum(1 for x in cmf_hist if x > float(get_cfg(config, "cmf_floor")))
             accumulation_gate = bool(payload.get("accumulation_divergence")) or (
@@ -554,9 +799,20 @@ def evaluate_symbol(
                 state_json["had_accumulation_phase"] = True
                 state_json["last_phase_reason"] = "accumulation_gate"
 
+        # 5) Watch trigger from ACCUMULATION with frozen base-high reference.
+        if (transition is None or resumed_after_avoid) and state["phase"] in {"ACCUMULATION", "BASE_FORMING"}:
+            recent_5 = history[-5:]
+            rv_hits = sum(1 for h in recent_5 if float(h.get("rel_volume") or 0.0) >= 1.5)
+            near_base_with_build = base_high_ref > 0 and close >= (0.97 * base_high_ref) and rv_hits >= 2
+            if near_base_with_build:
+                prev_phase = state["phase"]
+                _phase_set(state, "BREAKOUT_WATCH", trade_date)
+                transition = (prev_phase, state["phase"])
+                state_json["last_phase_reason"] = "watch_trigger"
+
         # 6) Pass-2 ordering amendment: while NEUTRAL, evaluate trend-join before
         # base detection inside the join window.
-        if transition is None and state["phase"] == "NEUTRAL":
+        if (transition is None or resumed_after_avoid) and state["phase"] == "NEUTRAL":
             trend_join_window = int(get_cfg(config, "trend_join_window"))
             if coverage_sessions is not None:
                 sessions_since_start = int(coverage_sessions)
@@ -607,15 +863,27 @@ def evaluate_symbol(
                 prev_phase = state["phase"]
                 _phase_set(state, "BASE_FORMING", trade_date)
                 transition = (prev_phase, state["phase"])
+                old_high = float(state.get("base_high") or 0.0) if state.get("base_high") is not None else None
+                old_low = float(state.get("base_low") or 0.0) if state.get("base_low") is not None else None
                 state["base_high"] = base_high_60
                 state["base_low"] = range_low_60
                 state["base_start"] = trade_date
                 base_high_ref = float(state.get("base_high") or base_high_ref)
                 base_low_ref = float(state.get("base_low") or base_low_ref)
                 state_json["last_phase_reason"] = "base_detected"
+                _append_base_lifecycle_event(
+                    state_json,
+                    trade_date,
+                    "base_freeze",
+                    old_high,
+                    old_low,
+                    base_high_ref,
+                    base_low_ref,
+                    "entered_base_forming",
+                )
 
         # 8) Exit is not terminal; re-arm to NEUTRAL after cooldown sessions.
-        if transition is None and state["phase"] == "EXIT":
+        if state["phase"] == "EXIT":
             cooldown_sessions = int(get_cfg(config, "exit_cooldown_sessions"))
             exit_start = int(state.get("phase_since") or trade_date)
             bars_since_exit = sum(1 for h in history if exit_start <= int(h.get("trade_date") or 0) <= trade_date)
@@ -625,9 +893,17 @@ def evaluate_symbol(
                 _phase_set(state, "NEUTRAL", trade_date)
                 transition = (prev_phase, state["phase"])
                 state_json["last_phase_reason"] = "exit_cooldown_rearm"
+                _clear_base_breakout_state(
+                    state,
+                    state_json,
+                    trade_date,
+                    "base_cleared",
+                    "exit_rearm",
+                )
+                _clear_avoid_state(state_json)
 
         confirmed_at = int(state_json.get("breakout_confirmed_at") or 0)
-        if transition is None and confirmed_at:
+        if (transition is None or resumed_after_avoid) and confirmed_at:
             confirm_ix = None
             for i, h in enumerate(history):
                 if int(h.get("trade_date") or 0) == confirmed_at:
@@ -636,7 +912,7 @@ def evaluate_symbol(
             if confirm_ix is not None:
                 sessions_since = len(history) - 1 - confirm_ix
                 if 0 < sessions_since <= 5:
-                    base_high = float(state_json.get("breakout_base_high") or range_high_120)
+                    base_high = float(state_json.get("breakout_base_high") or state.get("base_high") or 0.0)
                     if close < (base_high * 0.97) and rel_volume >= 1.5:
                         prev_phase = state["phase"]
                         _phase_set(state, "ACCUMULATION", trade_date)
@@ -644,7 +920,7 @@ def evaluate_symbol(
                         signal_type = "BREAKOUT_FAILED"
                         close_open_position(symbol, trade_date, "breakout_failed", close)
 
-        if transition is None and state["phase"] == "BREAKOUT_CONFIRMED":
+        if (transition is None or resumed_after_avoid) and state["phase"] == "BREAKOUT_CONFIRMED":
             confirmed_at = int(state_json.get("breakout_confirmed_at") or 0)
             if confirmed_at:
                 post = [h for h in history if int(h.get("trade_date") or 0) >= confirmed_at]
@@ -655,7 +931,7 @@ def evaluate_symbol(
                         _phase_set(state, "MARKUP", trade_date)
                         transition = (prev_phase, state["phase"])
 
-    if transition is None and state["phase"] == "MARKUP":
+    if (transition is None or resumed_after_avoid) and state["phase"] == "MARKUP":
         day_range = max(0.0, high - low)
         close_bottom40 = True if day_range == 0 else close <= (low + 0.4 * day_range)
         climax = rel_volume >= 4 and day_range >= (2.5 * atr) and close_bottom40
@@ -676,7 +952,7 @@ def evaluate_symbol(
             state_json["ema30_armed"] = True
             state_json["below_ema30_streak"] = 0
 
-    if state["phase"] == "MARKUP":
+    if (transition is None or resumed_after_avoid) and state["phase"] == "MARKUP":
         anchor = float(state.get("state_json", {}).get("max_close") or close)
         anchor = max(anchor, close)
         atr = float(payload.get("atr_14") or 0.0)
@@ -685,7 +961,7 @@ def evaluate_symbol(
         state_json["trail_price"] = trail
         update_trailing_stop(symbol, trail)
 
-    if state["phase"] == "DISTRIBUTION_WARNING":
+    if (transition is None or resumed_after_avoid) and state["phase"] == "DISTRIBUTION_WARNING":
         anchor = float(state.get("state_json", {}).get("max_close") or close)
         anchor = max(anchor, close)
         atr = float(payload.get("atr_14") or 0.0)
@@ -733,6 +1009,7 @@ def evaluate_symbol(
                 "score": score,
                 "had_accumulation_phase": bool(state_json.get("had_accumulation_phase")),
                 "joined_externally": bool(state_json.get("joined_externally")),
+                "base_lifecycle_event": state_json.get("base_lifecycle_last_event"),
                 "suppressed_reason": suppression_reason,
                 "attempted_signal_type": signal_type,
             },

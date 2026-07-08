@@ -28,18 +28,49 @@ def _sma(series: pd.Series, period: int) -> pd.Series:
 
 def _norm_lr_slope(series: pd.Series, lookback: int) -> pd.Series:
     def _fit(values: np.ndarray) -> float:
-        if len(values) < lookback:
-            return np.nan
-        x = np.arange(len(values), dtype=float)
         y = np.asarray(values, dtype=float)
-        if np.all(np.isfinite(y)):
-            slope = np.polyfit(x, y, 1)[0]
-            delta = abs(float(y[-1] - y[0]))
-            scale = delta if delta > 1e-9 else 1.0
-            return float(2.0 * (slope * len(y)) / scale)
-        return np.nan
+        if len(y) < lookback or np.any(~np.isfinite(y)):
+            return np.nan
+        x = np.arange(lookback, dtype=float)
+        slope, intercept = np.polyfit(x, y, 1)
+        fit_start = float(intercept)
+        fit_end = float(intercept + slope * (lookback - 1))
+        mean_abs = float(np.mean(np.abs(y))) if len(y) else 1.0
+        denom = max(abs(fit_start), 1e-9 * max(mean_abs, 1.0))
+        return float((fit_end - fit_start) / denom)
 
     return series.rolling(lookback).apply(lambda v: _fit(np.asarray(v, dtype=float)), raw=True)
+
+
+def _norm_flow_slope(flow_series: pd.Series, scale_series: pd.Series, lookback: int) -> pd.Series:
+    def _fit(flow_values: np.ndarray, scale_values: np.ndarray) -> float:
+        flow = np.asarray(flow_values, dtype=float)
+        scale = np.asarray(scale_values, dtype=float)
+        if len(flow) < lookback or len(scale) < lookback:
+            return np.nan
+        if np.any(~np.isfinite(flow)) or np.any(~np.isfinite(scale)):
+            return np.nan
+
+        mean_scale = float(np.mean(scale))
+        denom = max(mean_scale * lookback, 1e-9)
+        normalized_flow = flow / denom
+        x = np.arange(lookback, dtype=float)
+        slope = float(np.polyfit(x, normalized_flow, 1)[0])
+        return float(slope * (lookback - 1))
+
+    return pd.Series(
+        [
+            _fit(
+                flow_series.iloc[max(0, i - lookback + 1) : i + 1].to_numpy(dtype=float),
+                scale_series.iloc[max(0, i - lookback + 1) : i + 1].to_numpy(dtype=float),
+            )
+            if i + 1 >= lookback
+            else np.nan
+            for i in range(len(flow_series))
+        ],
+        index=flow_series.index,
+        dtype=float,
+    )
 
 
 def _rsi(close: pd.Series, period: int = 14) -> pd.Series:
@@ -109,14 +140,19 @@ def _cci(df: pd.DataFrame, period: int = 14) -> pd.Series:
     return (tp - sma) / (0.015 * mad)
 
 
-def _rolling_percentile(series: pd.Series, window: int) -> pd.Series:
-    def _pct(v: np.ndarray) -> float:
-        if len(v) < 2:
-            return np.nan
-        rank = np.sum(v[:-1] <= v[-1]) / max(1, len(v) - 1)
-        return float(rank)
-
-    return series.rolling(window).apply(lambda x: _pct(np.asarray(x, dtype=float)), raw=True)
+def _expanding_percentile(series: pd.Series, min_history: int = 60) -> pd.Series:
+    values = series.to_numpy(dtype=float)
+    out = np.full(len(values), np.nan, dtype=float)
+    for i in range(len(values)):
+        current = values[i]
+        if not np.isfinite(current):
+            continue
+        prior = values[:i]
+        prior = prior[np.isfinite(prior)]
+        if len(prior) < min_history:
+            continue
+        out[i] = float(np.sum(prior <= current) / len(prior))
+    return pd.Series(out, index=series.index, dtype=float)
 
 
 def _pivot_high(series: pd.Series, window: int = 5) -> pd.Series:
@@ -175,11 +211,11 @@ def compute_symbol_indicators(symbol: str) -> list[IndicatorResult]:
     bb_lower = bb_mid - 2 * bb_std
     bb_width = (bb_upper - bb_lower) / bb_mid.replace(0, np.nan)
 
-    atr_pct_pctile_252 = _rolling_percentile(atr_pct, 252)
+    atr_pct_pctile_252 = _expanding_percentile(atr_pct, 60)
 
     price_slope = _norm_lr_slope(close, 40)
-    obv_slope = _norm_lr_slope(obv, 40)
-    anv_slope = _norm_lr_slope(anv, 40)
+    obv_slope = _norm_flow_slope(obv, volume, 40)
+    anv_slope = _norm_flow_slope(anv, df["value_kwd"].fillna(0.0), 40)
 
     accumulation_div = (price_slope.abs() < 0.02) & ((obv_slope > 0.10) | (anv_slope > 0.10))
 
