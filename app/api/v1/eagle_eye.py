@@ -140,11 +140,13 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
 
     Source priority:
     1) TickerChart QuotesSnapShot (P/E, LTM EPS, BVPS)
-    2) ``stocks.pe_ratio``
-    3) Latest ``stock_metrics`` values for:
+     2) Statement-based EPS/BVPS from ``ml_fundamentals`` stockanalysis sources
+         (preferred when recent)
+    3) ``stocks.pe_ratio``
+    4) Latest ``stock_metrics`` values for:
          - "Book Value / Share"
          - "EPS" (used to derive P/E when direct PE is missing)
-    4) Latest ``ml_fundamentals`` snapshot (fills remaining gaps)
+    5) Latest ``ml_fundamentals`` snapshot (fills remaining gaps)
     """
     global _FUNDAMENTALS_MAP_CACHE, _FUNDAMENTALS_MAP_CACHE_AT
 
@@ -352,6 +354,24 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
             except Exception as exc:
                 logger.warning("stock_metrics->stocks_master fundamentals query failed: %s", exc)
 
+        # Prefer statement-style EPS/BVPS where available. Snapshot values can
+        # use a different basis versus announced-period statement values.
+        # Use a recency guard so very stale statements do not override snapshot.
+        STATEMENT_FUNDAMENTALS_MAX_AGE_DAYS = 540
+
+        def _try_parse_iso_date(raw: object) -> Optional[date]:
+            if raw is None:
+                return None
+            if isinstance(raw, date):
+                return raw
+            text = str(raw).strip()
+            if not text:
+                return None
+            try:
+                return date.fromisoformat(text[:10])
+            except Exception:
+                return None
+
         # Fill any remaining gaps from latest ml_fundamentals snapshots.
         has_mlf_ticker = column_exists("ml_fundamentals", "stock_ticker")
         has_mlf_disclosure = column_exists("ml_fundamentals", "disclosure_date")
@@ -377,6 +397,59 @@ def _get_fundamentals_map() -> Dict[str, Dict[str, Optional[float]]]:
 
         if has_mlf_ticker and has_mlf_disclosure and has_mlf_id:
             try:
+                statement_rows = query_all(
+                    f"""
+                    WITH ranked AS (
+                        SELECT
+                            stock_ticker AS symbol,
+                            {'eps' if has_mlf_eps else 'NULL'} AS eps,
+                            {'book_value_per_share' if has_mlf_bvps else 'NULL'} AS book_value_per_share,
+                            disclosure_date,
+                            source,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY UPPER(TRIM(stock_ticker))
+                                ORDER BY
+                                    {mlf_order}
+                            ) AS rn
+                        FROM ml_fundamentals
+                        WHERE {'(eps IS NOT NULL OR book_value_per_share IS NOT NULL) AND' if (has_mlf_eps or has_mlf_bvps) else ''}
+                              LOWER(COALESCE(source, '')) LIKE 'stockanalysis%'
+                    )
+                    SELECT symbol, eps, book_value_per_share, disclosure_date, source
+                    FROM ranked
+                    WHERE rn = 1
+                    """,
+                    (),
+                )
+
+                today = date.today()
+                for r in statement_rows or []:
+                    ticker = _normalize_symbol(r.get("symbol"))
+                    if not ticker:
+                        continue
+
+                    eps_val = _safe_float(r.get("eps"))
+                    bvps_val = _safe_float(r.get("book_value_per_share"))
+                    if eps_val is None and bvps_val is None:
+                        continue
+
+                    disclosure = _try_parse_iso_date(r.get("disclosure_date"))
+                    if disclosure is not None and (today - disclosure).days > STATEMENT_FUNDAMENTALS_MAX_AGE_DAYS:
+                        continue
+
+                    fmap.setdefault(
+                        ticker,
+                        {
+                            "pe_ratio": None,
+                            "book_value_per_share": None,
+                            "eps": None,
+                        },
+                    )
+                    if eps_val is not None:
+                        fmap[ticker]["eps"] = eps_val
+                    if bvps_val is not None:
+                        fmap[ticker]["book_value_per_share"] = bvps_val
+
                 mlf_rows = query_all(
                     f"""
                     WITH ranked AS (
