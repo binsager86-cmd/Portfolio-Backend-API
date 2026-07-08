@@ -1,0 +1,236 @@
+{
+  "BPCC": {
+    "base": {
+      "bar_end": 419,
+      "bar_start": 340,
+      "trade_date_end": 1660176000,
+      "trade_date_start": 1650585600
+    },
+    "breakout": {
+      "bar_end": 422,
+      "bar_start": 420,
+      "trade_date_end": 1660608000,
+      "trade_date_start": 1660262400
+    },
+    "decline": {
+      "bar_end": 339,
+      "bar_start": 220,
+      "trade_date_end": 1650499200,
+      "trade_date_start": 1636070400
+    },
+    "markup": {
+      "bar_end": 492,
+      "bar_start": 423,
+      "trade_date_end": 1669075200,
+      "trade_date_start": 1660694400
+    },
+    "prefix": {
+      "bar_end": 219,
+      "bar_start": 0,
+      "trade_date_end": 1635984000,
+      "trade_date_start": 1609459200
+    },
+    "tail": {
+      "bar_end": 552,
+      "bar_start": 493,
+      "trade_date_end": 1676332800,
+      "trade_date_start": 1669161600
+    }
+  },
+  "JOINER": {
+    "breakout": {
+      "bar_end": 259,
+      "bar_start": 220,
+      "trade_date_end": 1640822400,
+      "trade_date_start": 1636070400
+    },
+    "decline": {
+      "bar_end": 409,
+      "bar_start": 320,
+      "trade_date_end": 1658966400,
+      "trade_date_start": 1648166400
+    },
+    "markup": {
+      "bar_end": 299,
+      "bar_start": 260,
+      "trade_date_end": 1645660800,
+      "trade_date_start": 1640908800
+    },
+    "prefix": {
+      "bar_end": 219,
+      "bar_start": 0,
+      "trade_date_end": 1635984000,
+      "trade_date_start": 1609459200
+    },
+    "tail": {
+      "bar_end": 439,
+      "bar_start": 410,
+      "trade_date_end": 1662595200,
+      "trade_date_start": 1659052800
+    },
+    "top": {
+      "bar_end": 319,
+      "bar_start": 300,
+      "trade_date_end": 1648080000,
+      "trade_date_start": 1645747200
+    }
+  },
+  "MABANEE": {
+    "base": {
+      "bar_end": 379,
+      "bar_start": 220,
+      "trade_date_end": 1655337600,
+      "trade_date_start": 1636070400
+    },
+    "breakout": {
+      "bar_end": 382,
+      "bar_start": 380,
+      "trade_date_end": 1655769600,
+      "trade_date_start": 1655424000
+    },
+    "decline": {
+      "bar_end": 586,
+      "bar_start": 497,
+      "trade_date_end": 1680480000,
+      "trade_date_start": 1669680000
+    },
+    "markup": {
+      "bar_end": 472,
+      "bar_start": 383,
+      "trade_date_end": 1666656000,
+      "trade_date_start": 1655856000
+    },
+    "prefix": {
+      "bar_end": 219,
+      "bar_start": 0,
+      "trade_date_end": 1635984000,
+      "trade_date_start": 1609459200
+    },
+    "tail": {
+      "bar_end": 626,
+      "bar_start": 587,
+      "trade_date_end": 1685318400,
+      "trade_date_start": 1680566400
+    },
+    "top": {
+      "bar_end": 496,
+      "bar_start": 473,
+      "trade_date_end": 1669593600,
+      "trade_date_start": 1666742400
+    }
+  },
+  "SANAM": {
+    "base": {
+      "bar_end": 319,
+      "bar_start": 220,
+      "trade_date_end": 1648080000,
+      "trade_date_start": 1636070400
+    },
+    "breakout": {
+      "bar_end": 321,
+      "bar_start": 320,
+      "trade_date_end": 1648425600,
+      "trade_date_start": 1648166400
+    },
+    "markup": {
+      "bar_end": 441,
+      "bar_start": 322,
+      "trade_date_end": 1662940800,
+      "trade_date_start": 1648512000
+    },
+    "prefix": {
+      "bar_end": 219,
+      "bar_start": 0,
+      "trade_date_end": 1635984000,
+      "trade_date_start": 1609459200
+    },
+    "tail": {
+      "bar_end": 561,
+      "bar_start": 442,
+      "trade_date_end": 1677456000,
+      "trade_date_start": 1663027200
+    }
+  },
+  "TIJARA": {
+    "base": {
+      "bar_end": 399,
+      "bar_start": 260,
+      "trade_date_end": 1657756800,
+      "trade_date_start": 1640908800
+    },
+    "breakout": {
+      "bar_end": 401,
+      "bar_start": 400,
+      "trade_date_end": 1658102400,
+      "trade_date_start": 1657843200
+    },
+    "drift": {
+      "bar_end": 551,
+      "bar_start": 492,
+      "trade_date_end": 1676246400,
+      "trade_date_start": 1669075200
+    },
+    "markup": {
+      "bar_end": 491,
+      "bar_start": 402,
+      "trade_date_end": 1668988800,
+      "trade_date_start": 1658188800
+    },
+    "pre": {
+      "bar_end": 259,
+      "bar_start": 220,
+      "trade_date_end": 1640822400,
+      "trade_date_start": 1636070400
+    },
+    "prefix": {
+      "bar_end": 219,
+      "bar_start": 0,
+      "trade_date_end": 1635984000,
+      "trade_date_start": 1609459200
+    },
+    "tail": {
+      "bar_end": 581,
+      "bar_start": 552,
+      "trade_date_end": 1679875200,
+      "trade_date_start": 1676332800
+    }
+  },
+  "ZAIN": {
+    "base": {
+      "bar_end": 359,
+      "bar_start": 250,
+      "trade_date_end": 1652918400,
+      "trade_date_start": 1639699200
+    },
+    "breakout": {
+      "bar_end": 361,
+      "bar_start": 360,
+      "trade_date_end": 1653264000,
+      "trade_date_start": 1653004800
+    },
+    "markup": {
+      "bar_end": 461,
+      "bar_start": 362,
+      "trade_date_end": 1665360000,
+      "trade_date_start": 1653350400
+    },
+    "prefix": {
+      "bar_end": 219,
+      "bar_start": 0,
+      "trade_date_end": 1635984000,
+      "trade_date_start": 1609459200
+    },
+    "rise": {
+      "bar_end": 249,
+      "bar_start": 220,
+      "trade_date_end": 1639612800,
+      "trade_date_start": 1636070400
+    },
+    "tail": {
+      "bar_end": 551,
+      "bar_start": 462,
+      "trade_date_end": 1676246400,
+      "trade_date_start": 1665446400
+    }
+  }
+}

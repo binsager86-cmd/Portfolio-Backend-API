@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+from app.services.eagle_eye import indicator_service as ee_indicator_service
 
 
 OUT_DIR = Path(__file__).resolve().parent
@@ -20,6 +23,7 @@ class SeriesBundle:
     volume: np.ndarray
     range_frac: np.ndarray
     accumulation_windows: list[tuple[int, int]] = field(default_factory=list)
+    segments: dict[str, tuple[int, int]] = field(default_factory=dict)
 
 
 def _neutral_prefix(
@@ -45,7 +49,8 @@ def _prepend_prefix(
     volume: np.ndarray,
     range_frac: np.ndarray,
     accumulation_windows: list[tuple[int, int]],
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[tuple[int, int]]]:
+    segments: dict[str, tuple[int, int]],
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[tuple[int, int]], dict[str, tuple[int, int]]]:
     pref_close, pref_vol, pref_range = _neutral_prefix(
         rng,
         PREFIX_SESSIONS,
@@ -59,16 +64,35 @@ def _prepend_prefix(
     out_volume = np.concatenate([pref_vol, volume])
     out_range = np.concatenate([pref_range, range_frac])
     shifted_windows = [(s + PREFIX_SESSIONS, e + PREFIX_SESSIONS) for s, e in accumulation_windows]
-    return out_close, out_volume, out_range, shifted_windows
+    shifted_segments = {
+        "prefix": (0, PREFIX_SESSIONS),
+        **{name: (start + PREFIX_SESSIONS, end + PREFIX_SESSIONS) for name, (start, end) in segments.items()},
+    }
+    return out_close, out_volume, out_range, shifted_windows, shifted_segments
+
+
+def _segment_entry(df: pd.DataFrame, start: int, end_exclusive: int) -> dict[str, int]:
+    end_inclusive = max(start, end_exclusive - 1)
+    d_start = pd.to_datetime(df.iloc[start]["date"], format="%d/%m/%Y", dayfirst=True)
+    d_end = pd.to_datetime(df.iloc[end_inclusive]["date"], format="%d/%m/%Y", dayfirst=True)
+    ts_start = int(pd.Timestamp(d_start, tz="UTC").timestamp())
+    ts_end = int(pd.Timestamp(d_end, tz="UTC").timestamp())
+    return {
+        "bar_start": int(start),
+        "bar_end": int(end_inclusive),
+        "trade_date_start": ts_start,
+        "trade_date_end": ts_end,
+    }
 
 
 def _assert_warmup_alignment(df: pd.DataFrame, symbol: str, first_pattern_idx: int, is_joiner: bool = False) -> None:
     close = df["close"].to_numpy(dtype=float)
-    ema10 = _ema(close, 10)
-    ema30 = _ema(close, 30)
-    sma200 = pd.Series(close).rolling(200).mean().to_numpy()
-    range_low_120 = pd.Series(close).rolling(120).min().to_numpy()
-    range_high_120 = pd.Series(close).rolling(120).max().to_numpy()
+    close_s = pd.Series(close, dtype=float)
+    ema10 = ee_indicator_service._ema(close_s, 10).to_numpy(dtype=float)
+    ema30 = ee_indicator_service._ema(close_s, 30).to_numpy(dtype=float)
+    sma200 = ee_indicator_service._sma(close_s, 200).to_numpy(dtype=float)
+    range_low_120 = close_s.rolling(120).min().shift(1).to_numpy(dtype=float)
+    range_high_120 = close_s.rolling(120).max().shift(1).to_numpy(dtype=float)
 
     ready = np.where(
         (~np.isnan(sma200))
@@ -180,6 +204,27 @@ def _assert_accumulation_cmf_window(df: pd.DataFrame, window: tuple[int, int], s
     )
 
 
+def _assert_breakout_crossing(df: pd.DataFrame, symbol: str, base_window: tuple[int, int], breakout_window: tuple[int, int]) -> None:
+    close = df["close"].to_numpy(dtype=float)
+    high = df["high"].to_numpy(dtype=float)
+    vol = df["volume"].to_numpy(dtype=float)
+    rv = vol / pd.Series(vol).rolling(20).mean().to_numpy()
+
+    base_start, base_end = base_window
+    brk_start, brk_end = breakout_window
+    frozen_candidate = float(np.nanmax(high[base_start:base_end]))
+    breakout_close = close[brk_start:brk_end]
+    breakout_rv = rv[brk_start:brk_end]
+
+    assert len(breakout_close) > 0, f"{symbol}: breakout segment empty"
+    assert np.all(breakout_close > (frozen_candidate * 1.005)), (
+        f"{symbol}: breakout close failed frozen-base test against {frozen_candidate:.3f}"
+    )
+    assert int(np.sum(breakout_rv >= 2.5)) >= 2, (
+        f"{symbol}: breakout rel_volume >= 2.5 on fewer than 2 bars"
+    )
+
+
 def _ohlcv_from_close(
     symbol: str,
     close: np.ndarray,
@@ -250,7 +295,7 @@ def _build_tijara(rng: np.random.Generator) -> SeriesBundle:
     base_early = 90.0 + 8.5 * np.sin(np.linspace(0, 8.0, 100))
     base_late = 98.0 + 1.2 * np.sin(np.linspace(0, 4.0 * np.pi, 40))
     base = np.concatenate([base_early, base_late])
-    breakout = np.array([99.4, 105.4])
+    breakout = np.array([101.2, 106.4])
     markup = np.linspace(107.0, 185.0, 90)
     markup[24:27] -= np.array([4.0, 5.5, 2.0])
     markup[56:59] -= np.array([4.5, 6.0, 3.0])
@@ -287,22 +332,30 @@ def _build_tijara(rng: np.random.Generator) -> SeriesBundle:
     volume[base_end + 24] = base_vol * 1.8
     volume[base_end + 56] = base_vol * 1.8
 
-    close, volume, range_frac, windows = _prepend_prefix(
+    close, volume, range_frac, windows, segments = _prepend_prefix(
         rng,
         close,
         volume,
         range_frac,
         [(base_end - 40, base_end)],
+        {
+            "pre": (0, len(pre)),
+            "base": (len(pre), len(pre) + len(base)),
+            "breakout": (len(pre) + len(base), len(pre) + len(base) + len(breakout)),
+            "markup": (len(pre) + len(base) + len(breakout), len(pre) + len(base) + len(breakout) + len(markup)),
+            "drift": (len(pre) + len(base) + len(breakout) + len(markup), len(pre) + len(base) + len(breakout) + len(markup) + len(drift)),
+            "tail": (len(pre) + len(base) + len(breakout) + len(markup) + len(drift), len(close)),
+        },
     )
-    return SeriesBundle(close=close, volume=volume, range_frac=range_frac, accumulation_windows=windows)
+    return SeriesBundle(close=close, volume=volume, range_frac=range_frac, accumulation_windows=windows, segments=segments)
 
 
 def _build_bpcc(rng: np.random.Generator) -> SeriesBundle:
     decline = np.linspace(700.0, 560.0, 120)
     base = 585.0 + 23.0 * np.sin(np.linspace(0, 10.0, 80))
-    breakout = np.array([607.0, 616.0])
-    markup = np.linspace(620.0, 697.0, 70)
-    tail = 695.0 + 5.0 * np.sin(np.linspace(0, 7.0, 60))
+    breakout = np.array([628.0, 636.0, 644.0])
+    markup = np.linspace(650.0, 760.0, 70)
+    tail = 758.0 + 6.0 * np.sin(np.linspace(0, 7.0, 60))
     close = np.concatenate([decline, base, breakout, markup, tail])
     close = _apply_close_noise(close, rng)
 
@@ -320,24 +373,33 @@ def _build_bpcc(rng: np.random.Generator) -> SeriesBundle:
     volume[base_end - 1] = base_vol * 1.85
 
     brk_i = base_end
-    volume[brk_i] = base_vol * 4.5
-    volume[brk_i + 1] = base_vol * 4.2
+    volume[brk_i] = base_vol * 4.2
+    volume[brk_i + 1] = base_vol * 6.0
+    volume[brk_i + 2] = base_vol * 5.5
     range_frac[brk_i] = 0.017
     range_frac[brk_i + 1] = 0.018
+    range_frac[brk_i + 2] = 0.019
 
     for k in [brk_i + 4, brk_i + 8, brk_i + 12, brk_i + 16]:
         if k < len(volume):
             volume[k] = base_vol * 3.3
             range_frac[k] = 0.010
 
-    close, volume, range_frac, windows = _prepend_prefix(
+    close, volume, range_frac, windows, segments = _prepend_prefix(
         rng,
         close,
         volume,
         range_frac,
         [(base_start, base_end)],
+        {
+            "decline": (0, len(decline)),
+            "base": (len(decline), len(decline) + len(base)),
+            "breakout": (len(decline) + len(base), len(decline) + len(base) + len(breakout)),
+            "markup": (len(decline) + len(base) + len(breakout), len(decline) + len(base) + len(breakout) + len(markup)),
+            "tail": (len(decline) + len(base) + len(breakout) + len(markup), len(close)),
+        },
     )
-    return SeriesBundle(close=close, volume=volume, range_frac=range_frac, accumulation_windows=windows)
+    return SeriesBundle(close=close, volume=volume, range_frac=range_frac, accumulation_windows=windows, segments=segments)
 
 
 def _build_zain(rng: np.random.Generator) -> SeriesBundle:
@@ -382,21 +444,28 @@ def _build_zain(rng: np.random.Generator) -> SeriesBundle:
     for j in [len(rise) + len(base) + 20, len(rise) + len(base) + 46, len(rise) + len(base) + 74]:
         volume[j] = base_vol * 1.8
 
-    close, volume, range_frac, windows = _prepend_prefix(
+    close, volume, range_frac, windows, segments = _prepend_prefix(
         rng,
         close,
         volume,
         range_frac,
         [(base_start, base_end)],
+        {
+            "rise": (0, len(rise)),
+            "base": (len(rise), len(rise) + len(base)),
+            "breakout": (len(rise) + len(base), len(rise) + len(base) + len(breakout)),
+            "markup": (len(rise) + len(base) + len(breakout), len(rise) + len(base) + len(breakout) + len(markup)),
+            "tail": (len(rise) + len(base) + len(breakout) + len(markup), len(close)),
+        },
     )
-    return SeriesBundle(close=close, volume=volume, range_frac=range_frac, accumulation_windows=windows)
+    return SeriesBundle(close=close, volume=volume, range_frac=range_frac, accumulation_windows=windows, segments=segments)
 
 
 def _build_sanam(rng: np.random.Generator) -> SeriesBundle:
     base_early = 205.0 + 8.5 * np.sin(np.linspace(0, 8.0, 60))
     base_late = 210.0 + 1.4 * np.sin(np.linspace(0, 4.0 * np.pi, 40))
     base = np.concatenate([base_early, base_late])
-    breakout = np.array([214.0, 223.0])
+    breakout = np.array([222.0, 232.0])
     markup = np.linspace(228.0, 333.0, 120)
     tail = np.linspace(334.0, 338.0, 120)
     close = np.concatenate([base, breakout, markup, tail])
@@ -418,24 +487,30 @@ def _build_sanam(rng: np.random.Generator) -> SeriesBundle:
         volume[i] = base_vol * rng.uniform(1.35, 1.70) if up_day else base_vol * rng.uniform(0.65, 0.90)
 
     brk_i = len(base)
-    volume[brk_i] = base_vol * 3.2
-    volume[brk_i + 1] = base_vol * 3.0
+    volume[brk_i] = base_vol * 5.0
+    volume[brk_i + 1] = base_vol * 4.8
     range_frac[brk_i] = 0.018
     range_frac[brk_i + 1] = 0.019
 
-    close, volume, range_frac, windows = _prepend_prefix(
+    close, volume, range_frac, windows, segments = _prepend_prefix(
         rng,
         close,
         volume,
         range_frac,
         [(base_start, base_end)],
+        {
+            "base": (0, len(base)),
+            "breakout": (len(base), len(base) + len(breakout)),
+            "markup": (len(base) + len(breakout), len(base) + len(breakout) + len(markup)),
+            "tail": (len(base) + len(breakout) + len(markup), len(close)),
+        },
     )
-    return SeriesBundle(close=close, volume=volume, range_frac=range_frac, accumulation_windows=windows)
+    return SeriesBundle(close=close, volume=volume, range_frac=range_frac, accumulation_windows=windows, segments=segments)
 
 
 def _build_mabanee(rng: np.random.Generator) -> SeriesBundle:
     base = 882.0 + 13.0 * np.sin(np.linspace(0, 8.0 * np.pi, 160))
-    breakout = np.array([901.0, 915.0, 932.0])
+    breakout = np.array([912.0, 926.0, 940.0])
     markup = np.linspace(940.0, 1160.0, 90)
     top = 1150.0 + 12.0 * np.sin(np.linspace(0, 3.5 * np.pi, 24))
     decline = np.linspace(1138.0, 920.0, 90)
@@ -455,7 +530,7 @@ def _build_mabanee(rng: np.random.Generator) -> SeriesBundle:
     brk_i = base_end
     volume[brk_i] = base_vol * 4.8
     volume[brk_i + 1] = base_vol * 4.5
-    volume[brk_i + 2] = base_vol * 3.8
+    volume[brk_i + 2] = base_vol * 5.2
     range_frac[brk_i : brk_i + 3] = np.array([0.020, 0.021, 0.018])
 
     top_start = len(base) + len(breakout) + len(markup)
@@ -476,37 +551,68 @@ def _build_mabanee(rng: np.random.Generator) -> SeriesBundle:
     for i in range(decline_start, len(close)):
         volume[i] = base_vol * rng.uniform(1.05, 1.35)
 
-    close, volume, range_frac, windows = _prepend_prefix(
+    close, volume, range_frac, windows, segments = _prepend_prefix(
         rng,
         close,
         volume,
         range_frac,
         [(0, base_end)],
+        {
+            "base": (0, len(base)),
+            "breakout": (len(base), len(base) + len(breakout)),
+            "markup": (len(base) + len(breakout), len(base) + len(breakout) + len(markup)),
+            "top": (len(base) + len(breakout) + len(markup), len(base) + len(breakout) + len(markup) + len(top)),
+            "decline": (len(base) + len(breakout) + len(markup) + len(top), len(base) + len(breakout) + len(markup) + len(top) + len(decline)),
+            "tail": (len(base) + len(breakout) + len(markup) + len(top) + len(decline), len(close)),
+        },
     )
-    return SeriesBundle(close=close, volume=volume, range_frac=range_frac, accumulation_windows=windows)
+    return SeriesBundle(close=close, volume=volume, range_frac=range_frac, accumulation_windows=windows, segments=segments)
 
 
 def _build_joiner(rng: np.random.Generator) -> SeriesBundle:
-    warmup = np.linspace(760.0, 980.0, 220)
-    early_join = np.linspace(986.0, 1120.0, 40)
-    late_markup = np.linspace(1125.0, 1195.0, 40)
-    topping = 1188.0 + 8.0 * np.sin(np.linspace(0, 3.0 * np.pi, 20))
-    decline = np.linspace(1170.0, 820.0, 90)
-    tail = np.linspace(810.0, 770.0, 30)
-    close = np.concatenate([warmup, early_join, late_markup, topping, decline, tail])
+    # JOINER prefix must be a clean uptrend so warmup-ready bars satisfy trend-join conditions.
+    daily_ret = rng.normal(0.0020, 0.0007, size=PREFIX_SESSIONS)
+    prefix = 760.0 * np.exp(np.cumsum(daily_ret))
+
+    early_join = np.linspace(prefix[-1] * 1.10, prefix[-1] * 1.28, 40)
+    late_markup = np.linspace(early_join[-1] * 1.01, early_join[-1] * 1.08, 40)
+    topping_mid = late_markup[-1]
+    topping = topping_mid + (0.012 * topping_mid) * np.sin(np.linspace(0, 3.0 * np.pi, 20))
+    decline = np.linspace(topping[-1] * 0.985, topping[-1] * 0.70, 90)
+    tail = np.linspace(decline[-1] * 0.99, decline[-1] * 0.94, 30)
+    close = np.concatenate([prefix, early_join, late_markup, topping, decline, tail])
     close = _apply_close_noise(close, rng)
 
     base_vol = 105_000.0
     volume = np.full(len(close), base_vol)
     range_frac = np.full(len(close), 0.011)
-    join_start = len(warmup)
-    decline_start = len(warmup) + len(early_join) + len(late_markup) + len(topping)
+    join_start = PREFIX_SESSIONS
+    decline_start = PREFIX_SESSIONS + len(early_join) + len(late_markup) + len(topping)
     for i in range(join_start, decline_start):
         volume[i] = base_vol * rng.uniform(1.15, 1.45)
+    volume[join_start] = base_vol * 3.6
+    volume[join_start + 1] = base_vol * 3.8
     for i in range(decline_start, len(close)):
         volume[i] = base_vol * rng.uniform(1.55, 2.10)
         range_frac[i] = 0.020
-    return SeriesBundle(close=close, volume=volume, range_frac=range_frac)
+    segments = {
+        "prefix": (0, PREFIX_SESSIONS),
+        "breakout": (PREFIX_SESSIONS, PREFIX_SESSIONS + len(early_join)),
+        "markup": (PREFIX_SESSIONS + len(early_join), PREFIX_SESSIONS + len(early_join) + len(late_markup)),
+        "top": (
+            PREFIX_SESSIONS + len(early_join) + len(late_markup),
+            PREFIX_SESSIONS + len(early_join) + len(late_markup) + len(topping),
+        ),
+        "decline": (
+            PREFIX_SESSIONS + len(early_join) + len(late_markup) + len(topping),
+            PREFIX_SESSIONS + len(early_join) + len(late_markup) + len(topping) + len(decline),
+        ),
+        "tail": (
+            PREFIX_SESSIONS + len(early_join) + len(late_markup) + len(topping) + len(decline),
+            len(close),
+        ),
+    }
+    return SeriesBundle(close=close, volume=volume, range_frac=range_frac, segments=segments)
 
 
 def _self_check_tijara(df: pd.DataFrame) -> None:
@@ -526,6 +632,7 @@ def _self_check_tijara(df: pd.DataFrame) -> None:
 
     brk_i = pre + base_len
     assert rv[brk_i] >= 3.5, f"TIJARA: breakout rel_volume < 3.5 ({rv[brk_i]:.3f})"
+    _assert_breakout_crossing(df, "TIJARA", (pre, pre + base_len), (brk_i, brk_i + 2))
 
 
 def _self_check_bpcc(df: pd.DataFrame) -> None:
@@ -543,6 +650,7 @@ def _self_check_bpcc(df: pd.DataFrame) -> None:
     rv = vol / pd.Series(vol).rolling(20).mean().to_numpy()
     brk_i = PREFIX_SESSIONS + 200
     assert rv[brk_i] >= 3.0, f"BPCC: breakout rel_volume < 3.0 ({rv[brk_i]:.3f})"
+    _assert_breakout_crossing(df, "BPCC", (PREFIX_SESSIONS + 120, PREFIX_SESSIONS + 200), (brk_i, brk_i + 3))
 
 
 def _self_check_zain(df: pd.DataFrame) -> None:
@@ -560,6 +668,7 @@ def _self_check_zain(df: pd.DataFrame) -> None:
     rv = vol / pd.Series(vol).rolling(20).mean().to_numpy()
     brk_i = PREFIX_SESSIONS + 140
     assert rv[brk_i] >= 3.0, f"ZAIN: breakout rel_volume < 3.0 ({rv[brk_i]:.3f})"
+    _assert_breakout_crossing(df, "ZAIN", (PREFIX_SESSIONS + 30, PREFIX_SESSIONS + 140), (brk_i, brk_i + 2))
 
 
 def _self_check_sanam(df: pd.DataFrame) -> None:
@@ -575,6 +684,7 @@ def _self_check_sanam(df: pd.DataFrame) -> None:
         else:
             streak = 0
     assert best >= 15, f"SANAM: RSI>70 streak too short ({best})"
+    _assert_breakout_crossing(df, "SANAM", (PREFIX_SESSIONS, PREFIX_SESSIONS + 100), (PREFIX_SESSIONS + 100, PREFIX_SESSIONS + 102))
 
 
 def _self_check_mabanee(df: pd.DataFrame) -> None:
@@ -598,16 +708,25 @@ def _self_check_mabanee(df: pd.DataFrame) -> None:
     post_sma = sma200[climax_i + 1 :]
     below = np.where(post < post_sma)[0]
     assert len(below) > 0, "MABANEE: decline never crosses below SMA200"
+    _assert_breakout_crossing(df, "MABANEE", (PREFIX_SESSIONS, PREFIX_SESSIONS + 160), (PREFIX_SESSIONS + 160, PREFIX_SESSIONS + 163))
 
 
 def _self_check_joiner(df: pd.DataFrame) -> None:
     close = df["close"].to_numpy(dtype=float)
-    ema10 = _ema(close, 10)
-    ema30 = _ema(close, 30)
-    sma200 = pd.Series(close).rolling(200).mean().to_numpy()
-    range_low_120 = pd.Series(close).rolling(120).min().to_numpy()
+    close_s = pd.Series(close, dtype=float)
+    ema10 = ee_indicator_service._ema(close_s, 10).to_numpy(dtype=float)
+    ema30 = ee_indicator_service._ema(close_s, 30).to_numpy(dtype=float)
+    sma200 = ee_indicator_service._sma(close_s, 200).to_numpy(dtype=float)
+    range_low_120 = close_s.rolling(120).min().shift(1).to_numpy(dtype=float)
+    range_high_120 = close_s.rolling(120).max().shift(1).to_numpy(dtype=float)
 
-    warmup_ready = np.where((~np.isnan(sma200)) & (~np.isnan(range_low_120)) & (range_low_120 > 0))[0]
+    warmup_ready = np.where(
+        (~np.isnan(sma200))
+        & (~np.isnan(range_low_120))
+        & (~np.isnan(range_high_120))
+        & (range_low_120 > 0)
+        & (range_high_120 > 0)
+    )[0]
     assert len(warmup_ready) > 0, "JOINER: warmup_ready_date not found"
     warmup_idx = int(warmup_ready[0])
 
@@ -623,6 +742,7 @@ def _self_check_joiner(df: pd.DataFrame) -> None:
     upper = float(np.nanmax(close[warmup_idx + 20 : warmup_idx + 140]))
     assert upper > 1150.0, "JOINER: expected late-cycle strong markup"
     assert np.nanmean(close[-80:] < sma200[-80:]) > 0.7, "JOINER: expected late decline below SMA200"
+    _assert_breakout_crossing(df, "JOINER", (0, PREFIX_SESSIONS), (PREFIX_SESSIONS, PREFIX_SESSIONS + 40))
 
 
 def _write(symbol: str, bundle: SeriesBundle) -> None:
@@ -662,8 +782,9 @@ def main() -> None:
         "ZAIN": PREFIX_SESSIONS,
         "SANAM": PREFIX_SESSIONS,
         "MABANEE": PREFIX_SESSIONS,
-        "JOINER": 0,
+        "JOINER": PREFIX_SESSIONS,
     }
+    all_segments: dict[str, dict[str, dict[str, int]]] = {}
 
     for symbol in ["TIJARA", "BPCC", "ZAIN", "SANAM", "MABANEE", "JOINER"]:
         local_rng = np.random.default_rng(rng.integers(0, 1_000_000_000))
@@ -686,7 +807,18 @@ def main() -> None:
         checkers[symbol](df)
         target = OUT_DIR / f"synthetic_{symbol.lower()}.csv"
         df.to_csv(target, index=False)
+        all_segments[symbol] = {
+            name: _segment_entry(df, bounds[0], bounds[1])
+            for name, bounds in sorted(bundle.segments.items())
+            if bounds[0] < bounds[1]
+        }
         print(f"generated {target.name}: {len(df)} rows")
+
+    (OUT_DIR / "segments.json").write_text(
+        json.dumps(all_segments, ensure_ascii=True, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    print("generated segments.json")
 
 
 if __name__ == "__main__":
