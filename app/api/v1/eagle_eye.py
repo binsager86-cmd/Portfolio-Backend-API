@@ -92,6 +92,11 @@ _LATEST_CLOSE_MAP_CACHE: Optional[Dict[str, float]] = None
 _LATEST_CLOSE_MAP_CACHE_AT: float = 0.0
 _LATEST_CLOSE_MAP_TTL_SEC: float = 600.0  # 10 minutes
 
+# Volume stats map: ticker -> {latest_volume, average_volume_20d}.
+_VOLUME_STATS_MAP_CACHE: Optional[Dict[str, Dict[str, float]]] = None
+_VOLUME_STATS_MAP_CACHE_AT: float = 0.0
+_VOLUME_STATS_MAP_TTL_SEC: float = 600.0  # 10 minutes
+
 # Scanner response cache: assembled List[RatedStock] held for 30 s so
 # rapid re-fetches (focus events, filter clicks) return instantly.
 _SCANNER_RESP_CACHE: Optional[list] = None
@@ -476,6 +481,64 @@ def _get_latest_close_map() -> Dict[str, float]:
     except Exception as exc:
         logger.warning("Could not refresh latest close map; using stale cache or empty dict: %s", exc)
         return _LATEST_CLOSE_MAP_CACHE or {}
+
+
+def _get_volume_stats_map() -> Dict[str, Dict[str, float]]:
+    """Return cached ticker volume stats (latest + trailing 20d average)."""
+    global _VOLUME_STATS_MAP_CACHE, _VOLUME_STATS_MAP_CACHE_AT
+
+    now = time.time()
+    if (
+        _VOLUME_STATS_MAP_CACHE is not None
+        and (now - _VOLUME_STATS_MAP_CACHE_AT) < _VOLUME_STATS_MAP_TTL_SEC
+    ):
+        return _VOLUME_STATS_MAP_CACHE
+
+    stats_map: Dict[str, Dict[str, float]] = {}
+    try:
+        from app.core.database import query_all
+
+        rows = query_all(
+            """
+            WITH ranked AS (
+                SELECT
+                    ticker,
+                    volume,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY ticker
+                        ORDER BY bar_date DESC
+                    ) AS rn
+                FROM ee_ohlcv_cache
+                WHERE volume IS NOT NULL
+            )
+            SELECT
+                ticker,
+                MAX(CASE WHEN rn = 1 THEN volume END) AS latest_volume,
+                AVG(CASE WHEN rn <= 20 THEN volume END) AS average_volume_20d
+            FROM ranked
+            GROUP BY ticker
+            """,
+            (),
+        )
+
+        for row in rows or []:
+            ticker = _normalize_symbol(row.get("ticker"))
+            latest_volume = _safe_float(row.get("latest_volume"))
+            average_volume = _safe_float(row.get("average_volume_20d"))
+            if not ticker:
+                continue
+            stats_map[ticker] = {}
+            if latest_volume is not None:
+                stats_map[ticker]["latest_volume"] = latest_volume
+            if average_volume is not None:
+                stats_map[ticker]["average_volume"] = average_volume
+
+        _VOLUME_STATS_MAP_CACHE = stats_map
+        _VOLUME_STATS_MAP_CACHE_AT = now
+        return stats_map
+    except Exception as exc:
+        logger.warning("Could not refresh volume stats map; using stale cache or empty dict: %s", exc)
+        return _VOLUME_STATS_MAP_CACHE or {}
 
 
 def _is_computed_today(computed_at: object, today_iso: Optional[str] = None) -> bool:
@@ -975,6 +1038,7 @@ async def get_scanner(
         meta_map = _get_meta_map()
         fundamentals_map = _get_fundamentals_map()
         latest_close_map = _get_latest_close_map()
+        volume_stats_map = _get_volume_stats_map()
 
         results: List[RatedStock] = []
         for row in db_rows:
@@ -1016,13 +1080,9 @@ async def get_scanner(
                 volume_trend_5d=str(vc_raw.get("volume_trend_5d") or "NEUTRAL"),
             ) if vc_raw else None
 
-            indicators_raw = row.get("indicators") if isinstance(row.get("indicators"), dict) else {}
-            latest_volume = _safe_float(indicators_raw.get("volume"))
-            average_volume = _safe_float(indicators_raw.get("avg_volume_20d"))
-            if average_volume is None:
-                rel_volume = _safe_float((vc_raw or {}).get("relative_volume"))
-                if latest_volume is not None and rel_volume is not None and rel_volume > 0:
-                    average_volume = latest_volume / rel_volume
+            vol_stats = volume_stats_map.get(t, {})
+            latest_volume = _safe_float(vol_stats.get("latest_volume"))
+            average_volume = _safe_float(vol_stats.get("average_volume"))
 
             fmeta = fundamentals_map.get(t, {})
             bvps = _safe_float(fmeta.get("book_value_per_share"))
