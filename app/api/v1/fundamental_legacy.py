@@ -242,6 +242,18 @@ def _ensure_schema() -> None:
                 FOREIGN KEY (stock_id) REFERENCES analysis_stocks(id)
             )""",
         "CREATE INDEX IF NOT EXISTS idx_peer_companies_stock ON peer_companies(stock_id)",
+        f"""CREATE TABLE IF NOT EXISTS score_category_preferences (
+                id {_PK},
+                user_id INTEGER NOT NULL,
+                stock_id INTEGER NOT NULL,
+                category_key TEXT NOT NULL,
+                included BOOLEAN NOT NULL DEFAULT 1,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                UNIQUE(user_id, stock_id, category_key),
+                FOREIGN KEY (stock_id) REFERENCES analysis_stocks(id)
+            )""",
+        "CREATE INDEX IF NOT EXISTS idx_score_category_prefs_user_stock ON score_category_preferences(user_id, stock_id)",
     ]
 
     try:
@@ -837,6 +849,19 @@ class MultiplesRequest(BaseModel):
     peer_multiple: float
     multiple_type: str = "P/E"
     shares_outstanding: float = 1.0
+
+
+class ScoreCategoryPreferenceItem(BaseModel):
+    category_key: str
+    included: bool
+
+
+class ScoreCategoryPreferenceUpdate(BaseModel):
+    included: bool
+
+
+class ScoreCategoryPreferencesBulkUpdate(BaseModel):
+    preferences: List[ScoreCategoryPreferenceItem]
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -4723,6 +4748,52 @@ async def get_score_history(
     return {"status": "ok", "data": {"scores": scores, "count": len(scores)}}
 
 
+@router.get("/stocks/{stock_id}/score/category-preferences")
+async def get_score_category_preferences_endpoint(
+    stock_id: int,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Get the current score category inclusion preferences for this stock."""
+    _ensure_schema()
+    _verify_stock_owner(stock_id, current_user.user_id)
+
+    prefs = _get_score_category_preferences(stock_id, current_user.user_id)
+    pro_rata = _calculate_pro_rata_weights(prefs)
+    return {
+        "status": "ok",
+        "data": {
+            "preferences": prefs,
+            "pro_rata_weights": pro_rata,
+        },
+    }
+
+
+@router.put("/stocks/{stock_id}/score/category-preferences")
+async def update_score_category_preferences_endpoint(
+    stock_id: int,
+    body: ScoreCategoryPreferencesBulkUpdate,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Update score category inclusion preferences and return the new pro-rata weights."""
+    _ensure_schema()
+    _verify_stock_owner(stock_id, current_user.user_id)
+
+    for item in body.preferences:
+        _set_score_category_preference(
+            stock_id, current_user.user_id, item.category_key, item.included
+        )
+
+    prefs = _get_score_category_preferences(stock_id, current_user.user_id)
+    pro_rata = _calculate_pro_rata_weights(prefs)
+    return {
+        "status": "ok",
+        "data": {
+            "preferences": prefs,
+            "pro_rata_weights": pro_rata,
+        },
+    }
+
+
 def _persist_daily_stock_score(stock_id: int, user_id: int, result: Dict[str, Any], latest: Dict[str, float]) -> None:
     scoring_date = date.today().isoformat()
     now = int(time.time())
@@ -6581,7 +6652,7 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
                    JOIN financial_statements fs ON fs.id = li.statement_id
                    WHERE fs.stock_id = ? AND fs.statement_type = ?
                      AND UPPER(li.line_item_code) = UPPER(?)
-                   ORDER BY fs.fiscal_year, fs.period_end_date""",
+                   ORDER BY fs.fiscal_year DESC, fs.period_end_date DESC""",
                 (stock_id, stmt_type, c),
             )
             for r in rows:
@@ -6590,7 +6661,7 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
                 else:
                     rec = {"period": r["period"], "fiscal_year": r["fiscal_year"], "amount": r["amount"]}
                 fy = rec["fiscal_year"]
-                # Keep first code's data for each year (don't overwrite)
+                # Keep latest period in each fiscal year; preserve alias priority by not overwriting.
                 if fy is not None and fy not in by_year:
                     by_year[fy] = rec
         return by_year
@@ -7081,6 +7152,67 @@ def _fetch_stockanalysis_core_ratios(symbol: str) -> Dict[str, float]:
 
     return ratios
 
+
+def _get_score_category_preferences(stock_id: int, user_id: int) -> Dict[str, bool]:
+    """Return current inclusion preference for each metric category.
+
+    Missing rows default to included=True so existing scores keep their
+    original weights until the user explicitly toggles a category off.
+    """
+    rows = query_all(
+        """SELECT category_key, included
+           FROM score_category_preferences
+           WHERE user_id = ? AND stock_id = ?""",
+        (user_id, stock_id),
+    )
+    prefs: Dict[str, bool] = {key: True for key in METRIC_CATEGORY_SCORE_WEIGHTS}
+    for r in rows:
+        key = r[0] if isinstance(r, (tuple, list)) else r.get("category_key")
+        included = r[1] if isinstance(r, (tuple, list)) else r.get("included")
+        if key in prefs and included is not None:
+            prefs[key] = bool(included)
+    return prefs
+
+
+def _set_score_category_preference(
+    stock_id: int, user_id: int, category_key: str, included: bool
+) -> None:
+    """Upsert a single category inclusion preference."""
+    if category_key not in METRIC_CATEGORY_SCORE_WEIGHTS:
+        raise BadRequestError(f"Invalid category key: {category_key}")
+    now = int(time.time())
+    exec_sql(
+        """INSERT INTO score_category_preferences
+           (user_id, stock_id, category_key, included, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON CONFLICT(user_id, stock_id, category_key)
+           DO UPDATE SET included = ?, updated_at = ?""",
+        (user_id, stock_id, category_key, int(included), now, now, int(included), now),
+    )
+
+
+def _calculate_pro_rata_weights(
+    preferences: Dict[str, bool]
+) -> Dict[str, float]:
+    """Recalculate category weights pro-rata across included categories.
+
+    If every category is excluded (edge case), fall back to original weights
+    so the score remains computable.
+    """
+    included_total = sum(
+        METRIC_CATEGORY_SCORE_WEIGHTS[key]
+        for key, included in preferences.items()
+        if included
+    )
+    if included_total <= 0:
+        return dict(METRIC_CATEGORY_SCORE_WEIGHTS)
+
+    return {
+        key: (weight / included_total) if preferences.get(key, True) else 0.0
+        for key, weight in METRIC_CATEGORY_SCORE_WEIGHTS.items()
+    }
+
+
 def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
     # ── Auto-recalculate all metrics from financial statements before scoring ──
     # This ensures newly added formulas (ROIC, Accruals Ratio, Net Debt/EBITDA, etc.)
@@ -7109,17 +7241,62 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
     except Exception:
         pass
 
+    statement_rows = query_all(
+        """SELECT id, period_end_date, fiscal_year, fiscal_quarter
+           FROM financial_statements
+           WHERE stock_id = ?
+           ORDER BY period_end_date DESC""",
+        (stock_id,),
+    )
+    statement_records: List[Dict[str, Any]] = []
+    for row in statement_rows:
+        if isinstance(row, (tuple, list)):
+            statement_records.append(
+                {
+                    "id": row[0],
+                    "period_end_date": row[1],
+                    "fiscal_year": row[2],
+                    "fiscal_quarter": row[3],
+                }
+            )
+        else:
+            statement_records.append(
+                {
+                    "id": row.get("id"),
+                    "period_end_date": row.get("period_end_date"),
+                    "fiscal_year": row.get("fiscal_year"),
+                    "fiscal_quarter": row.get("fiscal_quarter"),
+                }
+            )
+
+    latest_preferred = _select_latest_preferred_statement(statement_records)
+    snapshot_period_end = str(latest_preferred.get("period_end_date")) if latest_preferred and latest_preferred.get("period_end_date") else None
+
     rows = query_all(
-        "SELECT metric_name, metric_value FROM stock_metrics WHERE stock_id = ? ORDER BY period_end_date DESC",
+        "SELECT metric_name, metric_value, period_end_date FROM stock_metrics WHERE stock_id = ? ORDER BY period_end_date DESC",
         (stock_id,),
     )
     if not rows:
         return {"overall_score": None, "error": "No metrics available. Calculate metrics first."}
 
     latest: Dict[str, float] = {}
+
+    # Prefer a coherent as-of snapshot: exact preferred period first,
+    # then backfill missing metrics using nearest older periods.
+    if snapshot_period_end:
+        for r in rows:
+            name = r[0] if isinstance(r, (tuple, list)) else r["metric_name"]
+            val = r[1] if isinstance(r, (tuple, list)) else r["metric_value"]
+            ped = str(r[2]) if isinstance(r, (tuple, list)) else str(r.get("period_end_date"))
+            if ped == snapshot_period_end and name not in latest:
+                latest[name] = val
+
     for r in rows:
         name = r[0] if isinstance(r, (tuple, list)) else r["metric_name"]
         val = r[1] if isinstance(r, (tuple, list)) else r["metric_value"]
+        ped = str(r[2]) if isinstance(r, (tuple, list)) else str(r.get("period_end_date"))
+        if snapshot_period_end and ped > snapshot_period_end:
+            continue
         if name not in latest:
             latest[name] = val
 
@@ -7156,20 +7333,29 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
                      JOIN financial_statements fs2 ON li2.statement_id = fs2.id
                      WHERE fs2.stock_id = ? AND li2.line_item_code IN
                            ('TOTAL_COMMON_SHARES_OUTSTANDING','DILUTED_SHARES_OUTSTANDING','BASIC_SHARES_OUTSTANDING')
+                     AND (? IS NULL OR fs2.period_end_date <= ?)
                      ORDER BY fs2.period_end_date DESC LIMIT 1) AS shares,
                     (SELECT li2.amount FROM financial_line_items li2
                      JOIN financial_statements fs2 ON li2.statement_id = fs2.id
                      WHERE fs2.stock_id = ? AND li2.line_item_code = 'EBIT'
+                     AND (? IS NULL OR fs2.period_end_date <= ?)
                      ORDER BY fs2.period_end_date DESC LIMIT 1) AS ebit,
                     (SELECT li2.amount FROM financial_line_items li2
                      JOIN financial_statements fs2 ON li2.statement_id = fs2.id
                      WHERE fs2.stock_id = ? AND li2.line_item_code = 'TOTAL_DEBT'
+                     AND (? IS NULL OR fs2.period_end_date <= ?)
                      ORDER BY fs2.period_end_date DESC LIMIT 1) AS total_debt,
                     (SELECT li2.amount FROM financial_line_items li2
                      JOIN financial_statements fs2 ON li2.statement_id = fs2.id
                      WHERE fs2.stock_id = ? AND li2.line_item_code = 'CASH_EQUIVALENTS'
+                     AND (? IS NULL OR fs2.period_end_date <= ?)
                      ORDER BY fs2.period_end_date DESC LIMIT 1) AS cash
-            """, (stock_id, stock_id, stock_id, stock_id))
+            """, (
+                stock_id, snapshot_period_end, snapshot_period_end,
+                stock_id, snapshot_period_end, snapshot_period_end,
+                stock_id, snapshot_period_end, snapshot_period_end,
+                stock_id, snapshot_period_end, snapshot_period_end,
+            ))
             if li_row:
                 shares = li_row[0] if isinstance(li_row, (tuple, list)) else li_row.get("shares")
                 ebit = li_row[1] if isinstance(li_row, (tuple, list)) else li_row.get("ebit")
@@ -7201,8 +7387,9 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
             f"""SELECT li.amount FROM financial_line_items li
                 JOIN financial_statements fs ON li.statement_id = fs.id
                 WHERE fs.stock_id = ? AND UPPER(li.line_item_code) IN ({placeholders})
+                AND (? IS NULL OR fs.period_end_date <= ?)
                 ORDER BY fs.period_end_date DESC LIMIT 1""",
-            (stock_id, *[c.upper() for c in codes]),
+            (stock_id, *[c.upper() for c in codes], snapshot_period_end, snapshot_period_end),
         )
         if row:
             return row[0] if isinstance(row, (tuple, list)) else row.get("amount")
@@ -7271,7 +7458,11 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
     growth, growth_breakdown = _score_growth_detailed(latest)
     quality, quality_breakdown = _score_quality_detailed(latest)
     risk, risk_breakdown = _score_risk_detailed(latest)
-    metric_category_scores, metric_category_breakdown, overall = _score_metric_categories(latest)
+    category_preferences = _get_score_category_preferences(stock_id, user_id)
+    metric_category_scores, metric_category_breakdown, overall, metric_category_weights = _score_metric_categories(
+        latest,
+        category_preferences,
+    )
 
     # Legacy risk score remains available for existing consumers, but the
     # displayed overall score now follows the metrics taxonomy shown on the UI.
@@ -7288,6 +7479,8 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
         "details": latest,
         "metric_category_scores": {key: round(value, 1) for key, value in metric_category_scores.items()},
         "metric_category_breakdown": metric_category_breakdown,
+        "metric_category_weights": metric_category_weights,
+        "metric_category_preferences": category_preferences,
         "score_breakdown": {
             "fundamental": fund_breakdown,
             "valuation": val_breakdown,
@@ -8016,7 +8209,10 @@ def _score_cashflow_detailed(m: Dict[str, float]):
     return max(0.0, min(100.0, score)), {"base": 50, "metrics": breakdown}
 
 
-def _score_metric_categories(m: Dict[str, float]):
+def _score_metric_categories(
+    m: Dict[str, float],
+    preferences: Optional[Dict[str, bool]] = None,
+):
     profitability, profitability_breakdown = _score_profitability_detailed(m)
     liquidity, liquidity_breakdown = _score_liquidity_detailed(m)
     capital_structure, capital_structure_breakdown = _score_capital_structure_detailed(m)
@@ -8043,8 +8239,9 @@ def _score_metric_categories(m: Dict[str, float]):
         "cashflow": cashflow_breakdown,
         "growth": growth_breakdown,
     }
-    overall = sum(category_scores[key] * weight for key, weight in METRIC_CATEGORY_SCORE_WEIGHTS.items())
-    return category_scores, category_breakdown, overall
+    weights = _calculate_pro_rata_weights(preferences) if preferences else METRIC_CATEGORY_SCORE_WEIGHTS
+    overall = sum(category_scores[key] * weights[key] for key in METRIC_CATEGORY_SCORE_WEIGHTS)
+    return category_scores, category_breakdown, overall, weights
 
 
 def _resolve_yf_ticker(symbol: str, user_id: int = None) -> str:
