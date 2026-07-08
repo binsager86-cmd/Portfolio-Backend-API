@@ -220,15 +220,26 @@ def _ensure_wal_mode(conn: sqlite3.Connection) -> None:
     cur.close()
 
 
+def _open_sqlite_connection() -> sqlite3.Connection:
+    """Create a fresh SQLite connection with standard runtime pragmas."""
+    conn = sqlite3.connect(_DB_PATH, check_same_thread=False)
+    _ensure_wal_mode(conn)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
 def _get_sqlite_connection() -> sqlite3.Connection:
     """Return a shared SQLite connection for this process (dev/test runtime)."""
     global _SQLITE_CONN
     with _SQLITE_CONN_LOCK:
         if _SQLITE_CONN is None:
-            conn = sqlite3.connect(_DB_PATH, check_same_thread=False)
-            _ensure_wal_mode(conn)
-            conn.row_factory = sqlite3.Row
-            _SQLITE_CONN = conn
+            _SQLITE_CONN = _open_sqlite_connection()
+        else:
+            # Self-heal if another code path closed the shared connection.
+            try:
+                _SQLITE_CONN.execute("SELECT 1")
+            except sqlite3.ProgrammingError:
+                _SQLITE_CONN = _open_sqlite_connection()
         return _SQLITE_CONN
 
 
@@ -376,7 +387,9 @@ def get_conn():
     if _USE_PG:
         raw = engine.raw_connection()
         return _PgConnProxy(raw)
-    return _get_sqlite_connection()
+    # Return a dedicated SQLite connection for legacy call-sites that
+    # explicitly invoke conn.close() in finally blocks.
+    return _open_sqlite_connection()
 
 
 def query_df(sql: str, params: tuple = ()) -> pd.DataFrame:
