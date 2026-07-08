@@ -87,6 +87,11 @@ _FUNDAMENTALS_MAP_CACHE: Optional[Dict[str, Dict[str, Optional[float]]]] = None
 _FUNDAMENTALS_MAP_CACHE_AT: float = 0.0
 _FUNDAMENTALS_MAP_TTL_SEC: float = 600.0  # 10 minutes
 
+# Latest close map: ticker -> latest cached close (fils for KSE universe).
+_LATEST_CLOSE_MAP_CACHE: Optional[Dict[str, float]] = None
+_LATEST_CLOSE_MAP_CACHE_AT: float = 0.0
+_LATEST_CLOSE_MAP_TTL_SEC: float = 600.0  # 10 minutes
+
 # Scanner response cache: assembled List[RatedStock] held for 30 s so
 # rapid re-fetches (focus events, filter clicks) return instantly.
 _SCANNER_RESP_CACHE: Optional[list] = None
@@ -429,6 +434,50 @@ def _cache_key(ticker: str, as_of: Optional[date] = None) -> str:
     return f"{ticker.upper()}:{d}"
 
 
+def _get_latest_close_map() -> Dict[str, float]:
+    """Return cached ticker -> latest close map from ee_ohlcv_cache."""
+    global _LATEST_CLOSE_MAP_CACHE, _LATEST_CLOSE_MAP_CACHE_AT
+
+    now = time.time()
+    if (
+        _LATEST_CLOSE_MAP_CACHE is not None
+        and (now - _LATEST_CLOSE_MAP_CACHE_AT) < _LATEST_CLOSE_MAP_TTL_SEC
+    ):
+        return _LATEST_CLOSE_MAP_CACHE
+
+    close_map: Dict[str, float] = {}
+    try:
+        from app.core.database import query_all
+
+        rows = query_all(
+            """
+            SELECT c.ticker, c.close
+            FROM ee_ohlcv_cache c
+            JOIN (
+                SELECT ticker, MAX(bar_date) AS max_bar_date
+                FROM ee_ohlcv_cache
+                GROUP BY ticker
+            ) mx
+              ON mx.ticker = c.ticker
+             AND mx.max_bar_date = c.bar_date
+            """,
+            (),
+        )
+
+        for row in rows or []:
+            ticker = _normalize_symbol(row.get("ticker"))
+            close_val = _safe_float(row.get("close"))
+            if ticker and close_val is not None:
+                close_map[ticker] = close_val
+
+        _LATEST_CLOSE_MAP_CACHE = close_map
+        _LATEST_CLOSE_MAP_CACHE_AT = now
+        return close_map
+    except Exception as exc:
+        logger.warning("Could not refresh latest close map; using stale cache or empty dict: %s", exc)
+        return _LATEST_CLOSE_MAP_CACHE or {}
+
+
 def _is_computed_today(computed_at: object, today_iso: Optional[str] = None) -> bool:
     """Treat both date-only and timestamp values as fresh for the same day."""
     if computed_at is None:
@@ -450,6 +499,19 @@ def _safe_float(v) -> Optional[float]:
         return None if (math.isnan(f) or math.isinf(f)) else f
     except (TypeError, ValueError):
         return None
+
+
+def _derive_pe_from_price_eps(last_price_fils: Optional[float], eps_kwd: Optional[float]) -> Optional[float]:
+    """Derive P/E using KSE price units (fils) and EPS in KWD."""
+    if last_price_fils is None or eps_kwd is None:
+        return None
+    if last_price_fils <= 0 or eps_kwd <= 0:
+        return None
+    # KSE prices are stored in fils; EPS is in KWD.
+    derived = (last_price_fils / 1000.0) / eps_kwd
+    if derived <= 0 or derived > 5000:
+        return None
+    return derived
 
 
 def _extract_mce_from_reason(reason: object) -> Optional[float]:
@@ -693,6 +755,11 @@ def _run_analysis(ticker: str) -> Optional[dict]:
 
             supports = cached_row.get("supports_json") or []
             resistances = cached_row.get("resistances_json") or []
+            # Always refresh display close from cached OHLCV so detail price tracks
+            # daily ingestion even if a prior rating row had stale indicators_json.
+            latest_close = _safe_float(ohlcv_cached["close"].iloc[-1])
+            if latest_close is not None:
+                indicators["close"] = latest_close
             entry = {
                 "entry_primary": cached_row.get("entry_primary"),
                 "entry_aggressive": cached_row.get("entry_aggressive"),
@@ -907,6 +974,7 @@ async def get_scanner(
         # ── Use cached meta map (rebuilt at most every 10 min) ───────────────
         meta_map = _get_meta_map()
         fundamentals_map = _get_fundamentals_map()
+        latest_close_map = _get_latest_close_map()
 
         results: List[RatedStock] = []
         for row in db_rows:
@@ -950,14 +1018,16 @@ async def get_scanner(
 
             fmeta = fundamentals_map.get(t, {})
             bvps = _safe_float(fmeta.get("book_value_per_share"))
-            pe_ratio = _safe_float(fmeta.get("pe_ratio"))
-
-            # Derive P/E from latest scanner price and EPS when direct PE is missing.
-            if pe_ratio is None:
-                eps_latest = _safe_float(fmeta.get("eps"))
+            # Use the most recent close from OHLCV for the scanner "Current" field.
+            # Fallback to rating-row last_price when no OHLCV bar is available.
+            last_price = _safe_float(latest_close_map.get(t))
+            if last_price is None:
                 last_price = _safe_float(row.get("last_price"))
-                if eps_latest is not None and eps_latest > 0 and last_price is not None:
-                    pe_ratio = last_price / eps_latest
+
+            eps_latest = _safe_float(fmeta.get("eps"))
+            pe_ratio = _derive_pe_from_price_eps(last_price, eps_latest)
+            if pe_ratio is None:
+                pe_ratio = _safe_float(fmeta.get("pe_ratio"))
 
             results.append(RatedStock(
                 ticker=t,
@@ -970,7 +1040,7 @@ async def get_scanner(
                 entry_primary=row.get("entry_primary"),
                 stop_loss=row.get("stop_loss"),
                 tp1=row.get("tp1"),
-                last_price=row.get("last_price"),
+                last_price=last_price,
                 book_value_per_share=round(bvps, 3) if bvps is not None else None,
                 pe_ratio=round(pe_ratio, 2) if pe_ratio is not None else None,
                 computed_at=row.get("computed_at"),
