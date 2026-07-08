@@ -21,6 +21,8 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import subprocess
+import sys
 import traceback
 from datetime import date, datetime
 from typing import Dict, List, Optional, Tuple
@@ -71,9 +73,25 @@ def run_shadow_scoring(signal_date: Optional[str] = None) -> Dict:
         "details": [],
     }
 
-    for ticker in SHADOW_ROSTER:
+    # Prefer current SHADOW roster from DB; fallback to static list.
+    db_rows = query_all(
+        "SELECT DISTINCT stock_ticker FROM ml_models WHERE status = 'SHADOW' ORDER BY stock_ticker",
+        (),
+    )
+    tickers = [str(r.get("stock_ticker") or "").strip().upper() for r in db_rows or [] if str(r.get("stock_ticker") or "").strip()]
+    if not tickers:
+        tickers = list(SHADOW_ROSTER)
+
+    for ticker in tickers:
         detail: Dict = {"ticker": ticker}
         try:
+            # LightGBM can abort the process on malformed bundles; isolate load check.
+            if not _bundle_loadable(ticker):
+                detail.update({"skipped": True, "reason": "bundle_unloadable"})
+                summary["skipped"] += 1
+                summary["details"].append(detail)
+                continue
+
             result = _score_one(
                 ticker=ticker,
                 today=today,
@@ -106,6 +124,41 @@ def run_shadow_scoring(signal_date: Optional[str] = None) -> Dict:
         summary["errors"],
     )
     return summary
+
+
+def _bundle_loadable(ticker: str, timeout_sec: int = 20) -> bool:
+    """Verify model bundle is loadable in an isolated subprocess.
+
+    This prevents a single bad LightGBM model file from crashing the full
+    shadow run process.
+    """
+    clean_ticker = str(ticker or "").strip().upper()
+    if not clean_ticker:
+        return False
+
+    code = (
+        "from app.services.eagle_eye.ml.model_store import load_model_bundle;"
+        f"b=load_model_bundle(tier='per_stock', identifier='{clean_ticker}_{PRIMARY_LABEL}', version='current');"
+        "raise SystemExit(0 if (b is not None and b.model is not None) else 2)"
+    )
+    try:
+        completed = subprocess.run(
+            [sys.executable, "-c", code],
+            capture_output=True,
+            text=True,
+            timeout=timeout_sec,
+            check=False,
+        )
+    except Exception as exc:
+        LOGGER.warning("shadow_runner: bundle preflight failed for %s: %s", clean_ticker, exc)
+        return False
+
+    if completed.returncode != 0:
+        stderr = (completed.stderr or "").strip().splitlines()
+        msg = stderr[-1] if stderr else "unloadable model bundle"
+        LOGGER.warning("shadow_runner: skipping %s due to bundle load failure: %s", clean_ticker, msg)
+        return False
+    return True
 
 
 # ---------------------------------------------------------------------------
