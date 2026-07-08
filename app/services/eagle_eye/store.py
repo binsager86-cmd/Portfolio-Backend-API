@@ -553,8 +553,8 @@ def load_all_ratings(
     rows = query_all(
         """
          SELECT ticker, name_en, sector, market_tier, stage, rating, confidence, ml_score, thesis,
-               entry_primary, stop_loss, tp1, last_price, computed_at, computed_date,
-               volume_context_json
+                             entry_primary, stop_loss, tp1, last_price, computed_at, computed_date,
+                             volume_context_json, indicators_json
         FROM   ee_ratings_cache
         WHERE  confidence >= ?
           AND  (computed_date = ? OR computed_at = ? OR computed_at LIKE ?)
@@ -569,10 +569,15 @@ def load_all_ratings(
     for r in rows:
         d = dict(r.items())
         vc_raw = d.pop("volume_context_json", None)
+        indicators_raw = d.pop("indicators_json", None)
         try:
             d["volume_context"] = json.loads(vc_raw) if vc_raw else {}
         except Exception:
             d["volume_context"] = {}
+        try:
+            d["indicators"] = json.loads(indicators_raw) if indicators_raw else {}
+        except Exception:
+            d["indicators"] = {}
         result.append(d)
     return result
 

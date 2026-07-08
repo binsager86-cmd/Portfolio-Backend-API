@@ -1016,6 +1016,14 @@ async def get_scanner(
                 volume_trend_5d=str(vc_raw.get("volume_trend_5d") or "NEUTRAL"),
             ) if vc_raw else None
 
+            indicators_raw = row.get("indicators") if isinstance(row.get("indicators"), dict) else {}
+            latest_volume = _safe_float(indicators_raw.get("volume"))
+            average_volume = _safe_float(indicators_raw.get("avg_volume_20d"))
+            if average_volume is None:
+                rel_volume = _safe_float((vc_raw or {}).get("relative_volume"))
+                if latest_volume is not None and rel_volume is not None and rel_volume > 0:
+                    average_volume = latest_volume / rel_volume
+
             fmeta = fundamentals_map.get(t, {})
             bvps = _safe_float(fmeta.get("book_value_per_share"))
             # Use the most recent close from OHLCV for the scanner "Current" field.
@@ -1040,6 +1048,8 @@ async def get_scanner(
                 entry_primary=row.get("entry_primary"),
                 stop_loss=row.get("stop_loss"),
                 tp1=row.get("tp1"),
+                average_volume=round(average_volume, 2) if average_volume is not None else None,
+                latest_volume=round(latest_volume, 2) if latest_volume is not None else None,
                 last_price=last_price,
                 book_value_per_share=round(bvps, 3) if bvps is not None else None,
                 pe_ratio=round(pe_ratio, 2) if pe_ratio is not None else None,

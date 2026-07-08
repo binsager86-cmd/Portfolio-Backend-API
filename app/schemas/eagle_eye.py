@@ -49,6 +49,8 @@ class RatedStock(BaseModel):
     entry_primary: Optional[float] = None
     stop_loss: Optional[float] = None
     tp1: Optional[float] = None
+    average_volume: Optional[float] = None
+    latest_volume: Optional[float] = None
     last_price: Optional[float] = None
     book_value_per_share: Optional[float] = None
     pe_ratio: Optional[float] = None
