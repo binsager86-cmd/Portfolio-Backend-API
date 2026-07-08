@@ -16,6 +16,7 @@ Both layers share the same underlying connection.
 import json
 import math
 import sqlite3
+import threading
 from contextlib import contextmanager
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -31,6 +32,8 @@ from app.core.config import get_settings
 _settings = get_settings()
 _DB_PATH = _settings.database_abs_path
 _USE_PG = _settings.use_postgres
+_SQLITE_CONN: Optional[sqlite3.Connection] = None
+_SQLITE_CONN_LOCK = threading.Lock()
 
 
 def safe_json_dumps(obj: Any) -> str:
@@ -206,11 +209,27 @@ def _pg_sql_named(sql: str, params: tuple) -> tuple[str, dict]:
 
 
 def _ensure_wal_mode(conn: sqlite3.Connection) -> None:
-    """Enable WAL journal mode for safe concurrent reads."""
+    """Enable SQLite pragmas tuned for local/dev runtime throughput."""
     cur = conn.cursor()
     cur.execute("PRAGMA journal_mode=WAL;")
     cur.fetchone()
+    cur.execute("PRAGMA synchronous=NORMAL;")
+    cur.execute("PRAGMA temp_store=MEMORY;")
+    cur.execute("PRAGMA cache_size=-20000;")
+    cur.execute("PRAGMA foreign_keys=ON;")
     cur.close()
+
+
+def _get_sqlite_connection() -> sqlite3.Connection:
+    """Return a shared SQLite connection for this process (dev/test runtime)."""
+    global _SQLITE_CONN
+    with _SQLITE_CONN_LOCK:
+        if _SQLITE_CONN is None:
+            conn = sqlite3.connect(_DB_PATH, check_same_thread=False)
+            _ensure_wal_mode(conn)
+            conn.row_factory = sqlite3.Row
+            _SQLITE_CONN = conn
+        return _SQLITE_CONN
 
 
 # ── PG cursor proxy — translates ?-style placeholders to %s ─────────
@@ -345,13 +364,7 @@ def get_connection():
         finally:
             raw.close()
     else:
-        conn = sqlite3.connect(_DB_PATH, check_same_thread=False)
-        _ensure_wal_mode(conn)
-        conn.row_factory = sqlite3.Row  # dict-like rows
-        try:
-            yield conn
-        finally:
-            conn.close()
+        yield _get_sqlite_connection()
 
 
 def get_conn():
@@ -363,9 +376,7 @@ def get_conn():
     if _USE_PG:
         raw = engine.raw_connection()
         return _PgConnProxy(raw)
-    conn = sqlite3.connect(_DB_PATH, check_same_thread=False)
-    _ensure_wal_mode(conn)
-    return conn
+    return _get_sqlite_connection()
 
 
 def query_df(sql: str, params: tuple = ()) -> pd.DataFrame:

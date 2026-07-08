@@ -16,13 +16,14 @@ FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 REAL_DATA = Path(__file__).resolve().parents[2] / "data" / "kse"
 SYMBOLS = ["TIJARA", "BPCC", "ZAIN", "SANAM", "MABANEE"]
 JOINER_SYMBOL = "JOINER"
+ADVERSARIAL_SYMBOLS = ["CHOP", "FAKEOUT", "PUMP"]
+SUITE_SYMBOLS = SYMBOLS + [JOINER_SYMBOL] + ADVERSARIAL_SYMBOLS
 SYNTHETIC_OVERRIDES = {
     "min_daily_value_kwd": 100000.0,
 }
 
 
-@pytest.fixture(autouse=True)
-def _reset_regression_tables():
+def _reset_regression_tables_now() -> None:
     ensure_schema()
     ensure_audit_schema()
     for t in [
@@ -53,7 +54,33 @@ def _reset_regression_tables():
             """,
             (key, json.dumps(value, ensure_ascii=True), ts, 0, None),
         )
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _reset_regression_tables():
+    _reset_regression_tables_now()
     yield
+
+
+@pytest.fixture(scope="module")
+def _synthetic_suite() -> dict:
+    mn, mx = _load_synthetic(SUITE_SYMBOLS)
+    rep = run_backtest(SUITE_SYMBOLS, mn, mx, config_overrides=SYNTHETIC_OVERRIDES)
+    signal_counts = query_all(
+        """
+        SELECT symbol, signal_type, COUNT(1) AS n
+        FROM ee_signals
+        GROUP BY symbol, signal_type
+        ORDER BY symbol, signal_type
+        """,
+        (),
+    )
+    return {
+        "mn": mn,
+        "mx": mx,
+        "report": rep,
+        "signal_counts": {(str(r["symbol"]), str(r["signal_type"])): int(r["n"] or 0) for r in signal_counts},
+    }
 
 
 def _load_synthetic(symbols: list[str] | None = None) -> tuple[int, int]:
@@ -65,8 +92,8 @@ def _load_synthetic(symbols: list[str] | None = None) -> tuple[int, int]:
     return int(row["mn"]), int(row["mx"])
 
 
-def _run_fixture_backtest(mn: int, mx: int):
-    return run_backtest(SYMBOLS, mn, mx, config_overrides=SYNTHETIC_OVERRIDES)
+def _run_fixture_backtest(mn: int, mx: int, symbols: list[str] | None = None):
+    return run_backtest(symbols or SYMBOLS, mn, mx, config_overrides=SYNTHETIC_OVERRIDES)
 
 
 def _signal_dates(symbol: str, signal_type: str) -> list[int]:
@@ -93,9 +120,7 @@ def _trade(symbol: str):
     )
 
 
-def test_r1_tijara_regression_gate():
-    mn, mx = _load_synthetic()
-    _run_fixture_backtest(mn, mx)
+def test_r1_tijara_regression_gate(_synthetic_suite):
 
     acc = _signal_dates("TIJARA", "ACCUMULATION_ALERT")
     brk = _signal_dates("TIJARA", "BREAKOUT_CONFIRMED")
@@ -108,9 +133,7 @@ def test_r1_tijara_regression_gate():
     assert float(t["net_return"] or 0.0) >= 0.40
 
 
-def test_r2_bpcc_regression_gate():
-    mn, mx = _load_synthetic()
-    _run_fixture_backtest(mn, mx)
+def test_r2_bpcc_regression_gate(_synthetic_suite):
 
     brk = _signal_dates("BPCC", "BREAKOUT_CONFIRMED")
     assert brk
@@ -137,9 +160,7 @@ def test_r2_bpcc_regression_gate():
     assert early_longs == []
 
 
-def test_r3_zain_regression_gate():
-    mn, mx = _load_synthetic()
-    _run_fixture_backtest(mn, mx)
+def test_r3_zain_regression_gate(_synthetic_suite):
 
     brk_dates = _signal_dates("ZAIN", "BREAKOUT_CONFIRMED")
     assert brk_dates
@@ -161,9 +182,7 @@ def test_r3_zain_regression_gate():
     assert exits == []
 
 
-def test_r4_sanam_regression_gate():
-    mn, mx = _load_synthetic()
-    _run_fixture_backtest(mn, mx)
+def test_r4_sanam_regression_gate(_synthetic_suite):
 
     acc = _signal_dates("SANAM", "ACCUMULATION_ALERT")
     assert acc
@@ -186,9 +205,7 @@ def test_r4_sanam_regression_gate():
     assert float(t["net_return"] or 0.0) >= 0.25
 
 
-def test_r5_mabanee_regression_gate():
-    mn, mx = _load_synthetic()
-    _run_fixture_backtest(mn, mx)
+def test_r5_mabanee_regression_gate(_synthetic_suite):
 
     brk = _signal_dates("MABANEE", "BREAKOUT_CONFIRMED")
     assert brk, "R5a: BREAKOUT_CONFIRMED missing for MABANEE"
@@ -259,9 +276,52 @@ def test_r5_mabanee_regression_gate():
     assert reentries == [], "R5f: re-entry occurred after exit"
 
 
-def test_r7_synthetic_joiner_trend_join_gate():
-    mn, mx = _load_synthetic([JOINER_SYMBOL])
-    run_backtest([JOINER_SYMBOL], mn, mx, config_overrides=SYNTHETIC_OVERRIDES)
+def test_r6_adversarial_rejection_gate(_synthetic_suite):
+    near_misses = query_all(
+        """
+        SELECT symbol, trade_date, signal_type, evidence_json
+        FROM ee_signals
+        WHERE symbol IN ('CHOP', 'FAKEOUT', 'PUMP')
+          AND signal_type IN ('PHASE_ONLY', 'DISTRIBUTION_WARNING', 'AVOID_SET')
+        ORDER BY symbol, trade_date
+        """,
+        (),
+    )
+    _ = near_misses  # kept for external reporting; WATCH/revert activity is allowed.
+
+    forbidden_signals = query_all(
+        """
+        SELECT symbol, signal_type, trade_date
+        FROM ee_signals
+        WHERE symbol IN ('CHOP', 'FAKEOUT', 'PUMP')
+          AND signal_type IN ('ACCUMULATION_ALERT', 'BREAKOUT_CONFIRMED')
+        """,
+        (),
+    )
+    assert forbidden_signals == [], f"R6: adversarial fixtures emitted entry signals: {forbidden_signals}"
+
+    opened = query_all(
+        """
+        SELECT symbol, id
+        FROM ee_backtest_trades
+        WHERE symbol IN ('CHOP', 'FAKEOUT', 'PUMP')
+        """,
+        (),
+    )
+    assert opened == [], f"R6: adversarial fixtures opened trades: {opened}"
+
+    live_positions = query_all(
+        """
+        SELECT symbol, id
+        FROM ee_positions
+        WHERE symbol IN ('CHOP', 'FAKEOUT', 'PUMP')
+        """,
+        (),
+    )
+    assert live_positions == [], f"R6: adversarial fixtures left open positions: {live_positions}"
+
+
+def test_r7_synthetic_joiner_trend_join_gate(_synthetic_suite):
 
     joined = query_all(
         """
@@ -341,6 +401,7 @@ def test_r7_synthetic_joiner_trend_join_gate():
 
 
 def test_real_data_statistical_gate_optional():
+    _reset_regression_tables_now()
     missing = [s for s in SYMBOLS if not (REAL_DATA / f"{s}.csv").exists()]
     if missing:
         pytest.skip(f"Real KSE CSV data not found under data/kse: {', '.join(missing)}")

@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import hashlib
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -1770,6 +1771,7 @@ def test_u4_signals_api_auth_and_config_workflow(test_client, auth_headers):
         ("get", "/api/v1/eagle-eye/signals/ratings/TIJARA"),
         ("get", "/api/v1/eagle-eye/signals/state/TIJARA"),
         ("post", "/api/v1/eagle-eye/signals/scan/run"),
+        ("get", "/api/v1/eagle-eye/signals/scan-preview"),
         ("get", "/api/v1/eagle-eye/signals/config"),
         ("put", "/api/v1/eagle-eye/signals/config"),
         ("get", "/api/v1/eagle-eye/signals/performance"),
@@ -1860,6 +1862,43 @@ def test_u4_signals_api_auth_and_config_workflow(test_client, auth_headers):
     perf = test_client.get("/api/v1/eagle-eye/signals/performance", headers=auth_headers)
     assert perf.status_code == 200
     assert perf.json()["data"]["advice"] is False
+
+
+def test_u4b_scan_preview_admin_endpoint(test_client, auth_headers, tmp_path, monkeypatch):
+    from app.api.v1 import eagle_eye_signals as sig_api
+
+    unauthorized = test_client.get("/api/v1/eagle-eye/signals/scan-preview")
+    assert unauthorized.status_code == 401
+
+    forbidden = test_client.get("/api/v1/eagle-eye/signals/scan-preview", headers=auth_headers)
+    assert forbidden.status_code == 403
+
+    admin_headers = _seed_admin_user(test_client)
+
+    empty_dir = tmp_path / "kse-empty"
+    empty_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(sig_api, "_scan_preview_dir", lambda: empty_dir)
+
+    empty_resp = test_client.get("/api/v1/eagle-eye/signals/scan-preview", headers=admin_headers)
+    assert empty_resp.status_code == 200
+    payload = empty_resp.json()["data"]
+    assert payload["items"] == []
+    assert payload["loaded_symbols"] == []
+    assert "No CSV files found" in payload["message"]
+    assert payload["advice"] is False
+
+    data_dir = tmp_path / "kse"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    src = FIXTURES / "synthetic_tijara.csv"
+    shutil.copyfile(src, data_dir / "preview_tijara.csv")
+    monkeypatch.setattr(sig_api, "_scan_preview_dir", lambda: data_dir)
+
+    filled_resp = test_client.get("/api/v1/eagle-eye/signals/scan-preview", headers=admin_headers)
+    assert filled_resp.status_code == 200, filled_resp.text
+    body = filled_resp.json()["data"]
+    assert body["advice"] is False
+    assert body["loaded_symbols"] == ["PREVIEW_TIJARA"]
+    assert isinstance(body["items"], list)
 
 
 def test_u5_risk_suppression_emits_signal_and_skips_position():
