@@ -37,6 +37,52 @@
       "trade_date_start": 1669161600
     }
   },
+  "CHOP": {
+    "chop": {
+      "bar_end": 559,
+      "bar_start": 220,
+      "trade_date_end": 1677110400,
+      "trade_date_start": 1636070400
+    },
+    "prefix": {
+      "bar_end": 219,
+      "bar_start": 0,
+      "trade_date_end": 1635984000,
+      "trade_date_start": 1609459200
+    }
+  },
+  "FAKEOUT": {
+    "base": {
+      "bar_end": 379,
+      "bar_start": 260,
+      "trade_date_end": 1655337600,
+      "trade_date_start": 1640908800
+    },
+    "fakeout": {
+      "bar_end": 383,
+      "bar_start": 380,
+      "trade_date_end": 1655856000,
+      "trade_date_start": 1655424000
+    },
+    "pre": {
+      "bar_end": 259,
+      "bar_start": 220,
+      "trade_date_end": 1640822400,
+      "trade_date_start": 1636070400
+    },
+    "prefix": {
+      "bar_end": 219,
+      "bar_start": 0,
+      "trade_date_end": 1635984000,
+      "trade_date_start": 1609459200
+    },
+    "tail": {
+      "bar_end": 453,
+      "bar_start": 384,
+      "trade_date_end": 1664323200,
+      "trade_date_start": 1655942400
+    }
+  },
   "JOINER": {
     "breakout": {
       "bar_end": 259,
@@ -117,6 +163,38 @@
       "bar_start": 473,
       "trade_date_end": 1669593600,
       "trade_date_start": 1666742400
+    }
+  },
+  "PUMP": {
+    "fade": {
+      "bar_end": 400,
+      "bar_start": 391,
+      "trade_date_end": 1657843200,
+      "trade_date_start": 1656892800
+    },
+    "prefix": {
+      "bar_end": 219,
+      "bar_start": 0,
+      "trade_date_end": 1635984000,
+      "trade_date_start": 1609459200
+    },
+    "pretrend": {
+      "bar_end": 389,
+      "bar_start": 220,
+      "trade_date_end": 1656547200,
+      "trade_date_start": 1636070400
+    },
+    "spike": {
+      "bar_end": 390,
+      "bar_start": 390,
+      "trade_date_end": 1656633600,
+      "trade_date_start": 1656633600
+    },
+    "tail": {
+      "bar_end": 450,
+      "bar_start": 401,
+      "trade_date_end": 1663891200,
+      "trade_date_start": 1658102400
     }
   },
   "SANAM": {

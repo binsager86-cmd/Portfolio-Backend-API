@@ -225,6 +225,42 @@ def _assert_breakout_crossing(df: pd.DataFrame, symbol: str, base_window: tuple[
     )
 
 
+def _assert_markup_anchor(
+    df: pd.DataFrame,
+    symbol: str,
+    base_window: tuple[int, int],
+    peak_window: tuple[int, int],
+    min_gain: float,
+) -> None:
+    high = df["high"].to_numpy(dtype=float)
+    close = df["close"].to_numpy(dtype=float)
+    b0, b1 = base_window
+    p0, p1 = peak_window
+    base_top = float(np.nanmax(high[b0:b1]))
+    peak = float(np.nanmax(close[p0:p1]))
+    gain = (peak / max(base_top, 1e-9)) - 1.0
+    assert gain >= min_gain, (
+        f"{symbol}: markup anchor failed ({gain:.3f} < {min_gain:.3f}) "
+        f"base_top={base_top:.3f} peak={peak:.3f}"
+    )
+
+
+def _qualifying_base_exists(close: np.ndarray, end_exclusive: int, min_sessions: int = 60, max_width: float = 0.18) -> bool:
+    if end_exclusive <= min_sessions:
+        return False
+    for i in range(min_sessions, end_exclusive + 1):
+        win = close[i - min_sessions : i]
+        low = float(np.min(win))
+        high = float(np.max(win))
+        if low <= 0:
+            continue
+        width = (high / low) - 1.0
+        slope = abs(_norm_lr_fractional_change(win))
+        if width <= max_width and slope <= 0.02:
+            return True
+    return False
+
+
 def _ohlcv_from_close(
     symbol: str,
     close: np.ndarray,
@@ -237,9 +273,11 @@ def _ohlcv_from_close(
     seen: set[float] = set()
     for i in range(len(close)):
         v = round(float(close[i]), 3)
-        if v in seen:
-            close[i] = close[i] + ((i + 1) * 1e-4)
+        bump = 1
+        while v in seen:
+            close[i] = close[i] + ((i + 1) * bump * 1e-4)
             v = round(float(close[i]), 3)
+            bump += 1
         seen.add(v)
     prev_close = np.roll(close, 1)
     prev_close[0] = close[0]
@@ -615,6 +653,109 @@ def _build_joiner(rng: np.random.Generator) -> SeriesBundle:
     return SeriesBundle(close=close, volume=volume, range_frac=range_frac, segments=segments)
 
 
+def _build_chop(rng: np.random.Generator) -> SeriesBundle:
+    n = 340
+    close = 100.0 + np.where(np.arange(n) % 2 == 0, -0.95, 0.95) + rng.normal(0.0, 0.03, size=n)
+    close = np.maximum(close, 0.1)
+
+    base_vol = 88_000.0
+    volume = base_vol * rng.uniform(0.92, 1.08, size=n)
+    range_frac = np.full(n, 0.020)
+
+    close, volume, range_frac, windows, segments = _prepend_prefix(
+        rng,
+        close,
+        volume,
+        range_frac,
+        [],
+        {
+            "chop": (0, n),
+        },
+    )
+    return SeriesBundle(close=close, volume=volume, range_frac=range_frac, accumulation_windows=windows, segments=segments)
+
+
+def _build_fakeout(rng: np.random.Generator) -> SeriesBundle:
+    pre = np.linspace(94.0, 98.0, 40)
+    base = 99.5 + 1.8 * np.sin(np.linspace(0, 9.0 * np.pi, 120))
+    fakeout = np.array([104.2, 100.8, 99.7, 100.3])
+    tail = 99.8 + 1.1 * np.sin(np.linspace(0, 4.5 * np.pi, 70))
+    close = np.concatenate([pre, base, fakeout, tail])
+    close = _apply_close_noise(close, rng)
+
+    base_vol = 92_000.0
+    volume = np.full(len(close), base_vol)
+    range_frac = np.full(len(close), 0.014)
+    base_start = len(pre)
+    base_end = base_start + len(base)
+    for i in range(base_start, base_end):
+        volume[i] = base_vol * rng.uniform(0.95, 1.05)
+
+    fk_i = base_end
+    volume[fk_i] = base_vol * 1.33
+    volume[fk_i + 1] = base_vol * 1.26
+    volume[fk_i + 2] = base_vol * 1.12
+    volume[fk_i + 3] = base_vol * 1.08
+    range_frac[fk_i : fk_i + 4] = np.array([0.021, 0.016, 0.015, 0.014])
+
+    close, volume, range_frac, windows, segments = _prepend_prefix(
+        rng,
+        close,
+        volume,
+        range_frac,
+        [],
+        {
+            "pre": (0, len(pre)),
+            "base": (len(pre), len(pre) + len(base)),
+            "fakeout": (len(pre) + len(base), len(pre) + len(base) + len(fakeout)),
+            "tail": (len(pre) + len(base) + len(fakeout), len(close)),
+        },
+    )
+    return SeriesBundle(close=close, volume=volume, range_frac=range_frac, accumulation_windows=windows, segments=segments)
+
+
+def _build_pump(rng: np.random.Generator) -> SeriesBundle:
+    pretrend = np.linspace(82.0, 128.0, 150)
+    lead = np.linspace(pretrend[-1] * 1.002, pretrend[-1] * 1.028, 20)
+    prev = float(lead[-1])
+    spike = np.array([prev * 1.19])
+    fade = np.linspace(spike[0] * 0.97, prev * 1.01, 10)
+    tail = np.linspace(fade[-1], prev * 0.995, 50)
+    close = np.concatenate([pretrend, lead, spike, fade, tail])
+    close = _apply_close_noise(close, rng)
+
+    base_vol = 96_000.0
+    volume = np.full(len(close), base_vol)
+    range_frac = np.full(len(close), 0.014)
+    for i in range(0, len(pretrend) + len(lead)):
+        volume[i] = base_vol * rng.uniform(0.95, 1.15)
+
+    spike_i = len(pretrend) + len(lead)
+    volume[spike_i] = base_vol * 5.1
+    range_frac[spike_i] = 0.045
+    for i in range(spike_i + 1, min(len(close), spike_i + 11)):
+        volume[i] = base_vol * rng.uniform(1.35, 1.70)
+        range_frac[i] = 0.024
+
+    close, volume, range_frac, windows, segments = _prepend_prefix(
+        rng,
+        close,
+        volume,
+        range_frac,
+        [],
+        {
+            "pretrend": (0, len(pretrend) + len(lead)),
+            "spike": (len(pretrend) + len(lead), len(pretrend) + len(lead) + len(spike)),
+            "fade": (
+                len(pretrend) + len(lead) + len(spike),
+                len(pretrend) + len(lead) + len(spike) + len(fade),
+            ),
+            "tail": (len(pretrend) + len(lead) + len(spike) + len(fade), len(close)),
+        },
+    )
+    return SeriesBundle(close=close, volume=volume, range_frac=range_frac, accumulation_windows=windows, segments=segments)
+
+
 def _self_check_tijara(df: pd.DataFrame) -> None:
     close = df["close"].to_numpy(dtype=float)
     vol = df["volume"].to_numpy(dtype=float)
@@ -633,6 +774,7 @@ def _self_check_tijara(df: pd.DataFrame) -> None:
     brk_i = pre + base_len
     assert rv[brk_i] >= 3.5, f"TIJARA: breakout rel_volume < 3.5 ({rv[brk_i]:.3f})"
     _assert_breakout_crossing(df, "TIJARA", (pre, pre + base_len), (brk_i, brk_i + 2))
+    _assert_markup_anchor(df, "TIJARA", (pre, pre + base_len), (brk_i, len(df)), min_gain=0.80)
 
 
 def _self_check_bpcc(df: pd.DataFrame) -> None:
@@ -651,6 +793,7 @@ def _self_check_bpcc(df: pd.DataFrame) -> None:
     brk_i = PREFIX_SESSIONS + 200
     assert rv[brk_i] >= 3.0, f"BPCC: breakout rel_volume < 3.0 ({rv[brk_i]:.3f})"
     _assert_breakout_crossing(df, "BPCC", (PREFIX_SESSIONS + 120, PREFIX_SESSIONS + 200), (brk_i, brk_i + 3))
+    _assert_markup_anchor(df, "BPCC", (PREFIX_SESSIONS + 120, PREFIX_SESSIONS + 200), (brk_i, len(df)), min_gain=0.12)
 
 
 def _self_check_zain(df: pd.DataFrame) -> None:
@@ -669,6 +812,7 @@ def _self_check_zain(df: pd.DataFrame) -> None:
     brk_i = PREFIX_SESSIONS + 140
     assert rv[brk_i] >= 3.0, f"ZAIN: breakout rel_volume < 3.0 ({rv[brk_i]:.3f})"
     _assert_breakout_crossing(df, "ZAIN", (PREFIX_SESSIONS + 30, PREFIX_SESSIONS + 140), (brk_i, brk_i + 2))
+    _assert_markup_anchor(df, "ZAIN", (PREFIX_SESSIONS + 30, PREFIX_SESSIONS + 140), (brk_i, len(df)), min_gain=0.12)
 
 
 def _self_check_sanam(df: pd.DataFrame) -> None:
@@ -685,6 +829,7 @@ def _self_check_sanam(df: pd.DataFrame) -> None:
             streak = 0
     assert best >= 15, f"SANAM: RSI>70 streak too short ({best})"
     _assert_breakout_crossing(df, "SANAM", (PREFIX_SESSIONS, PREFIX_SESSIONS + 100), (PREFIX_SESSIONS + 100, PREFIX_SESSIONS + 102))
+    _assert_markup_anchor(df, "SANAM", (PREFIX_SESSIONS, PREFIX_SESSIONS + 100), (PREFIX_SESSIONS + 100, len(df)), min_gain=0.45)
 
 
 def _self_check_mabanee(df: pd.DataFrame) -> None:
@@ -709,6 +854,7 @@ def _self_check_mabanee(df: pd.DataFrame) -> None:
     below = np.where(post < post_sma)[0]
     assert len(below) > 0, "MABANEE: decline never crosses below SMA200"
     _assert_breakout_crossing(df, "MABANEE", (PREFIX_SESSIONS, PREFIX_SESSIONS + 160), (PREFIX_SESSIONS + 160, PREFIX_SESSIONS + 163))
+    _assert_markup_anchor(df, "MABANEE", (PREFIX_SESSIONS, PREFIX_SESSIONS + 160), (PREFIX_SESSIONS + 160, len(df)), min_gain=0.25)
 
 
 def _self_check_joiner(df: pd.DataFrame) -> None:
@@ -745,6 +891,56 @@ def _self_check_joiner(df: pd.DataFrame) -> None:
     _assert_breakout_crossing(df, "JOINER", (0, PREFIX_SESSIONS), (PREFIX_SESSIONS, PREFIX_SESSIONS + 40))
 
 
+def _self_check_chop(df: pd.DataFrame) -> None:
+    close = df["close"].to_numpy(dtype=float)
+    vol = df["volume"].to_numpy(dtype=float)
+    obv = _obv(close, vol)
+
+    hits = 0
+    start = PREFIX_SESSIONS + 60
+    for i in range(start, len(close) + 1):
+        win_obv = obv[i - 60 : i]
+        win_vol = vol[i - 60 : i]
+        net_flow = _norm_flow_window(win_obv, win_vol)
+        if net_flow > 0.10:
+            hits += 1
+    assert hits == 0, f"CHOP: expected zero 60-session windows with net-flow > 0.10, got {hits}"
+
+
+def _self_check_fakeout(df: pd.DataFrame) -> None:
+    close = df["close"].to_numpy(dtype=float)
+    high = df["high"].to_numpy(dtype=float)
+    vol = df["volume"].to_numpy(dtype=float)
+    rv = vol / pd.Series(vol).rolling(20).mean().to_numpy()
+
+    base = (PREFIX_SESSIONS + 40, PREFIX_SESSIONS + 160)
+    fakeout = (PREFIX_SESSIONS + 160, PREFIX_SESSIONS + 164)
+    base_high = float(np.nanmax(high[base[0] : base[1]]))
+    crossing_i = fakeout[0]
+    assert close[crossing_i] > base_high, "FAKEOUT: first fakeout bar must cross base high"
+    assert rv[crossing_i] < 1.5, f"FAKEOUT: crossing bar rel_volume must be <1.5, got {rv[crossing_i]:.3f}"
+    assert int(np.sum(rv[fakeout[0] : fakeout[1]] >= 2.5)) == 0, "FAKEOUT: no fakeout-window bar may reach rel_volume >=2.5"
+
+    inside = False
+    for i in range(crossing_i + 1, min(crossing_i + 4, len(close))):
+        if close[i] <= base_high:
+            inside = True
+            break
+    assert inside, "FAKEOUT: price must fade back inside base within 3 bars"
+
+
+def _self_check_pump(df: pd.DataFrame) -> None:
+    close = df["close"].to_numpy(dtype=float)
+    spike_i = PREFIX_SESSIONS + 170
+    prev = float(close[spike_i - 1])
+    gap = (float(close[spike_i]) / max(prev, 1e-9)) - 1.0
+    assert gap > 0.08, f"PUMP: spike gap must exceed 8%, got {gap:.3f}"
+    pre_spike = close[PREFIX_SESSIONS:spike_i]
+    assert not _qualifying_base_exists(pre_spike, len(pre_spike), min_sessions=60, max_width=0.18), (
+        "PUMP: found a qualifying 60-session base before spike"
+    )
+
+
 def _write(symbol: str, bundle: SeriesBundle) -> None:
     df = _ohlcv_from_close(
         symbol,
@@ -767,6 +963,9 @@ def main() -> None:
         "SANAM": _build_sanam,
         "MABANEE": _build_mabanee,
         "JOINER": _build_joiner,
+        "CHOP": _build_chop,
+        "FAKEOUT": _build_fakeout,
+        "PUMP": _build_pump,
     }
     checkers = {
         "TIJARA": _self_check_tijara,
@@ -775,6 +974,9 @@ def main() -> None:
         "SANAM": _self_check_sanam,
         "MABANEE": _self_check_mabanee,
         "JOINER": _self_check_joiner,
+        "CHOP": _self_check_chop,
+        "FAKEOUT": _self_check_fakeout,
+        "PUMP": _self_check_pump,
     }
     first_pattern_index = {
         "TIJARA": PREFIX_SESSIONS,
@@ -783,10 +985,13 @@ def main() -> None:
         "SANAM": PREFIX_SESSIONS,
         "MABANEE": PREFIX_SESSIONS,
         "JOINER": PREFIX_SESSIONS,
+        "CHOP": PREFIX_SESSIONS,
+        "FAKEOUT": PREFIX_SESSIONS,
+        "PUMP": PREFIX_SESSIONS,
     }
     all_segments: dict[str, dict[str, dict[str, int]]] = {}
 
-    for symbol in ["TIJARA", "BPCC", "ZAIN", "SANAM", "MABANEE", "JOINER"]:
+    for symbol in ["TIJARA", "BPCC", "ZAIN", "SANAM", "MABANEE", "JOINER", "CHOP", "FAKEOUT", "PUMP"]:
         local_rng = np.random.default_rng(rng.integers(0, 1_000_000_000))
         bundle = builders[symbol](local_rng)
         df = _ohlcv_from_close(
