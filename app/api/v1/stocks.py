@@ -26,6 +26,117 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/stocks", tags=["Stocks"])
 
 
+_US_STOCKS_CACHE_TTL_SEC = 24 * 60 * 60
+_US_STOCKS_CACHE: dict = {
+    "expires_at": 0.0,
+    "stocks": [],
+}
+
+
+def _normalize_us_symbol(raw_symbol: str) -> str:
+    # Yahoo-style normalization (e.g. BRK.B -> BRK-B) and uppercase ticker key.
+    return raw_symbol.strip().upper().replace(".", "-")
+
+
+def _append_us_entry(target: list, seen: set, symbol: str, name: str) -> None:
+    sym = _normalize_us_symbol(symbol)
+    if not sym:
+        return
+    # Skip non-equity-like symbols (futures/options/indices/cross-list formats).
+    if any(ch in sym for ch in ("=", ":", "^", "/")):
+        return
+    if sym in seen:
+        return
+
+    display_name = (name or "").strip() or sym
+    target.append({
+        "symbol": sym,
+        "name": display_name,
+        "yf_ticker": sym,
+    })
+    seen.add(sym)
+
+
+def _build_cached_us_universe() -> list:
+    merged: list = []
+    seen: set[str] = set()
+
+    # Always include curated baseline first.
+    for s in US_STOCKS:
+        _append_us_entry(merged, seen, s.get("symbol", ""), s.get("name", ""))
+
+    # Best-effort expansion from NASDAQ Trader's official symbol directories.
+    # This is lightweight, returns thousands of US-listed symbols, and works
+    # without optional HTML parsing dependencies.
+    try:
+        import requests
+
+        feeds = [
+            {
+                "url": "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt",
+                "symbol_key": "Symbol",
+                "name_key": "Security Name",
+                "test_key": "Test Issue",
+            },
+            {
+                "url": "https://www.nasdaqtrader.com/dynamic/SymDir/otherlisted.txt",
+                "symbol_key": "ACT Symbol",
+                "name_key": "Security Name",
+                "test_key": "Test Issue",
+            },
+        ]
+
+        for feed in feeds:
+            try:
+                resp = requests.get(feed["url"], timeout=20)
+                resp.raise_for_status()
+            except Exception:
+                continue
+
+            lines = [ln.strip() for ln in resp.text.splitlines() if ln.strip()]
+            if not lines:
+                continue
+
+            headers = lines[0].split("|")
+            idx = {h: i for i, h in enumerate(headers)}
+            if feed["symbol_key"] not in idx or feed["name_key"] not in idx:
+                continue
+
+            symbol_i = idx[feed["symbol_key"]]
+            name_i = idx[feed["name_key"]]
+            test_i = idx.get(feed["test_key"])
+
+            # Skip header row and trailer summary line.
+            for ln in lines[1:]:
+                if ln.startswith("File Creation Time"):
+                    continue
+                parts = ln.split("|")
+                if len(parts) <= max(symbol_i, name_i):
+                    continue
+                if test_i is not None and len(parts) > test_i and parts[test_i].strip().upper() == "Y":
+                    continue
+
+                symbol_val = parts[symbol_i].strip()
+                name_val = parts[name_i].strip()
+                _append_us_entry(merged, seen, symbol_val, name_val)
+    except Exception as e:
+        logger.warning("US universe expansion failed; using baseline US_STOCKS only: %s", e)
+
+    return merged
+
+
+def _get_cached_us_universe() -> list:
+    now = time.time()
+    if _US_STOCKS_CACHE["stocks"] and now < float(_US_STOCKS_CACHE["expires_at"]):
+        return _US_STOCKS_CACHE["stocks"]
+
+    expanded = _build_cached_us_universe()
+    _US_STOCKS_CACHE["stocks"] = expanded
+    _US_STOCKS_CACHE["expires_at"] = now + _US_STOCKS_CACHE_TTL_SEC
+    logger.info("US stock-list cache refreshed: %d symbols", len(expanded))
+    return expanded
+
+
 # ── Schemas ──────────────────────────────────────────────────────────
 
 class StockCreate(BaseModel):
@@ -103,7 +214,9 @@ async def get_stock_list(
     results, augment with live yfinance search results.
     """
     is_us = not market.lower().startswith("k")
-    stocks = KUWAIT_STOCKS if not is_us else US_STOCKS
+    base_stocks = KUWAIT_STOCKS if not is_us else _get_cached_us_universe()
+    # Work on a local copy so search augmentation never mutates the cache.
+    stocks = [dict(s) for s in base_stocks]
 
     if search:
         q = search.upper()
@@ -114,9 +227,9 @@ async def get_stock_list(
 
     # For US market: augment with live yfinance search when few hardcoded matches
     if is_us and search and len(stocks) < 5:
+        existing_symbols = {s["symbol"].upper() for s in stocks}
         try:
             import yfinance as yf
-            existing_symbols = {s["symbol"].upper() for s in stocks}
             resp = yf.screen(
                 yf.EquityQuery("is", ["exchange", "NMS", "NYQ", "NGM", "PCX", "BTS", "ASE"]),
                 size=25,
