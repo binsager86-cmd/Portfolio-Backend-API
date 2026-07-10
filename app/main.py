@@ -9,6 +9,7 @@ import logging
 import os
 import json
 import asyncio
+from collections.abc import Sequence
 from contextlib import asynccontextmanager
 
 import tracemalloc
@@ -60,6 +61,35 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 settings = get_settings()
+
+
+def _join_router_prefixes(*parts: str) -> str:
+    normalized_parts = []
+    for part in parts:
+        if not part:
+            continue
+        normalized_parts.append(part if part.startswith("/") else f"/{part}")
+    return "".join(normalized_parts)
+
+
+def _annotate_included_router_paths(routes: Sequence[object]) -> None:
+    for route in routes:
+        original_router = getattr(route, "original_router", None)
+        include_context = getattr(route, "include_context", None)
+        if original_router is None or include_context is None:
+            continue
+
+        prefix = _join_router_prefixes(
+            getattr(include_context, "prefix", ""),
+            getattr(original_router, "prefix", ""),
+        )
+        route.path = prefix
+        route.path_format = prefix
+
+        child_routes = getattr(original_router, "routes", None)
+        if child_routes:
+            _annotate_included_router_paths(child_routes)
+
 
 # Sentry Init (Production Only)
 if os.getenv("ENVIRONMENT") == "production" and os.getenv("SENTRY_DSN"):
@@ -388,6 +418,8 @@ for _legacy_router in (auth_router_legacy, portfolio_router_legacy, cron_router_
         logger.warning("Skipping invalid legacy router %r: missing .routes (likely _IncludedRouter)", _legacy_router)
         continue
     app.include_router(_legacy_router)
+
+_annotate_included_router_paths(app.router.routes)
 
 
 # ── Health check (no auth) ──────────────────────────────────────────
