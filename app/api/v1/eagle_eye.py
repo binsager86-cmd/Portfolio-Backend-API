@@ -889,6 +889,16 @@ def _run_analysis(ticker: str) -> Optional[dict]:
             if not isinstance(indicators, dict):
                 indicators = {}
 
+            volume_context = cached_row.get("volume_context_json") or {}
+            if isinstance(volume_context, str):
+                import json
+                try:
+                    volume_context = json.loads(volume_context)
+                except Exception:
+                    volume_context = {}
+            if not isinstance(volume_context, dict):
+                volume_context = {}
+
             supports = cached_row.get("supports_json") or []
             resistances = cached_row.get("resistances_json") or []
             # Always refresh display close from cached OHLCV so detail price tracks
@@ -941,6 +951,7 @@ def _run_analysis(ticker: str) -> Optional[dict]:
                 "resistances": resistances,
                 "entry": entry,
                 "indicators": indicators,
+                "volume_context": volume_context,
                 "days_of_history": cached_row.get("days_of_history"),
                 "computed_at": cached_row.get("computed_at"),
             }
@@ -2145,14 +2156,17 @@ async def get_market_regime(
 
     def _compute_regime_response() -> RegimeResponse:
         import json
+        from datetime import date, datetime, timedelta
 
         from app.core.database import query_all
         from app.services.eagle_eye.adapter import TickerChartAdapter
+        from app.services.eagle_eye.market_data_service import get_validated_history_start
         from app.services.eagle_eye.store import load_ohlcv
 
         adapter = TickerChartAdapter()
         end_d = date.today()
         start_d = end_d - timedelta(days=120)
+        validated_start = get_validated_history_start()
 
         stocks_meta = adapter.list_stocks()
         if not stocks_meta:
@@ -2190,7 +2204,7 @@ async def get_market_regime(
                 if ema50 is None or close is None:
                     from app.services.eagle_eye.indicators import compute_all_indicators
 
-                    df = load_ohlcv(meta.ticker, start=start_d, end=end_d)
+                    df = load_ohlcv(meta.ticker, start=max(start_d, validated_start), end=end_d)
                     if df is None or len(df) < 52:
                         continue
                     ind_df = compute_all_indicators(df)

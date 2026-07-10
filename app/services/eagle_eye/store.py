@@ -592,7 +592,7 @@ def load_rating(ticker: str) -> Optional[dict]:
                entry_primary, entry_aggressive, entry_conservative,
                stop_loss, tp1, tp1_probability, tp2, tp2_probability,
                tp3, tp3_probability, last_price,
-               supports_json, resistances_json, indicators_json,
+               supports_json, resistances_json, indicators_json, volume_context_json,
                days_of_history, computed_at
         FROM   ee_ratings_cache
         WHERE  ticker = ?
@@ -602,12 +602,15 @@ def load_rating(ticker: str) -> Optional[dict]:
     if row is None:
         return None
     d = dict(row.items())
-    for key in ("supports_json", "resistances_json", "indicators_json"):
+    for key in ("supports_json", "resistances_json", "indicators_json", "volume_context_json"):
         if d.get(key):
             try:
                 d[key] = json.loads(d[key])
             except Exception:
                 d[key] = []
+
+    if not isinstance(d.get("volume_context_json"), dict):
+        d["volume_context_json"] = {}
     return d
 
 
