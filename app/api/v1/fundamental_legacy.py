@@ -4871,30 +4871,34 @@ def _compute_tax_rate_from_statements(stock_id: int, user_id: int) -> Optional[f
     try:
         rows = query_all(
             """
-            SELECT li.code, li.value, fs.period_end
+                        SELECT li.line_item_code, li.amount, fs.period_end_date
             FROM financial_line_items li
             JOIN financial_statements fs ON li.statement_id = fs.id
             WHERE fs.stock_id = ? AND fs.user_id = ? AND fs.statement_type = 'income'
-              AND li.code IN ('income_tax', 'income_before_tax', 'pretax_income')
-            ORDER BY fs.period_end DESC
+                            AND UPPER(li.line_item_code) IN (
+                                        'INCOME_TAX', 'INCOME_TAX_EXPENSE', 'PROVISION_FOR_INCOME_TAXES', 'TAX_EXPENSE',
+                                        'INCOME_BEFORE_TAX', 'PRETAX_INCOME', 'PROFIT_BEFORE_TAX'
+                            )
+                        ORDER BY fs.period_end_date DESC
             """,
             (stock_id, user_id),
         )
         if not rows:
             return None
         # Group by period — take values from the latest period
-        latest_period = rows[0]["period_end"] if isinstance(rows[0], dict) else rows[0][2]
+        latest_period = rows[0]["period_end_date"] if isinstance(rows[0], dict) else rows[0][2]
         tax_val = None
         pretax_val = None
         for r in rows:
-            p = r["period_end"] if isinstance(r, dict) else r[2]
+            p = r["period_end_date"] if isinstance(r, dict) else r[2]
             if p != latest_period:
                 break
-            code = r["code"] if isinstance(r, dict) else r[0]
-            val = r["value"] if isinstance(r, dict) else r[1]
-            if code == "income_tax" and val is not None:
+            code = (r["line_item_code"] if isinstance(r, dict) else r[0])
+            code_upper = str(code).upper()
+            val = r["amount"] if isinstance(r, dict) else r[1]
+            if code_upper in ("INCOME_TAX", "INCOME_TAX_EXPENSE", "PROVISION_FOR_INCOME_TAXES", "TAX_EXPENSE") and val is not None:
                 tax_val = float(val)
-            if code in ("income_before_tax", "pretax_income") and val is not None:
+            if code_upper in ("INCOME_BEFORE_TAX", "PRETAX_INCOME", "PROFIT_BEFORE_TAX") and val is not None:
                 pretax_val = float(val)
         if tax_val is not None and pretax_val and pretax_val > 0:
             return round(abs(tax_val) / pretax_val, 4)
@@ -5051,31 +5055,58 @@ async def get_valuation_defaults(
             avg_fcf_growth = round(sum(fcf_growth_rates) / len(fcf_growth_rates), 4)
 
     # Dividends per share history (for DDM growth calculation)
-    div_rows = query_all(
-        """SELECT fs.fiscal_year, li.amount FROM financial_line_items li
-           JOIN financial_statements fs ON fs.id = li.statement_id
-           WHERE fs.stock_id = ? AND fs.statement_type = 'cashflow'
-             AND fs.fiscal_quarter IS NULL
-             AND UPPER(li.line_item_code) = 'DIVIDENDS_PAID'
-           ORDER BY fs.fiscal_year""",
-        (stock_id,),
-    )
+    # Prefer explicit per-share line items when available. Many statements store
+    # DIVIDENDS_PAID in scaled units (e.g. thousands), which can understate DPS
+    # when divided by raw share counts.
     dps_history = []
     div_growth_rates = []
-    if div_rows and shares and shares > 0:
-        for dr_row in div_rows:
-            fy = dr_row[0] if isinstance(dr_row, (tuple, list)) else dr_row["fiscal_year"]
-            amt = dr_row[1] if isinstance(dr_row, (tuple, list)) else dr_row["amount"]
+
+    dps_rows = query_all(
+        """SELECT fs.fiscal_year, li.line_item_code, li.amount FROM financial_line_items li
+           JOIN financial_statements fs ON fs.id = li.statement_id
+           WHERE fs.stock_id = ?
+             AND fs.fiscal_quarter IS NULL
+             AND UPPER(li.line_item_code) IN ('DIVIDEND_PER_SHARE', 'DIVIDENDS_PER_SHARE')
+             AND li.amount IS NOT NULL
+           ORDER BY fs.fiscal_year, fs.period_end_date DESC""",
+        (stock_id,),
+    )
+
+    if dps_rows:
+        seen_years = set()
+        for row in dps_rows:
+            fy = row[0] if isinstance(row, (tuple, list)) else row["fiscal_year"]
+            if fy in seen_years:
+                continue
+            seen_years.add(fy)
+            amt = row[2] if isinstance(row, (tuple, list)) else row["amount"]
             if amt is not None:
-                dps = abs(amt) / shares
+                dps_history.append({"year": fy, "dps": round(abs(float(amt)), 4)})
+    else:
+        div_rows = query_all(
+            """SELECT fs.fiscal_year, li.amount FROM financial_line_items li
+               JOIN financial_statements fs ON fs.id = li.statement_id
+               WHERE fs.stock_id = ? AND fs.statement_type = 'cashflow'
+                 AND fs.fiscal_quarter IS NULL
+                 AND UPPER(li.line_item_code) = 'DIVIDENDS_PAID'
+                 AND li.amount IS NOT NULL
+               ORDER BY fs.fiscal_year""",
+            (stock_id,),
+        )
+        if div_rows and shares and shares > 0:
+            for dr_row in div_rows:
+                fy = dr_row[0] if isinstance(dr_row, (tuple, list)) else dr_row["fiscal_year"]
+                amt = dr_row[1] if isinstance(dr_row, (tuple, list)) else dr_row["amount"]
+                dps = abs(float(amt)) / shares
                 dps_history.append({"year": fy, "dps": round(dps, 4)})
-        # Compute growth rates between consecutive years
-        for i in range(1, len(dps_history)):
-            prev_dps = dps_history[i - 1]["dps"]
-            curr_dps = dps_history[i]["dps"]
-            if prev_dps > 0:
-                gr = (curr_dps - prev_dps) / prev_dps
-                div_growth_rates.append(gr)
+
+    # Compute growth rates between consecutive years
+    for i in range(1, len(dps_history)):
+        prev_dps = dps_history[i - 1]["dps"]
+        curr_dps = dps_history[i]["dps"]
+        if prev_dps > 0:
+            gr = (curr_dps - prev_dps) / prev_dps
+            div_growth_rates.append(gr)
 
     avg_div_growth = sum(div_growth_rates) / len(div_growth_rates) if div_growth_rates else None
 
@@ -5162,29 +5193,44 @@ async def get_valuation_defaults(
         low = code_str.lower()
         return 'fils' in low or 'cents' in low or 'halala' in low
 
-    eps_ttm = latest.get("EPS")
-    # Fallback: get EPS directly from income statement line items
+    # Prefer statement-derived EPS for valuation defaults, then fallback to metrics.
+    # This keeps the valuation tab aligned with uploaded statement values.
+    eps_ttm = None
+
+    # Primary: get EPS directly from latest annual/TTM income statement line items.
+    eps_li_row = query_one(
+        """SELECT li.line_item_code, li.amount FROM financial_line_items li
+           JOIN financial_statements fs ON fs.id = li.statement_id
+           WHERE fs.stock_id = ? AND fs.statement_type = 'income'
+             AND fs.fiscal_quarter IS NULL
+             AND fs.period_end_date NOT LIKE '%/_3M' ESCAPE '/'
+             AND fs.period_end_date NOT LIKE '%/_6M' ESCAPE '/'
+             AND fs.period_end_date NOT LIKE '%/_9M' ESCAPE '/'
+             AND (UPPER(li.line_item_code) IN ('EPS_DILUTED','EPS_BASIC')
+                  OR LOWER(li.line_item_code) LIKE '%earnings_per_share%'
+                  OR LOWER(li.line_item_code) LIKE '%eps_%')
+           ORDER BY fs.fiscal_year DESC,
+                    fs.period_end_date DESC,
+                    CASE
+                      WHEN UPPER(li.line_item_code) = 'EPS_DILUTED' THEN 1
+                      WHEN UPPER(li.line_item_code) = 'EPS_BASIC' THEN 2
+                      WHEN LOWER(li.line_item_code) LIKE '%diluted%eps%' THEN 3
+                      WHEN LOWER(li.line_item_code) LIKE '%basic%eps%' THEN 4
+                      ELSE 5
+                    END
+           LIMIT 1""",
+        (stock_id,),
+    )
+    if eps_li_row:
+        code = eps_li_row.get("line_item_code", "")
+        val = eps_li_row.get("amount")
+        if val is not None and _is_subunit_code(code):
+            val = val / 1000.0
+        eps_ttm = val
+
+    # Secondary fallback: latest computed EPS metric.
     if eps_ttm is None:
-        eps_li_row = query_one(
-            """SELECT li.line_item_code, li.amount FROM financial_line_items li
-               JOIN financial_statements fs ON fs.id = li.statement_id
-               WHERE fs.stock_id = ? AND fs.statement_type = 'income'
-                 AND fs.fiscal_quarter IS NULL
-                 AND fs.period_end_date NOT LIKE '%/_3M' ESCAPE '/'
-                 AND fs.period_end_date NOT LIKE '%/_6M' ESCAPE '/'
-                 AND fs.period_end_date NOT LIKE '%/_9M' ESCAPE '/'
-                 AND (UPPER(li.line_item_code) IN ('EPS_DILUTED','EPS_BASIC')
-                      OR LOWER(li.line_item_code) LIKE '%earnings_per_share%'
-                      OR LOWER(li.line_item_code) LIKE '%eps_%')
-               ORDER BY fs.fiscal_year DESC LIMIT 1""",
-            (stock_id,),
-        )
-        if eps_li_row:
-            code = eps_li_row.get("line_item_code", "")
-            val = eps_li_row.get("amount")
-            if val is not None and _is_subunit_code(code):
-                val = val / 1000.0
-            eps_ttm = val
+        eps_ttm = latest.get("EPS")
     # Last fallback: compute from Net Income / Shares Outstanding
     if eps_ttm is None and shares and shares > 0:
         ni_row = query_one(
@@ -5216,18 +5262,26 @@ async def get_valuation_defaults(
     # Fallback: pull EPS directly from income statement line items
     if not eps_rows:
         eps_rows_raw = query_all(
-            """SELECT fs.fiscal_year, li.line_item_code, li.amount FROM financial_line_items li
-               JOIN financial_statements fs ON fs.id = li.statement_id
-               WHERE fs.stock_id = ? AND fs.statement_type = 'income'
-                 AND fs.fiscal_quarter IS NULL
-                 AND fs.period_end_date NOT LIKE '%/_3M' ESCAPE '/'
-                 AND fs.period_end_date NOT LIKE '%/_6M' ESCAPE '/'
-                 AND fs.period_end_date NOT LIKE '%/_9M' ESCAPE '/'
-                 AND (UPPER(li.line_item_code) IN ('EPS_DILUTED','EPS_BASIC')
-                      OR LOWER(li.line_item_code) LIKE '%earnings_per_share%'
-                      OR LOWER(li.line_item_code) LIKE '%eps_%')
-                 AND li.amount IS NOT NULL
-               ORDER BY fs.fiscal_year""",
+                        """SELECT fs.fiscal_year, li.line_item_code, li.amount FROM financial_line_items li
+                             JOIN financial_statements fs ON fs.id = li.statement_id
+                             WHERE fs.stock_id = ? AND fs.statement_type = 'income'
+                                 AND fs.fiscal_quarter IS NULL
+                                 AND fs.period_end_date NOT LIKE '%/_3M' ESCAPE '/'
+                                 AND fs.period_end_date NOT LIKE '%/_6M' ESCAPE '/'
+                                 AND fs.period_end_date NOT LIKE '%/_9M' ESCAPE '/'
+                                 AND (UPPER(li.line_item_code) IN ('EPS_DILUTED','EPS_BASIC')
+                                            OR LOWER(li.line_item_code) LIKE '%earnings_per_share%'
+                                            OR LOWER(li.line_item_code) LIKE '%eps_%')
+                                 AND li.amount IS NOT NULL
+                             ORDER BY fs.fiscal_year,
+                                                fs.period_end_date DESC,
+                                                CASE
+                                                    WHEN UPPER(li.line_item_code) = 'EPS_DILUTED' THEN 1
+                                                    WHEN UPPER(li.line_item_code) = 'EPS_BASIC' THEN 2
+                                                    WHEN LOWER(li.line_item_code) LIKE '%diluted%eps%' THEN 3
+                                                    WHEN LOWER(li.line_item_code) LIKE '%basic%eps%' THEN 4
+                                                    ELSE 5
+                                                END""",
             (stock_id,),
         )
         # Dedupe: keep one EPS per fiscal_year, convert fils/cents if needed
@@ -5355,10 +5409,17 @@ async def get_valuation_defaults(
         except Exception as e:
             logger.warning("yfinance fetch failed for Graham defaults: %s", e)
 
+    # Prefer latest explicit DPS history value for DDM defaults when available.
+    # This avoids stale/legacy metric rows that may have been computed with
+    # mismatched statement scaling.
+    dps_default = latest.get("Dividends / Share")
+    if dps_history:
+        dps_default = dps_history[-1]["dps"]
+
     defaults = {
         "eps": eps_ttm,
         "book_value_per_share": latest.get("Book Value / Share"),
-        "dividends_per_share": latest.get("Dividends / Share"),
+        "dividends_per_share": dps_default,
         "fcf": fcf_val,
         "fcf_history": fcf_history,
         "avg_fcf_growth": avg_fcf_growth,
@@ -6518,17 +6579,15 @@ def _calculate_all_metrics(
         val["EPS"] = eps
 
     # --- Payout Ratio (CFA approach with multiple fallbacks) ---
-    # 1) Try total dividends paid from cash-flow statement
+    # Prefer explicit per-share line item first to avoid scale mismatch between
+    # total dividends (often in thousands/millions) and raw share counts.
     dividends_paid = (
         _get("DIVIDENDS_PAID") or _get("COMMON_DIVIDENDS_PAID")
         or _get("dividends_paid")
     )
-    dps: Optional[float] = None
-    if dividends_paid is not None and shares and shares != 0:
+    dps: Optional[float] = _get("DIVIDEND_PER_SHARE") or _get("DIVIDENDS_PER_SHARE")
+    if dps is None and dividends_paid is not None and shares and shares != 0:
         dps = abs(dividends_paid) / shares
-    # 2) Fall back to DIVIDEND_PER_SHARE line item if available
-    if dps is None:
-        dps = _get("DIVIDEND_PER_SHARE")
     if dps is not None:
         val["Dividends / Share"] = dps
 
