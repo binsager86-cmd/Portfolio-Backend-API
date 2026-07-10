@@ -71,7 +71,7 @@ def _join_router_prefixes(*parts: str) -> str:
     return prefix or "/"
 
 
-def _annotate_included_router_paths(routes, parent_prefix: str = "") -> None:
+def _annotate_included_router_paths(routes) -> None:
     for route in routes:
         original_router = getattr(route, "original_router", None)
         include_context = getattr(route, "include_context", None)
@@ -79,16 +79,15 @@ def _annotate_included_router_paths(routes, parent_prefix: str = "") -> None:
             continue
 
         prefix = _join_router_prefixes(
-            parent_prefix,
             getattr(include_context, "prefix", ""),
             getattr(original_router, "prefix", ""),
         )
-        setattr(route, "path", prefix)
-        setattr(route, "path_format", prefix)
+        route.path = prefix
+        route.path_format = prefix
 
         child_routes = getattr(original_router, "routes", None)
         if child_routes:
-            _annotate_included_router_paths(child_routes, prefix)
+            _annotate_included_router_paths(child_routes)
 
 
 # Sentry Init (Production Only)
