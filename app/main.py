@@ -378,9 +378,16 @@ async def inject_flags(request, call_next):
 app.include_router(v1_router)
 
 # Legacy unversioned routes (kept for backward compat — will be removed)
-app.include_router(auth_router_legacy)
-app.include_router(portfolio_router_legacy)
-app.include_router(cron_router_legacy)
+# Guard against accidental `_IncludedRouter` objects to avoid runtime error:
+# AttributeError: '_IncludedRouter' object has no attribute 'path'
+for _legacy_router in (auth_router_legacy, portfolio_router_legacy, cron_router_legacy):
+    if isinstance(_legacy_router, FastAPI):
+        logger.warning("Skipping invalid legacy router %r: got FastAPI app instead of APIRouter", _legacy_router)
+        continue
+    if not hasattr(_legacy_router, "routes"):
+        logger.warning("Skipping invalid legacy router %r: missing .routes (likely _IncludedRouter)", _legacy_router)
+        continue
+    app.include_router(_legacy_router)
 
 
 # ── Health check (no auth) ──────────────────────────────────────────
