@@ -64,12 +64,12 @@ settings = get_settings()
 
 
 def _join_router_prefixes(*parts: str) -> str:
-    prefix = ""
+    normalized_parts = []
     for part in parts:
         if not part:
             continue
-        prefix = f"{prefix}{part if part.startswith('/') else f'/{part}'}"
-    return prefix
+        normalized_parts.append(part if part.startswith("/") else f"/{part}")
+    return "".join(normalized_parts)
 
 
 def _annotate_included_router_paths(routes: Sequence[object]) -> None:
