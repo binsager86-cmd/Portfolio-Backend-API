@@ -9,6 +9,7 @@ import logging
 import os
 import json
 import asyncio
+from collections.abc import Sequence
 from contextlib import asynccontextmanager
 
 import tracemalloc
@@ -71,7 +72,7 @@ def _join_router_prefixes(*parts: str) -> str:
     return prefix or "/"
 
 
-def _annotate_included_router_paths(routes) -> None:
+def _annotate_included_router_paths(routes: Sequence[object]) -> None:
     for route in routes:
         original_router = getattr(route, "original_router", None)
         include_context = getattr(route, "include_context", None)

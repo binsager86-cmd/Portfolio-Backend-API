@@ -3,9 +3,11 @@ from app.main import app
 
 
 def test_app_routes_expose_path_for_included_routers():
-    missing_path = [type(route).__name__ for route in app.routes if not hasattr(route, "path")]
+    missing_path_route_types = [
+        type(route).__name__ for route in app.routes if not hasattr(route, "path")
+    ]
 
-    assert missing_path == []
+    assert missing_path_route_types == []
 
     included_paths = {
         route.path for route in app.routes if type(route).__name__ == "_IncludedRouter"
