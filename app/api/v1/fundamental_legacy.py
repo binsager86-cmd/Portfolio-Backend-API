@@ -6211,6 +6211,51 @@ def _calculate_all_metrics(
             found = True
         return total if found else None
 
+    def _resolve_period_end_date(target_fiscal_year: int, target_fiscal_quarter: Optional[int]) -> Optional[str]:
+        if target_fiscal_quarter is None:
+            row = query_one(
+                """SELECT period_end_date FROM financial_statements
+                   WHERE stock_id = ? AND fiscal_year = ? AND (fiscal_quarter = 4 OR fiscal_quarter IS NULL)
+                   ORDER BY period_end_date DESC LIMIT 1""",
+                (stock_id, target_fiscal_year),
+            )
+        else:
+            row = query_one(
+                """SELECT period_end_date FROM financial_statements
+                   WHERE stock_id = ? AND fiscal_year = ? AND fiscal_quarter = ?
+                   ORDER BY period_end_date DESC LIMIT 1""",
+                (stock_id, target_fiscal_year, target_fiscal_quarter),
+            )
+        if not row:
+            return None
+        return row[0] if isinstance(row, (tuple, list)) else row.get("period_end_date")
+
+    def _get_from_period(target_period_end: Optional[str], aliases: Tuple[str, ...]) -> Optional[float]:
+        if not target_period_end:
+            return None
+        period_items = _load_items_for_period(stock_id, target_period_end)
+        for alias in aliases:
+            val = period_items.get(alias)
+            if val is not None:
+                return val
+        return None
+
+    def _ttm_flow_value(current_value: Optional[float], aliases: Tuple[str, ...]) -> Optional[float]:
+        if current_value is None or fiscal_quarter is None or fiscal_quarter >= 4:
+            return current_value
+
+        prior_annual_period = _resolve_period_end_date(fiscal_year - 1, None)
+        prior_same_quarter_period = _resolve_period_end_date(fiscal_year - 1, fiscal_quarter)
+        if not prior_annual_period or not prior_same_quarter_period:
+            return current_value
+
+        prior_annual_value = _get_from_period(prior_annual_period, aliases)
+        prior_same_quarter_value = _get_from_period(prior_same_quarter_period, aliases)
+        if prior_annual_value is None or prior_same_quarter_value is None:
+            return current_value
+
+        return prior_annual_value + current_value - prior_same_quarter_value
+
     results: Dict[str, Dict[str, Optional[float]]] = {}
 
     # ── profitability
@@ -6219,6 +6264,12 @@ def _calculate_all_metrics(
     gross_profit = _get("GROSS_PROFIT")
     operating_income = _get("OPERATING_INCOME")
     net_income = _get("NET_INCOME")
+
+    # For interim periods (Q1-Q3), use TTM flow numerators so ratios align with TTM labels in UI.
+    revenue = _ttm_flow_value(revenue, ("REVENUE", "TOTAL_REVENUE", "NET_REVENUE", "TOTAL_SALES"))
+    gross_profit = _ttm_flow_value(gross_profit, ("GROSS_PROFIT",))
+    operating_income = _ttm_flow_value(operating_income, ("OPERATING_INCOME",))
+    net_income = _ttm_flow_value(net_income, ("NET_INCOME", "NET_INCOME_COMMON", "NET_INCOME_AVAILABLE_TO_COMMON_SHAREHOLDERS"))
     total_assets = _get("TOTAL_ASSETS")
     total_equity = (
         _get("TOTAL_EQUITY")
@@ -6252,6 +6303,7 @@ def _calculate_all_metrics(
         prof["DuPont ROE"] = (net_income / revenue) * (revenue / total_assets) * (total_assets / total_equity)
 
     ebitda = _get("EBITDA")
+    ebitda = _ttm_flow_value(ebitda, ("EBITDA",))
     if ebitda is None:
         da = _get("DEPRECIATION_AMORTIZATION")
         if operating_income is not None and da is not None:
