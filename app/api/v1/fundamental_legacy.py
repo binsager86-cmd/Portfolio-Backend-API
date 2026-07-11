@@ -6481,13 +6481,24 @@ def _calculate_all_metrics(
 
     # CFA: ROIC = NOPAT / Invested Capital (placed after leverage so total_debt is available)
     tax_rate = _get("EFFECTIVE_TAX_RATE")
+    # Normalize percent-style tax inputs (e.g., 15 means 15%).
+    if tax_rate is not None and 1 < abs(tax_rate) <= 100:
+        tax_rate = tax_rate / 100.0
     if tax_rate is None:
-        income_tax = _get("INCOME_TAX_EXPENSE")
-        pretax = _get("PRETAX_INCOME")
+        income_tax = _ttm_flow_value(
+            _get("INCOME_TAX_EXPENSE"),
+            ("INCOME_TAX_EXPENSE", "PROVISION_FOR_INCOME_TAXES", "TAX_EXPENSE"),
+        )
+        pretax = _ttm_flow_value(
+            _get("PRETAX_INCOME"),
+            ("PRETAX_INCOME", "INCOME_BEFORE_TAX", "PROFIT_BEFORE_TAX"),
+        )
         if income_tax is not None and pretax and pretax != 0:
             tax_rate = income_tax / pretax
-    if operating_income is not None and tax_rate is not None:
-        nopat = operating_income * (1.0 - min(max(tax_rate, 0), 1.0))
+
+    safe_tax_rate = min(max(tax_rate or 0.0, 0.0), 1.0)
+    if operating_income is not None:
+        nopat = operating_income * (1.0 - safe_tax_rate)
         invested_capital = (total_equity or 0) + total_debt - (cash or 0) - (short_term_inv or 0)
         if invested_capital and invested_capital > 0:
             prof["ROIC"] = nopat / invested_capital
