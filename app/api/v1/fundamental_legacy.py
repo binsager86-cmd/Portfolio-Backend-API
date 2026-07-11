@@ -6553,6 +6553,19 @@ def _calculate_all_metrics(
         val["EPS"] = eps
 
     # --- Payout Ratio (CFA approach with multiple fallbacks) ---
+    # Prefer explicit statement payout ratio. For interim periods, prefer the
+    # latest annual payout ratio because quarterly payout rows are often seasonal.
+    statement_payout = _get("PAYOUT_RATIO") or _get("PAYOUTRATIO")
+    if statement_payout is not None and 1 < abs(statement_payout) <= 100:
+        statement_payout = statement_payout / 100.0
+    if fiscal_quarter is not None and fiscal_quarter < 4:
+        prior_annual_period = _resolve_period_end_date(fiscal_year - 1, None)
+        annual_payout = _get_from_period(prior_annual_period, ("PAYOUT_RATIO", "PAYOUTRATIO"))
+        if annual_payout is not None:
+            if 1 < abs(annual_payout) <= 100:
+                annual_payout = annual_payout / 100.0
+            statement_payout = annual_payout
+
     # 1) Try total dividends paid from cash-flow statement
     dividends_paid = (
         _get("DIVIDENDS_PAID") or _get("COMMON_DIVIDENDS_PAID")
@@ -6569,7 +6582,9 @@ def _calculate_all_metrics(
 
     # CFA Payout Ratio = DPS / EPS
     payout: Optional[float] = None
-    if dps is not None and eps and eps != 0:
+    if statement_payout is not None:
+        payout = statement_payout
+    if payout is None and dps is not None and eps and eps != 0:
         payout = dps / eps
     # 3) Final fallback: Total Dividends Paid / Net Income
     if payout is None and dividends_paid is not None and net_income and net_income != 0:
@@ -6587,19 +6602,35 @@ def _calculate_all_metrics(
 
     # ── cash flow (J/K: use validated CFO and validated capex only)
     cfm: Dict[str, Optional[float]] = {}
-    cfo = _get("CASH_FROM_OPERATIONS") or _get("OPERATING_CASH_FLOW")
-    cfi = _get("CASH_FROM_INVESTING") or _get("INVESTING_CASH_FLOW")
-    cff = _get("CASH_FROM_FINANCING") or _get("FINANCING_CASH_FLOW")
+    cfo = _ttm_flow_value(
+        _get("CASH_FROM_OPERATIONS") or _get("OPERATING_CASH_FLOW"),
+        ("CASH_FROM_OPERATIONS", "OPERATING_CASH_FLOW"),
+    )
+    cfi = _ttm_flow_value(
+        _get("CASH_FROM_INVESTING") or _get("INVESTING_CASH_FLOW"),
+        ("CASH_FROM_INVESTING", "INVESTING_CASH_FLOW"),
+    )
+    cff = _ttm_flow_value(
+        _get("CASH_FROM_FINANCING") or _get("FINANCING_CASH_FLOW"),
+        ("CASH_FROM_FINANCING", "FINANCING_CASH_FLOW"),
+    )
 
     # J) Capex: look for both PPE and intangibles capex from committed rows
-    capex_ppe = _get("CAPITAL_EXPENDITURES") or _get("CAPEX")
+    capex_ppe = _ttm_flow_value(
+        _get("CAPITAL_EXPENDITURES") or _get("CAPEX"),
+        ("CAPITAL_EXPENDITURES", "CAPEX"),
+    )
     capex_intang = None
+    capex_intang_code: Optional[str] = None
     # Try normalized codes that the reconciler would have set
     for code_name in items:
         low = code_name.lower()
         if "intangible" in low and ("capex" in low or "purchase" in low or "payment" in low):
             capex_intang = items[code_name]
+            capex_intang_code = code_name
             break
+    if capex_intang is not None and capex_intang_code is not None:
+        capex_intang = _ttm_flow_value(capex_intang, (capex_intang_code,))
 
     total_capex: Optional[float] = None
     if capex_ppe is not None:
@@ -6633,7 +6664,10 @@ def _calculate_all_metrics(
 
     # Free Cash Flow — also pick up from statement line items if not already set
     if "Free Cash Flow" not in cfm:
-        stmt_fcf = _get("FREE_CASH_FLOW") or _get("UNLEVERED_FREE_CASH_FLOW") or _get("LEVERED_FREE_CASH_FLOW")
+        stmt_fcf = _ttm_flow_value(
+            _get("FREE_CASH_FLOW") or _get("UNLEVERED_FREE_CASH_FLOW") or _get("LEVERED_FREE_CASH_FLOW"),
+            ("FREE_CASH_FLOW", "UNLEVERED_FREE_CASH_FLOW", "LEVERED_FREE_CASH_FLOW"),
+        )
         if stmt_fcf is not None:
             cfm["Free Cash Flow"] = stmt_fcf
 
@@ -7394,23 +7428,26 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
                 SELECT
                     (SELECT li2.amount FROM financial_line_items li2
                      JOIN financial_statements fs2 ON li2.statement_id = fs2.id
-                     WHERE fs2.stock_id = ? AND li2.line_item_code IN
-                           ('TOTAL_COMMON_SHARES_OUTSTANDING','DILUTED_SHARES_OUTSTANDING','BASIC_SHARES_OUTSTANDING')
+                       WHERE fs2.stock_id = ? AND UPPER(li2.line_item_code) IN
+                           ('TOTAL_COMMON_SHARES_OUTSTANDING','DILUTED_SHARES_OUTSTANDING','BASIC_SHARES_OUTSTANDING',
+                            'SHARES_DILUTED','SHARES_BASIC','SHARE_COUNT',
+                            'SHARES_OUTSTANDING_DILUTED','SHARES_OUTSTANDING_BASIC',
+                            'FILING_DATE_SHARES_OUTSTANDING')
                      AND (? IS NULL OR fs2.period_end_date <= ?)
                      ORDER BY fs2.period_end_date DESC LIMIT 1) AS shares,
                     (SELECT li2.amount FROM financial_line_items li2
                      JOIN financial_statements fs2 ON li2.statement_id = fs2.id
-                     WHERE fs2.stock_id = ? AND li2.line_item_code = 'EBIT'
+                     WHERE fs2.stock_id = ? AND UPPER(li2.line_item_code) IN ('EBIT', 'OPERATING_INCOME', 'OPERATING_PROFIT', 'INCOME_FROM_OPERATIONS')
                      AND (? IS NULL OR fs2.period_end_date <= ?)
                      ORDER BY fs2.period_end_date DESC LIMIT 1) AS ebit,
                     (SELECT li2.amount FROM financial_line_items li2
                      JOIN financial_statements fs2 ON li2.statement_id = fs2.id
-                     WHERE fs2.stock_id = ? AND li2.line_item_code = 'TOTAL_DEBT'
+                     WHERE fs2.stock_id = ? AND UPPER(li2.line_item_code) = 'TOTAL_DEBT'
                      AND (? IS NULL OR fs2.period_end_date <= ?)
                      ORDER BY fs2.period_end_date DESC LIMIT 1) AS total_debt,
                     (SELECT li2.amount FROM financial_line_items li2
                      JOIN financial_statements fs2 ON li2.statement_id = fs2.id
-                     WHERE fs2.stock_id = ? AND li2.line_item_code = 'CASH_EQUIVALENTS'
+                     WHERE fs2.stock_id = ? AND UPPER(li2.line_item_code) IN ('CASH_EQUIVALENTS', 'CASH', 'CASH_AND_CASH_EQUIVALENTS')
                      AND (? IS NULL OR fs2.period_end_date <= ?)
                      ORDER BY fs2.period_end_date DESC LIMIT 1) AS cash
             """, (
