@@ -4,6 +4,8 @@ import argparse
 import json
 from pathlib import Path
 
+from app.core.config import BASE_DIR, get_settings
+from app.core.db_isolation import ensure_debug_fixture_write_allowed
 from app.core.database import query_all, query_one, query_val
 from app.services.eagle_eye.backtest_service import run_backtest
 from app.services.eagle_eye.pipeline import process_bar
@@ -13,7 +15,14 @@ from app.services.eagle_eye.audit_service import ensure_schema as ensure_audit_s
 from app.services.eagle_eye.rating_service import compute_rating_from_indicator, store_rating
 
 
-SYMBOLS = ["TIJARA", "BPCC", "ZAIN", "SANAM", "MABANEE", "JOINER"]
+SYMBOLS = [
+    "TST_ACCUM_001",
+    "TST_BREAKOUT_FAIL_001",
+    "TST_DISTRIBUTION_001",
+    "TST_ACCUM_002",
+    "TST_MARKUP_001",
+    "DBG_GATE_001",
+]
 FIXTURES = Path(__file__).resolve().parents[1] / "tests" / "fixtures"
 SEGMENTS_PATH = FIXTURES / "segments.json"
 
@@ -43,6 +52,9 @@ def _resolve_segment(spec: str | None) -> tuple[str, str, int, int] | None:
 
 
 def _load_and_run() -> None:
+    settings = get_settings()
+    ensure_debug_fixture_write_allowed(settings.ENVIRONMENT, settings.database_abs_path, BASE_DIR)
+
     ensure_schema()
     ensure_audit_schema()
     for t in [

@@ -305,6 +305,8 @@ def start_scheduler() -> None:
     # ── Eagle Eye nightly recompute (Sun–Thu, after Boursa close) ────
     try:
         from app.services.eagle_eye.ingest import run_nightly_recompute
+        from app.services.eagle_eye.market_data_service import get_active_config, ingest_tickerchart, list_symbols
+        from app.services.eagle_eye.scheduler_service import run_eod_pipeline
 
         def _run_eagle_eye_intraday_refresh() -> None:
             """Intraday ratings refresh — runs near market close (13:15) to
@@ -318,6 +320,28 @@ def start_scheduler() -> None:
         def _run_eagle_eye_dna() -> None:
             """Weekly full recompute including DNA profiles (Sundays)."""
             run_nightly_recompute(dna_refresh=True, verbose=False)
+
+        def _run_eagle_eye_r8_ingest_scan() -> None:
+            """R8 canonical paper-mode flow: ingest TickerChart OHLCV then run v2 scan pipeline."""
+            try:
+                cfg = get_active_config()
+                mode = str(cfg.get("pipeline_mode", "paper") or "paper").strip().lower()
+                if mode != "paper":
+                    logger.warning("Eagle Eye R8 scheduler skipped: pipeline_mode=%s (requires paper)", mode)
+                    return
+
+                symbols = list_symbols()
+                ingest = ingest_tickerchart(symbols=symbols, source="scheduler")
+                run = run_eod_pipeline(source="scheduler-r8")
+                logger.info(
+                    "Eagle Eye R8 ingest+scan done: symbols=%d rows=%d quarantined=%d run=%s",
+                    len(symbols),
+                    int(ingest.get("rows_upserted") or 0),
+                    int(ingest.get("quarantined_symbols") or 0),
+                    str(run.get("status") or "ok"),
+                )
+            except Exception as _exc:
+                logger.warning("Eagle Eye R8 ingest+scan failed: %s", _exc)
 
         # Sun–Thu at 13:15 Asia/Kuwait — intraday refresh near Boursa close
         _scheduler.add_job(
@@ -392,9 +416,26 @@ def start_scheduler() -> None:
             max_instances=1,
         )
 
+        # R8 canonical scheduler — Sun–Thu 15:30 Asia/Kuwait (paper mode only)
+        _scheduler.add_job(
+            _run_eagle_eye_r8_ingest_scan,
+            trigger=CronTrigger(
+                day_of_week="sun,mon,tue,wed,thu",
+                hour=15,
+                minute=30,
+                timezone="Asia/Kuwait",
+            ),
+            id="eagle_eye_r8_ingest_scan",
+            name="Eagle Eye R8 tickerchart ingest + scan (paper)",
+            replace_existing=True,
+            coalesce=True,
+            max_instances=1,
+        )
+
         logger.info(
             "Eagle Eye jobs scheduled "
-            "(Sun–Thu 13:15 intraday; Sun–Thu 14:05 nightly; DNA rebuild Sun 14:30; Simulator 14:20 Asia/Kuwait)"
+            "(Sun–Thu 13:15 intraday; Sun–Thu 14:05 nightly; DNA rebuild Sun 14:30; "
+            "Simulator 14:20; R8 ingest+scan 15:30 Asia/Kuwait)"
         )
     except Exception as exc:
         logger.warning("Could not schedule Eagle Eye jobs: %s", exc)

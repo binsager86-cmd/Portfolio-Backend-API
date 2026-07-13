@@ -23,7 +23,7 @@ _test_db_fd, _test_db_path = tempfile.mkstemp(suffix=".db", prefix="test_portfol
 os.close(_test_db_fd)
 
 os.environ["DATABASE_PATH"] = _test_db_path
-os.environ["ENVIRONMENT"] = "development"
+os.environ["ENVIRONMENT"] = "test"
 os.environ["SECRET_KEY"] = "test-secret-key-for-unit-tests"
 os.environ["CRON_SECRET_KEY"] = "test-cron-key"
 os.environ["PRICE_UPDATE_ENABLED"] = "false"

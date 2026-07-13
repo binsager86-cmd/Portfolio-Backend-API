@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -9,9 +10,22 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from app.api.deps import get_current_user, require_admin
 from app.core.database import exec_sql, query_all
 from app.core.security import TokenData
-from app.schemas.eagle_eye_signals import EngineConfigUpdateRequest, ScanRunRequest
+from app.schemas.eagle_eye_signals import (
+    DataQualityClearRequest,
+    EngineConfigUpdateRequest,
+    PipelineModeUpdateRequest,
+    ScanRunRequest,
+    TickerChartIngestRequest,
+)
 from app.services.eagle_eye.entry_exit_service import get_position_state
-from app.services.eagle_eye.market_data_service import ensure_schema, get_config_with_meta, load_ohlcv_csv, update_config
+from app.services.eagle_eye.market_data_service import (
+    ensure_schema,
+    get_config_with_meta,
+    ingest_tickerchart,
+    list_data_quality_quarantine,
+    load_ohlcv_csv,
+    update_config,
+)
 from app.services.eagle_eye.rating_service import load_rating_history
 from app.services.eagle_eye.scanner_service import get_symbol_state, list_watchlist
 from app.services.eagle_eye.scheduler_service import (
@@ -195,6 +209,96 @@ def api_scan_run(
     return result
 
 
+@router.post("/ingest/tickerchart")
+def api_ingest_tickerchart(
+    payload: TickerChartIngestRequest,
+    admin_user: TokenData = Depends(require_admin),
+):
+    ensure_schema()
+    symbols = [s.upper().replace(".KW", "").strip() for s in payload.symbols if str(s).strip()]
+    if not symbols:
+        raise HTTPException(status_code=400, detail="symbols is required")
+
+    try:
+        start_dt = datetime.fromisoformat(payload.start) if payload.start else None
+        end_dt = datetime.fromisoformat(payload.end) if payload.end else None
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid date format: {exc}") from exc
+    result = ingest_tickerchart(
+        symbols=symbols,
+        start=start_dt,
+        end=end_dt,
+        source=payload.source or "manual",
+        actor=admin_user,
+    )
+    return {"status": "ok", "data": result}
+
+
+@router.get("/data-quality")
+def api_data_quality(current_user: TokenData = Depends(get_current_user)):
+    ensure_schema()
+    items = list_data_quality_quarantine(status="quarantined")
+    return {
+        "status": "ok",
+        "data": {
+            "items": items,
+            "count": len(items),
+            "viewer": _viewer(current_user),
+            "advice": False,
+        },
+    }
+
+
+@router.post("/data-quality/clear")
+def api_data_quality_clear(
+    payload: DataQualityClearRequest,
+    admin_user: TokenData = Depends(require_admin),
+):
+    ensure_schema()
+    symbol = payload.symbol.upper().replace(".KW", "").strip()
+    if not symbol:
+        raise HTTPException(status_code=400, detail="symbol is required")
+
+    rows = query_all(
+        "SELECT status FROM ee_data_quality_quarantine WHERE symbol = ? LIMIT 1",
+        (symbol,),
+    )
+    if not rows:
+        raise HTTPException(status_code=404, detail="Symbol is not quarantined")
+
+    cr = query_all(
+        "SELECT id, status FROM ee_change_requests WHERE id = ? LIMIT 1",
+        (payload.change_request_id,),
+    )
+    if not cr:
+        raise HTTPException(status_code=404, detail="Change request not found")
+    if str(cr[0].get("status") or "").strip().lower() != "approved":
+        raise HTTPException(status_code=400, detail="Change request must be approved")
+
+    exec_sql(
+        """
+        UPDATE ee_data_quality_quarantine
+        SET status='cleared',
+            cleared_at=strftime('%s','now'),
+            change_request_id=?,
+            cleared_by_user_id=?,
+            last_flagged_at=strftime('%s','now')
+        WHERE symbol=?
+        """,
+        (payload.change_request_id, int(admin_user.user_id), symbol),
+    )
+    return {
+        "status": "ok",
+        "data": {
+            "symbol": symbol,
+            "status": "cleared",
+            "change_request_id": payload.change_request_id,
+            "cleared_by": int(admin_user.user_id),
+            "advice": False,
+        },
+    }
+
+
 @router.get("/scan-preview")
 def api_scan_preview(admin_user: TokenData = Depends(require_admin)):
     ensure_schema()
@@ -263,6 +367,25 @@ def api_put_config(
     updated = update_config(
         values=payload.values,
         target_area=payload.target_area,
+        change_request_id=payload.change_request_id,
+        actor=admin_user,
+    )
+    return {"status": "ok", "data": {**updated, "advice": False}}
+
+
+@router.put("/pipeline-mode")
+def api_put_pipeline_mode(
+    payload: PipelineModeUpdateRequest,
+    admin_user: TokenData = Depends(require_admin),
+):
+    ensure_schema()
+    mode = payload.mode.strip().lower()
+    if mode not in {"paper", "live"}:
+        raise HTTPException(status_code=400, detail="mode must be paper or live")
+
+    updated = update_config(
+        values={"pipeline_mode": mode},
+        target_area="scheduler",
         change_request_id=payload.change_request_id,
         actor=admin_user,
     )

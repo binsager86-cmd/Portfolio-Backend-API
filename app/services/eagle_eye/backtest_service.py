@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 from collections import deque
 import statistics
@@ -14,6 +15,7 @@ from app.services.eagle_eye.market_data_service import (
     CONCEPT_VERSION,
     get_active_config,
     get_config_hash,
+    get_validated_history_start,
     now_ts,
     set_now_ts_override,
     validate_engine_config_presence,
@@ -158,6 +160,9 @@ def run_backtest(
     if config_overrides:
         cfg.update(config_overrides)
     validate_runtime_config_keys(cfg)
+    validated_history_start = get_validated_history_start(cfg)
+    validated_history_start_ts = int(datetime(validated_history_start.year, validated_history_start.month, validated_history_start.day).timestamp())
+    start = max(start, validated_history_start_ts)
 
     run_started = now_ts()
     config_hash = get_config_hash(cfg)

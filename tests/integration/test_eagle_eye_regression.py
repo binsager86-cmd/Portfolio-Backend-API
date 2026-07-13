@@ -14,9 +14,15 @@ from app.services.eagle_eye.audit_service import ensure_schema as ensure_audit_s
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 REAL_DATA = Path(__file__).resolve().parents[2] / "data" / "kse"
-SYMBOLS = ["TIJARA", "BPCC", "ZAIN", "SANAM", "MABANEE"]
-JOINER_SYMBOL = "JOINER"
-ADVERSARIAL_SYMBOLS = ["CHOP", "FAKEOUT", "PUMP"]
+SYMBOLS = [
+    "TST_ACCUM_001",
+    "TST_BREAKOUT_FAIL_001",
+    "TST_DISTRIBUTION_001",
+    "TST_ACCUM_002",
+    "TST_MARKUP_001",
+]
+JOINER_SYMBOL = "DBG_GATE_001"
+ADVERSARIAL_SYMBOLS = ["TST_CHOP_001", "TST_FAKEOUT_001", "TST_PUMP_001"]
 SUITE_SYMBOLS = SYMBOLS + [JOINER_SYMBOL] + ADVERSARIAL_SYMBOLS
 SYNTHETIC_OVERRIDES = {
     "min_daily_value_kwd": 100000.0,
@@ -122,32 +128,32 @@ def _trade(symbol: str):
 
 def test_r1_tijara_regression_gate(_synthetic_suite):
 
-    acc = _signal_dates("TIJARA", "ACCUMULATION_ALERT")
-    brk = _signal_dates("TIJARA", "BREAKOUT_CONFIRMED")
-    assert acc, "ACCUMULATION_ALERT missing for TIJARA"
-    assert brk, "BREAKOUT_CONFIRMED missing for TIJARA"
+    acc = _signal_dates("TST_ACCUM_001", "ACCUMULATION_ALERT")
+    brk = _signal_dates("TST_ACCUM_001", "BREAKOUT_CONFIRMED")
+    assert acc, "ACCUMULATION_ALERT missing for TST_ACCUM_001"
+    assert brk, "BREAKOUT_CONFIRMED missing for TST_ACCUM_001"
     assert min(acc) < min(brk)
 
-    t = _trade("TIJARA")
+    t = _trade("TST_ACCUM_001")
     assert t is not None
     assert float(t["net_return"] or 0.0) >= 0.40
 
 
 def test_r2_bpcc_regression_gate(_synthetic_suite):
 
-    brk = _signal_dates("BPCC", "BREAKOUT_CONFIRMED")
+    brk = _signal_dates("TST_BREAKOUT_FAIL_001", "BREAKOUT_CONFIRMED")
     assert brk
 
-    t = _trade("BPCC")
+    t = _trade("TST_BREAKOUT_FAIL_001")
     assert t is not None
     assert float(t["net_return"] or 0.0) >= 0.08
 
-    avoid = _signal_dates("BPCC", "AVOID_SET")
+    avoid = _signal_dates("TST_BREAKOUT_FAIL_001", "AVOID_SET")
     assert avoid, "Expected AVOID_SET during decline segment"
 
     early_cut = query_val(
         "SELECT trade_date FROM ee_ohlcv WHERE symbol = ? ORDER BY trade_date ASC LIMIT 1 OFFSET 80",
-        ("BPCC",),
+        ("TST_BREAKOUT_FAIL_001",),
     )
     early_longs = query_all(
         """
@@ -155,14 +161,14 @@ def test_r2_bpcc_regression_gate(_synthetic_suite):
         WHERE symbol = ? AND trade_date <= ?
           AND signal_type IN ('ACCUMULATION_ALERT', 'BREAKOUT_CONFIRMED')
         """,
-        ("BPCC", early_cut),
+        ("TST_BREAKOUT_FAIL_001", early_cut),
     )
     assert early_longs == []
 
 
 def test_r3_zain_regression_gate(_synthetic_suite):
 
-    brk_dates = _signal_dates("ZAIN", "BREAKOUT_CONFIRMED")
+    brk_dates = _signal_dates("TST_DISTRIBUTION_001", "BREAKOUT_CONFIRMED")
     assert brk_dates
     first_brk = brk_dates[0]
 
@@ -174,17 +180,17 @@ def test_r3_zain_regression_gate(_synthetic_suite):
           AND json_extract(i.payload_json, '$.low') <= json_extract(i.payload_json, '$.ema30')
           AND json_extract(i.payload_json, '$.close') >= json_extract(i.payload_json, '$.ema30')
         """,
-        ("ZAIN", first_brk),
+        ("TST_DISTRIBUTION_001", first_brk),
     )
     assert len(pullbacks) >= 2
 
-    exits = _signal_dates("ZAIN", "EXIT")
+    exits = _signal_dates("TST_DISTRIBUTION_001", "EXIT")
     assert exits == []
 
 
 def test_r4_sanam_regression_gate(_synthetic_suite):
 
-    acc = _signal_dates("SANAM", "ACCUMULATION_ALERT")
+    acc = _signal_dates("TST_ACCUM_002", "ACCUMULATION_ALERT")
     assert acc
 
     exit_rsi70 = query_all(
@@ -192,7 +198,7 @@ def test_r4_sanam_regression_gate(_synthetic_suite):
         SELECT s.id
         FROM ee_signals s
         JOIN ee_indicators i ON i.symbol = s.symbol AND i.trade_date = s.trade_date
-        WHERE s.symbol = 'SANAM'
+        WHERE s.symbol = 'TST_ACCUM_002'
           AND s.signal_type = 'EXIT'
           AND json_extract(i.payload_json, '$.rsi_14') > 70
         """,
@@ -200,22 +206,22 @@ def test_r4_sanam_regression_gate(_synthetic_suite):
     )
     assert exit_rsi70 == []
 
-    t = _trade("SANAM")
+    t = _trade("TST_ACCUM_002")
     assert t is not None
     assert float(t["net_return"] or 0.0) >= 0.25
 
 
 def test_r5_mabanee_regression_gate(_synthetic_suite):
 
-    brk = _signal_dates("MABANEE", "BREAKOUT_CONFIRMED")
-    assert brk, "R5a: BREAKOUT_CONFIRMED missing for MABANEE"
+    brk = _signal_dates("TST_MARKUP_001", "BREAKOUT_CONFIRMED")
+    assert brk, "R5a: BREAKOUT_CONFIRMED missing for TST_MARKUP_001"
 
     first_brk = min(brk)
     pre_exit = query_all(
         """
         SELECT id
         FROM ee_signals
-        WHERE symbol = 'MABANEE'
+        WHERE symbol = 'TST_MARKUP_001'
           AND trade_date >= ?
           AND signal_type IN ('EXIT', 'AVOID_SET')
         ORDER BY trade_date ASC
@@ -227,22 +233,22 @@ def test_r5_mabanee_regression_gate(_synthetic_suite):
 
     top_date = int(
         query_val(
-            "SELECT trade_date FROM ee_ohlcv WHERE symbol = 'MABANEE' ORDER BY close DESC, trade_date ASC LIMIT 1",
+            "SELECT trade_date FROM ee_ohlcv WHERE symbol = 'TST_MARKUP_001' ORDER BY close DESC, trade_date ASC LIMIT 1",
             (),
         )
         or 0
     )
     assert top_date > 0
 
-    warn = _signal_dates("MABANEE", "DISTRIBUTION_WARNING")
+    warn = _signal_dates("TST_MARKUP_001", "DISTRIBUTION_WARNING")
     assert warn
-    assert (_index_date("MABANEE", warn[0]) - _index_date("MABANEE", top_date)) <= 15
+    assert (_index_date("TST_MARKUP_001", warn[0]) - _index_date("TST_MARKUP_001", top_date)) <= 15
 
-    exit_dates = _signal_dates("MABANEE", "EXIT")
-    assert exit_dates, "R5d: EXIT missing for MABANEE"
+    exit_dates = _signal_dates("TST_MARKUP_001", "EXIT")
+    assert exit_dates, "R5d: EXIT missing for TST_MARKUP_001"
 
     rows = query_all(
-        "SELECT trade_date, close FROM ee_ohlcv WHERE symbol = 'MABANEE' AND trade_date >= ? ORDER BY trade_date ASC",
+        "SELECT trade_date, close FROM ee_ohlcv WHERE symbol = 'TST_MARKUP_001' AND trade_date >= ? ORDER BY trade_date ASC",
         (first_brk,),
     )
     running_peak = 0.0
@@ -256,18 +262,18 @@ def test_r5_mabanee_regression_gate(_synthetic_suite):
     assert ten_down_date > 0
     assert min(exit_dates) <= ten_down_date
 
-    t = _trade("MABANEE")
+    t = _trade("TST_MARKUP_001")
     assert t is not None
     assert float(t["net_return"] or 0.0) >= 0.18, "R5e: net return below +0.18"
 
-    end_state = query_one("SELECT phase FROM ee_symbol_state WHERE symbol = 'MABANEE'", ())
+    end_state = query_one("SELECT phase FROM ee_symbol_state WHERE symbol = 'TST_MARKUP_001'", ())
     assert end_state and end_state["phase"] == "AVOID"
 
     reentries = query_all(
         """
         SELECT id
         FROM ee_signals
-        WHERE symbol = 'MABANEE'
+        WHERE symbol = 'TST_MARKUP_001'
           AND trade_date > ?
           AND signal_type IN ('ACCUMULATION_ALERT', 'BREAKOUT_CONFIRMED')
         """,
@@ -281,7 +287,7 @@ def test_r6_adversarial_rejection_gate(_synthetic_suite):
         """
         SELECT symbol, trade_date, signal_type, evidence_json
         FROM ee_signals
-        WHERE symbol IN ('CHOP', 'FAKEOUT', 'PUMP')
+        WHERE symbol IN ('TST_CHOP_001', 'TST_FAKEOUT_001', 'TST_PUMP_001')
           AND signal_type IN ('PHASE_ONLY', 'DISTRIBUTION_WARNING', 'AVOID_SET')
         ORDER BY symbol, trade_date
         """,
@@ -293,7 +299,7 @@ def test_r6_adversarial_rejection_gate(_synthetic_suite):
         """
         SELECT symbol, signal_type, trade_date
         FROM ee_signals
-        WHERE symbol IN ('CHOP', 'FAKEOUT', 'PUMP')
+        WHERE symbol IN ('TST_CHOP_001', 'TST_FAKEOUT_001', 'TST_PUMP_001')
           AND signal_type IN ('ACCUMULATION_ALERT', 'BREAKOUT_CONFIRMED')
         """,
         (),
@@ -304,7 +310,7 @@ def test_r6_adversarial_rejection_gate(_synthetic_suite):
         """
         SELECT symbol, id
         FROM ee_backtest_trades
-        WHERE symbol IN ('CHOP', 'FAKEOUT', 'PUMP')
+        WHERE symbol IN ('TST_CHOP_001', 'TST_FAKEOUT_001', 'TST_PUMP_001')
         """,
         (),
     )
@@ -314,7 +320,7 @@ def test_r6_adversarial_rejection_gate(_synthetic_suite):
         """
         SELECT symbol, id
         FROM ee_positions
-        WHERE symbol IN ('CHOP', 'FAKEOUT', 'PUMP')
+        WHERE symbol IN ('TST_CHOP_001', 'TST_FAKEOUT_001', 'TST_PUMP_001')
         """,
         (),
     )
@@ -397,7 +403,7 @@ def test_r7_synthetic_joiner_trend_join_gate(_synthetic_suite):
     assert end_state and end_state["phase"] == "AVOID"
 
     src = (Path(__file__).resolve().parents[2] / "app" / "services" / "eagle_eye" / "scanner_service.py").read_text(encoding="utf-8")
-    assert "MABANEE" not in src and "TIJARA" not in src and "BPCC" not in src
+    assert "TST_MARKUP_001" not in src and "TST_ACCUM_001" not in src and "TST_BREAKOUT_FAIL_001" not in src
 
 
 def test_real_data_statistical_gate_optional():
@@ -432,3 +438,5 @@ def test_real_data_statistical_gate_optional():
 
     assert win_rate >= 0.45
     assert (avg_win / max(1e-9, avg_loss)) >= 1.8
+
+

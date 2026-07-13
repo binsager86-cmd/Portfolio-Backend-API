@@ -8,6 +8,8 @@ from pathlib import Path
 from functools import lru_cache
 from pydantic_settings import BaseSettings
 
+from app.core.db_isolation import enforce_environment_database_isolation
+
 # Resolve project paths
 BASE_DIR = Path(__file__).resolve().parent.parent.parent  # backend-api/
 # Prefer .env, fall back to .env.production (deployed repos may lack .env)
@@ -152,4 +154,13 @@ def get_settings() -> Settings:
             "LEGACY_PLAINTEXT_LOGIN=True is forbidden in production. "
             "Set LEGACY_PLAINTEXT_LOGIN=False in your .env before deploying."
         )
+
+    # R11 isolation guard: test/debug sessions must never resolve to production DB.
+    enforce_environment_database_isolation(
+        environment=settings.ENVIRONMENT,
+        database_abs_path=settings.database_abs_path,
+        use_postgres=settings.use_postgres,
+        database_url=settings.DATABASE_URL,
+        base_dir=BASE_DIR,
+    )
     return settings

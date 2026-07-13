@@ -1,5 +1,5 @@
 {
-  "BPCC": {
+  "TST_BREAKOUT_FAIL_001": {
     "base": {
       "bar_end": 419,
       "bar_start": 340,
@@ -37,7 +37,7 @@
       "trade_date_start": 1669161600
     }
   },
-  "CHOP": {
+  "TST_CHOP_001": {
     "chop": {
       "bar_end": 559,
       "bar_start": 220,
@@ -51,7 +51,7 @@
       "trade_date_start": 1609459200
     }
   },
-  "FAKEOUT": {
+  "TST_FAKEOUT_001": {
     "base": {
       "bar_end": 379,
       "bar_start": 260,
@@ -83,7 +83,7 @@
       "trade_date_start": 1655942400
     }
   },
-  "JOINER": {
+  "DBG_GATE_001": {
     "breakout": {
       "bar_end": 259,
       "bar_start": 220,
@@ -121,7 +121,7 @@
       "trade_date_start": 1645747200
     }
   },
-  "MABANEE": {
+  "TST_MARKUP_001": {
     "base": {
       "bar_end": 379,
       "bar_start": 220,
@@ -165,7 +165,7 @@
       "trade_date_start": 1666742400
     }
   },
-  "PUMP": {
+  "TST_PUMP_001": {
     "fade": {
       "bar_end": 400,
       "bar_start": 391,
@@ -197,7 +197,7 @@
       "trade_date_start": 1658102400
     }
   },
-  "SANAM": {
+  "TST_ACCUM_002": {
     "base": {
       "bar_end": 319,
       "bar_start": 220,
@@ -229,7 +229,7 @@
       "trade_date_start": 1663027200
     }
   },
-  "TIJARA": {
+  "TST_ACCUM_001": {
     "base": {
       "bar_end": 399,
       "bar_start": 260,
@@ -273,7 +273,7 @@
       "trade_date_start": 1676332800
     }
   },
-  "ZAIN": {
+  "TST_DISTRIBUTION_001": {
     "base": {
       "bar_end": 359,
       "bar_start": 250,

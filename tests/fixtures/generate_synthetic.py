@@ -110,7 +110,7 @@ def _assert_warmup_alignment(df: pd.DataFrame, symbol: str, first_pattern_idx: i
         )
         return
 
-    # JOINER requirement: join conditions hold on >=5 bars inside warmup window.
+    # DBG_GATE_001 requirement: join conditions hold on >=5 bars inside warmup window.
     end = min(len(close), warmup_idx + 41)
     hits = 0
     for i in range(warmup_idx, end):
@@ -608,7 +608,7 @@ def _build_mabanee(rng: np.random.Generator) -> SeriesBundle:
 
 
 def _build_joiner(rng: np.random.Generator) -> SeriesBundle:
-    # JOINER prefix must be a clean uptrend so warmup-ready bars satisfy trend-join conditions.
+    # DBG_GATE_001 prefix must be a clean uptrend so warmup-ready bars satisfy trend-join conditions.
     daily_ret = rng.normal(0.0020, 0.0007, size=PREFIX_SESSIONS)
     prefix = 760.0 * np.exp(np.cumsum(daily_ret))
 
@@ -768,13 +768,13 @@ def _self_check_tijara(df: pd.DataFrame) -> None:
 
     frac = _norm_lr_fractional_change(close[base_last_40])
     flow = _norm_flow_window(obv[base_last_40], vol[base_last_40])
-    assert abs(frac) < 0.02, f"TIJARA: expected flat price in late base, got {frac:.4f}"
-    assert flow > 0.10, f"TIJARA: expected positive OBV flow > 0.10, got {flow:.4f}"
+    assert abs(frac) < 0.02, f"TST_ACCUM_001: expected flat price in late base, got {frac:.4f}"
+    assert flow > 0.10, f"TST_ACCUM_001: expected positive OBV flow > 0.10, got {flow:.4f}"
 
     brk_i = pre + base_len
-    assert rv[brk_i] >= 3.5, f"TIJARA: breakout rel_volume < 3.5 ({rv[brk_i]:.3f})"
-    _assert_breakout_crossing(df, "TIJARA", (pre, pre + base_len), (brk_i, brk_i + 2))
-    _assert_markup_anchor(df, "TIJARA", (pre, pre + base_len), (brk_i, len(df)), min_gain=0.80)
+    assert rv[brk_i] >= 3.5, f"TST_ACCUM_001: breakout rel_volume < 3.5 ({rv[brk_i]:.3f})"
+    _assert_breakout_crossing(df, "TST_ACCUM_001", (pre, pre + base_len), (brk_i, brk_i + 2))
+    _assert_markup_anchor(df, "TST_ACCUM_001", (pre, pre + base_len), (brk_i, len(df)), min_gain=0.80)
 
 
 def _self_check_bpcc(df: pd.DataFrame) -> None:
@@ -783,17 +783,17 @@ def _self_check_bpcc(df: pd.DataFrame) -> None:
     obv = _obv(close, vol)
 
     decline = close[PREFIX_SESSIONS : PREFIX_SESSIONS + 120]
-    assert decline[-1] < decline[0] * 0.84, "BPCC: decline segment is not steep enough"
+    assert decline[-1] < decline[0] * 0.84, "TST_BREAKOUT_FAIL_001: decline segment is not steep enough"
 
     base_window = slice(PREFIX_SESSIONS + 120 + 40, PREFIX_SESSIONS + 120 + 80)
     flow = _norm_flow_window(obv[base_window], vol[base_window])
-    assert flow > 0.10, f"BPCC: base OBV flow should be >0.10, got {flow:.4f}"
+    assert flow > 0.10, f"TST_BREAKOUT_FAIL_001: base OBV flow should be >0.10, got {flow:.4f}"
 
     rv = vol / pd.Series(vol).rolling(20).mean().to_numpy()
     brk_i = PREFIX_SESSIONS + 200
-    assert rv[brk_i] >= 3.0, f"BPCC: breakout rel_volume < 3.0 ({rv[brk_i]:.3f})"
-    _assert_breakout_crossing(df, "BPCC", (PREFIX_SESSIONS + 120, PREFIX_SESSIONS + 200), (brk_i, brk_i + 3))
-    _assert_markup_anchor(df, "BPCC", (PREFIX_SESSIONS + 120, PREFIX_SESSIONS + 200), (brk_i, len(df)), min_gain=0.12)
+    assert rv[brk_i] >= 3.0, f"TST_BREAKOUT_FAIL_001: breakout rel_volume < 3.0 ({rv[brk_i]:.3f})"
+    _assert_breakout_crossing(df, "TST_BREAKOUT_FAIL_001", (PREFIX_SESSIONS + 120, PREFIX_SESSIONS + 200), (brk_i, brk_i + 3))
+    _assert_markup_anchor(df, "TST_BREAKOUT_FAIL_001", (PREFIX_SESSIONS + 120, PREFIX_SESSIONS + 200), (brk_i, len(df)), min_gain=0.12)
 
 
 def _self_check_zain(df: pd.DataFrame) -> None:
@@ -806,13 +806,13 @@ def _self_check_zain(df: pd.DataFrame) -> None:
         win = base[i - 40 : i]
         drift = abs((win[-1] / win[0]) - 1.0)
         max_drift = max(max_drift, drift)
-    assert max_drift <= 0.015, f"ZAIN: 40-session base drift too high ({max_drift:.4f})"
+    assert max_drift <= 0.015, f"TST_DISTRIBUTION_001: 40-session base drift too high ({max_drift:.4f})"
 
     rv = vol / pd.Series(vol).rolling(20).mean().to_numpy()
     brk_i = PREFIX_SESSIONS + 140
-    assert rv[brk_i] >= 3.0, f"ZAIN: breakout rel_volume < 3.0 ({rv[brk_i]:.3f})"
-    _assert_breakout_crossing(df, "ZAIN", (PREFIX_SESSIONS + 30, PREFIX_SESSIONS + 140), (brk_i, brk_i + 2))
-    _assert_markup_anchor(df, "ZAIN", (PREFIX_SESSIONS + 30, PREFIX_SESSIONS + 140), (brk_i, len(df)), min_gain=0.12)
+    assert rv[brk_i] >= 3.0, f"TST_DISTRIBUTION_001: breakout rel_volume < 3.0 ({rv[brk_i]:.3f})"
+    _assert_breakout_crossing(df, "TST_DISTRIBUTION_001", (PREFIX_SESSIONS + 30, PREFIX_SESSIONS + 140), (brk_i, brk_i + 2))
+    _assert_markup_anchor(df, "TST_DISTRIBUTION_001", (PREFIX_SESSIONS + 30, PREFIX_SESSIONS + 140), (brk_i, len(df)), min_gain=0.12)
 
 
 def _self_check_sanam(df: pd.DataFrame) -> None:
@@ -827,9 +827,9 @@ def _self_check_sanam(df: pd.DataFrame) -> None:
             best = max(best, streak)
         else:
             streak = 0
-    assert best >= 15, f"SANAM: RSI>70 streak too short ({best})"
-    _assert_breakout_crossing(df, "SANAM", (PREFIX_SESSIONS, PREFIX_SESSIONS + 100), (PREFIX_SESSIONS + 100, PREFIX_SESSIONS + 102))
-    _assert_markup_anchor(df, "SANAM", (PREFIX_SESSIONS, PREFIX_SESSIONS + 100), (PREFIX_SESSIONS + 100, len(df)), min_gain=0.45)
+    assert best >= 15, f"TST_ACCUM_002: RSI>70 streak too short ({best})"
+    _assert_breakout_crossing(df, "TST_ACCUM_002", (PREFIX_SESSIONS, PREFIX_SESSIONS + 100), (PREFIX_SESSIONS + 100, PREFIX_SESSIONS + 102))
+    _assert_markup_anchor(df, "TST_ACCUM_002", (PREFIX_SESSIONS, PREFIX_SESSIONS + 100), (PREFIX_SESSIONS + 100, len(df)), min_gain=0.45)
 
 
 def _self_check_mabanee(df: pd.DataFrame) -> None:
@@ -840,21 +840,21 @@ def _self_check_mabanee(df: pd.DataFrame) -> None:
     climax_i = int(np.argmax(vol))
     top_start = max(0, climax_i - 40)
     top = close[top_start:climax_i]
-    assert top.max() > close[PREFIX_SESSIONS + 59], "MABANEE: top segment missing higher highs"
+    assert top.max() > close[PREFIX_SESSIONS + 59], "TST_MARKUP_001: top segment missing higher highs"
 
     top_obv = obv[top_start:climax_i]
-    assert top_obv[-1] < top_obv[10], "MABANEE: OBV should fade in top segment"
+    assert top_obv[-1] < top_obv[10], "TST_MARKUP_001: OBV should fade in top segment"
 
     rv = vol / pd.Series(vol).rolling(20).mean().to_numpy()
-    assert rv[climax_i] >= 4.0, f"MABANEE: climax rel_volume < 4.0 ({rv[climax_i]:.3f})"
+    assert rv[climax_i] >= 4.0, f"TST_MARKUP_001: climax rel_volume < 4.0 ({rv[climax_i]:.3f})"
 
     sma200 = pd.Series(close).rolling(200).mean().to_numpy()
     post = close[climax_i + 1 :]
     post_sma = sma200[climax_i + 1 :]
     below = np.where(post < post_sma)[0]
-    assert len(below) > 0, "MABANEE: decline never crosses below SMA200"
-    _assert_breakout_crossing(df, "MABANEE", (PREFIX_SESSIONS, PREFIX_SESSIONS + 160), (PREFIX_SESSIONS + 160, PREFIX_SESSIONS + 163))
-    _assert_markup_anchor(df, "MABANEE", (PREFIX_SESSIONS, PREFIX_SESSIONS + 160), (PREFIX_SESSIONS + 160, len(df)), min_gain=0.25)
+    assert len(below) > 0, "TST_MARKUP_001: decline never crosses below SMA200"
+    _assert_breakout_crossing(df, "TST_MARKUP_001", (PREFIX_SESSIONS, PREFIX_SESSIONS + 160), (PREFIX_SESSIONS + 160, PREFIX_SESSIONS + 163))
+    _assert_markup_anchor(df, "TST_MARKUP_001", (PREFIX_SESSIONS, PREFIX_SESSIONS + 160), (PREFIX_SESSIONS + 160, len(df)), min_gain=0.25)
 
 
 def _self_check_joiner(df: pd.DataFrame) -> None:
@@ -873,7 +873,7 @@ def _self_check_joiner(df: pd.DataFrame) -> None:
         & (range_low_120 > 0)
         & (range_high_120 > 0)
     )[0]
-    assert len(warmup_ready) > 0, "JOINER: warmup_ready_date not found"
+    assert len(warmup_ready) > 0, "DBG_GATE_001: warmup_ready_date not found"
     warmup_idx = int(warmup_ready[0])
 
     join_window_end = min(len(close), warmup_idx + 41)
@@ -882,13 +882,13 @@ def _self_check_joiner(df: pd.DataFrame) -> None:
         if close[i] > sma200[i] and ema10[i] > ema30[i] and close[i] >= (range_low_120[i] * 1.15):
             joined_hits += 1
     assert joined_hits >= 5, (
-        "JOINER: expected >=5 trend-join eligible bars inside first 40 sessions after warmup_ready_date"
+        "DBG_GATE_001: expected >=5 trend-join eligible bars inside first 40 sessions after warmup_ready_date"
     )
 
     upper = float(np.nanmax(close[warmup_idx + 20 : warmup_idx + 140]))
-    assert upper > 1150.0, "JOINER: expected late-cycle strong markup"
-    assert np.nanmean(close[-80:] < sma200[-80:]) > 0.7, "JOINER: expected late decline below SMA200"
-    _assert_breakout_crossing(df, "JOINER", (0, PREFIX_SESSIONS), (PREFIX_SESSIONS, PREFIX_SESSIONS + 40))
+    assert upper > 1150.0, "DBG_GATE_001: expected late-cycle strong markup"
+    assert np.nanmean(close[-80:] < sma200[-80:]) > 0.7, "DBG_GATE_001: expected late decline below SMA200"
+    _assert_breakout_crossing(df, "DBG_GATE_001", (0, PREFIX_SESSIONS), (PREFIX_SESSIONS, PREFIX_SESSIONS + 40))
 
 
 def _self_check_chop(df: pd.DataFrame) -> None:
@@ -904,7 +904,7 @@ def _self_check_chop(df: pd.DataFrame) -> None:
         net_flow = _norm_flow_window(win_obv, win_vol)
         if net_flow > 0.10:
             hits += 1
-    assert hits == 0, f"CHOP: expected zero 60-session windows with net-flow > 0.10, got {hits}"
+    assert hits == 0, f"TST_CHOP_001: expected zero 60-session windows with net-flow > 0.10, got {hits}"
 
 
 def _self_check_fakeout(df: pd.DataFrame) -> None:
@@ -917,16 +917,16 @@ def _self_check_fakeout(df: pd.DataFrame) -> None:
     fakeout = (PREFIX_SESSIONS + 160, PREFIX_SESSIONS + 164)
     base_high = float(np.nanmax(high[base[0] : base[1]]))
     crossing_i = fakeout[0]
-    assert close[crossing_i] > base_high, "FAKEOUT: first fakeout bar must cross base high"
-    assert rv[crossing_i] < 1.5, f"FAKEOUT: crossing bar rel_volume must be <1.5, got {rv[crossing_i]:.3f}"
-    assert int(np.sum(rv[fakeout[0] : fakeout[1]] >= 2.5)) == 0, "FAKEOUT: no fakeout-window bar may reach rel_volume >=2.5"
+    assert close[crossing_i] > base_high, "TST_FAKEOUT_001: first fakeout bar must cross base high"
+    assert rv[crossing_i] < 1.5, f"TST_FAKEOUT_001: crossing bar rel_volume must be <1.5, got {rv[crossing_i]:.3f}"
+    assert int(np.sum(rv[fakeout[0] : fakeout[1]] >= 2.5)) == 0, "TST_FAKEOUT_001: no fakeout-window bar may reach rel_volume >=2.5"
 
     inside = False
     for i in range(crossing_i + 1, min(crossing_i + 4, len(close))):
         if close[i] <= base_high:
             inside = True
             break
-    assert inside, "FAKEOUT: price must fade back inside base within 3 bars"
+    assert inside, "TST_FAKEOUT_001: price must fade back inside base within 3 bars"
 
 
 def _self_check_pump(df: pd.DataFrame) -> None:
@@ -934,10 +934,10 @@ def _self_check_pump(df: pd.DataFrame) -> None:
     spike_i = PREFIX_SESSIONS + 170
     prev = float(close[spike_i - 1])
     gap = (float(close[spike_i]) / max(prev, 1e-9)) - 1.0
-    assert gap > 0.08, f"PUMP: spike gap must exceed 8%, got {gap:.3f}"
+    assert gap > 0.08, f"TST_PUMP_001: spike gap must exceed 8%, got {gap:.3f}"
     pre_spike = close[PREFIX_SESSIONS:spike_i]
     assert not _qualifying_base_exists(pre_spike, len(pre_spike), min_sessions=60, max_width=0.18), (
-        "PUMP: found a qualifying 60-session base before spike"
+        "TST_PUMP_001: found a qualifying 60-session base before spike"
     )
 
 
@@ -957,41 +957,41 @@ def main() -> None:
     rng = np.random.default_rng(MASTER_SEED)
 
     builders = {
-        "TIJARA": _build_tijara,
-        "BPCC": _build_bpcc,
-        "ZAIN": _build_zain,
-        "SANAM": _build_sanam,
-        "MABANEE": _build_mabanee,
-        "JOINER": _build_joiner,
-        "CHOP": _build_chop,
-        "FAKEOUT": _build_fakeout,
-        "PUMP": _build_pump,
+        "TST_ACCUM_001": _build_tijara,
+        "TST_BREAKOUT_FAIL_001": _build_bpcc,
+        "TST_DISTRIBUTION_001": _build_zain,
+        "TST_ACCUM_002": _build_sanam,
+        "TST_MARKUP_001": _build_mabanee,
+        "DBG_GATE_001": _build_joiner,
+        "TST_CHOP_001": _build_chop,
+        "TST_FAKEOUT_001": _build_fakeout,
+        "TST_PUMP_001": _build_pump,
     }
     checkers = {
-        "TIJARA": _self_check_tijara,
-        "BPCC": _self_check_bpcc,
-        "ZAIN": _self_check_zain,
-        "SANAM": _self_check_sanam,
-        "MABANEE": _self_check_mabanee,
-        "JOINER": _self_check_joiner,
-        "CHOP": _self_check_chop,
-        "FAKEOUT": _self_check_fakeout,
-        "PUMP": _self_check_pump,
+        "TST_ACCUM_001": _self_check_tijara,
+        "TST_BREAKOUT_FAIL_001": _self_check_bpcc,
+        "TST_DISTRIBUTION_001": _self_check_zain,
+        "TST_ACCUM_002": _self_check_sanam,
+        "TST_MARKUP_001": _self_check_mabanee,
+        "DBG_GATE_001": _self_check_joiner,
+        "TST_CHOP_001": _self_check_chop,
+        "TST_FAKEOUT_001": _self_check_fakeout,
+        "TST_PUMP_001": _self_check_pump,
     }
     first_pattern_index = {
-        "TIJARA": PREFIX_SESSIONS,
-        "BPCC": PREFIX_SESSIONS,
-        "ZAIN": PREFIX_SESSIONS,
-        "SANAM": PREFIX_SESSIONS,
-        "MABANEE": PREFIX_SESSIONS,
-        "JOINER": PREFIX_SESSIONS,
-        "CHOP": PREFIX_SESSIONS,
-        "FAKEOUT": PREFIX_SESSIONS,
-        "PUMP": PREFIX_SESSIONS,
+        "TST_ACCUM_001": PREFIX_SESSIONS,
+        "TST_BREAKOUT_FAIL_001": PREFIX_SESSIONS,
+        "TST_DISTRIBUTION_001": PREFIX_SESSIONS,
+        "TST_ACCUM_002": PREFIX_SESSIONS,
+        "TST_MARKUP_001": PREFIX_SESSIONS,
+        "DBG_GATE_001": PREFIX_SESSIONS,
+        "TST_CHOP_001": PREFIX_SESSIONS,
+        "TST_FAKEOUT_001": PREFIX_SESSIONS,
+        "TST_PUMP_001": PREFIX_SESSIONS,
     }
     all_segments: dict[str, dict[str, dict[str, int]]] = {}
 
-    for symbol in ["TIJARA", "BPCC", "ZAIN", "SANAM", "MABANEE", "JOINER", "CHOP", "FAKEOUT", "PUMP"]:
+    for symbol in ["TST_ACCUM_001", "TST_BREAKOUT_FAIL_001", "TST_DISTRIBUTION_001", "TST_ACCUM_002", "TST_MARKUP_001", "DBG_GATE_001", "TST_CHOP_001", "TST_FAKEOUT_001", "TST_PUMP_001"]:
         local_rng = np.random.default_rng(rng.integers(0, 1_000_000_000))
         bundle = builders[symbol](local_rng)
         df = _ohlcv_from_close(
@@ -1005,7 +1005,7 @@ def main() -> None:
             df,
             symbol,
             first_pattern_idx=first_pattern_index[symbol],
-            is_joiner=(symbol == "JOINER"),
+            is_joiner=(symbol == "DBG_GATE_001"),
         )
         for window in bundle.accumulation_windows:
             _assert_accumulation_cmf_window(df, window, symbol)
@@ -1028,3 +1028,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

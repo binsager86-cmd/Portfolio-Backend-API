@@ -28,12 +28,22 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.orm import Session, sessionmaker, DeclarativeBase
 
 from app.core.config import get_settings
+from app.core.db_isolation import enforce_environment_database_isolation
 
 _settings = get_settings()
 _DB_PATH = _settings.database_abs_path
 _USE_PG = _settings.use_postgres
 _SQLITE_CONN: Optional[sqlite3.Connection] = None
 _SQLITE_CONN_LOCK = threading.Lock()
+
+# R11 defense-in-depth: enforce path isolation again at DB layer.
+enforce_environment_database_isolation(
+    environment=_settings.ENVIRONMENT,
+    database_abs_path=_DB_PATH,
+    use_postgres=_USE_PG,
+    database_url=_settings.DATABASE_URL,
+    base_dir=Path(__file__).resolve().parent.parent.parent,
+)
 
 
 def safe_json_dumps(obj: Any) -> str:

@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sqlite3
 import sys
 import time
@@ -41,6 +42,8 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.engine import Engine
+
+from app.core.db_isolation import enforce_environment_database_isolation
 
 logger = logging.getLogger("migrate_data")
 
@@ -499,6 +502,19 @@ def migrate_sqlite_to_postgres(
 
 # ─── CLI ──────────────────────────────────────────────────────────────
 
+def validate_migration_runtime_isolation(*, sqlite_path: str, postgres_url: str | None, environment: str) -> None:
+    """Fail closed when migration is invoked from test/debug against production targets."""
+    base_dir = Path(__file__).resolve().parents[1]
+    resolved_sqlite = Path(sqlite_path).resolve() if sqlite_path else Path("").resolve()
+    enforce_environment_database_isolation(
+        environment=(environment or "").strip().lower(),
+        database_abs_path=str(resolved_sqlite),
+        use_postgres=bool((postgres_url or "").strip()),
+        database_url=str(postgres_url or ""),
+        base_dir=base_dir,
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Migrate portfolio data from SQLite to PostgreSQL.",
@@ -560,6 +576,12 @@ def main() -> None:
         parser.error(
             "PostgreSQL URL required: pass --postgres or set DATABASE_URL env var"
         )
+
+    validate_migration_runtime_isolation(
+        sqlite_path=args.sqlite,
+        postgres_url=postgres_url,
+        environment=(os.getenv("ENVIRONMENT") or "development"),
+    )
 
     logger.info("=" * 60)
     logger.info("Portfolio SQLite → PostgreSQL Migration")

@@ -1602,43 +1602,43 @@ def test_u1h_base_freeze_logs_provenance_event():
 
 
 def test_u2_no_lookahead_mutating_future_bar_keeps_prior_signals_identical():
-    _load_fixture("TIJARA")
-    compute_and_store_symbol("TIJARA")
-    mn, mx = _bounds(["TIJARA"])
+    _load_fixture("TST_ACCUM_001")
+    compute_and_store_symbol("TST_ACCUM_001")
+    mn, mx = _bounds(["TST_ACCUM_001"])
 
-    report1 = run_backtest(["TIJARA"], mn, mx)
+    report1 = run_backtest(["TST_ACCUM_001"], mn, mx)
     assert isinstance(report1.get("equity_curve"), list)
 
     mutation_date = query_val(
         "SELECT trade_date FROM ee_ohlcv WHERE symbol = ? ORDER BY trade_date ASC LIMIT 1 OFFSET 120",
-        ("TIJARA",),
+        ("TST_ACCUM_001",),
     )
     baseline = query_all(
         "SELECT trade_date, evidence_json FROM ee_signals WHERE symbol = ? AND trade_date <= ? ORDER BY trade_date, id",
-        ("TIJARA", mutation_date),
+        ("TST_ACCUM_001", mutation_date),
     )
     baseline_hashes = [(int(r["trade_date"]), _json_hash(json.loads(r["evidence_json"]))) for r in baseline]
 
     exec_sql(
         "UPDATE ee_ohlcv SET close = close * 1.25, high = high * 1.25, low = low * 1.25 WHERE symbol = ? AND trade_date > ?",
-        ("TIJARA", mutation_date),
+        ("TST_ACCUM_001", mutation_date),
     )
-    compute_and_store_symbol("TIJARA")
+    compute_and_store_symbol("TST_ACCUM_001")
 
-    report2 = run_backtest(["TIJARA"], mn, mx)
+    report2 = run_backtest(["TST_ACCUM_001"], mn, mx)
     assert isinstance(report2.get("equity_curve"), list)
 
     after = query_all(
         "SELECT trade_date, evidence_json FROM ee_signals WHERE symbol = ? AND trade_date <= ? ORDER BY trade_date, id",
-        ("TIJARA", mutation_date),
+        ("TST_ACCUM_001", mutation_date),
     )
     after_hashes = [(int(r["trade_date"]), _json_hash(json.loads(r["evidence_json"]))) for r in after]
     assert baseline_hashes == after_hashes
 
 
 def test_u3_eod_idempotency_same_date_same_signals_single_summary_event():
-    _load_fixture("ZAIN")
-    compute_and_store_symbol("ZAIN")
+    _load_fixture("TST_DISTRIBUTION_001")
+    compute_and_store_symbol("TST_DISTRIBUTION_001")
 
     r1 = run_eod_pipeline(source="scheduler")
     d = int(r1["data"]["run_date"])
@@ -1667,7 +1667,7 @@ def test_u3_eod_idempotency_same_date_same_signals_single_summary_event():
 
 
 def test_u9_driver_equivalence():
-    symbols = ["TIJARA", "BPCC", "ZAIN", "SANAM", "MABANEE", "JOINER"]
+    symbols = ["TST_ACCUM_001", "TST_BREAKOUT_FAIL_001", "TST_DISTRIBUTION_001", "TST_ACCUM_002", "TST_MARKUP_001", "DBG_GATE_001"]
 
     mn, mx = _load_driver_equivalence_fixtures(symbols)
     run_backtest(symbols, mn, mx, config_overrides={"min_daily_value_kwd": 100000.0})
@@ -1768,8 +1768,8 @@ def test_u4_signals_api_auth_and_config_workflow(test_client, auth_headers):
         ("get", "/api/v1/eagle-eye/signals/watchlist"),
         ("get", "/api/v1/eagle-eye/signals/signals"),
         ("get", "/api/v1/eagle-eye/signals/signals/1"),
-        ("get", "/api/v1/eagle-eye/signals/ratings/TIJARA"),
-        ("get", "/api/v1/eagle-eye/signals/state/TIJARA"),
+        ("get", "/api/v1/eagle-eye/signals/ratings/TST_ACCUM_001"),
+        ("get", "/api/v1/eagle-eye/signals/state/TST_ACCUM_001"),
         ("post", "/api/v1/eagle-eye/signals/scan/run"),
         ("get", "/api/v1/eagle-eye/signals/scan-preview"),
         ("get", "/api/v1/eagle-eye/signals/config"),
@@ -1785,8 +1785,8 @@ def test_u4_signals_api_auth_and_config_workflow(test_client, auth_headers):
             resp = test_client.put(url, json={"target_area": "scanner", "change_request_id": 1, "values": {"base_min_sessions": 61}})
         assert resp.status_code == 401
 
-    _load_fixture("TIJARA")
-    compute_and_store_symbol("TIJARA")
+    _load_fixture("TST_ACCUM_001")
+    compute_and_store_symbol("TST_ACCUM_001")
 
     cfg = test_client.get("/api/v1/eagle-eye/signals/config", headers=auth_headers)
     assert cfg.status_code == 200
@@ -1855,7 +1855,7 @@ def test_u4_signals_api_auth_and_config_workflow(test_client, auth_headers):
     assert sigs.status_code == 200
     assert sigs.json()["data"]["advice"] is False
 
-    st = test_client.get("/api/v1/eagle-eye/signals/state/TIJARA", headers=auth_headers)
+    st = test_client.get("/api/v1/eagle-eye/signals/state/TST_ACCUM_001", headers=auth_headers)
     assert st.status_code == 200
     assert st.json()["data"]["advice"] is False
 
@@ -1889,15 +1889,15 @@ def test_u4b_scan_preview_admin_endpoint(test_client, auth_headers, tmp_path, mo
 
     data_dir = tmp_path / "kse"
     data_dir.mkdir(parents=True, exist_ok=True)
-    src = FIXTURES / "synthetic_tijara.csv"
-    shutil.copyfile(src, data_dir / "preview_tijara.csv")
+    src = FIXTURES / "synthetic_tst_accum_001.csv"
+    shutil.copyfile(src, data_dir / "preview_tst_accum_001.csv")
     monkeypatch.setattr(sig_api, "_scan_preview_dir", lambda: data_dir)
 
     filled_resp = test_client.get("/api/v1/eagle-eye/signals/scan-preview", headers=admin_headers)
     assert filled_resp.status_code == 200, filled_resp.text
     body = filled_resp.json()["data"]
     assert body["advice"] is False
-    assert body["loaded_symbols"] == ["PREVIEW_TIJARA"]
+    assert body["loaded_symbols"] == ["PREVIEW_TST_ACCUM_001"]
     assert isinstance(body["items"], list)
 
 
@@ -1985,13 +1985,13 @@ def test_u5_risk_suppression_emits_signal_and_skips_position():
 
 
 def test_u6_liquidity_filter_blocks_publishable_signals():
-    _load_fixture("SANAM", low_liquidity=True)
-    compute_and_store_symbol("SANAM")
+    _load_fixture("TST_ACCUM_002", low_liquidity=True)
+    compute_and_store_symbol("TST_ACCUM_002")
 
-    latest = int(query_val("SELECT MAX(trade_date) FROM ee_indicators WHERE symbol = ?", ("SANAM",)) or 0)
+    latest = int(query_val("SELECT MAX(trade_date) FROM ee_indicators WHERE symbol = ?", ("TST_ACCUM_002",)) or 0)
     exec_sql(
         "INSERT INTO ee_symbol_state (symbol, phase, phase_since, updated_at, state_json) VALUES (?, 'BASE_FORMING', ?, ?, '{}')",
-        ("SANAM", latest - 86400, latest),
+        ("TST_ACCUM_002", latest - 86400, latest),
     )
 
     cfg = {
@@ -2006,11 +2006,11 @@ def test_u6_liquidity_filter_blocks_publishable_signals():
         "max_positions": 8,
         "min_daily_value_kwd": 100000.0,
     }
-    evaluate_symbol("SANAM", latest, 82.0, cfg)
+    evaluate_symbol("TST_ACCUM_002", latest, 82.0, cfg)
 
     longs = query_all(
         "SELECT signal_type FROM ee_signals WHERE symbol = ? AND signal_type IN ('ACCUMULATION_ALERT', 'BREAKOUT_CONFIRMED')",
-        ("SANAM",),
+        ("TST_ACCUM_002",),
     )
     assert longs == []
 
@@ -2196,3 +2196,5 @@ def test_lint_single_evaluate_symbol_callsite():
 
     assert len(callsites) == 1
     assert callsites[0].startswith("app/services/eagle_eye/pipeline.py:")
+
+

@@ -11,6 +11,7 @@ from app.services.eagle_eye.market_data_service import (
     CONCEPT_VERSION,
     ensure_schema,
     get_active_config,
+    get_quarantined_symbols,
     latest_trade_date,
     list_symbols,
     now_ts,
@@ -37,6 +38,10 @@ def run_eod_pipeline(source: str = "scheduler", actor: TokenData | None = None) 
     if run_date is None:
         return {"status": "ok", "data": {"trace_id": trace_id, "symbols": 0, "advice": False}}
 
+    symbols = list_symbols()
+    quarantined = get_quarantined_symbols()
+    skipped_quarantined = 0
+
     existing_summary = query_all(
         "SELECT id FROM ee_audit_events WHERE action = 'eod_pipeline_run' AND entity_type = 'pipeline' AND entity_id = ? LIMIT 1",
         (f"eagle_eye:{run_date}",),
@@ -48,12 +53,14 @@ def run_eod_pipeline(source: str = "scheduler", actor: TokenData | None = None) 
                 "trace_id": trace_id,
                 "run_date": run_date,
                 "source": source,
-                "symbols": len(list_symbols()),
+                "symbols": len(symbols),
                 "copied_ohlcv_rows": copied,
                 "indicator_updates": 0,
                 "rating_updates": 0,
                 "transitions": 0,
                 "labels_updated": 0,
+                "quarantined_symbols": len(quarantined),
+                "skipped_quarantined": skipped_quarantined,
                 "errors": [],
                 "summary_audit_event_id": int(existing_summary[0].get("id") or 0),
                 "advice": False,
@@ -66,7 +73,6 @@ def run_eod_pipeline(source: str = "scheduler", actor: TokenData | None = None) 
         (f"eagle_eye:{run_date}",),
     )
 
-    symbols = list_symbols()
     cfg = get_active_config()
 
     indicator_updates = 0
@@ -75,6 +81,9 @@ def run_eod_pipeline(source: str = "scheduler", actor: TokenData | None = None) 
     failures: list[dict[str, Any]] = []
 
     for symbol in symbols:
+        if symbol.upper() in quarantined:
+            skipped_quarantined += 1
+            continue
         try:
             indicator_updates += compute_and_store_symbol(symbol)
             payload = load_latest_indicator(symbol, run_date)
@@ -140,6 +149,8 @@ def run_eod_pipeline(source: str = "scheduler", actor: TokenData | None = None) 
                 "rating_updates": rating_updates,
                 "transitions": transitions,
                 "labels_updated": labels_updated,
+                "quarantined_symbols": len(quarantined),
+                "skipped_quarantined": skipped_quarantined,
                 "errors": failures,
             },
             "concept_version": CONCEPT_VERSION,
@@ -159,6 +170,8 @@ def run_eod_pipeline(source: str = "scheduler", actor: TokenData | None = None) 
             "rating_updates": rating_updates,
             "transitions": transitions,
             "labels_updated": labels_updated,
+            "quarantined_symbols": len(quarantined),
+            "skipped_quarantined": skipped_quarantined,
             "errors": failures,
             "summary_audit_event_id": summary_event.get("id"),
             "advice": False,

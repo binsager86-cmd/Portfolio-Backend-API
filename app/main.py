@@ -18,6 +18,7 @@ pd.set_option("future.no_silent_downcasting", True)
 
 import sentry_sdk
 from prometheus_fastapi_instrumentator import Instrumentator
+from prometheus_fastapi_instrumentator import routing as prom_routing
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
@@ -315,6 +316,20 @@ app = FastAPI(
 # ── Observability (Prometheus) ─────────────────────────────────────
 # Must be called at module level — add_middleware() cannot be called
 # after the application has started (i.e. inside lifespan).
+_orig_get_route_name = prom_routing.get_route_name
+
+
+def _safe_get_route_name(request):
+    try:
+        return _orig_get_route_name(request)
+    except AttributeError as exc:
+        # FastAPI/Starlette may surface internal route wrappers without .path.
+        if "_IncludedRouter" in str(exc):
+            return "none"
+        raise
+
+
+prom_routing.get_route_name = _safe_get_route_name
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 # ── Exception handlers ──────────────────────────────────────────────
