@@ -637,6 +637,43 @@ def _safe_float(v) -> Optional[float]:
         return None
 
 
+def _volume_from_indicators(indicators: object) -> tuple[Optional[float], Optional[float]]:
+    """Best-effort fallback for scanner volume fields from cached indicators_json."""
+    if not isinstance(indicators, dict):
+        return None, None
+
+    avg_candidates = (
+        indicators.get("avg_20d_volume"),
+        indicators.get("average_volume_20d"),
+        indicators.get("average_volume"),
+        indicators.get("avg_volume"),
+        indicators.get("volume_avg_20"),
+        indicators.get("volume_ma20"),
+    )
+    latest_candidates = (
+        indicators.get("latest_volume"),
+        indicators.get("volume"),
+        indicators.get("last_volume"),
+    )
+
+    avg_v: Optional[float] = None
+    latest_v: Optional[float] = None
+
+    for cand in avg_candidates:
+        val = _safe_float(cand)
+        if val is not None:
+            avg_v = val
+            break
+
+    for cand in latest_candidates:
+        val = _safe_float(cand)
+        if val is not None:
+            latest_v = val
+            break
+
+    return avg_v, latest_v
+
+
 def _derive_pe_from_price_eps(last_price_fils: Optional[float], eps_kwd: Optional[float]) -> Optional[float]:
     """Derive P/E using KSE price units (fils) and EPS in KWD."""
     if last_price_fils is None or eps_kwd is None:
@@ -1167,6 +1204,13 @@ async def get_scanner(
             vol_stats = volume_stats_map.get(t, {})
             latest_volume = _safe_float(vol_stats.get("latest_volume"))
             average_volume = _safe_float(vol_stats.get("average_volume"))
+
+            if latest_volume is None or average_volume is None:
+                ind_avg, ind_latest = _volume_from_indicators(row.get("indicators"))
+                if average_volume is None:
+                    average_volume = ind_avg
+                if latest_volume is None:
+                    latest_volume = ind_latest
 
             fmeta = fundamentals_map.get(t, {})
             bvps = _safe_float(fmeta.get("book_value_per_share"))
