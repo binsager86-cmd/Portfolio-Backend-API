@@ -1,0 +1,71 @@
+{
+  "baseline_artifact": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14e_module_e_test_evidence_v7.json",
+  "checks": {
+    "direct_entries_unchanged": {
+      "baseline_direct_entries": {
+        "MABANEE": [],
+        "SANAM": [
+          "2025-05-15"
+        ],
+        "TIJARA": [
+          "2024-10-14"
+        ]
+      },
+      "current_direct_entries": {
+        "MABANEE": [],
+        "SANAM": [
+          "2025-05-15"
+        ],
+        "TIJARA": [
+          "2024-10-14"
+        ]
+      },
+      "status": "PASS"
+    },
+    "mabanee_unchanged": {
+      "mabanee_decline_early": [],
+      "status": "PASS"
+    },
+    "pilots_deduped": {
+      "early_pilot_dates": {
+        "MABANEE": [],
+        "SANAM": [],
+        "TIJARA": []
+      },
+      "execution_counts": {
+        "MABANEE": {
+          "NONE": 138
+        },
+        "SANAM": {
+          "EXECUTE_CONFIRMED_DIRECT": 1,
+          "NONE": 139
+        },
+        "TIJARA": {
+          "EXECUTE_CONFIRMED_DIRECT": 1,
+          "NONE": 370
+        }
+      },
+      "pilot_suppressions": {
+        "MABANEE": 0,
+        "SANAM": 0,
+        "TIJARA": 0
+      },
+      "status": "PASS"
+    }
+  },
+  "per_symbol_counts": {
+    "MABANEE": {
+      "NONE": 138
+    },
+    "SANAM": {
+      "EXECUTE_CONFIRMED_DIRECT": 1,
+      "NONE": 139
+    },
+    "TIJARA": {
+      "EXECUTE_CONFIRMED_DIRECT": 1,
+      "NONE": 370
+    }
+  },
+  "run_nonce": "R15REM_THIN_REGRESSION_V1",
+  "version_id": "R15REM_THIN_REGRESSION_V1"
+}

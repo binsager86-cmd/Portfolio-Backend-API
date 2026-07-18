@@ -1,0 +1,20 @@
+{
+  "version_id": "r14_design_spec_CONSOLIDATED_v2_2_addendum_2",
+  "status": "owner_authorized_r15_remediation_cycle_1",
+  "authority": "append_only_addendum_to_r14_design_spec_CONSOLIDATED_v2_2",
+  "pilot_re_entry_guard": {
+    "rule": "EXECUTE_EARLY_PILOT requires no open position for the same symbol.",
+    "suppression_disposition": "POSITION_ALREADY_OPEN_FEEDBACK_SUPPRESSED_PILOT",
+    "mirror_rule": "direct path guard POSITION_ALREADY_OPEN_FEEDBACK_SUPPRESSED_DIRECT"
+  },
+  "upward_base_retirement": {
+    "rule": "A base is RETIRED_SUPERSEDED_BY_MARKUP when markup materializes from it.",
+    "materialization_definition": "MFE >= +0.20 from base_high_ref within 120 sessions",
+    "retirement_permanence": "PERMANENT",
+    "new_base_after_retirement": "New bases may form at higher structure per existing geometry rules.",
+    "parameter_form": "UPWARD_RETIREMENT_MFE_THRESHOLD",
+    "parameter_value": "PENDING_GATE",
+    "presumptive_candidate": 0.2,
+    "ratification_status": "PENDING_OWNER_RATIFICATION_AFTER_PART_C_EVIDENCE"
+  }
+}

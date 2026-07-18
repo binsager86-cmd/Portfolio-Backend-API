@@ -1,0 +1,71 @@
+{
+  "version_id": "R15REM_FINDINGS_LEDGER_V1",
+  "mode": "APPEND_ONLY",
+  "r15_attempt_1": {
+    "status": "FAIL_OF_RECORD",
+    "run_nonce": "2026-07-18T11:16:01.688511Z",
+    "stopping_rule_status": "FAILURE_1_OF_2",
+    "criteria": {
+      "i": "FAIL",
+      "ii": "PASS_ON_WORDING_HOLLOW",
+      "iii": "FAIL",
+      "iv": "PASS_GENUINE",
+      "v": "PASS"
+    },
+    "criterion_evidence": {
+      "i": {
+        "anchor": "SANAM 2025-05-18 emitted SUPPRESSION_RESTRAINT, not confirmed entry",
+        "prediction_id": "d750da9228f714381b7a64623938c191"
+      },
+      "ii": {
+        "anchor": "SANAM first early pilot predates revised thesis window but references stale 2021 base",
+        "prediction_id": "08c114b2a28e59cc3fbc1e27848e6b40",
+        "prediction_date": "2023-11-16",
+        "reference_price": 168.0,
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_high_ref": 59.0,
+        "extension_pct_vs_current_valid_reference": 1.847457627118644
+      },
+      "iii": {
+        "anchor": "TIJARA full-window no-candidate criterion failed",
+        "r15_report_section": "Per-Criterion Evidence"
+      },
+      "iv": {
+        "anchor": "MABANEE had zero early entries inside decline windows; avoid veto plane remained active where applicable",
+        "total_avoid_veto_rows_all_symbols": 1568,
+        "sample_prediction_ids": [
+          "211375425be5bcf10052f0631fcbcc47",
+          "694e84f03b10e47966071b9be57695c6",
+          "dc2dbed6aa9dbf82e9e865001b976a60"
+        ]
+      },
+      "v": {
+        "failed_pilot_count": 125,
+        "capital_days": 4537.5,
+        "min_drawdown_pct": -37.9
+      }
+    }
+  },
+  "new_findings": {
+    "BASE_REFERENCE_STALENESS": {
+      "statement": "Invalidation retires bases downward only; no upward retirement on markup materialization, allowing bases to persist years into markup and early-tier detection to fire at stale-reference extension.",
+      "evidence_anchor": {
+        "prediction_id": "08c114b2a28e59cc3fbc1e27848e6b40",
+        "symbol": "SANAM",
+        "prediction_date": "2023-11-16",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "extension_pct_vs_current_valid_reference": 1.847457627118644
+      }
+    },
+    "PILOT_REENTRY_UNGUARDED": {
+      "statement": "EXECUTE_EARLY_PILOT path lacks a same-symbol position-open guard; daily re-pilots occur while a pilot is already open and materially drive failed-pilot count.",
+      "evidence_anchors": [
+        {"prediction_id": "8c3a928c78778973a079c094ab6b8efa", "symbol": "MABANEE", "prediction_date": "2021-10-11"},
+        {"prediction_id": "4772bec4b95230653938714fdcc01a5e", "symbol": "MABANEE", "prediction_date": "2021-10-12"},
+        {"prediction_id": "ffcfd3bbeda22b414b27cf785b71986a", "symbol": "MABANEE", "prediction_date": "2021-10-13"},
+        {"prediction_id": "16529355c4c62c308de475e7c9036abb", "symbol": "BPCC", "prediction_date": "2021-10-12"},
+        {"prediction_id": "4eba1171414cd9cbf5e8243a5e9a42af", "symbol": "BPCC", "prediction_date": "2021-11-14"}
+      ]
+    }
+  }
+}

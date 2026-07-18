@@ -65,6 +65,7 @@ class LifecycleIntentRouter:
         candidate_state = str(candidate_intent.get("intent_state") or "INTENT_NONE")
         base_valid = str(base_state.get("base_state") or "").upper() in {"BASE_VALID", "BASE_FROZEN"}
         confirmed = str(confirmation_state.get("confirmation_state") or "").upper() == "CONFIRMED"
+        position_open = bool(current_state.get("active")) and str(current_state.get("state") or "").upper() == "POSITION_OPEN"
 
         deferred_active = False
         deferred_expiry_ok = True
@@ -105,7 +106,7 @@ class LifecycleIntentRouter:
             extension_pct=extension_pct,
         )
 
-        early_active = deferred_active and staged.get("cap_ok", True)
+        early_active = deferred_active and staged.get("cap_ok", True) and not position_open
         early_scale_ready = bool(staged.get("scale_action", {}).get("scale_ready"))
         confirmed_direct_ready = bool(
             candidate_state == "INTENT_FORMED"
@@ -137,6 +138,9 @@ class LifecycleIntentRouter:
             "time_stop_sessions": None if execution_state == "EXECUTE_CONFIRMED_DIRECT" else staged.get("early_entry", {}).get("time_stop_sessions", 60),
             "chase_advisory": staged.get("chase_band", {}),
         }
+        if position_open and deferred_active and execution_state == "NONE" and not veto_record.get("veto"):
+            execution_intent["no_path_reason"] = "POSITION_ALREADY_OPEN_FEEDBACK_SUPPRESSED_PILOT"
+            execution_intent["disposition_state"] = "NO_PATH_EXPLICIT"
 
         lifecycle_terms = {
             DEFERRED_INTENT_ACTIVE: deferred_active,

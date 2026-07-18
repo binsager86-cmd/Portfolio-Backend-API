@@ -1,0 +1,2027 @@
+diff --git a/app/services/eagle_eye_v2/adaptive_base_geometry.py b/app/services/eagle_eye_v2/adaptive_base_geometry.py
+index 3dae326..7aa9d12 100644
+--- a/app/services/eagle_eye_v2/adaptive_base_geometry.py
++++ b/app/services/eagle_eye_v2/adaptive_base_geometry.py
+@@ -15,6 +15,7 @@ BASE_REFERENCE_ADVANCE_OK = "BASE_REFERENCE_ADVANCE_OK"
+ BASE_MIN_SESSIONS = "base_min_sessions"
+ BASE_MAX_WIDTH_PCT = "base_max_width_pct"
+ ATR_SQUEEZE_PCTILE = "atr_squeeze_pctile"
++UPWARD_RETIREMENT_MFE_THRESHOLD = "UPWARD_RETIREMENT_MFE_THRESHOLD"
+
+ RULE_CLOSE_BELOW_BASE_LOW_N = "CLOSE_BELOW_BASE_LOW_N"
+ RULE_CLOSE_BELOW_BASE_LOW_BY_ATR_X_N = "CLOSE_BELOW_BASE_LOW_BY_ATR_X_N"
+@@ -116,7 +117,24 @@ class AdaptiveBaseGeometry:
+                 transition["no_freeze_reason"] = ",".join(reasons) if reasons else "UNSPECIFIED"
+         else:
+             validity_state = str(base_reference.get("base_validity_state") or "").upper()
+-            if validity_state == "RETIRED":
++            if validity_state == "RETIRED" and str(base_reference.get("base_retirement_reason") or "").startswith("RETIRED_SUPERSEDED_BY_MARKUP"):
++                base_reference = None
++                if freeze_eligible:
++                    base_reference = {
++                        "base_reference_id": f"{normalized_day_payload['symbol']}::{normalized_day_payload['trade_date']}::BASE01",
++                        "base_high_ref": float(high_ref),
++                        "base_low_ref": float(low_ref),
++                        "base_origin_date": normalized_day_payload["trade_date"],
++                        "base_validity_state": "VALID",
++                        "base_retirement_reason": "NONE",
++                        "invalidation_rule_form": invalidation_rule_form,
++                        "invalidation_rule_state": {},
++                    }
++                    base_state = "BASE_FROZEN"
++                    transition["base_freeze_event"] = "BASE_FROZEN"
++                else:
++                    base_state = "BASE_FORMING"
++            elif validity_state == "RETIRED":
+                 base_state = "BASE_RETIRED"
+             else:
+                 base_reference["base_validity_state"] = "VALID"
+@@ -137,6 +155,15 @@ class AdaptiveBaseGeometry:
+                     atr_value=float(volatility_regime_state.get("atr_value") or 0.0),
+                     flow_confirmed_progress=flow_confirmed_progress,
+                 )
++                if not retire:
++                    upward_retirement = self._evaluate_upward_retirement(
++                        rule_params=volatility_regime_state,
++                        rule_state=next_rule_state,
++                        high_px=float(normalized_day_payload.get("high") or close_px),
++                        base_high_ref=float(base_reference.get("base_high_ref") or 0.0),
++                    )
++                    if upward_retirement is not None:
++                        retire, retire_reason, next_rule_state = upward_retirement
+                 base_reference["invalidation_rule_state"] = next_rule_state
+                 if retire:
+                     base_reference["base_validity_state"] = "RETIRED"
+@@ -278,6 +305,31 @@ class AdaptiveBaseGeometry:
+         reason = f"{RULE_CLOSE_BELOW_BASE_LOW_N}(n={n_sessions})"
+         return retire, reason, state
+
++    @staticmethod
++    def _evaluate_upward_retirement(
++        *,
++        rule_params: dict[str, Any],
++        rule_state: dict[str, Any],
++        high_px: float,
++        base_high_ref: float,
++    ) -> tuple[bool, str, dict[str, Any]] | None:
++        if UPWARD_RETIREMENT_MFE_THRESHOLD not in rule_params:
++            return None
++        threshold = float(rule_params[UPWARD_RETIREMENT_MFE_THRESHOLD])
++        state = dict(rule_state)
++        upward = dict(state.get("upward_retirement") or {})
++        age = int(upward.get("age_sessions") or 0) + 1
++        mfe = 0.0 if base_high_ref <= 0.0 else max(float(upward.get("mfe") or 0.0), (high_px / base_high_ref) - 1.0)
++        upward["age_sessions"] = age
++        upward["mfe"] = mfe
++        upward["threshold"] = threshold
++        state["upward_retirement"] = upward
++        retire = age <= 120 and mfe >= threshold
++        if not retire:
++            return False, "NONE", state
++        reason = f"RETIRED_SUPERSEDED_BY_MARKUP({UPWARD_RETIREMENT_MFE_THRESHOLD}={threshold},sessions<=120)"
++        return True, reason, state
++
+     def _append_base_predicate(
+         self,
+         *,
+diff --git a/app/services/eagle_eye_v2/lifecycle_intent_router.py b/app/services/eagle_eye_v2/lifecycle_intent_router.py
+index 052db44..711da05 100644
+--- a/app/services/eagle_eye_v2/lifecycle_intent_router.py
++++ b/app/services/eagle_eye_v2/lifecycle_intent_router.py
+@@ -65,6 +65,7 @@ class LifecycleIntentRouter:
+         candidate_state = str(candidate_intent.get("intent_state") or "INTENT_NONE")
+         base_valid = str(base_state.get("base_state") or "").upper() in {"BASE_VALID", "BASE_FROZEN"}
+         confirmed = str(confirmation_state.get("confirmation_state") or "").upper() == "CONFIRMED"
++        position_open = bool(current_state.get("active")) and str(current_state.get("state") or "").upper() == "POSITION_OPEN"
+
+         deferred_active = False
+         deferred_expiry_ok = True
+@@ -105,7 +106,7 @@ class LifecycleIntentRouter:
+             extension_pct=extension_pct,
+         )
+
+-        early_active = deferred_active and staged.get("cap_ok", True)
++        early_active = deferred_active and staged.get("cap_ok", True) and not position_open
+         early_scale_ready = bool(staged.get("scale_action", {}).get("scale_ready"))
+         confirmed_direct_ready = bool(
+             candidate_state == "INTENT_FORMED"
+@@ -137,6 +138,9 @@ class LifecycleIntentRouter:
+             "time_stop_sessions": None if execution_state == "EXECUTE_CONFIRMED_DIRECT" else staged.get("early_entry", {}).get("time_stop_sessions", 60),
+             "chase_advisory": staged.get("chase_band", {}),
+         }
++        if position_open and deferred_active and execution_state == "NONE" and not veto_record.get("veto"):
++            execution_intent["no_path_reason"] = "POSITION_ALREADY_OPEN_FEEDBACK_SUPPRESSED_PILOT"
++            execution_intent["disposition_state"] = "NO_PATH_EXPLICIT"
+
+         lifecycle_terms = {
+             DEFERRED_INTENT_ACTIVE: deferred_active,
+diff --git a/artifacts/preview1a_prestart/review_final/r14_design_spec_CONSOLIDATED_v2_2_addendum_2.json b/artifacts/preview1a_prestart/review_final/r14_design_spec_CONSOLIDATED_v2_2_addendum_2.json
+new file mode 100644
+index 0000000..a6594df
+--- /dev/null
++++ b/artifacts/preview1a_prestart/review_final/r14_design_spec_CONSOLIDATED_v2_2_addendum_2.json
+@@ -0,0 +1,20 @@
++{
++  "version_id": "r14_design_spec_CONSOLIDATED_v2_2_addendum_2",
++  "status": "owner_authorized_r15_remediation_cycle_1",
++  "authority": "append_only_addendum_to_r14_design_spec_CONSOLIDATED_v2_2",
++  "pilot_re_entry_guard": {
++    "rule": "EXECUTE_EARLY_PILOT requires no open position for the same symbol.",
++    "suppression_disposition": "POSITION_ALREADY_OPEN_FEEDBACK_SUPPRESSED_PILOT",
++    "mirror_rule": "direct path guard POSITION_ALREADY_OPEN_FEEDBACK_SUPPRESSED_DIRECT"
++  },
++  "upward_base_retirement": {
++    "rule": "A base is RETIRED_SUPERSEDED_BY_MARKUP when markup materializes from it.",
++    "materialization_definition": "MFE >= +0.20 from base_high_ref within 120 sessions",
++    "retirement_permanence": "PERMANENT",
++    "new_base_after_retirement": "New bases may form at higher structure per existing geometry rules.",
++    "parameter_form": "UPWARD_RETIREMENT_MFE_THRESHOLD",
++    "parameter_value": "PENDING_GATE",
++    "presumptive_candidate": 0.2,
++    "ratification_status": "PENDING_OWNER_RATIFICATION_AFTER_PART_C_EVIDENCE"
++  }
++}
+\ No newline at end of file
+diff --git a/artifacts/preview1a_prestart/review_final/r14_design_spec_CONSOLIDATED_v2_2_addendum_2.json.sha256 b/artifacts/preview1a_prestart/review_final/r14_design_spec_CONSOLIDATED_v2_2_addendum_2.json.sha256
+new file mode 100644
+index 0000000..38a26f3
+--- /dev/null
++++ b/artifacts/preview1a_prestart/review_final/r14_design_spec_CONSOLIDATED_v2_2_addendum_2.json.sha256
+@@ -0,0 +1 @@
++bf11e86b6235758871cfdc3e4ab3adc3eddb9430e5ffa3799d9220221e18fdae  r14_design_spec_CONSOLIDATED_v2_2_addendum_2.json
+\ No newline at end of file
+diff --git a/artifacts/preview1a_prestart/review_final/r14_design_spec_CONSOLIDATED_v2_2_addendum_2.md b/artifacts/preview1a_prestart/review_final/r14_design_spec_CONSOLIDATED_v2_2_addendum_2.md
+new file mode 100644
+index 0000000..eac3000
+--- /dev/null
++++ b/artifacts/preview1a_prestart/review_final/r14_design_spec_CONSOLIDATED_v2_2_addendum_2.md
+@@ -0,0 +1,25 @@
++# R14 Design Spec CONSOLIDATED v2.2 Addendum 2
++
++Status: owner-authorized R15 remediation cycle 1.
++
++Authority: append-only addendum to `r14_design_spec_CONSOLIDATED_v2_2`.
++
++## Pilot Re-Entry Guard
++
++`EXECUTE_EARLY_PILOT` requires no open position for the same symbol.
++
++While a position is open, intent days emit explicit suppression disposition `POSITION_ALREADY_OPEN_FEEDBACK_SUPPRESSED_PILOT`, mirroring the direct-path guard `POSITION_ALREADY_OPEN_FEEDBACK_SUPPRESSED_DIRECT`.
++
++## Upward Base Retirement
++
++A base is `RETIRED_SUPERSEDED_BY_MARKUP` when markup materializes from it, defined by the already-frozen materialization criterion: MFE >= +0.20 from `base_high_ref` within 120 sessions.
++
++Retirement is permanent. New bases may then form at higher structure per existing geometry rules.
++
++Parameter form: `UPWARD_RETIREMENT_MFE_THRESHOLD`.
++
++Parameter value: `PENDING_GATE`.
++
++Presumptive candidate: `0.20`.
++
++Ratification status: pending owner ratification after Part C evidence.
+\ No newline at end of file
+diff --git a/artifacts/preview1a_prestart/review_final/r15_criteria_reratification_sheet_v1.md b/artifacts/preview1a_prestart/review_final/r15_criteria_reratification_sheet_v1.md
+new file mode 100644
+index 0000000..5c2e237
+--- /dev/null
++++ b/artifacts/preview1a_prestart/review_final/r15_criteria_reratification_sheet_v1.md
+@@ -0,0 +1,17 @@
++# R15 Criteria Re-Ratification Sheet v1
++
++Status: DRAFT_REQUIRES_OWNER_RATIFICATION_BEFORE_ATTEMPT_2
++
++R15_ATTEMPT_1 remains FAIL_OF_RECORD and is not rerun by this sheet.
++
++## Revised Criteria Options
++
++1. Criterion i: SANAM must show a confirmed, non-stale-base entry or an explicit no-entry disposition tied to a newly ratified base lifecycle rule. Owner must choose exact wording before attempt 2.
++2. Criterion ii: Wording must distinguish true thesis capture from stale-base early pilots. `PASS_ON_WORDING_HOLLOW` is not acceptable for attempt 2.
++3. Criterion iii: TIJARA must be judged against explicit no-candidate persistence wording, with no inference from unrelated suppression rows.
++4. Criterion iv: MABANEE avoid protection remains a preservation criterion. Existing genuine PASS must not be degraded.
++5. Criterion v: Pilot cost criterion must include duplicate-pilot suppression and capital-days, with failed pilot count and drawdown reported separately.
++
++## Ratification Gate
++
++Attempt 2 is not authorized until the owner ratifies this sheet or a successor sheet and explicitly authorizes `R15_ATTEMPT_2`.
+\ No newline at end of file
+diff --git a/artifacts/preview1a_prestart/review_final/r15_criteria_reratification_sheet_v1.md.sha256 b/artifacts/preview1a_prestart/review_final/r15_criteria_reratification_sheet_v1.md.sha256
+new file mode 100644
+index 0000000..17cc22d
+--- /dev/null
++++ b/artifacts/preview1a_prestart/review_final/r15_criteria_reratification_sheet_v1.md.sha256
+@@ -0,0 +1 @@
++6cfc94333d739cf8225927d1dbe6fdb0fa112920c6a32023581eb4773b3ae5d5  r15_criteria_reratification_sheet_v1.md
+\ No newline at end of file
+diff --git a/artifacts/preview1a_prestart/review_final/r15rem_findings_ledger_v1.json b/artifacts/preview1a_prestart/review_final/r15rem_findings_ledger_v1.json
+new file mode 100644
+index 0000000..f1d3920
+--- /dev/null
++++ b/artifacts/preview1a_prestart/review_final/r15rem_findings_ledger_v1.json
+@@ -0,0 +1,71 @@
++{
++  "version_id": "R15REM_FINDINGS_LEDGER_V1",
++  "mode": "APPEND_ONLY",
++  "r15_attempt_1": {
++    "status": "FAIL_OF_RECORD",
++    "run_nonce": "2026-07-18T11:16:01.688511Z",
++    "stopping_rule_status": "FAILURE_1_OF_2",
++    "criteria": {
++      "i": "FAIL",
++      "ii": "PASS_ON_WORDING_HOLLOW",
++      "iii": "FAIL",
++      "iv": "PASS_GENUINE",
++      "v": "PASS"
++    },
++    "criterion_evidence": {
++      "i": {
++        "anchor": "SANAM 2025-05-18 emitted SUPPRESSION_RESTRAINT, not confirmed entry",
++        "prediction_id": "d750da9228f714381b7a64623938c191"
++      },
++      "ii": {
++        "anchor": "SANAM first early pilot predates revised thesis window but references stale 2021 base",
++        "prediction_id": "08c114b2a28e59cc3fbc1e27848e6b40",
++        "prediction_date": "2023-11-16",
++        "reference_price": 168.0,
++        "base_reference_id": "SANAM::2021-06-23::BASE01",
++        "base_high_ref": 59.0,
++        "extension_pct_vs_current_valid_reference": 1.847457627118644
++      },
++      "iii": {
++        "anchor": "TIJARA full-window no-candidate criterion failed",
++        "r15_report_section": "Per-Criterion Evidence"
++      },
++      "iv": {
++        "anchor": "MABANEE had zero early entries inside decline windows; avoid veto plane remained active where applicable",
++        "total_avoid_veto_rows_all_symbols": 1568,
++        "sample_prediction_ids": [
++          "211375425be5bcf10052f0631fcbcc47",
++          "694e84f03b10e47966071b9be57695c6",
++          "dc2dbed6aa9dbf82e9e865001b976a60"
++        ]
++      },
++      "v": {
++        "failed_pilot_count": 125,
++        "capital_days": 4537.5,
++        "min_drawdown_pct": -37.9
++      }
++    }
++  },
++  "new_findings": {
++    "BASE_REFERENCE_STALENESS": {
++      "statement": "Invalidation retires bases downward only; no upward retirement on markup materialization, allowing bases to persist years into markup and early-tier detection to fire at stale-reference extension.",
++      "evidence_anchor": {
++        "prediction_id": "08c114b2a28e59cc3fbc1e27848e6b40",
++        "symbol": "SANAM",
++        "prediction_date": "2023-11-16",
++        "base_reference_id": "SANAM::2021-06-23::BASE01",
++        "extension_pct_vs_current_valid_reference": 1.847457627118644
++      }
++    },
++    "PILOT_REENTRY_UNGUARDED": {
++      "statement": "EXECUTE_EARLY_PILOT path lacks a same-symbol position-open guard; daily re-pilots occur while a pilot is already open and materially drive failed-pilot count.",
++      "evidence_anchors": [
++        {"prediction_id": "8c3a928c78778973a079c094ab6b8efa", "symbol": "MABANEE", "prediction_date": "2021-10-11"},
++        {"prediction_id": "4772bec4b95230653938714fdcc01a5e", "symbol": "MABANEE", "prediction_date": "2021-10-12"},
++        {"prediction_id": "ffcfd3bbeda22b414b27cf785b71986a", "symbol": "MABANEE", "prediction_date": "2021-10-13"},
++        {"prediction_id": "16529355c4c62c308de475e7c9036abb", "symbol": "BPCC", "prediction_date": "2021-10-12"},
++        {"prediction_id": "4eba1171414cd9cbf5e8243a5e9a42af", "symbol": "BPCC", "prediction_date": "2021-11-14"}
++      ]
++    }
++  }
++}
+\ No newline at end of file
+diff --git a/artifacts/preview1a_prestart/review_final/r15rem_findings_ledger_v1.json.sha256 b/artifacts/preview1a_prestart/review_final/r15rem_findings_ledger_v1.json.sha256
+new file mode 100644
+index 0000000..a27f0bb
+--- /dev/null
++++ b/artifacts/preview1a_prestart/review_final/r15rem_findings_ledger_v1.json.sha256
+@@ -0,0 +1 @@
++d7ccee36ffeb58bcc7f6cb27aef0285da82052c86178247f3d379f8ffb5a9429  r15rem_findings_ledger_v1.json
+\ No newline at end of file
+diff --git a/artifacts/preview1a_prestart/review_final/r15rem_findings_ledger_v1.md b/artifacts/preview1a_prestart/review_final/r15rem_findings_ledger_v1.md
+new file mode 100644
+index 0000000..b9b7f98
+--- /dev/null
++++ b/artifacts/preview1a_prestart/review_final/r15rem_findings_ledger_v1.md
+@@ -0,0 +1,37 @@
++# R15-REM Findings Ledger v1
++
++Mode: APPEND_ONLY
++
++## R15_ATTEMPT_1
++
++Status: FAIL_OF_RECORD
++
++RUN_NONCE: 2026-07-18T11:16:01.688511Z
++
++Stopping-rule status: FAILURE_1_OF_2
++
++Criteria:
++
++- i: FAIL
++- ii: PASS_ON_WORDING_HOLLOW
++- iii: FAIL
++- iv: PASS_GENUINE
++- v: PASS
++
++Evidence anchors:
++
++- Criterion i: SANAM 2025-05-18 emitted `SUPPRESSION_RESTRAINT`, not confirmed entry. Prediction ID `d750da9228f714381b7a64623938c191`.
++- Criterion ii: SANAM first early pilot was `08c114b2a28e59cc3fbc1e27848e6b40` on 2023-11-16 at 168.0, referencing `SANAM::2021-06-23::BASE01`, base_high_ref 59.0, extension 1.847457627118644.
++- Criterion iii: TIJARA full-window no-candidate criterion failed; see `r15_exam_report_v1.md` Per-Criterion Evidence.
++- Criterion iv: MABANEE had zero early entries inside the decline windows; total avoid-veto rows across the sealed R15 attempt were 1,568. Sample MABANEE avoid-veto prediction IDs: `211375425be5bcf10052f0631fcbcc47`, `694e84f03b10e47966071b9be57695c6`, `dc2dbed6aa9dbf82e9e865001b976a60`.
++- Criterion v: failed pilots 125, capital-days 4,537.5, min drawdown -37.9%.
++
++## New Findings
++
++### BASE_REFERENCE_STALENESS
++
++Invalidation retires bases downward only; no upward retirement on markup materialization, allowing bases to persist years into markup and early-tier detection to fire at stale-reference extension. Evidence anchor: prediction ID `08c114b2a28e59cc3fbc1e27848e6b40`, SANAM 2023-11-16, base `SANAM::2021-06-23::BASE01`, extension 1.847457627118644.
++
++### PILOT_REENTRY_UNGUARDED
++
++`EXECUTE_EARLY_PILOT` path lacks a same-symbol position-open guard; daily re-pilots occur while a pilot is already open and materially drive failed-pilot count. Evidence anchors include MABANEE `8c3a928c78778973a079c094ab6b8efa` 2021-10-11, `4772bec4b95230653938714fdcc01a5e` 2021-10-12, `ffcfd3bbeda22b414b27cf785b71986a` 2021-10-13; BPCC `16529355c4c62c308de475e7c9036abb` 2021-10-12 and `4eba1171414cd9cbf5e8243a5e9a42af` 2021-11-14.
+\ No newline at end of file
+diff --git a/artifacts/preview1a_prestart/review_final/r15rem_thin_regression_v1.json b/artifacts/preview1a_prestart/review_final/r15rem_thin_regression_v1.json
+new file mode 100644
+index 0000000..0600c13
+--- /dev/null
++++ b/artifacts/preview1a_prestart/review_final/r15rem_thin_regression_v1.json
+@@ -0,0 +1,71 @@
++{
++  "baseline_artifact": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14e_module_e_test_evidence_v7.json",
++  "checks": {
++    "direct_entries_unchanged": {
++      "baseline_direct_entries": {
++        "MABANEE": [],
++        "SANAM": [
++          "2025-05-15"
++        ],
++        "TIJARA": [
++          "2024-10-14"
++        ]
++      },
++      "current_direct_entries": {
++        "MABANEE": [],
++        "SANAM": [
++          "2025-05-15"
++        ],
++        "TIJARA": [
++          "2024-10-14"
++        ]
++      },
++      "status": "PASS"
++    },
++    "mabanee_unchanged": {
++      "mabanee_decline_early": [],
++      "status": "PASS"
++    },
++    "pilots_deduped": {
++      "early_pilot_dates": {
++        "MABANEE": [],
++        "SANAM": [],
++        "TIJARA": []
++      },
++      "execution_counts": {
++        "MABANEE": {
++          "NONE": 138
++        },
++        "SANAM": {
++          "EXECUTE_CONFIRMED_DIRECT": 1,
++          "NONE": 139
++        },
++        "TIJARA": {
++          "EXECUTE_CONFIRMED_DIRECT": 1,
++          "NONE": 370
++        }
++      },
++      "pilot_suppressions": {
++        "MABANEE": 0,
++        "SANAM": 0,
++        "TIJARA": 0
++      },
++      "status": "PASS"
++    }
++  },
++  "per_symbol_counts": {
++    "MABANEE": {
++      "NONE": 138
++    },
++    "SANAM": {
++      "EXECUTE_CONFIRMED_DIRECT": 1,
++      "NONE": 139
++    },
++    "TIJARA": {
++      "EXECUTE_CONFIRMED_DIRECT": 1,
++      "NONE": 370
++    }
++  },
++  "run_nonce": "R15REM_THIN_REGRESSION_V1",
++  "version_id": "R15REM_THIN_REGRESSION_V1"
++}
+\ No newline at end of file
+diff --git a/artifacts/preview1a_prestart/review_final/r15rem_thin_regression_v1.md b/artifacts/preview1a_prestart/review_final/r15rem_thin_regression_v1.md
+new file mode 100644
+index 0000000..b111df4
+--- /dev/null
++++ b/artifacts/preview1a_prestart/review_final/r15rem_thin_regression_v1.md
+@@ -0,0 +1,15 @@
++# R15-REM Thin Regression v1
++
++RUN_NONCE: R15REM_THIN_REGRESSION_V1
++
++## direct_entries_unchanged
++
++{"baseline_direct_entries": {"MABANEE": [], "SANAM": ["2025-05-15"], "TIJARA": ["2024-10-14"]}, "current_direct_entries": {"MABANEE": [], "SANAM": ["2025-05-15"], "TIJARA": ["2024-10-14"]}, "status": "PASS"}
++
++## pilots_deduped
++
++{"early_pilot_dates": {"MABANEE": [], "SANAM": [], "TIJARA": []}, "execution_counts": {"MABANEE": {"NONE": 138}, "SANAM": {"EXECUTE_CONFIRMED_DIRECT": 1, "NONE": 139}, "TIJARA": {"EXECUTE_CONFIRMED_DIRECT": 1, "NONE": 370}}, "pilot_suppressions": {"MABANEE": 0, "SANAM": 0, "TIJARA": 0}, "status": "PASS"}
++
++## mabanee_unchanged
++
++{"mabanee_decline_early": [], "status": "PASS"}
+diff --git a/artifacts/preview1a_prestart/review_final/r15rem_thin_regression_v1.sha256 b/artifacts/preview1a_prestart/review_final/r15rem_thin_regression_v1.sha256
+new file mode 100644
+index 0000000..70de5be
+--- /dev/null
++++ b/artifacts/preview1a_prestart/review_final/r15rem_thin_regression_v1.sha256
+@@ -0,0 +1,2 @@
++8763c5b039e05a4f299501d44596fdecbdaa6aea7b9693be86283a657839a1ba  r15rem_thin_regression_v1.json
++c0cc28855683f0b83d0b8d1d0e090d6646c30379bdf53ef8aa5cecca9b4a8238  r15rem_thin_regression_v1.md
+\ No newline at end of file
+diff --git a/artifacts/preview1a_prestart/review_final/r15rem_upward_retirement_evidence_v1.json b/artifacts/preview1a_prestart/review_final/r15rem_upward_retirement_evidence_v1.json
+new file mode 100644
+index 0000000..081d7f9
+--- /dev/null
++++ b/artifacts/preview1a_prestart/review_final/r15rem_upward_retirement_evidence_v1.json
+@@ -0,0 +1,1115 @@
++{
++  "candidate_definition": {
++    "horizon_sessions": 120,
++    "min_dwell": 10,
++    "note": "Descriptive threshold evidence only; not R15 attempt 2 and not owner ratification.",
++    "range_sessions": 20,
++    "width_cap": 0.24
++  },
++  "cohort": {
++    "ex_set_b_symbol_count": 134,
++    "set_a_symbols": [
++      "BPCC",
++      "MABANEE",
++      "SANAM",
++      "TIJARA",
++      "ZAIN"
++    ],
++    "set_b_excluded_count": 5,
++    "symbols_with_bars": 133
++  },
++  "mode": "READ_ONLY_EX_SET_B_DESCRIPTIVE",
++  "sample_rows_by_threshold": {
++    "0.15": [
++      {
++        "base_high_ref": 99.2,
++        "base_low_ref": 86.2,
++        "freeze_date": "2021-07-29",
++        "freeze_index": 9,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.058467741935483764,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.15,
++        "width_pct": 0.15081206496519722
++      },
++      {
++        "base_high_ref": 92.9,
++        "base_low_ref": 86.2,
++        "freeze_date": "2022-01-19",
++        "freeze_index": 129,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.0,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.15,
++        "width_pct": 0.07772621809744783
++      },
++      {
++        "base_high_ref": 73.8,
++        "base_low_ref": 67.1,
++        "freeze_date": "2022-07-24",
++        "freeze_index": 249,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.0907859078590787,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.15,
++        "width_pct": 0.09985096870342777
++      },
++      {
++        "base_high_ref": 79.0,
++        "base_low_ref": 74.2,
++        "freeze_date": "2023-01-19",
++        "freeze_index": 369,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.03164556962025311,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.15,
++        "width_pct": 0.06469002695417786
++      },
++      {
++        "base_high_ref": 79.4,
++        "base_low_ref": 75.0,
++        "freeze_date": "2023-08-02",
++        "freeze_index": 489,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.061712846347606876,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.15,
++        "width_pct": 0.05866666666666674
++      },
++      {
++        "base_high_ref": 83.8,
++        "base_low_ref": 71.6,
++        "freeze_date": "2024-01-25",
++        "freeze_index": 609,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.10859188544152754,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.15,
++        "width_pct": 0.170391061452514
++      },
++      {
++        "base_high_ref": 79.4,
++        "base_low_ref": 74.3,
++        "freeze_date": "2024-07-28",
++        "freeze_index": 729,
++        "horizon_sessions_available": 120,
++        "materialization_date": "2024-10-31",
++        "materialized": true,
++        "max_mfe_120": 0.19269521410579338,
++        "sessions_to_materialization": 68,
++        "symbol": "AAYANRE",
++        "threshold": 0.15,
++        "width_pct": 0.06864064602960981
++      },
++      {
++        "base_high_ref": 93.4,
++        "base_low_ref": 89.3,
++        "freeze_date": "2025-01-16",
++        "freeze_index": 849,
++        "horizon_sessions_available": 120,
++        "materialization_date": "2025-06-10",
++        "materialized": true,
++        "max_mfe_120": 0.22055674518201274,
++        "sessions_to_materialization": 93,
++        "symbol": "AAYANRE",
++        "threshold": 0.15,
++        "width_pct": 0.04591265397536404
++      },
++      {
++        "base_high_ref": 114.0,
++        "base_low_ref": 97.9,
++        "freeze_date": "2025-07-20",
++        "freeze_index": 969,
++        "horizon_sessions_available": 120,
++        "materialization_date": "2025-09-10",
++        "materialized": true,
++        "max_mfe_120": 0.3771929824561404,
++        "sessions_to_materialization": 37,
++        "symbol": "AAYANRE",
++        "threshold": 0.15,
++        "width_pct": 0.16445352400408572
++      },
++      {
++        "base_high_ref": 144.0,
++        "base_low_ref": 129.0,
++        "freeze_date": "2026-01-06",
++        "freeze_index": 1089,
++        "horizon_sessions_available": 120,
++        "materialization_date": "2026-04-22",
++        "materialized": true,
++        "max_mfe_120": 0.3472222222222223,
++        "sessions_to_materialization": 69,
++        "symbol": "AAYANRE",
++        "threshold": 0.15,
++        "width_pct": 0.11627906976744186
++      },
++      {
++        "base_high_ref": 194.0,
++        "base_low_ref": 168.0,
++        "freeze_date": "2026-07-09",
++        "freeze_index": 1209,
++        "horizon_sessions_available": 0,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.0,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.15,
++        "width_pct": 0.15476190476190477
++      },
++      {
++        "base_high_ref": 188.0,
++        "base_low_ref": 173.0,
++        "freeze_date": "2021-07-29",
++        "freeze_index": 9,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.0,
++        "sessions_to_materialization": null,
++        "symbol": "ABAR",
++        "threshold": 0.15,
++        "width_pct": 0.08670520231213873
++      },
++      {
++        "base_high_ref": 152.0,
++        "base_low_ref": 139.0,
++        "freeze_date": "2022-01-19",
++        "freeze_index": 129,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.13157894736842102,
++        "sessions_to_materialization": null,
++        "symbol": "ABAR",
++        "threshold": 0.15,
++        "width_pct": 0.09352517985611511
++      },
++      {
++        "base_high_ref": 153.0,
++        "base_low_ref": 124.0,
++        "freeze_date": "2022-08-09",
++        "freeze_index": 258,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.0,
++        "sessions_to_materialization": null,
++        "symbol": "ABAR",
++        "threshold": 0.15,
++        "width_pct": 0.23387096774193547
++      },
++      {
++        "base_high_ref": 133.0,
++        "base_low_ref": 110.0,
++        "freeze_date": "2023-02-01",
++        "freeze_index": 378,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.0,
++        "sessions_to_materialization": null,
++        "symbol": "ABAR",
++        "threshold": 0.15,
++        "width_pct": 0.20909090909090908
++      },
++      {
++        "base_high_ref": 110.0,
++        "base_low_ref": 104.0,
++        "freeze_date": "2023-08-23",
++        "freeze_index": 498,
++        "horizon_sessions_available": 120,
++        "materialization_date": "2024-01-21",
++        "materialized": true,
++        "max_mfe_120": 0.18181818181818188,
++        "sessions_to_materialization": 94,
++        "symbol": "ABAR",
++        "threshold": 0.15,
++        "width_pct": 0.057692307692307696
++      },
++      {
++        "base_high_ref": 121.0,
++        "base_low_ref": 99.2,
++        "freeze_date": "2024-02-29",
++        "freeze_index": 618,
++        "horizon_sessions_available": 120,
++        "materialization_date": "2024-06-05",
++        "materialized": true,
++        "max_mfe_120": 0.165289256198347,
++        "sessions_to_materialization": 65,
++        "symbol": "ABAR",
++        "threshold": 0.15,
++        "width_pct": 0.219758064516129
++      },
++      {
++        "base_high_ref": 125.0,
++        "base_low_ref": 105.0,
++        "freeze_date": "2024-08-27",
++        "freeze_index": 738,
++        "horizon_sessions_available": 120,
++        "materialization_date": "2024-09-30",
++        "materialized": true,
++        "max_mfe_120": 0.3680000000000001,
++        "sessions_to_materialization": 23,
++        "symbol": "ABAR",
++        "threshold": 0.15,
++        "width_pct": 0.19047619047619047
++      },
++      {
++        "base_high_ref": 168.0,
++        "base_low_ref": 151.0,
++        "freeze_date": "2025-02-18",
++        "freeze_index": 858,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.09523809523809534,
++        "sessions_to_materialization": null,
++        "symbol": "ABAR",
++        "threshold": 0.15,
++        "width_pct": 0.11258278145695365
++      },
++      {
++        "base_high_ref": 184.0,
++        "base_low_ref": 165.0,
++        "freeze_date": "2025-08-19",
++        "freeze_index": 978,
++        "horizon_sessions_available": 120,
++        "materialization_date": "2025-10-05",
++        "materialized": true,
++        "max_mfe_120": 0.27717391304347827,
++        "sessions_to_materialization": 32,
++        "symbol": "ABAR",
++        "threshold": 0.15,
++        "width_pct": 0.11515151515151516
++      },
++      {
++        "base_high_ref": 186.0,
++        "base_low_ref": 164.0,
++        "freeze_date": "2026-02-08",
++        "freeze_index": 1098,
++        "horizon_sessions_available": 98,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.11827956989247301,
++        "sessions_to_materialization": null,
++        "symbol": "ABAR",
++        "threshold": 0.15,
++        "width_pct": 0.13414634146341464
++      },
++      {
++        "base_high_ref": 222.0,
++        "base_low_ref": 210.0,
++        "freeze_date": "2021-07-29",
++        "freeze_index": 9,
++        "horizon_sessions_available": 120,
++        "materialization_date": "2021-11-02",
++        "materialized": true,
++        "max_mfe_120": 0.32432432432432434,
++        "sessions_to_materialization": 65,
++        "symbol": "ABK",
++        "threshold": 0.15,
++        "width_pct": 0.05714285714285714
++      },
++      {
++        "base_high_ref": 294.0,
++        "base_low_ref": 245.0,
++        "freeze_date": "2022-01-20",
++        "freeze_index": 130,
++        "horizon_sessions_available": 120,
++        "materialization_date": "2022-07-20",
++        "materialized": true,
++        "max_mfe_120": 0.17006802721088432,
++        "sessions_to_materialization": 117,
++        "symbol": "ABK",
++        "threshold": 0.15,
++        "width_pct": 0.2
++      },
++      {
++        "base_high_ref": 344.0,
++        "base_low_ref": 306.0,
++        "freeze_date": "2022-07-25",
++        "freeze_index": 250,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.03197674418604657,
++        "sessions_to_materialization": null,
++        "symbol": "ABK",
++        "threshold": 0.15,
++        "width_pct": 0.12418300653594772
++      },
++      {
++        "base_high_ref": 342.0,
++        "base_low_ref": 317.0,
++        "freeze_date": "2023-01-15",
++        "freeze_index": 370,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.01754385964912286,
++        "sessions_to_materialization": null,
++        "symbol": "ABK",
++        "threshold": 0.15,
++        "width_pct": 0.07886435331230283
++      }
++    ],
++    "0.2": [
++      {
++        "base_high_ref": 99.2,
++        "base_low_ref": 86.2,
++        "freeze_date": "2021-07-29",
++        "freeze_index": 9,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.058467741935483764,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.2,
++        "width_pct": 0.15081206496519722
++      },
++      {
++        "base_high_ref": 92.9,
++        "base_low_ref": 86.2,
++        "freeze_date": "2022-01-19",
++        "freeze_index": 129,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.0,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.2,
++        "width_pct": 0.07772621809744783
++      },
++      {
++        "base_high_ref": 73.8,
++        "base_low_ref": 67.1,
++        "freeze_date": "2022-07-24",
++        "freeze_index": 249,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.0907859078590787,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.2,
++        "width_pct": 0.09985096870342777
++      },
++      {
++        "base_high_ref": 79.0,
++        "base_low_ref": 74.2,
++        "freeze_date": "2023-01-19",
++        "freeze_index": 369,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.03164556962025311,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.2,
++        "width_pct": 0.06469002695417786
++      },
++      {
++        "base_high_ref": 79.4,
++        "base_low_ref": 75.0,
++        "freeze_date": "2023-08-02",
++        "freeze_index": 489,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.061712846347606876,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.2,
++        "width_pct": 0.05866666666666674
++      },
++      {
++        "base_high_ref": 83.8,
++        "base_low_ref": 71.6,
++        "freeze_date": "2024-01-25",
++        "freeze_index": 609,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.10859188544152754,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.2,
++        "width_pct": 0.170391061452514
++      },
++      {
++        "base_high_ref": 79.4,
++        "base_low_ref": 74.3,
++        "freeze_date": "2024-07-28",
++        "freeze_index": 729,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.19269521410579338,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.2,
++        "width_pct": 0.06864064602960981
++      },
++      {
++        "base_high_ref": 93.4,
++        "base_low_ref": 89.3,
++        "freeze_date": "2025-01-16",
++        "freeze_index": 849,
++        "horizon_sessions_available": 120,
++        "materialization_date": "2025-06-29",
++        "materialized": true,
++        "max_mfe_120": 0.22055674518201274,
++        "sessions_to_materialization": 105,
++        "symbol": "AAYANRE",
++        "threshold": 0.2,
++        "width_pct": 0.04591265397536404
++      },
++      {
++        "base_high_ref": 114.0,
++        "base_low_ref": 97.9,
++        "freeze_date": "2025-07-20",
++        "freeze_index": 969,
++        "horizon_sessions_available": 120,
++        "materialization_date": "2025-09-11",
++        "materialized": true,
++        "max_mfe_120": 0.3771929824561404,
++        "sessions_to_materialization": 38,
++        "symbol": "AAYANRE",
++        "threshold": 0.2,
++        "width_pct": 0.16445352400408572
++      },
++      {
++        "base_high_ref": 144.0,
++        "base_low_ref": 129.0,
++        "freeze_date": "2026-01-06",
++        "freeze_index": 1089,
++        "horizon_sessions_available": 120,
++        "materialization_date": "2026-04-26",
++        "materialized": true,
++        "max_mfe_120": 0.3472222222222223,
++        "sessions_to_materialization": 71,
++        "symbol": "AAYANRE",
++        "threshold": 0.2,
++        "width_pct": 0.11627906976744186
++      },
++      {
++        "base_high_ref": 194.0,
++        "base_low_ref": 168.0,
++        "freeze_date": "2026-07-09",
++        "freeze_index": 1209,
++        "horizon_sessions_available": 0,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.0,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.2,
++        "width_pct": 0.15476190476190477
++      },
++      {
++        "base_high_ref": 188.0,
++        "base_low_ref": 173.0,
++        "freeze_date": "2021-07-29",
++        "freeze_index": 9,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.0,
++        "sessions_to_materialization": null,
++        "symbol": "ABAR",
++        "threshold": 0.2,
++        "width_pct": 0.08670520231213873
++      },
++      {
++        "base_high_ref": 152.0,
++        "base_low_ref": 139.0,
++        "freeze_date": "2022-01-19",
++        "freeze_index": 129,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.13157894736842102,
++        "sessions_to_materialization": null,
++        "symbol": "ABAR",
++        "threshold": 0.2,
++        "width_pct": 0.09352517985611511
++      },
++      {
++        "base_high_ref": 153.0,
++        "base_low_ref": 124.0,
++        "freeze_date": "2022-08-09",
++        "freeze_index": 258,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.0,
++        "sessions_to_materialization": null,
++        "symbol": "ABAR",
++        "threshold": 0.2,
++        "width_pct": 0.23387096774193547
++      },
++      {
++        "base_high_ref": 133.0,
++        "base_low_ref": 110.0,
++        "freeze_date": "2023-02-01",
++        "freeze_index": 378,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.0,
++        "sessions_to_materialization": null,
++        "symbol": "ABAR",
++        "threshold": 0.2,
++        "width_pct": 0.20909090909090908
++      },
++      {
++        "base_high_ref": 110.0,
++        "base_low_ref": 104.0,
++        "freeze_date": "2023-08-23",
++        "freeze_index": 498,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.18181818181818188,
++        "sessions_to_materialization": null,
++        "symbol": "ABAR",
++        "threshold": 0.2,
++        "width_pct": 0.057692307692307696
++      },
++      {
++        "base_high_ref": 121.0,
++        "base_low_ref": 99.2,
++        "freeze_date": "2024-02-29",
++        "freeze_index": 618,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.165289256198347,
++        "sessions_to_materialization": null,
++        "symbol": "ABAR",
++        "threshold": 0.2,
++        "width_pct": 0.219758064516129
++      },
++      {
++        "base_high_ref": 125.0,
++        "base_low_ref": 105.0,
++        "freeze_date": "2024-08-27",
++        "freeze_index": 738,
++        "horizon_sessions_available": 120,
++        "materialization_date": "2024-09-30",
++        "materialized": true,
++        "max_mfe_120": 0.3680000000000001,
++        "sessions_to_materialization": 23,
++        "symbol": "ABAR",
++        "threshold": 0.2,
++        "width_pct": 0.19047619047619047
++      },
++      {
++        "base_high_ref": 168.0,
++        "base_low_ref": 151.0,
++        "freeze_date": "2025-02-18",
++        "freeze_index": 858,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.09523809523809534,
++        "sessions_to_materialization": null,
++        "symbol": "ABAR",
++        "threshold": 0.2,
++        "width_pct": 0.11258278145695365
++      },
++      {
++        "base_high_ref": 184.0,
++        "base_low_ref": 165.0,
++        "freeze_date": "2025-08-19",
++        "freeze_index": 978,
++        "horizon_sessions_available": 120,
++        "materialization_date": "2025-10-06",
++        "materialized": true,
++        "max_mfe_120": 0.27717391304347827,
++        "sessions_to_materialization": 33,
++        "symbol": "ABAR",
++        "threshold": 0.2,
++        "width_pct": 0.11515151515151516
++      },
++      {
++        "base_high_ref": 186.0,
++        "base_low_ref": 164.0,
++        "freeze_date": "2026-02-08",
++        "freeze_index": 1098,
++        "horizon_sessions_available": 98,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.11827956989247301,
++        "sessions_to_materialization": null,
++        "symbol": "ABAR",
++        "threshold": 0.2,
++        "width_pct": 0.13414634146341464
++      },
++      {
++        "base_high_ref": 222.0,
++        "base_low_ref": 210.0,
++        "freeze_date": "2021-07-29",
++        "freeze_index": 9,
++        "horizon_sessions_available": 120,
++        "materialization_date": "2022-01-06",
++        "materialized": true,
++        "max_mfe_120": 0.32432432432432434,
++        "sessions_to_materialization": 111,
++        "symbol": "ABK",
++        "threshold": 0.2,
++        "width_pct": 0.05714285714285714
++      },
++      {
++        "base_high_ref": 294.0,
++        "base_low_ref": 245.0,
++        "freeze_date": "2022-01-20",
++        "freeze_index": 130,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.17006802721088432,
++        "sessions_to_materialization": null,
++        "symbol": "ABK",
++        "threshold": 0.2,
++        "width_pct": 0.2
++      },
++      {
++        "base_high_ref": 344.0,
++        "base_low_ref": 306.0,
++        "freeze_date": "2022-07-25",
++        "freeze_index": 250,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.03197674418604657,
++        "sessions_to_materialization": null,
++        "symbol": "ABK",
++        "threshold": 0.2,
++        "width_pct": 0.12418300653594772
++      },
++      {
++        "base_high_ref": 342.0,
++        "base_low_ref": 317.0,
++        "freeze_date": "2023-01-15",
++        "freeze_index": 370,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.01754385964912286,
++        "sessions_to_materialization": null,
++        "symbol": "ABK",
++        "threshold": 0.2,
++        "width_pct": 0.07886435331230283
++      }
++    ],
++    "0.25": [
++      {
++        "base_high_ref": 99.2,
++        "base_low_ref": 86.2,
++        "freeze_date": "2021-07-29",
++        "freeze_index": 9,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.058467741935483764,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.25,
++        "width_pct": 0.15081206496519722
++      },
++      {
++        "base_high_ref": 92.9,
++        "base_low_ref": 86.2,
++        "freeze_date": "2022-01-19",
++        "freeze_index": 129,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.0,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.25,
++        "width_pct": 0.07772621809744783
++      },
++      {
++        "base_high_ref": 73.8,
++        "base_low_ref": 67.1,
++        "freeze_date": "2022-07-24",
++        "freeze_index": 249,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.0907859078590787,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.25,
++        "width_pct": 0.09985096870342777
++      },
++      {
++        "base_high_ref": 79.0,
++        "base_low_ref": 74.2,
++        "freeze_date": "2023-01-19",
++        "freeze_index": 369,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.03164556962025311,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.25,
++        "width_pct": 0.06469002695417786
++      },
++      {
++        "base_high_ref": 79.4,
++        "base_low_ref": 75.0,
++        "freeze_date": "2023-08-02",
++        "freeze_index": 489,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.061712846347606876,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.25,
++        "width_pct": 0.05866666666666674
++      },
++      {
++        "base_high_ref": 83.8,
++        "base_low_ref": 71.6,
++        "freeze_date": "2024-01-25",
++        "freeze_index": 609,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.10859188544152754,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.25,
++        "width_pct": 0.170391061452514
++      },
++      {
++        "base_high_ref": 79.4,
++        "base_low_ref": 74.3,
++        "freeze_date": "2024-07-28",
++        "freeze_index": 729,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.19269521410579338,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.25,
++        "width_pct": 0.06864064602960981
++      },
++      {
++        "base_high_ref": 93.4,
++        "base_low_ref": 89.3,
++        "freeze_date": "2025-01-16",
++        "freeze_index": 849,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.22055674518201274,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.25,
++        "width_pct": 0.04591265397536404
++      },
++      {
++        "base_high_ref": 114.0,
++        "base_low_ref": 97.9,
++        "freeze_date": "2025-07-20",
++        "freeze_index": 969,
++        "horizon_sessions_available": 120,
++        "materialization_date": "2025-09-11",
++        "materialized": true,
++        "max_mfe_120": 0.3771929824561404,
++        "sessions_to_materialization": 38,
++        "symbol": "AAYANRE",
++        "threshold": 0.25,
++        "width_pct": 0.16445352400408572
++      },
++      {
++        "base_high_ref": 144.0,
++        "base_low_ref": 129.0,
++        "freeze_date": "2026-01-06",
++        "freeze_index": 1089,
++        "horizon_sessions_available": 120,
++        "materialization_date": "2026-05-04",
++        "materialized": true,
++        "max_mfe_120": 0.3472222222222223,
++        "sessions_to_materialization": 77,
++        "symbol": "AAYANRE",
++        "threshold": 0.25,
++        "width_pct": 0.11627906976744186
++      },
++      {
++        "base_high_ref": 194.0,
++        "base_low_ref": 168.0,
++        "freeze_date": "2026-07-09",
++        "freeze_index": 1209,
++        "horizon_sessions_available": 0,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.0,
++        "sessions_to_materialization": null,
++        "symbol": "AAYANRE",
++        "threshold": 0.25,
++        "width_pct": 0.15476190476190477
++      },
++      {
++        "base_high_ref": 188.0,
++        "base_low_ref": 173.0,
++        "freeze_date": "2021-07-29",
++        "freeze_index": 9,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.0,
++        "sessions_to_materialization": null,
++        "symbol": "ABAR",
++        "threshold": 0.25,
++        "width_pct": 0.08670520231213873
++      },
++      {
++        "base_high_ref": 152.0,
++        "base_low_ref": 139.0,
++        "freeze_date": "2022-01-19",
++        "freeze_index": 129,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.13157894736842102,
++        "sessions_to_materialization": null,
++        "symbol": "ABAR",
++        "threshold": 0.25,
++        "width_pct": 0.09352517985611511
++      },
++      {
++        "base_high_ref": 153.0,
++        "base_low_ref": 124.0,
++        "freeze_date": "2022-08-09",
++        "freeze_index": 258,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.0,
++        "sessions_to_materialization": null,
++        "symbol": "ABAR",
++        "threshold": 0.25,
++        "width_pct": 0.23387096774193547
++      },
++      {
++        "base_high_ref": 133.0,
++        "base_low_ref": 110.0,
++        "freeze_date": "2023-02-01",
++        "freeze_index": 378,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.0,
++        "sessions_to_materialization": null,
++        "symbol": "ABAR",
++        "threshold": 0.25,
++        "width_pct": 0.20909090909090908
++      },
++      {
++        "base_high_ref": 110.0,
++        "base_low_ref": 104.0,
++        "freeze_date": "2023-08-23",
++        "freeze_index": 498,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.18181818181818188,
++        "sessions_to_materialization": null,
++        "symbol": "ABAR",
++        "threshold": 0.25,
++        "width_pct": 0.057692307692307696
++      },
++      {
++        "base_high_ref": 121.0,
++        "base_low_ref": 99.2,
++        "freeze_date": "2024-02-29",
++        "freeze_index": 618,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.165289256198347,
++        "sessions_to_materialization": null,
++        "symbol": "ABAR",
++        "threshold": 0.25,
++        "width_pct": 0.219758064516129
++      },
++      {
++        "base_high_ref": 125.0,
++        "base_low_ref": 105.0,
++        "freeze_date": "2024-08-27",
++        "freeze_index": 738,
++        "horizon_sessions_available": 120,
++        "materialization_date": "2024-10-01",
++        "materialized": true,
++        "max_mfe_120": 0.3680000000000001,
++        "sessions_to_materialization": 24,
++        "symbol": "ABAR",
++        "threshold": 0.25,
++        "width_pct": 0.19047619047619047
++      },
++      {
++        "base_high_ref": 168.0,
++        "base_low_ref": 151.0,
++        "freeze_date": "2025-02-18",
++        "freeze_index": 858,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.09523809523809534,
++        "sessions_to_materialization": null,
++        "symbol": "ABAR",
++        "threshold": 0.25,
++        "width_pct": 0.11258278145695365
++      },
++      {
++        "base_high_ref": 184.0,
++        "base_low_ref": 165.0,
++        "freeze_date": "2025-08-19",
++        "freeze_index": 978,
++        "horizon_sessions_available": 120,
++        "materialization_date": "2025-10-06",
++        "materialized": true,
++        "max_mfe_120": 0.27717391304347827,
++        "sessions_to_materialization": 33,
++        "symbol": "ABAR",
++        "threshold": 0.25,
++        "width_pct": 0.11515151515151516
++      },
++      {
++        "base_high_ref": 186.0,
++        "base_low_ref": 164.0,
++        "freeze_date": "2026-02-08",
++        "freeze_index": 1098,
++        "horizon_sessions_available": 98,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.11827956989247301,
++        "sessions_to_materialization": null,
++        "symbol": "ABAR",
++        "threshold": 0.25,
++        "width_pct": 0.13414634146341464
++      },
++      {
++        "base_high_ref": 222.0,
++        "base_low_ref": 210.0,
++        "freeze_date": "2021-07-29",
++        "freeze_index": 9,
++        "horizon_sessions_available": 120,
++        "materialization_date": "2022-01-10",
++        "materialized": true,
++        "max_mfe_120": 0.32432432432432434,
++        "sessions_to_materialization": 113,
++        "symbol": "ABK",
++        "threshold": 0.25,
++        "width_pct": 0.05714285714285714
++      },
++      {
++        "base_high_ref": 294.0,
++        "base_low_ref": 245.0,
++        "freeze_date": "2022-01-20",
++        "freeze_index": 130,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.17006802721088432,
++        "sessions_to_materialization": null,
++        "symbol": "ABK",
++        "threshold": 0.25,
++        "width_pct": 0.2
++      },
++      {
++        "base_high_ref": 344.0,
++        "base_low_ref": 306.0,
++        "freeze_date": "2022-07-25",
++        "freeze_index": 250,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.03197674418604657,
++        "sessions_to_materialization": null,
++        "symbol": "ABK",
++        "threshold": 0.25,
++        "width_pct": 0.12418300653594772
++      },
++      {
++        "base_high_ref": 342.0,
++        "base_low_ref": 317.0,
++        "freeze_date": "2023-01-15",
++        "freeze_index": 370,
++        "horizon_sessions_available": 120,
++        "materialization_date": null,
++        "materialized": false,
++        "max_mfe_120": 0.01754385964912286,
++        "sessions_to_materialization": null,
++        "symbol": "ABK",
++        "threshold": 0.25,
++        "width_pct": 0.07886435331230283
++      }
++    ]
++  },
++  "summary_by_threshold": {
++    "0.15": {
++      "candidate_count": 1219,
++      "materialized_count": 502,
++      "materialized_rate": 0.4118129614438064,
++      "max_mfe_120_mean": 0.31482580117325765,
++      "max_mfe_120_median": 0.09857819905213261,
++      "max_mfe_120_p75": 0.2777173913043478,
++      "sessions_to_materialization_median": 42.5
++    },
++    "0.2": {
++      "candidate_count": 1219,
++      "materialized_count": 408,
++      "materialized_rate": 0.33470057424118127,
++      "max_mfe_120_mean": 0.31482580117325765,
++      "max_mfe_120_median": 0.09857819905213261,
++      "max_mfe_120_p75": 0.2777173913043478,
++      "sessions_to_materialization_median": 50.0
++    },
++    "0.25": {
++      "candidate_count": 1219,
++      "materialized_count": 335,
++      "materialized_rate": 0.2748154224774405,
++      "max_mfe_120_mean": 0.31482580117325765,
++      "max_mfe_120_median": 0.09857819905213261,
++      "max_mfe_120_p75": 0.2777173913043478,
++      "sessions_to_materialization_median": 54
++    }
++  },
++  "thresholds": [
++    0.15,
++    0.2,
++    0.25
++  ],
++  "version_id": "R15REM_UPWARD_RETIREMENT_EVIDENCE_V1"
++}
+\ No newline at end of file
+diff --git a/artifacts/preview1a_prestart/review_final/r15rem_upward_retirement_evidence_v1.md b/artifacts/preview1a_prestart/review_final/r15rem_upward_retirement_evidence_v1.md
+new file mode 100644
+index 0000000..4f82abf
+--- /dev/null
++++ b/artifacts/preview1a_prestart/review_final/r15rem_upward_retirement_evidence_v1.md
+@@ -0,0 +1,15 @@
++# R15-REM Upward Retirement Evidence v1
++
++Mode: READ_ONLY_EX_SET_B_DESCRIPTIVE
++
++## Threshold 0.15
++
++{"candidate_count": 1219, "materialized_count": 502, "materialized_rate": 0.4118129614438064, "max_mfe_120_mean": 0.31482580117325765, "max_mfe_120_median": 0.09857819905213261, "max_mfe_120_p75": 0.2777173913043478, "sessions_to_materialization_median": 42.5}
++
++## Threshold 0.20
++
++{"candidate_count": 1219, "materialized_count": 408, "materialized_rate": 0.33470057424118127, "max_mfe_120_mean": 0.31482580117325765, "max_mfe_120_median": 0.09857819905213261, "max_mfe_120_p75": 0.2777173913043478, "sessions_to_materialization_median": 50.0}
++
++## Threshold 0.25
++
++{"candidate_count": 1219, "materialized_count": 335, "materialized_rate": 0.2748154224774405, "max_mfe_120_mean": 0.31482580117325765, "max_mfe_120_median": 0.09857819905213261, "max_mfe_120_p75": 0.2777173913043478, "sessions_to_materialization_median": 54}
+diff --git a/artifacts/preview1a_prestart/review_final/r15rem_upward_retirement_evidence_v1.sha256 b/artifacts/preview1a_prestart/review_final/r15rem_upward_retirement_evidence_v1.sha256
+new file mode 100644
+index 0000000..cde4a0e
+--- /dev/null
++++ b/artifacts/preview1a_prestart/review_final/r15rem_upward_retirement_evidence_v1.sha256
+@@ -0,0 +1,2 @@
++7b0684ca77e9dfb3008c9b9ae150e644383a3fb37accfa2ded6ed47deabc92d5  r15rem_upward_retirement_evidence_v1.json
++399f4441093149c7204746a5c2fede6017bce3c41534b462920ff0c83e7d4543  r15rem_upward_retirement_evidence_v1.md
+\ No newline at end of file
+diff --git a/scripts/r15rem_thin_regression_v1.py b/scripts/r15rem_thin_regression_v1.py
+new file mode 100644
+index 0000000..9ca4b11
+--- /dev/null
++++ b/scripts/r15rem_thin_regression_v1.py
+@@ -0,0 +1,239 @@
++from __future__ import annotations
++
++import collections
++import hashlib
++import json
++import os
++import sqlite3
++import sys
++from pathlib import Path
++from typing import Any
++
++ROOT = Path(__file__).resolve().parents[1]
++if str(ROOT) not in sys.path:
++    sys.path.insert(0, str(ROOT))
++
++import scripts.r14e_module_e_lifecycle_intent_harness_v7 as v7
++from app.core.config import get_settings
++
++REVIEW = ROOT / "artifacts" / "preview1a_prestart" / "review_final"
++OUT_JSON = REVIEW / "r15rem_thin_regression_v1.json"
++OUT_MD = REVIEW / "r15rem_thin_regression_v1.md"
++OUT_SHA = REVIEW / "r15rem_thin_regression_v1.sha256"
++HARNESS_DB = REVIEW / "r15rem_thin_regression_v1.db"
++BASELINE = REVIEW / "r14e_module_e_test_evidence_v7.json"
++RUN_NONCE = "R15REM_THIN_REGRESSION_V1"
++
++
++def sha256_file(path: Path) -> str:
++    h = hashlib.sha256()
++    with path.open("rb") as f:
++        while True:
++            chunk = f.read(1024 * 1024)
++            if not chunk:
++                break
++            h.update(chunk)
++    return h.hexdigest()
++
++
++def bind_db() -> None:
++    if HARNESS_DB.exists():
++        HARNESS_DB.unlink()
++    HARNESS_DB.touch()
++    os.environ["EE_V2_RUNTIME_DB_PATH"] = str(HARNESS_DB)
++    os.environ["DATABASE_PATH"] = str(HARNESS_DB)
++    get_settings.cache_clear()
++    v7.HARNESS_DB = HARNESS_DB
++    v7.apply_schema_migration()
++
++
++def make_stack() -> dict[str, Any]:
++    cal = v7.load_default_calendar_context(ROOT)
++    mask = v7.load_default_mask_manifest(ROOT)
++    return {
++        "adapter": v7.DataSurfaceAdapter(calendar_context=cal, mask_manifest=mask),
++        "calendar": cal,
++        "warmup": v7.WarmupReadinessEngine(
++            v7.WarmupNamedParameters(
++                values={
++                    v7.READINESS_LONG_LOOKBACK_MIN_SESSIONS: 180,
++                    v7.READINESS_SEGMENT_RESTART_MIN_SESSIONS: 20,
++                    v7.READINESS_FALLBACK_MIN_SESSIONS: 60,
++                }
++            )
++        ),
++        "base": v7.AdaptiveBaseGeometry(
++            v7.BaseNamedParameters(
++                values={
++                    v7.BASE_MIN_SESSIONS: 10,
++                    v7.BASE_MAX_WIDTH_PCT: 0.24,
++                    v7.ATR_SQUEEZE_PCTILE: 0.95,
++                    "UPWARD_RETIREMENT_MFE_THRESHOLD": 0.20,
++                }
++            )
++        ),
++        "flow": v7.FlowConfirmationEngine(
++            v7.FlowNamedParameters(
++                values={
++                    v7.OBV_SLOPE_MIN: 0.10,
++                    v7.ANV_SLOPE_MIN: 0.10,
++                    v7.CMF_FLOOR: 0.05,
++                    v7.REL_VOLUME_CONTEXT_MIN: 2.5,
++                    v7.RSI_REGIME: 50.0,
++                    v7.ADX_TRIGGER: 18.0,
++                    v7.CHASE_ADVISORY_BAND: 0.08,
++                    v7.MIN_DAILY_VALUE_KWD: 100000.0,
++                    v7.MIN_CURRENT_DAY_VALUE_KWD: 50000.0,
++                }
++            )
++        ),
++        "router": v7.LifecycleIntentRouter(
++            v7.LifecycleRouterNamedParameters(
++                values={
++                    v7.EARLY_TIER_SIZE_FRACTION: 0.30,
++                    v7.EARLY_TIER_PARTICIPATION_CAP: 0.10,
++                    v7.EARLY_TIER_TIME_STOP: 60.0,
++                    v7.SCALE_ON_CONFIRMATION: "SINGLE_ADD_TO_FULL_TARGET",
++                    v7.CHASE_ADVISORY_THRESHOLD: 0.08,
++                    v7.CHASE_ESCALATION_THRESHOLD: 0.15,
++                }
++            )
++        ),
++    }
++
++
++def replay_symbol(symbol: str, cfg: dict[str, Any], stack: dict[str, Any]) -> list[dict[str, Any]]:
++    rows = v7.load_window(symbol, cfg["replay_start"], cfg["replay_end"])
++    avoid_series = v7.derive_avoid_context(rows)
++    adapter = stack["adapter"]
++    prev_segment = None
++    prev_masked = False
++    prev_ready = "READINESS_PENDING"
++    history_window: list[dict[str, Any]] = []
++    flow_window: list[dict[str, Any]] = []
++    prior_base = None
++    coverage_dates: list[str] = []
++    segment_dates: list[str] = []
++    deferred_state: dict[str, Any] = {"age_sessions": 0, "rearm_count": 0, "flow_evidence_decay": False}
++    position_state: dict[str, Any] | None = None
++    out: list[dict[str, Any]] = []
++    for idx, day in enumerate(rows):
++        trade_date = str(day["trade_date"])
++        avoid_ctx = avoid_series[idx]
++        mask_ctx = adapter.mask_context_for(symbol, trade_date)
++        seg = adapter.next_segment_state(symbol=symbol, trade_date=trade_date, prev_segment=prev_segment, prev_masked=prev_masked, current_masked=bool(mask_ctx["masked_flag"]))
++        normalized, readiness_ctx = adapter.normalize_day(ohlcv_day=day, indicator_day=dict(day.get("indicator_payload") or {}), segment_context=seg, calendar_context=stack["calendar"])
++        coverage_dates.append(trade_date)
++        segment_dates = [trade_date] if seg.segment_day_index == 0 else [*segment_dates, trade_date]
++        ready = stack["warmup"].evaluate(
++            normalized_day_payload=normalized,
++            coverage_history={"long_lookback_session_dates": coverage_dates, "segment_session_dates": segment_dates, "fallback_session_dates": coverage_dates, "previous_readiness_state": prev_ready},
++            segment_restart_flag=bool(readiness_ctx["segment_restart_flag"]),
++        )
++        history_window = [*history_window, day][-260:]
++        base_out = stack["base"].evaluate(
++            normalized_day_payload=normalized,
++            readiness_state=ready["readiness_state"],
++            price_history_window=history_window,
++            volatility_regime_state={
++                "atr_squeeze_pctile": 0.50,
++                "base_range_sessions": 20,
++                "atr_value": float(day["high"] or 0.0) - float(day["low"] or 0.0),
++                "invalidation_rule_form": v7.RULE_CLOSE_BELOW_BASE_LOW_BY_ATR_X_N,
++                "invalidation_rule_params": {"atr_mult": 1.0, "n_sessions": 2},
++                "UPWARD_RETIREMENT_MFE_THRESHOLD": 0.20,
++                "parameter_status": "R15REM_DESCRIPTIVE_REGRESSION",
++            },
++            prior_base_reference=prior_base,
++            flow_stub_state={"confirmed_progress": False},
++        )
++        flow_window = [*flow_window, dict(day.get("indicator_payload") or {})][-40:]
++        flow_out = stack["flow"].evaluate(
++            normalized_day_payload=normalized,
++            base_reference=base_out["base_reference"],
++            flow_history_window=flow_window,
++            structure_terms=v7.build_structure_terms(day, base_out["base_reference"]),
++            readiness_state=ready["readiness_state"],
++            phase_state=base_out["base_state"],
++        )
++        router_current_state = dict(deferred_state)
++        if position_state is not None:
++            router_current_state.update({"active": True, "state": "POSITION_OPEN", "position_id": position_state["position_id"]})
++        route_out = stack["router"].evaluate(
++            candidate_intent=flow_out["candidate_intent"],
++            base_state={"base_state": base_out["base_state"]},
++            confirmation_state={"confirmation_state": flow_out["confirmation_state"]},
++            risk_budget_state={"current_day_value_kwd": float(day.get("value_kwd") or 0.0), "planned_order_value_kwd": float(day.get("value_kwd") or 0.0) * 0.03, "avoid_veto": bool(avoid_ctx["avoid_active"]), "deferred_intent_state": router_current_state},
++        )
++        deferred_state = dict(route_out["deferred_intent"])
++        execution_state = str(route_out["execution_intent"].get("execution_state") or "NONE")
++        if execution_state.startswith("EXECUTE_") and position_state is None:
++            position_state = {"position_id": f"{symbol}::POS0001", "sessions_held": 0, "position_type": "CONFIRMED_DIRECT" if execution_state == "EXECUTE_CONFIRMED_DIRECT" else "PILOT_OR_SCALE"}
++        if position_state is not None:
++            position_state["sessions_held"] = int(position_state.get("sessions_held") or 0) + 1
++            if base_out["base_transition_terms"].get("base_invalidate_event") == "BASE_INVALIDATED":
++                position_state = None
++            elif position_state.get("position_type") != "CONFIRMED_DIRECT" and int(position_state.get("sessions_held") or 0) >= 60:
++                position_state = None
++        out.append({"trade_date": trade_date, "execution_state": execution_state, "entry_tier": route_out["execution_intent"].get("entry_tier"), "no_path_reason": route_out["execution_intent"].get("no_path_reason"), "avoid_state": avoid_ctx["avoid_state"], "owner_window_day": bool(cfg["owner_start"] <= trade_date <= cfg["owner_end"])})
++        prior_base = base_out["base_reference"]
++        prev_ready = ready["readiness_state"]
++        prev_segment = seg
++        prev_masked = bool(mask_ctx["masked_flag"])
++    return out
++
++
++def baseline_direct_entries(payload: dict[str, Any]) -> dict[str, list[str]]:
++    rows_by_symbol = payload.get("per_day_intent_lifecycle_tables") or payload.get("per_symbol_rows") or payload.get("per_symbol") or {}
++    return {
++        symbol: [
++            str(row.get("trade_date"))
++            for row in rows
++            if str(((row.get("execution_intent") or {}).get("execution_state")) or "") == "EXECUTE_CONFIRMED_DIRECT"
++        ]
++        for symbol, rows in rows_by_symbol.items()
++    }
++
++
++def main() -> None:
++    REVIEW.mkdir(parents=True, exist_ok=True)
++    bind_db()
++    baseline = json.loads(BASELINE.read_text(encoding="utf-8"))
++    stack = make_stack()
++    windows = v7.owner_windows()
++    per_symbol = {symbol: replay_symbol(symbol, cfg, stack) for symbol, cfg in windows.items()}
++    counts = {
++        symbol: dict(collections.Counter(row["execution_state"] for row in rows))
++        for symbol, rows in per_symbol.items()
++    }
++    direct_entries = {symbol: [row["trade_date"] for row in rows if row["execution_state"] == "EXECUTE_CONFIRMED_DIRECT"] for symbol, rows in per_symbol.items()}
++    baseline_direct = baseline_direct_entries(baseline)
++    early_pilots = {symbol: [row["trade_date"] for row in rows if row["execution_state"] == "EXECUTE_EARLY_PILOT"] for symbol, rows in per_symbol.items()}
++    pilot_suppressions = {symbol: sum(1 for row in rows if row.get("no_path_reason") == "POSITION_ALREADY_OPEN_FEEDBACK_SUPPRESSED_PILOT") for symbol, rows in per_symbol.items()}
++    mabanee_decline_early = [row["trade_date"] for row in per_symbol["MABANEE"] if row["execution_state"] == "EXECUTE_EARLY_PILOT" and row["owner_window_day"]]
++    checks = {
++        "direct_entries_unchanged": {
++            "status": "PASS" if direct_entries == baseline_direct else "FAIL",
++            "baseline_direct_entries": baseline_direct,
++            "current_direct_entries": direct_entries,
++        },
++        "pilots_deduped": {
++            "status": "PASS" if all(len(v) <= 1 for v in early_pilots.values()) else "FAIL",
++            "early_pilot_dates": early_pilots,
++            "pilot_suppressions": pilot_suppressions,
++            "execution_counts": counts,
++        },
++        "mabanee_unchanged": {"status": "PASS" if not mabanee_decline_early and baseline["acceptance_checks"]["MABANEE"]["status"] == "PASS" else "FAIL", "mabanee_decline_early": mabanee_decline_early},
++    }
++    payload = {"version_id": "R15REM_THIN_REGRESSION_V1", "run_nonce": RUN_NONCE, "baseline_artifact": str(BASELINE), "checks": checks, "per_symbol_counts": counts}
++    OUT_JSON.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
++    lines = ["# R15-REM Thin Regression v1", "", f"RUN_NONCE: {RUN_NONCE}", ""]
++    for name, check in checks.items():
++        lines.extend([f"## {name}", "", json.dumps(check, sort_keys=True), ""])
++    OUT_MD.write_text("\n".join(lines), encoding="utf-8")
++    OUT_SHA.write_text("\n".join(f"{sha256_file(p)}  {p.name}" for p in (OUT_JSON, OUT_MD)), encoding="utf-8")
++    print(json.dumps(payload["checks"], indent=2, sort_keys=True))
++
++
++if __name__ == "__main__":
++    main()
+\ No newline at end of file
+diff --git a/scripts/r15rem_upward_retirement_evidence_v1.py b/scripts/r15rem_upward_retirement_evidence_v1.py
+new file mode 100644
+index 0000000..757bbf1
+--- /dev/null
++++ b/scripts/r15rem_upward_retirement_evidence_v1.py
+@@ -0,0 +1,168 @@
++from __future__ import annotations
++
++import hashlib
++import json
++from pathlib import Path
++from statistics import mean, median
++from typing import Any
++
++from r14c_invalidation_rule_candidates_v1 import load_ex_set_b_symbols, load_symbol_bars
++
++ROOT = Path(__file__).resolve().parents[1]
++REVIEW = ROOT / "artifacts" / "preview1a_prestart" / "review_final"
++OUT_JSON = REVIEW / "r15rem_upward_retirement_evidence_v1.json"
++OUT_MD = REVIEW / "r15rem_upward_retirement_evidence_v1.md"
++OUT_SHA = REVIEW / "r15rem_upward_retirement_evidence_v1.sha256"
++
++THRESHOLDS = [0.15, 0.20, 0.25]
++WIDTH_CAP = 0.24
++RANGE_SESSIONS = 20
++MIN_DWELL = 10
++HORIZON = 120
++
++
++def sha256_file(path: Path) -> str:
++    h = hashlib.sha256()
++    with path.open("rb") as f:
++        while True:
++            chunk = f.read(1024 * 1024)
++            if not chunk:
++                break
++            h.update(chunk)
++    return h.hexdigest()
++
++
++def quantile(values: list[float], q: float) -> float | None:
++    if not values:
++        return None
++    xs = sorted(values)
++    if q <= 0:
++        return xs[0]
++    if q >= 1:
++        return xs[-1]
++    pos = (len(xs) - 1) * q
++    lo = int(pos)
++    hi = min(lo + 1, len(xs) - 1)
++    frac = pos - lo
++    return xs[lo] * (1.0 - frac) + xs[hi] * frac
++
++
++def freeze_candidates(symbol: str, bars: list[dict[str, Any]]) -> list[dict[str, Any]]:
++    out: list[dict[str, Any]] = []
++    last_freeze_index = -HORIZON
++    for idx, day in enumerate(bars):
++        if idx + 1 < MIN_DWELL or idx - last_freeze_index < HORIZON:
++            continue
++        window = bars[max(0, idx + 1 - RANGE_SESSIONS) : idx + 1]
++        high_ref = max(float(r["high"] or 0.0) for r in window)
++        low_ref = min(float(r["low"] or 0.0) for r in window)
++        close_px = float(day["close"] or 0.0)
++        width = 0.0 if low_ref <= 0.0 else (high_ref - low_ref) / low_ref
++        if width <= WIDTH_CAP and low_ref <= close_px <= high_ref:
++            out.append(
++                {
++                    "symbol": symbol,
++                    "freeze_index": idx,
++                    "freeze_date": day["trade_date"],
++                    "base_high_ref": high_ref,
++                    "base_low_ref": low_ref,
++                    "width_pct": width,
++                }
++            )
++            last_freeze_index = idx
++    return out
++
++
++def annotate_candidate(candidate: dict[str, Any], bars: list[dict[str, Any]], threshold: float) -> dict[str, Any]:
++    start = int(candidate["freeze_index"]) + 1
++    horizon_bars = bars[start : start + HORIZON]
++    base_high = float(candidate["base_high_ref"] or 0.0)
++    best_mfe = 0.0
++    materialized_index: int | None = None
++    materialized_date: str | None = None
++    for offset, day in enumerate(horizon_bars, start=1):
++        high_px = float(day["high"] or 0.0)
++        mfe = 0.0 if base_high <= 0.0 else (high_px / base_high) - 1.0
++        if mfe > best_mfe:
++            best_mfe = mfe
++        if materialized_index is None and mfe >= threshold:
++            materialized_index = offset
++            materialized_date = str(day["trade_date"])
++    return {
++        **candidate,
++        "threshold": threshold,
++        "horizon_sessions_available": len(horizon_bars),
++        "max_mfe_120": best_mfe,
++        "materialized": materialized_index is not None,
++        "sessions_to_materialization": materialized_index,
++        "materialization_date": materialized_date,
++    }
++
++
++def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
++    materialized = [r for r in rows if r["materialized"]]
++    mfe_values = [float(r["max_mfe_120"] or 0.0) for r in rows]
++    session_values = [int(r["sessions_to_materialization"]) for r in materialized if r["sessions_to_materialization"] is not None]
++    return {
++        "candidate_count": len(rows),
++        "materialized_count": len(materialized),
++        "materialized_rate": 0.0 if not rows else len(materialized) / len(rows),
++        "max_mfe_120_mean": mean(mfe_values) if mfe_values else None,
++        "max_mfe_120_median": median(mfe_values) if mfe_values else None,
++        "max_mfe_120_p75": quantile(mfe_values, 0.75),
++        "sessions_to_materialization_median": median(session_values) if session_values else None,
++    }
++
++
++def main() -> None:
++    REVIEW.mkdir(parents=True, exist_ok=True)
++    ex_set_b, set_a, set_b = load_ex_set_b_symbols()
++    rows_by_threshold: dict[str, list[dict[str, Any]]] = {str(t): [] for t in THRESHOLDS}
++    symbol_count = 0
++    for symbol in ex_set_b:
++        bars = load_symbol_bars(symbol)
++        if len(bars) < MIN_DWELL + 1:
++            continue
++        symbol_count += 1
++        candidates = freeze_candidates(symbol, bars)
++        for threshold in THRESHOLDS:
++            rows_by_threshold[str(threshold)].extend(annotate_candidate(c, bars, threshold) for c in candidates)
++
++    payload = {
++        "version_id": "R15REM_UPWARD_RETIREMENT_EVIDENCE_V1",
++        "mode": "READ_ONLY_EX_SET_B_DESCRIPTIVE",
++        "thresholds": THRESHOLDS,
++        "cohort": {
++            "ex_set_b_symbol_count": len(ex_set_b),
++            "symbols_with_bars": symbol_count,
++            "set_a_symbols": set_a,
++            "set_b_excluded_count": len(set_b),
++        },
++        "candidate_definition": {
++            "range_sessions": RANGE_SESSIONS,
++            "min_dwell": MIN_DWELL,
++            "width_cap": WIDTH_CAP,
++            "horizon_sessions": HORIZON,
++            "note": "Descriptive threshold evidence only; not R15 attempt 2 and not owner ratification.",
++        },
++        "summary_by_threshold": {k: summarize(v) for k, v in rows_by_threshold.items()},
++        "sample_rows_by_threshold": {k: v[:25] for k, v in rows_by_threshold.items()},
++    }
++    OUT_JSON.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
++    lines = ["# R15-REM Upward Retirement Evidence v1", "", "Mode: READ_ONLY_EX_SET_B_DESCRIPTIVE", ""]
++    for threshold in THRESHOLDS:
++        summary = payload["summary_by_threshold"][str(threshold)]
++        lines.append(f"## Threshold {threshold:.2f}")
++        lines.append("")
++        lines.append(json.dumps(summary, sort_keys=True))
++        lines.append("")
++    OUT_MD.write_text("\n".join(lines), encoding="utf-8")
++    hashes = []
++    for path in (OUT_JSON, OUT_MD):
++        hashes.append(f"{sha256_file(path)}  {path.name}")
++    OUT_SHA.write_text("\n".join(hashes), encoding="utf-8")
++    print(json.dumps({"json": str(OUT_JSON), "md": str(OUT_MD), "summary_by_threshold": payload["summary_by_threshold"]}, indent=2, sort_keys=True))
++
++
++if __name__ == "__main__":
++    main()
+\ No newline at end of file
