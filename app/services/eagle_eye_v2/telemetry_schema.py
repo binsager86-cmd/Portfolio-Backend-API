@@ -1,0 +1,82 @@
+from __future__ import annotations
+
+DAILY_TERM_ROW_FIELDS = [
+    "symbol",
+    "trade_date",
+    "segment_id",
+    "segment_day_index",
+    "phase_before",
+    "phase_after",
+    "readiness_state",
+    "readiness_transition_event",
+    "readiness_transition_from_state",
+    "readiness_transition_to_state",
+    "segment_restart_flag",
+    "masked_context_flag",
+    "lookback_long_sessions",
+    "lookback_segment_sessions",
+    "lookback_fallback_sessions",
+    "base_reference_id",
+    "intent_id",
+    "predicate_namespace",
+    "predicate_name",
+    "predicate_value",
+    "predicate_threshold_parameter",
+    "predicate_pass",
+    "recoverability_state",
+    "recoverability_reason",
+    "source_payload_fields",
+    "base_reference_version",
+    "base_reference_origin",
+    "base_reference_current_flag",
+    "extension_pct_vs_current_valid_reference",
+    "chase_advisory_flag",
+    "current_day_value_kwd",
+    "trailing_liquidity_context_value",
+    "early_tier_flag",
+    "dead_money_sessions",
+    "flow_obv_slope_40",
+    "flow_anv_slope_40",
+    "flow_accumulation_divergence",
+    "accumulation_context_ok",
+    "participation_cap_pct",
+    "pilot_size_fraction",
+    "time_stop_sessions",
+    "entry_tier",
+    "flow_evidence_snapshot",
+    "current_valid_reference_value",
+]
+
+DAILY_STATE_SNAPSHOT_FIELDS = [
+    "symbol",
+    "trade_date",
+    "readiness_state",
+    "phase_state",
+    "base_reference_snapshot",
+    "intent_snapshot",
+    "avoid_state",
+    "risk_budget_state",
+]
+
+EXECUTION_OUTCOME_ROW_FIELDS = [
+    "symbol",
+    "trade_date",
+    "candidate_intent_state",
+    "execution_state",
+    "veto_plane",
+    "veto_reason",
+    "opened_trade_flag",
+    "trade_id",
+    "chase_advisory_emitted",
+    "chase_advisory_extension_pct",
+    "entry_tier",
+    "dead_money_sessions",
+]
+
+TABLE_TO_FIELDS = {
+    "daily_term_row": DAILY_TERM_ROW_FIELDS,
+    "daily_state_snapshot": DAILY_STATE_SNAPSHOT_FIELDS,
+    "execution_outcome_row": EXECUTION_OUTCOME_ROW_FIELDS,
+}
+
+TABLES = ["daily_term_row", "daily_state_snapshot", "execution_outcome_row"]
