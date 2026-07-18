@@ -30,6 +30,7 @@ from app.api.v1.system import router as system_router
 from app.api.v1.eagle_eye import router as eagle_eye_router
 from app.api.v1.eagle_eye_audit import router as eagle_eye_audit_router
 from app.api.v1.eagle_eye_signals import router as eagle_eye_signals_router
+from app.api.v1.eagle_eye_v2_preview import router as eagle_eye_v2_preview_router
 
 try:
     from app.api.v1.orderbook import router as orderbook_router
@@ -69,6 +70,7 @@ v1_router.include_router(system_router)
 v1_router.include_router(eagle_eye_router)
 v1_router.include_router(eagle_eye_audit_router)
 v1_router.include_router(eagle_eye_signals_router)
+v1_router.include_router(eagle_eye_v2_preview_router)
 if orderbook_router is not None:
     v1_router.include_router(orderbook_router)
 if positions_router is not None:
