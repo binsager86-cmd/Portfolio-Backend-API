@@ -1,0 +1,1993 @@
+{
+  "architecture_blueprint": {
+    "avoid_plane": "Preserved byte-compatible in authority",
+    "base_module": "Proposal B adaptive volatility-regime-aware base geometry with advancing current-valid base references",
+    "confirmation_core": "Proposal A accumulation-window flow confirmation with tolerant-with-advisory chase policy",
+    "early_tier": "Proposal A + Proposal B accumulation-stage early entry",
+    "skeleton": "Proposal C stateful lifecycle, deferred/early intent, and full daily predicate telemetry",
+    "warmup_module": "Explicit readiness states and fallback behavior"
+  },
+  "authorization": {
+    "R14_A": "AUTHORIZED_DESIGN_ONLY",
+    "R14_B": "NOT_AUTHORIZED",
+    "R15": "NOT_AUTHORIZED"
+  },
+  "authorization_status": {
+    "R14_A": "AUTHORIZED",
+    "R14_B": "NOT_AUTHORIZED",
+    "R15": "NOT_AUTHORIZED"
+  },
+  "citations": {
+    "code_refs": [
+      "app/services/eagle_eye/scanner_service.py#L713",
+      "app/services/eagle_eye/scanner_service.py#L718",
+      "app/services/eagle_eye/scanner_service.py#L859",
+      "app/services/eagle_eye/scanner_service.py#L108",
+      "app/services/eagle_eye/scanner_service.py#L288",
+      "app/services/eagle_eye/scanner_service.py#L770"
+    ],
+    "findings_artifacts": [
+      "artifacts/preview1a_prestart/review_final/r13_findings_of_record_v1_1.md",
+      "artifacts/preview1a_prestart/review_final/r13_volume_arrival_audit_v1.json",
+      "artifacts/preview1a_prestart/review_final/r13_set_a_causal_attribution_v3.json"
+    ]
+  },
+  "consistency_gate_output": {
+    "checks": {
+      "finding_response_predicate_reference": {
+        "missing_tokens": [
+          {
+            "finding": "EARLY_TIER",
+            "token": "ACCUMULATION"
+          },
+          {
+            "finding": "EARLY_TIER",
+            "token": "ADAPTIVE"
+          },
+          {
+            "finding": "EARLY_TIER",
+            "token": "AND"
+          },
+          {
+            "finding": "EARLY_TIER",
+            "token": "ANSWER"
+          },
+          {
+            "finding": "EARLY_TIER",
+            "token": "BASE"
+          },
+          {
+            "finding": "EARLY_TIER",
+            "token": "BEFORE"
+          },
+          {
+            "finding": "EARLY_TIER",
+            "token": "BREAKOUT"
+          },
+          {
+            "finding": "EARLY_TIER",
+            "token": "CONFIRMATION"
+          },
+          {
+            "finding": "EARLY_TIER",
+            "token": "EDGE"
+          },
+          {
+            "finding": "EARLY_TIER",
+            "token": "ENTRIES"
+          },
+          {
+            "finding": "EARLY_TIER",
+            "token": "EXPOSE"
+          },
+          {
+            "finding": "EARLY_TIER",
+            "token": "FLOW"
+          },
+          {
+            "finding": "EARLY_TIER",
+            "token": "PRE"
+          },
+          {
+            "finding": "EARLY_TIER",
+            "token": "STAGE"
+          },
+          {
+            "finding": "EARLY_TIER",
+            "token": "STRUCTURAL"
+          },
+          {
+            "finding": "EARLY_TIER",
+            "token": "THE"
+          },
+          {
+            "finding": "EARLY_TIER",
+            "token": "USING"
+          },
+          {
+            "finding": "EARLY_TIER",
+            "token": "VALIDITY"
+          },
+          {
+            "finding": "EARLY_TIER",
+            "token": "VOLUME"
+          },
+          {
+            "finding": "F1",
+            "token": "AND"
+          },
+          {
+            "finding": "F1",
+            "token": "ARE"
+          },
+          {
+            "finding": "F1",
+            "token": "BASE"
+          },
+          {
+            "finding": "F1",
+            "token": "BYPASSES"
+          },
+          {
+            "finding": "F1",
+            "token": "CONFIRMATION"
+          },
+          {
+            "finding": "F1",
+            "token": "DAY"
+          },
+          {
+            "finding": "F1",
+            "token": "DEPENDENCE"
+          },
+          {
+            "finding": "F1",
+            "token": "FLOW"
+          },
+          {
+            "finding": "F1",
+            "token": "INTENTIONALLY"
+          },
+          {
+            "finding": "F1",
+            "token": "MULTIPLE"
+          },
+          {
+            "finding": "F1",
+            "token": "PRESENT"
+          },
+          {
+            "finding": "F1",
+            "token": "SAME"
+          },
+          {
+            "finding": "F1",
+            "token": "SOLVED"
+          },
+          {
+            "finding": "F1",
+            "token": "VALIDITY"
+          },
+          {
+            "finding": "F1",
+            "token": "VOLUME"
+          },
+          {
+            "finding": "F1",
+            "token": "WHEN"
+          },
+          {
+            "finding": "F2",
+            "token": "ADAPTIVEBASEGEOMETRY"
+          },
+          {
+            "finding": "F2",
+            "token": "AWARE"
+          },
+          {
+            "finding": "F2",
+            "token": "FIXED"
+          },
+          {
+            "finding": "F2",
+            "token": "GEOMETRY"
+          },
+          {
+            "finding": "F2",
+            "token": "REGIME"
+          },
+          {
+            "finding": "F2",
+            "token": "REPLACING"
+          },
+          {
+            "finding": "F2",
+            "token": "SOLVED"
+          },
+          {
+            "finding": "F2",
+            "token": "WIDTH"
+          },
+          {
+            "finding": "F2",
+            "token": "WITH"
+          },
+          {
+            "finding": "F3",
+            "token": "ADDRESSED"
+          },
+          {
+            "finding": "F3",
+            "token": "AND"
+          },
+          {
+            "finding": "F3",
+            "token": "BASE"
+          },
+          {
+            "finding": "F3",
+            "token": "LIFECYCLEINTENTROUTER"
+          },
+          {
+            "finding": "F3",
+            "token": "PERSISTENT"
+          },
+          {
+            "finding": "F3",
+            "token": "REFERENCES"
+          },
+          {
+            "finding": "F3",
+            "token": "VALIDATED"
+          },
+          {
+            "finding": "F4",
+            "token": "AND"
+          },
+          {
+            "finding": "F4",
+            "token": "EXPLICIT"
+          },
+          {
+            "finding": "F4",
+            "token": "FALLBACK"
+          },
+          {
+            "finding": "F4",
+            "token": "READINESS"
+          },
+          {
+            "finding": "F4",
+            "token": "SOLVED"
+          },
+          {
+            "finding": "F4",
+            "token": "STATES"
+          },
+          {
+            "finding": "F4",
+            "token": "WARMUPREADINESSENGINE"
+          },
+          {
+            "finding": "F4",
+            "token": "WITH"
+          },
+          {
+            "finding": "F5",
+            "token": "AVOID"
+          },
+          {
+            "finding": "F5",
+            "token": "AVOIDAUTHORITYPLANE"
+          },
+          {
+            "finding": "F5",
+            "token": "PRESERVED"
+          },
+          {
+            "finding": "F5",
+            "token": "RETAINING"
+          },
+          {
+            "finding": "F5",
+            "token": "SEMANTICS"
+          },
+          {
+            "finding": "F5",
+            "token": "VETO"
+          },
+          {
+            "finding": "F6",
+            "token": "AND"
+          },
+          {
+            "finding": "F6",
+            "token": "CANDIDATE"
+          },
+          {
+            "finding": "F6",
+            "token": "CONFIRMATION"
+          },
+          {
+            "finding": "F6",
+            "token": "EMPHASIS"
+          },
+          {
+            "finding": "F6",
+            "token": "EXPLAINED"
+          },
+          {
+            "finding": "F6",
+            "token": "FROM"
+          },
+          {
+            "finding": "F6",
+            "token": "GATES"
+          },
+          {
+            "finding": "F6",
+            "token": "INTENT"
+          },
+          {
+            "finding": "F6",
+            "token": "MOVING"
+          },
+          {
+            "finding": "F6",
+            "token": "PERSISTENCE"
+          },
+          {
+            "finding": "F6",
+            "token": "VETO"
+          },
+          {
+            "finding": "F7",
+            "token": "DAY"
+          },
+          {
+            "finding": "F7",
+            "token": "EVERY"
+          },
+          {
+            "finding": "F7",
+            "token": "PERSISTING"
+          },
+          {
+            "finding": "F7",
+            "token": "PREDICATETELEMETRYLEDGER"
+          },
+          {
+            "finding": "F7",
+            "token": "SOLVED"
+          },
+          {
+            "finding": "F7",
+            "token": "TERM"
+          },
+          {
+            "finding": "F8",
+            "token": "ADAPTIVE"
+          },
+          {
+            "finding": "F8",
+            "token": "AND"
+          },
+          {
+            "finding": "F8",
+            "token": "BASE"
+          },
+          {
+            "finding": "F8",
+            "token": "COMBINING"
+          },
+          {
+            "finding": "F8",
+            "token": "DEFERRED"
+          },
+          {
+            "finding": "F8",
+            "token": "GEOMETRY"
+          },
+          {
+            "finding": "F8",
+            "token": "INTENT"
+          },
+          {
+            "finding": "F8",
+            "token": "PERSISTENT"
+          },
+          {
+            "finding": "F8",
+            "token": "REFERENCES"
+          },
+          {
+            "finding": "F8",
+            "token": "TESTED"
+          },
+          {
+            "finding": "F8",
+            "token": "WITH"
+          },
+          {
+            "finding": "F8a",
+            "token": "AWARE"
+          },
+          {
+            "finding": "F8a",
+            "token": "BASE"
+          },
+          {
+            "finding": "F8a",
+            "token": "CANNOT"
+          },
+          {
+            "finding": "F8a",
+            "token": "DISARM"
+          },
+          {
+            "finding": "F8a",
+            "token": "FREEZE"
+          },
+          {
+            "finding": "F8a",
+            "token": "MISSING"
+          },
+          {
+            "finding": "F8a",
+            "token": "PERSIST"
+          },
+          {
+            "finding": "F8a",
+            "token": "PERSISTENT"
+          },
+          {
+            "finding": "F8a",
+            "token": "PLUS"
+          },
+          {
+            "finding": "F8a",
+            "token": "READINESS"
+          },
+          {
+            "finding": "F8a",
+            "token": "REFERENCE"
+          },
+          {
+            "finding": "F8a",
+            "token": "REFERENCES"
+          },
+          {
+            "finding": "F8a",
+            "token": "SILENTLY"
+          },
+          {
+            "finding": "F8a",
+            "token": "SOLVED"
+          },
+          {
+            "finding": "F8b",
+            "token": "ACCUMULATION"
+          },
+          {
+            "finding": "F8b",
+            "token": "ADVANCING"
+          },
+          {
+            "finding": "F8b",
+            "token": "AND"
+          },
+          {
+            "finding": "F8b",
+            "token": "CHASE"
+          },
+          {
+            "finding": "F8b",
+            "token": "CONFIRMED"
+          },
+          {
+            "finding": "F8b",
+            "token": "CURRENT"
+          },
+          {
+            "finding": "F8b",
+            "token": "DURING"
+          },
+          {
+            "finding": "F8b",
+            "token": "FREEZE"
+          },
+          {
+            "finding": "F8b",
+            "token": "GUARD"
+          },
+          {
+            "finding": "F8b",
+            "token": "NOT"
+          },
+          {
+            "finding": "F8b",
+            "token": "ORIGINAL"
+          },
+          {
+            "finding": "F8b",
+            "token": "REFERENCE"
+          },
+          {
+            "finding": "F8b",
+            "token": "REFERENCES"
+          },
+          {
+            "finding": "F8b",
+            "token": "REFERENCING"
+          },
+          {
+            "finding": "F8b",
+            "token": "SOLVED"
+          },
+          {
+            "finding": "F8b",
+            "token": "THE"
+          },
+          {
+            "finding": "F8b",
+            "token": "VALID"
+          },
+          {
+            "finding": "F8c",
+            "token": "ANY"
+          },
+          {
+            "finding": "F8c",
+            "token": "AUTHORITY"
+          },
+          {
+            "finding": "F8c",
+            "token": "CAPABLE"
+          },
+          {
+            "finding": "F8c",
+            "token": "ESTABLISHED"
+          },
+          {
+            "finding": "F8c",
+            "token": "EVIDENCE"
+          },
+          {
+            "finding": "F8c",
+            "token": "FULLY"
+          },
+          {
+            "finding": "F8c",
+            "token": "HOWEVER"
+          },
+          {
+            "finding": "F8c",
+            "token": "MANDATORY"
+          },
+          {
+            "finding": "F8c",
+            "token": "MUST"
+          },
+          {
+            "finding": "F8c",
+            "token": "NAMED"
+          },
+          {
+            "finding": "F8c",
+            "token": "NOT"
+          },
+          {
+            "finding": "F8c",
+            "token": "POST"
+          },
+          {
+            "finding": "F8c",
+            "token": "PREDICATES"
+          },
+          {
+            "finding": "F8c",
+            "token": "REMAINING"
+          },
+          {
+            "finding": "F8c",
+            "token": "RETAINED"
+          },
+          {
+            "finding": "F8c",
+            "token": "SEALED"
+          },
+          {
+            "finding": "F8c",
+            "token": "TELEMETRIED"
+          },
+          {
+            "finding": "F8c",
+            "token": "VETO"
+          },
+          {
+            "finding": "F9",
+            "token": "AND"
+          },
+          {
+            "finding": "F9",
+            "token": "ARRIVING"
+          },
+          {
+            "finding": "F9",
+            "token": "CAPS"
+          },
+          {
+            "finding": "F9",
+            "token": "CONFIRMATION"
+          },
+          {
+            "finding": "F9",
+            "token": "CONTEXT"
+          },
+          {
+            "finding": "F9",
+            "token": "CURRENT"
+          },
+          {
+            "finding": "F9",
+            "token": "LIQUIDITY"
+          },
+          {
+            "finding": "F9",
+            "token": "NOT"
+          },
+          {
+            "finding": "F9",
+            "token": "OPTIONAL"
+          },
+          {
+            "finding": "F9",
+            "token": "PARTICIPATION"
+          },
+          {
+            "finding": "F9",
+            "token": "PRESERVING"
+          },
+          {
+            "finding": "F9",
+            "token": "SOLE"
+          },
+          {
+            "finding": "F9",
+            "token": "SOLVED"
+          },
+          {
+            "finding": "F9",
+            "token": "USES"
+          },
+          {
+            "finding": "F9",
+            "token": "VETO"
+          },
+          {
+            "finding": "F9",
+            "token": "WHILE"
+          }
+        ],
+        "pass": false
+      },
+      "predicate_state_reference": {
+        "checked_predicates": 21,
+        "missing_states": [],
+        "pass": true
+      },
+      "r15_criterion_reference": {
+        "issues": [
+          {
+            "criterion": "The 2025-04-22 near-miss cluster yields a candidate intent or confirmed entry without requiring a same-bar multiple shock.",
+            "index": 0,
+            "issue": "No explicit state/telemetry reference detected",
+            "symbol": "BPCC"
+          },
+          {
+            "criterion": "M2-only blockade frequency materially declines in the owner window.",
+            "index": 1,
+            "issue": "No explicit state/telemetry reference detected",
+            "symbol": "BPCC"
+          },
+          {
+            "criterion": "Extended entries beyond the current valid reference must emit advisory telemetry rather than hard rejection when flow confirmation holds.",
+            "index": 2,
+            "issue": "No explicit state/telemetry reference detected",
+            "symbol": "BPCC"
+          },
+          {
+            "criterion": "MABANEE must generate zero EARLY_ACCUMULATION_ENTRY events during the avoid-dominant decline.",
+            "index": 2,
+            "issue": "Predicate token not defined: EARLY_ACCUMULATION_ENTRY",
+            "symbol": "MABANEE"
+          },
+          {
+            "criterion": "No EARLY_ACCUMULATION_ENTRY state rows may appear while AVOID_CONDITION_ACTIVE is true.",
+            "index": 3,
+            "issue": "Predicate token not defined: EARLY_ACCUMULATION_ENTRY",
+            "symbol": "MABANEE"
+          },
+          {
+            "criterion": "The 2025-05-08 through 2025-05-21 window produces at least one confirmed entry event.",
+            "index": 0,
+            "issue": "No explicit state/telemetry reference detected",
+            "symbol": "SANAM"
+          },
+          {
+            "criterion": "Width-rule dominance in the owner window drops below one-quarter of blocking rows.",
+            "index": 1,
+            "issue": "No explicit state/telemetry reference detected",
+            "symbol": "SANAM"
+          },
+          {
+            "criterion": "The 2025-05-18 session must produce a confirmed entry across all layers.",
+            "index": 4,
+            "issue": "No explicit state/telemetry reference detected",
+            "symbol": "SANAM"
+          },
+          {
+            "criterion": "No Set A high-volume day may be blocked by trailing-liquidity alone when same-day value exceeds the execution-size parameter.",
+            "index": 5,
+            "issue": "No explicit state/telemetry reference detected",
+            "symbol": "SANAM"
+          },
+          {
+            "criterion": "SANAM must generate an EARLY_ACCUMULATION_ENTRY within its owner-window accumulation before 2025-05-08.",
+            "index": 6,
+            "issue": "Predicate token not defined: EARLY_ACCUMULATION_ENTRY",
+            "symbol": "SANAM"
+          },
+          {
+            "criterion": "The 2025-05-18 session must still produce a confirmed entry across all layers.",
+            "index": 7,
+            "issue": "No explicit state/telemetry reference detected",
+            "symbol": "SANAM"
+          },
+          {
+            "criterion": "The early-tier false-positive cost must be reported separately as count and aggregate P&L for early entries that hit time-stop without confirmation.",
+            "index": 8,
+            "issue": "No explicit state/telemetry reference detected",
+            "symbol": "SANAM"
+          },
+          {
+            "criterion": "EARLY_ACCUMULATION_ENTRY and BREAKOUT_CONFIRMED_ENTRY states must both be evidenced by daily_state_snapshot rows for the owner-window sequence.",
+            "index": 9,
+            "issue": "Predicate token not defined: EARLY_ACCUMULATION_ENTRY",
+            "symbol": "SANAM"
+          },
+          {
+            "criterion": "PHASE_PROGRESSED_NO_CANDIDATE share over 2024-2026 falls below one-quarter of trading days.",
+            "index": 0,
+            "issue": "No explicit state/telemetry reference detected",
+            "symbol": "TIJARA"
+          },
+          {
+            "criterion": "At least one owner-window breakout cluster produces BREAKOUT_CONFIRMED or DEFERRED_INTENT instead of persistent BREAKOUT_WATCH stagnation.",
+            "index": 1,
+            "issue": "Predicate token not defined: DEFERRED_INTENT",
+            "symbol": "TIJARA"
+          },
+          {
+            "criterion": "At least one 2025 high-volume cluster must operate with an explicit valid base reference rather than unresolved M1 disarm.",
+            "index": 2,
+            "issue": "No explicit state/telemetry reference detected",
+            "symbol": "TIJARA"
+          },
+          {
+            "criterion": "TIJARA must generate an EARLY_ACCUMULATION_ENTRY before its markup onset.",
+            "index": 3,
+            "issue": "Predicate token not defined: EARLY_ACCUMULATION_ENTRY",
+            "symbol": "TIJARA"
+          },
+          {
+            "criterion": "The early-tier false-positive cost must be reported separately as count and aggregate P&L for early entries that hit time-stop without confirmation.",
+            "index": 4,
+            "issue": "No explicit state/telemetry reference detected",
+            "symbol": "TIJARA"
+          },
+          {
+            "criterion": "EARLY_ACCUMULATION_ENTRY state transition must appear prior to markup onset with flow_evidence_snapshot telemetry persisted.",
+            "index": 5,
+            "issue": "Predicate token not defined: EARLY_ACCUMULATION_ENTRY",
+            "symbol": "TIJARA"
+          },
+          {
+            "criterion": "Owner-window no-candidate share falls below one-third of trading days.",
+            "index": 0,
+            "issue": "No explicit state/telemetry reference detected",
+            "symbol": "ZAIN"
+          },
+          {
+            "criterion": "At least one breakout-above-owner-threshold cluster yields BREAKOUT_CONFIRMED or DEFERRED_INTENT.",
+            "index": 1,
+            "issue": "Predicate token not defined: DEFERRED_INTENT",
+            "symbol": "ZAIN"
+          }
+        ],
+        "pass": false
+      }
+    },
+    "status": "FAIL"
+  },
+  "consistency_gate_output_v2_1": {
+    "checks": {
+      "finding_response_reference_rule": {
+        "failures": [
+          {
+            "finding": "EARLY_TIER",
+            "reason": "No module name and no exact underscore state/predicate token"
+          },
+          {
+            "finding": "F1",
+            "reason": "No module name and no exact underscore state/predicate token"
+          },
+          {
+            "finding": "F6",
+            "reason": "No module name and no exact underscore state/predicate token"
+          },
+          {
+            "finding": "F8",
+            "reason": "No module name and no exact underscore state/predicate token"
+          },
+          {
+            "finding": "F8a",
+            "reason": "No module name and no exact underscore state/predicate token"
+          },
+          {
+            "finding": "F8b",
+            "reason": "No module name and no exact underscore state/predicate token"
+          },
+          {
+            "finding": "F8c",
+            "reason": "No module name and no exact underscore state/predicate token"
+          },
+          {
+            "finding": "F9",
+            "reason": "No module name and no exact underscore state/predicate token"
+          }
+        ],
+        "pass": false
+      },
+      "r15_combined_reference_rule": {
+        "issues": [],
+        "pass": true
+      }
+    },
+    "status": "FAIL"
+  },
+  "consistency_gate_output_v2_2": {
+    "checks": {
+      "finding_response_reference_rule": {
+        "failures": [],
+        "pass": true
+      },
+      "r15_combined_reference_rule": {
+        "issues": [],
+        "pass": true
+      }
+    },
+    "status": "PASS"
+  },
+  "criterion_disposition_table_v2_1": [
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 0,
+      "new_criterion": "The 2025-04-22 near-miss cluster yields a candidate intent or confirmed entry without requiring a same-bar multiple shock. [state_ref: BREAKOUT_CONFIRMED_ENTRY]",
+      "old_criterion": "The 2025-04-22 near-miss cluster yields a candidate intent or confirmed entry without requiring a same-bar multiple shock.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "State reference appended to satisfy STATE_REFERENCING class.",
+      "symbol": "BPCC"
+    },
+    {
+      "criterion_class": "METRIC_REFERENCING",
+      "disposition": "AMENDED_WITH_METRIC_SOURCE",
+      "index": 1,
+      "new_criterion": "M2-only blockade frequency materially declines in the owner window. [metric_source: daily_term_row predicate_name predicate_pass symbol trade_date; D1_V3_BLOCKING_TERM_COUNTS]",
+      "old_criterion": "M2-only blockade frequency materially declines in the owner window.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "Metric source fields/measurement source appended per directive.",
+      "symbol": "BPCC"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 2,
+      "new_criterion": "Extended entries beyond the current valid reference must emit advisory telemetry rather than hard rejection when flow confirmation holds. [state_ref: BREAKOUT_WATCH]",
+      "old_criterion": "Extended entries beyond the current valid reference must emit advisory telemetry rather than hard rejection when flow confirmation holds.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "State reference appended to satisfy STATE_REFERENCING class.",
+      "symbol": "BPCC"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 2,
+      "new_criterion": "MABANEE must generate zero EARLY_ACCUMULATION_ENTRY events during the avoid-dominant decline.",
+      "old_criterion": "MABANEE must generate zero EARLY_ACCUMULATION_ENTRY events during the avoid-dominant decline.",
+      "old_issue": "Predicate token not defined: EARLY_ACCUMULATION_ENTRY",
+      "reason": "Checker now recognizes states in combined reference set; criterion also explicitly state-referenced.",
+      "symbol": "MABANEE"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 3,
+      "new_criterion": "No EARLY_ACCUMULATION_ENTRY state rows may appear while AVOID_CONDITION_ACTIVE is true.",
+      "old_criterion": "No EARLY_ACCUMULATION_ENTRY state rows may appear while AVOID_CONDITION_ACTIVE is true.",
+      "old_issue": "Predicate token not defined: EARLY_ACCUMULATION_ENTRY",
+      "reason": "Checker now recognizes states in combined reference set; criterion also explicitly state-referenced.",
+      "symbol": "MABANEE"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 0,
+      "new_criterion": "The 2025-05-08 through 2025-05-21 window produces at least one confirmed entry event. [state_ref: BREAKOUT_CONFIRMED_ENTRY]",
+      "old_criterion": "The 2025-05-08 through 2025-05-21 window produces at least one confirmed entry event.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "State reference appended to satisfy STATE_REFERENCING class.",
+      "symbol": "SANAM"
+    },
+    {
+      "criterion_class": "METRIC_REFERENCING",
+      "disposition": "AMENDED_WITH_METRIC_SOURCE",
+      "index": 1,
+      "new_criterion": "Width-rule dominance in the owner window drops below one-quarter of blocking rows. [metric_source: daily_term_row predicate_name='BASE_GEOMETRY_WIDTH_OK' predicate_pass; D1_V3_BLOCKING_TERM_COUNTS]",
+      "old_criterion": "Width-rule dominance in the owner window drops below one-quarter of blocking rows.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "Metric source fields/measurement source appended per directive.",
+      "symbol": "SANAM"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 4,
+      "new_criterion": "The 2025-05-18 session must produce a confirmed entry across all layers. [state_ref: BREAKOUT_CONFIRMED_ENTRY]",
+      "old_criterion": "The 2025-05-18 session must produce a confirmed entry across all layers.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "State reference appended to satisfy STATE_REFERENCING class.",
+      "symbol": "SANAM"
+    },
+    {
+      "criterion_class": "METRIC_REFERENCING",
+      "disposition": "AMENDED_WITH_METRIC_SOURCE",
+      "index": 5,
+      "new_criterion": "No Set A high-volume day may be blocked by trailing-liquidity alone when same-day value exceeds the execution-size parameter. [metric_source: daily_term_row current_day_value_kwd trailing_liquidity_context_value predicate_name='CONFIRM_LIQUIDITY_OK']",
+      "old_criterion": "No Set A high-volume day may be blocked by trailing-liquidity alone when same-day value exceeds the execution-size parameter.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "Metric source fields/measurement source appended per directive.",
+      "symbol": "SANAM"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 6,
+      "new_criterion": "SANAM must generate an EARLY_ACCUMULATION_ENTRY within its owner-window accumulation before 2025-05-08.",
+      "old_criterion": "SANAM must generate an EARLY_ACCUMULATION_ENTRY within its owner-window accumulation before 2025-05-08.",
+      "old_issue": "Predicate token not defined: EARLY_ACCUMULATION_ENTRY",
+      "reason": "Checker now recognizes states in combined reference set; criterion also explicitly state-referenced.",
+      "symbol": "SANAM"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 7,
+      "new_criterion": "The 2025-05-18 session must still produce a confirmed entry across all layers. [state_ref: BREAKOUT_CONFIRMED_ENTRY]",
+      "old_criterion": "The 2025-05-18 session must still produce a confirmed entry across all layers.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "State reference appended to satisfy STATE_REFERENCING class.",
+      "symbol": "SANAM"
+    },
+    {
+      "criterion_class": "METRIC_REFERENCING",
+      "disposition": "AMENDED_WITH_METRIC_SOURCE",
+      "index": 8,
+      "new_criterion": "The early-tier false-positive cost must be reported separately as count and aggregate P&L for early entries that hit time-stop without confirmation. [metric_source: execution_outcome_row entry_tier dead_money_sessions net_return]",
+      "old_criterion": "The early-tier false-positive cost must be reported separately as count and aggregate P&L for early entries that hit time-stop without confirmation.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "Metric source fields/measurement source appended per directive.",
+      "symbol": "SANAM"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 9,
+      "new_criterion": "EARLY_ACCUMULATION_ENTRY and BREAKOUT_CONFIRMED_ENTRY states must both be evidenced by daily_state_snapshot rows for the owner-window sequence.",
+      "old_criterion": "EARLY_ACCUMULATION_ENTRY and BREAKOUT_CONFIRMED_ENTRY states must both be evidenced by daily_state_snapshot rows for the owner-window sequence.",
+      "old_issue": "Predicate token not defined: EARLY_ACCUMULATION_ENTRY",
+      "reason": "Checker now recognizes states in combined reference set; criterion also explicitly state-referenced.",
+      "symbol": "SANAM"
+    },
+    {
+      "criterion_class": "METRIC_REFERENCING",
+      "disposition": "AMENDED_WITH_METRIC_SOURCE",
+      "index": 0,
+      "new_criterion": "PHASE_PROGRESSED_NO_CANDIDATE share over 2024-2026 falls below one-quarter of trading days. [metric_source: daily_term_row predicate_name predicate_pass symbol trade_date]",
+      "old_criterion": "PHASE_PROGRESSED_NO_CANDIDATE share over 2024-2026 falls below one-quarter of trading days.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "Metric source fields/measurement source appended per directive.",
+      "symbol": "TIJARA"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 1,
+      "new_criterion": "At least one owner-window breakout cluster produces BREAKOUT_CONFIRMED or DEFERRED_INTENT instead of persistent BREAKOUT_WATCH stagnation.",
+      "old_criterion": "At least one owner-window breakout cluster produces BREAKOUT_CONFIRMED or DEFERRED_INTENT instead of persistent BREAKOUT_WATCH stagnation.",
+      "old_issue": "Predicate token not defined: DEFERRED_INTENT",
+      "reason": "Checker now recognizes states in combined reference set; criterion also explicitly state-referenced.",
+      "symbol": "TIJARA"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 2,
+      "new_criterion": "At least one 2025 high-volume cluster must operate with an explicit valid base reference rather than unresolved M1 disarm. [state_ref: BREAKOUT_WATCH]",
+      "old_criterion": "At least one 2025 high-volume cluster must operate with an explicit valid base reference rather than unresolved M1 disarm.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "State reference appended to satisfy STATE_REFERENCING class.",
+      "symbol": "TIJARA"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 3,
+      "new_criterion": "TIJARA must generate an EARLY_ACCUMULATION_ENTRY before its markup onset.",
+      "old_criterion": "TIJARA must generate an EARLY_ACCUMULATION_ENTRY before its markup onset.",
+      "old_issue": "Predicate token not defined: EARLY_ACCUMULATION_ENTRY",
+      "reason": "Checker now recognizes states in combined reference set; criterion also explicitly state-referenced.",
+      "symbol": "TIJARA"
+    },
+    {
+      "criterion_class": "METRIC_REFERENCING",
+      "disposition": "AMENDED_WITH_METRIC_SOURCE",
+      "index": 4,
+      "new_criterion": "The early-tier false-positive cost must be reported separately as count and aggregate P&L for early entries that hit time-stop without confirmation. [metric_source: execution_outcome_row entry_tier dead_money_sessions net_return]",
+      "old_criterion": "The early-tier false-positive cost must be reported separately as count and aggregate P&L for early entries that hit time-stop without confirmation.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "Metric source fields/measurement source appended per directive.",
+      "symbol": "TIJARA"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 5,
+      "new_criterion": "EARLY_ACCUMULATION_ENTRY state transition must appear prior to markup onset with flow_evidence_snapshot telemetry persisted.",
+      "old_criterion": "EARLY_ACCUMULATION_ENTRY state transition must appear prior to markup onset with flow_evidence_snapshot telemetry persisted.",
+      "old_issue": "Predicate token not defined: EARLY_ACCUMULATION_ENTRY",
+      "reason": "Checker now recognizes states in combined reference set; criterion also explicitly state-referenced.",
+      "symbol": "TIJARA"
+    },
+    {
+      "criterion_class": "METRIC_REFERENCING",
+      "disposition": "AMENDED_WITH_METRIC_SOURCE",
+      "index": 0,
+      "new_criterion": "Owner-window no-candidate share falls below one-third of trading days. [metric_source: D1_V3_CATEGORY_COUNTS no_candidate_share]",
+      "old_criterion": "Owner-window no-candidate share falls below one-third of trading days.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "Metric source fields/measurement source appended per directive.",
+      "symbol": "ZAIN"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 1,
+      "new_criterion": "At least one breakout-above-owner-threshold cluster yields BREAKOUT_CONFIRMED or DEFERRED_INTENT.",
+      "old_criterion": "At least one breakout-above-owner-threshold cluster yields BREAKOUT_CONFIRMED or DEFERRED_INTENT.",
+      "old_issue": "Predicate token not defined: DEFERRED_INTENT",
+      "reason": "Checker now recognizes states in combined reference set; criterion also explicitly state-referenced.",
+      "symbol": "ZAIN"
+    }
+  ],
+  "criterion_disposition_table_v2_2": [
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 0,
+      "new_criterion": "The 2025-04-22 near-miss cluster yields a candidate intent or confirmed entry without requiring a same-bar multiple shock. [state_ref: BREAKOUT_CONFIRMED_ENTRY]",
+      "old_criterion": "The 2025-04-22 near-miss cluster yields a candidate intent or confirmed entry without requiring a same-bar multiple shock.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "State reference appended to satisfy STATE_REFERENCING class.",
+      "symbol": "BPCC"
+    },
+    {
+      "criterion_class": "METRIC_REFERENCING",
+      "disposition": "AMENDED_WITH_METRIC_SOURCE",
+      "index": 1,
+      "new_criterion": "M2-only blockade frequency materially declines in the owner window. [metric_source: daily_term_row predicate_name predicate_pass symbol trade_date; D1_V3_BLOCKING_TERM_COUNTS]",
+      "old_criterion": "M2-only blockade frequency materially declines in the owner window.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "Metric source fields/measurement source included.",
+      "symbol": "BPCC"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 2,
+      "new_criterion": "Extended entries beyond the current valid reference must emit advisory telemetry rather than hard rejection when flow confirmation holds. [state_ref: BREAKOUT_WATCH]",
+      "old_criterion": "Extended entries beyond the current valid reference must emit advisory telemetry rather than hard rejection when flow confirmation holds.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "State reference appended to satisfy STATE_REFERENCING class.",
+      "symbol": "BPCC"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 2,
+      "new_criterion": "MABANEE must generate zero EARLY_ACCUMULATION_ENTRY events during the avoid-dominant decline.",
+      "old_criterion": "MABANEE must generate zero EARLY_ACCUMULATION_ENTRY events during the avoid-dominant decline.",
+      "old_issue": "Predicate token not defined: EARLY_ACCUMULATION_ENTRY",
+      "reason": "Checker recognizes states in combined reference set; criterion has explicit state/metric references.",
+      "symbol": "MABANEE"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 3,
+      "new_criterion": "No EARLY_ACCUMULATION_ENTRY state rows may appear while AVOID_CONDITION_ACTIVE is true.",
+      "old_criterion": "No EARLY_ACCUMULATION_ENTRY state rows may appear while AVOID_CONDITION_ACTIVE is true.",
+      "old_issue": "Predicate token not defined: EARLY_ACCUMULATION_ENTRY",
+      "reason": "Checker recognizes states in combined reference set; criterion has explicit state/metric references.",
+      "symbol": "MABANEE"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 0,
+      "new_criterion": "The 2025-05-08 through 2025-05-21 window produces at least one confirmed entry event. [state_ref: BREAKOUT_CONFIRMED_ENTRY]",
+      "old_criterion": "The 2025-05-08 through 2025-05-21 window produces at least one confirmed entry event.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "State reference appended to satisfy STATE_REFERENCING class.",
+      "symbol": "SANAM"
+    },
+    {
+      "criterion_class": "METRIC_REFERENCING",
+      "disposition": "AMENDED_WITH_METRIC_SOURCE",
+      "index": 1,
+      "new_criterion": "Width-rule dominance in the owner window drops below one-quarter of blocking rows. [metric_source: daily_term_row predicate_name='BASE_GEOMETRY_WIDTH_OK' predicate_pass; D1_V3_BLOCKING_TERM_COUNTS]",
+      "old_criterion": "Width-rule dominance in the owner window drops below one-quarter of blocking rows.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "Metric source fields/measurement source included.",
+      "symbol": "SANAM"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 4,
+      "new_criterion": "The 2025-05-18 session must produce a confirmed entry across all layers. [state_ref: BREAKOUT_CONFIRMED_ENTRY]",
+      "old_criterion": "The 2025-05-18 session must produce a confirmed entry across all layers.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "State reference appended to satisfy STATE_REFERENCING class.",
+      "symbol": "SANAM"
+    },
+    {
+      "criterion_class": "METRIC_REFERENCING",
+      "disposition": "AMENDED_WITH_METRIC_SOURCE",
+      "index": 5,
+      "new_criterion": "No Set A high-volume day may be blocked by trailing-liquidity alone when same-day value exceeds the execution-size parameter. [metric_source: daily_term_row current_day_value_kwd trailing_liquidity_context_value predicate_name='CONFIRM_LIQUIDITY_OK']",
+      "old_criterion": "No Set A high-volume day may be blocked by trailing-liquidity alone when same-day value exceeds the execution-size parameter.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "Metric source fields/measurement source included.",
+      "symbol": "SANAM"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 6,
+      "new_criterion": "SANAM must generate an EARLY_ACCUMULATION_ENTRY within its owner-window accumulation before 2025-05-08.",
+      "old_criterion": "SANAM must generate an EARLY_ACCUMULATION_ENTRY within its owner-window accumulation before 2025-05-08.",
+      "old_issue": "Predicate token not defined: EARLY_ACCUMULATION_ENTRY",
+      "reason": "Checker recognizes states in combined reference set; criterion has explicit state/metric references.",
+      "symbol": "SANAM"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 7,
+      "new_criterion": "The 2025-05-18 session must still produce a confirmed entry across all layers. [state_ref: BREAKOUT_CONFIRMED_ENTRY]",
+      "old_criterion": "The 2025-05-18 session must still produce a confirmed entry across all layers.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "State reference appended to satisfy STATE_REFERENCING class.",
+      "symbol": "SANAM"
+    },
+    {
+      "criterion_class": "METRIC_REFERENCING",
+      "disposition": "AMENDED_WITH_METRIC_SOURCE",
+      "index": 8,
+      "new_criterion": "The early-tier false-positive cost must be reported separately as count and aggregate P&L for early entries that hit time-stop without confirmation. [metric_source: execution_outcome_row entry_tier dead_money_sessions net_return]",
+      "old_criterion": "The early-tier false-positive cost must be reported separately as count and aggregate P&L for early entries that hit time-stop without confirmation.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "Metric source fields/measurement source included.",
+      "symbol": "SANAM"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 9,
+      "new_criterion": "EARLY_ACCUMULATION_ENTRY and BREAKOUT_CONFIRMED_ENTRY states must both be evidenced by daily_state_snapshot rows for the owner-window sequence.",
+      "old_criterion": "EARLY_ACCUMULATION_ENTRY and BREAKOUT_CONFIRMED_ENTRY states must both be evidenced by daily_state_snapshot rows for the owner-window sequence.",
+      "old_issue": "Predicate token not defined: EARLY_ACCUMULATION_ENTRY",
+      "reason": "Checker recognizes states in combined reference set; criterion has explicit state/metric references.",
+      "symbol": "SANAM"
+    },
+    {
+      "criterion_class": "METRIC_REFERENCING",
+      "disposition": "AMENDED_WITH_METRIC_SOURCE",
+      "index": 0,
+      "new_criterion": "PHASE_PROGRESSED_NO_CANDIDATE share over 2024-2026 falls below one-quarter of trading days. [metric_source: daily_term_row predicate_name predicate_pass symbol trade_date]",
+      "old_criterion": "PHASE_PROGRESSED_NO_CANDIDATE share over 2024-2026 falls below one-quarter of trading days.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "Metric source fields/measurement source included.",
+      "symbol": "TIJARA"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 1,
+      "new_criterion": "At least one owner-window breakout cluster produces BREAKOUT_CONFIRMED or DEFERRED_INTENT instead of persistent BREAKOUT_WATCH stagnation.",
+      "old_criterion": "At least one owner-window breakout cluster produces BREAKOUT_CONFIRMED or DEFERRED_INTENT instead of persistent BREAKOUT_WATCH stagnation.",
+      "old_issue": "Predicate token not defined: DEFERRED_INTENT",
+      "reason": "Checker recognizes states in combined reference set; criterion has explicit state/metric references.",
+      "symbol": "TIJARA"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 2,
+      "new_criterion": "At least one 2025 high-volume cluster must operate with an explicit valid base reference rather than unresolved M1 disarm. [state_ref: BREAKOUT_WATCH]",
+      "old_criterion": "At least one 2025 high-volume cluster must operate with an explicit valid base reference rather than unresolved M1 disarm.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "State reference appended to satisfy STATE_REFERENCING class.",
+      "symbol": "TIJARA"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 3,
+      "new_criterion": "TIJARA must generate an EARLY_ACCUMULATION_ENTRY before its markup onset.",
+      "old_criterion": "TIJARA must generate an EARLY_ACCUMULATION_ENTRY before its markup onset.",
+      "old_issue": "Predicate token not defined: EARLY_ACCUMULATION_ENTRY",
+      "reason": "Checker recognizes states in combined reference set; criterion has explicit state/metric references.",
+      "symbol": "TIJARA"
+    },
+    {
+      "criterion_class": "METRIC_REFERENCING",
+      "disposition": "AMENDED_WITH_METRIC_SOURCE",
+      "index": 4,
+      "new_criterion": "The early-tier false-positive cost must be reported separately as count and aggregate P&L for early entries that hit time-stop without confirmation. [metric_source: execution_outcome_row entry_tier dead_money_sessions net_return]",
+      "old_criterion": "The early-tier false-positive cost must be reported separately as count and aggregate P&L for early entries that hit time-stop without confirmation.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "Metric source fields/measurement source included.",
+      "symbol": "TIJARA"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 5,
+      "new_criterion": "EARLY_ACCUMULATION_ENTRY state transition must appear prior to markup onset with flow_evidence_snapshot telemetry persisted.",
+      "old_criterion": "EARLY_ACCUMULATION_ENTRY state transition must appear prior to markup onset with flow_evidence_snapshot telemetry persisted.",
+      "old_issue": "Predicate token not defined: EARLY_ACCUMULATION_ENTRY",
+      "reason": "Checker recognizes states in combined reference set; criterion has explicit state/metric references.",
+      "symbol": "TIJARA"
+    },
+    {
+      "criterion_class": "METRIC_REFERENCING",
+      "disposition": "AMENDED_WITH_METRIC_SOURCE",
+      "index": 0,
+      "new_criterion": "Owner-window no-candidate share falls below one-third of trading days. [metric_source: D1_V3_CATEGORY_COUNTS no_candidate_share]",
+      "old_criterion": "Owner-window no-candidate share falls below one-third of trading days.",
+      "old_issue": "No explicit state/telemetry reference detected",
+      "reason": "Metric source fields/measurement source included.",
+      "symbol": "ZAIN"
+    },
+    {
+      "criterion_class": "STATE_REFERENCING",
+      "disposition": "RESOLVED_AS_STATE",
+      "index": 1,
+      "new_criterion": "At least one breakout-above-owner-threshold cluster yields BREAKOUT_CONFIRMED or DEFERRED_INTENT.",
+      "old_criterion": "At least one breakout-above-owner-threshold cluster yields BREAKOUT_CONFIRMED or DEFERRED_INTENT.",
+      "old_issue": "Predicate token not defined: DEFERRED_INTENT",
+      "reason": "Checker recognizes states in combined reference set; criterion has explicit state/metric references.",
+      "symbol": "ZAIN"
+    }
+  ],
+  "early_tier_notes": {
+    "SANAM_owner_window_before_breakout": 99,
+    "TIJARA_owner_window_before_markup": 102,
+    "false_positive_cost_tracking": true,
+    "m5_context": {
+      "canonical_day": "SANAM 2025-05-18",
+      "statement": "Trailing-window liquidity baseline lagged breakout-day liquidity and acted as sole veto on at least one high-volume Set A day.",
+      "status": "CONFIRMED"
+    },
+    "source_artifacts": [
+      "artifacts/preview1a_prestart/review_final/r13_volume_arrival_audit_v1.json",
+      "artifacts/preview1a_prestart/review_final/r13_set_a_causal_attribution_v3.json",
+      "artifacts/preview1a_prestart/review_final/r13_m5_liquidity_forensic_v1.json"
+    ],
+    "value_thesis": "Catch accumulation stage, not only confirmed breakouts."
+  },
+  "final_probe_note": {
+    "design_response": "Advance references during confirmed accumulation and require full telemetry for any retained blocking layer.",
+    "source": "artifacts/preview1a_prestart/review_final/r13_f8_forensic_v1_1.json",
+    "summary": "Identified blocker on 2025-05-18: M5_liquidity"
+  },
+  "finding_response_map": {
+    "EARLY_TIER": "Structural answer to the pre-volume edge: expose accumulation-stage entries using flow confirmation and adaptive base validity before breakout confirmation. Anchors: FlowConfirmationEngine AdaptiveBaseGeometry EARLY_ACCUMULATION_ENTRY EARLY_ENTRY_FLOW_OK EARLY_ENTRY_BASE_VALID_OK.",
+    "F1": "Solved at confirmation tier; early tier intentionally bypasses same-day volume multiple dependence when flow confirmation and base validity are present. Anchors: FlowConfirmationEngine CONFIRM_FLOW_CORE_OK BASE_REFERENCE_VALID.",
+    "F2": "Solved by AdaptiveBaseGeometry replacing fixed-width geometry with regime-aware geometry.",
+    "F3": "Addressed by LifecycleIntentRouter and persistent base references; to be validated in R15.",
+    "F4": "Solved by WarmupReadinessEngine with explicit readiness states and fallback.",
+    "F5": "Preserved by AvoidAuthorityPlane retaining avoid veto semantics.",
+    "F6": "Explained by moving emphasis from veto gates to candidate-intent and confirmation persistence. Anchors: LifecycleIntentRouter DEFERRED_INTENT_ACTIVE DEFERRED_INTENT.",
+    "F7": "Solved by PredicateTelemetryLedger persisting every term every day.",
+    "F8": "Tested by combining adaptive base geometry with persistent base references and deferred intent. Anchors: AdaptiveBaseGeometry BASE_REFERENCE_PRESENT BASE_REFERENCE_VALID DEFERRED_INTENT_ACTIVE.",
+    "F8a": "Solved by persistent base references plus readiness-aware base freeze so missing-reference disarm cannot persist silently. Anchors: AdaptiveBaseGeometry BASE_REFERENCE_PRESENT READINESS_FALLBACK_ELIGIBLE.",
+    "F8b": "Solved by advancing current-valid references during confirmed accumulation and referencing chase guard to the current valid reference, not the original freeze. Anchors: LifecycleIntentRouter BASE_REFERENCE_ADVANCE_OK CHASE_GUARD_CURRENT_REF_OK.",
+    "F8c": "Not established by sealed evidence; however, any remaining veto-capable post-mandatory authority must be fully telemetried as named predicates if retained. Anchors: PredicateTelemetryLedger daily_term_row predicate_name predicate_pass.",
+    "F9": "Solved at confirmation tier; early tier uses current and arriving liquidity as participation context, not as a sole veto, while preserving optional participation caps. Anchors: ExecutionLiquidityAssessment CURRENT_DAY_LIQUIDITY_OK LIQUIDITY_CONTEXT_OK CONFIRM_LIQUIDITY_OK."
+  },
+  "forward_prediction_ledger_r16": {
+    "calibration_outputs": {
+      "comparability_rule": "EARLY_TIER_DEAD_MONEY_COST_MIRRORS_R15_METRIC_DEFINITION",
+      "live_tracking": [
+        "early_tier_dead_money_cost"
+      ],
+      "required_tables": [
+        "hit_rate_by_phase_state",
+        "forward_return_by_phase_state",
+        "hit_rate_by_rating_band",
+        "forward_return_by_rating_band"
+      ],
+      "standing_question": "DO_ACCUMULATION_RATED_SYMBOLS_OUTPERFORM_BY_RATING_TIER"
+    },
+    "governance": {
+      "calibration_window_rule": "MIN_CALIBRATION_WINDOW_OWNER_SET_RECOMMEND_AT_LEAST_ONE_QUARTER",
+      "change_control_rule": "NO_THRESHOLD_OR_MODEL_CHANGE_MAY_BE_JUSTIFIED_BY_FORWARD_RESULTS_BEFORE_MIN_CALIBRATION_WINDOW_ELAPSES",
+      "frozen_named_parameters_before_first_seal": [
+        "GRADING_HORIZONS",
+        "MARKUP_MATERIALIZATION_CRITERION",
+        "MIN_CALIBRATION_WINDOW"
+      ],
+      "universe_policy": "FULL_UNIVERSE_FORWARD_OUT_OF_SAMPLE_BY_TIME"
+    },
+    "outcome_grading": {
+      "artifact_policy": "APPEND_ONLY_HASH_SEALED",
+      "inputs": [
+        "SEALED_FORWARD_PREDICTION_LEDGER",
+        "MARKET_DATA_SURFACE"
+      ],
+      "named_parameters": [
+        "GRADING_HORIZONS",
+        "MARKUP_MATERIALIZATION_CRITERION"
+      ],
+      "per_prediction_outputs": [
+        "forward_return",
+        "max_favorable_excursion",
+        "max_adverse_excursion",
+        "markup_materialized",
+        "distribution_or_exit_preceded_peak"
+      ],
+      "producer_rule": "SEPARATE_PERMANENT_GRADER_SCRIPT_ONLY",
+      "separation_of_duties": "GRADER_MUST_NEVER_BE_PREDICTOR"
+    },
+    "prediction_snapshot": {
+      "grain": "PER_SYMBOL_PER_SESSION",
+      "mode": "APPEND_ONLY_HASH_SEALED_DAILY",
+      "primary_identifier": "prediction_id",
+      "required_fields": [
+        "prediction_id",
+        "symbol",
+        "trade_date",
+        "phase_cycle_state",
+        "rating_score",
+        "rating_band",
+        "entry_tier_flag",
+        "current_base_reference",
+        "flow_evidence_snapshot",
+        "obv_slope",
+        "anv_slope",
+        "accumulation_divergence",
+        "avoid_state"
+      ],
+      "storage": {
+        "external_sidecar": "FORWARD_PREDICTION_LEDGER_DAILY_SHA256",
+        "immutability_rule": "NO_UPDATE_NO_DELETE",
+        "ledger_table": "FORWARD_PREDICTION_LEDGER"
+      }
+    },
+    "r16_to_r17_gate_condition": "R17_CAPITAL_DEPLOYMENT_REQUIRES_FORWARD_CALIBRATION_DIRECTIONALLY_CONSISTENT_WITH_R15_BACKTEST_RESULTS_DIVERGENCE_IS_A_FINDING_AND_HALTS_SCALE_UP",
+    "status": "DESIGN_ONLY_SHADOW_MODE_ELIGIBLE_POST_R14B_COMPLETION"
+  },
+  "governing_constraints": {
+    "advisory_extension_band_parameter_only": true,
+    "all_thresholds_named_config_parameters_only": true,
+    "chase_policy": "TOLERANT_WITH_ADVISORY",
+    "early_tier_exempts_f1_and_f9_as_confirmation_vetoes": true,
+    "early_tier_participation_cap_parameter_only": true,
+    "early_tier_size_fraction_parameter_only": true,
+    "early_tier_time_stop_parameter_only": true,
+    "no_engine_code_changes_in_this_batch": true,
+    "no_threshold_values_in_spec": true,
+    "scale_on_confirmation": true,
+    "set_b_exposure_prohibited_until_r14_b_gate": true,
+    "trailing_liquidity_never_sole_veto_when_current_day_exceeds_execution_size_parameter": true,
+    "unauditable_blocking_authority_prohibited": true
+  },
+  "interfaces": {
+    "base_reference": [
+      "base_reference_id",
+      "base_high_ref",
+      "base_low_ref",
+      "base_origin_date",
+      "base_validity_state",
+      "base_retirement_reason"
+    ],
+    "candidate_intent": [
+      "intent_id",
+      "symbol",
+      "trade_date",
+      "phase_state",
+      "confirmation_state",
+      "intent_reason",
+      "base_reference_id"
+    ],
+    "normalized_day_payload": [
+      "trade_date",
+      "symbol",
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume",
+      "value_kwd",
+      "indicator_terms",
+      "segment_id",
+      "segment_day_index",
+      "masked_context"
+    ],
+    "veto_record": [
+      "intent_id",
+      "veto_plane",
+      "veto_reason",
+      "blocking_term_name",
+      "blocking_term_value"
+    ]
+  },
+  "lineage_repair_v2_2": {
+    "authoritative_version": "R14_DESIGN_SPEC_CONSOLIDATED_V2_2",
+    "conduct_ledger_entry": "#4",
+    "statement": "v2_1 artifacts and manifest v1_12 were regenerated in place; append-only lineage was broken and is repaired by v2_2 supersession.",
+    "v2_1_non_authoritative_variants": [
+      {
+        "json_sha256": "aedc50fca01886727e5154af8445f3ca64327d6d5f12638f52395cc7cb7dd328",
+        "label": "v2_1_original",
+        "status": "NON_AUTHORITATIVE"
+      },
+      {
+        "json_sha256": "262b8c17c175475e9ad893a5794348a40db9dd5e0c7fdf5c37fa7cf75d02d7bc",
+        "label": "v2_1_overwritten",
+        "status": "NON_AUTHORITATIVE"
+      }
+    ]
+  },
+  "m5_forensic_note": {
+    "source": "artifacts/preview1a_prestart/review_final/r13_m5_liquidity_forensic_v1.json",
+    "statement": "Trailing-window liquidity baseline lagged breakout-day liquidity and acted as sole veto on at least one high-volume Set A day.",
+    "status": "CONFIRMED"
+  },
+  "module_boundaries": [
+    {
+      "inputs": [
+        "ohlcv_day",
+        "indicator_day",
+        "segment_context",
+        "calendar_context"
+      ],
+      "module": "DataSurfaceAdapter",
+      "outputs": [
+        "normalized_day_payload",
+        "readiness_context"
+      ],
+      "responsibility": "Provide day-normalized input payloads and segment-aware readiness context."
+    },
+    {
+      "inputs": [
+        "normalized_day_payload",
+        "coverage_history",
+        "segment_restart_flag"
+      ],
+      "module": "WarmupReadinessEngine",
+      "outputs": [
+        "readiness_state",
+        "readiness_reason",
+        "readiness_transition_event"
+      ],
+      "responsibility": "Determine readiness state, warmup fallback, and reset semantics for new listings and segment restarts."
+    },
+    {
+      "inputs": [
+        "normalized_day_payload",
+        "readiness_state",
+        "price_history_window",
+        "volatility_regime_state"
+      ],
+      "module": "AdaptiveBaseGeometry",
+      "outputs": [
+        "base_state",
+        "base_transition_terms",
+        "base_reference"
+      ],
+      "responsibility": "Detect, freeze, ratchet, invalidate, and retire bases using regime-aware geometry."
+    },
+    {
+      "inputs": [
+        "normalized_day_payload",
+        "base_reference",
+        "flow_history_window",
+        "structure_terms"
+      ],
+      "module": "FlowConfirmationEngine",
+      "outputs": [
+        "confirmation_state",
+        "confirmation_terms",
+        "candidate_intent"
+      ],
+      "responsibility": "Score confirmation using accumulation-window flow evidence plus breakout structure."
+    },
+    {
+      "inputs": [
+        "candidate_intent",
+        "base_state",
+        "confirmation_state",
+        "risk_budget_state"
+      ],
+      "module": "LifecycleIntentRouter",
+      "outputs": [
+        "execution_intent",
+        "deferred_intent",
+        "veto_record"
+      ],
+      "responsibility": "Persist candidate intent, survive delayed volume arrival, and hand off to risk/capacity layer."
+    },
+    {
+      "inputs": [
+        "normalized_day_payload",
+        "trend_state"
+      ],
+      "module": "AvoidAuthorityPlane",
+      "outputs": [
+        "avoid_state",
+        "avoid_veto"
+      ],
+      "responsibility": "Retain current avoid authority semantics as a veto plane on top of the architecture."
+    },
+    {
+      "inputs": [
+        "all_module_terms",
+        "state_transitions",
+        "execution_outcomes"
+      ],
+      "module": "PredicateTelemetryLedger",
+      "outputs": [
+        "daily_term_row",
+        "state_snapshot_row",
+        "audit_row"
+      ],
+      "responsibility": "Persist every predicate term, every day, for every symbol."
+    },
+    {
+      "inputs": [
+        "normalized_day_payload",
+        "base_reference",
+        "confirmation_state",
+        "execution_size_parameter",
+        "trailing_liquidity_context"
+      ],
+      "module": "ExecutionLiquidityAssessment",
+      "outputs": [
+        "liquidity_assessment",
+        "liquidity_terms",
+        "liquidity_advisory_or_veto"
+      ],
+      "responsibility": "Evaluate current-day and context liquidity sufficiency, emit CURRENT_DAY_LIQUIDITY_OK and LIQUIDITY_CONTEXT_OK terms, and enforce liquidity gating semantics."
+    }
+  ],
+  "named_parameter_registry": [
+    {
+      "governs": "minimum sessions required for eligible base construction",
+      "module": "AdaptiveBaseGeometry",
+      "name": "base_min_sessions",
+      "owner_decision_status": "FROZEN_AT_R14B"
+    },
+    {
+      "governs": "base width gating envelope",
+      "module": "AdaptiveBaseGeometry",
+      "name": "base_max_width_pct",
+      "owner_decision_status": "FROZEN_AT_R14B"
+    },
+    {
+      "governs": "minimum CMF evidence component",
+      "module": "FlowConfirmationEngine",
+      "name": "cmf_floor",
+      "owner_decision_status": "FROZEN_AT_R14B"
+    },
+    {
+      "governs": "squeeze/regime entry criterion",
+      "module": "AdaptiveBaseGeometry",
+      "name": "atr_squeeze_pctile",
+      "owner_decision_status": "FROZEN_AT_R14B"
+    },
+    {
+      "governs": "breakout confirmation relative-volume multiple",
+      "module": "FlowConfirmationEngine",
+      "name": "volume_breakout_mult",
+      "owner_decision_status": "FROZEN_AT_R14B"
+    },
+    {
+      "governs": "RSI regime confirmation threshold",
+      "module": "FlowConfirmationEngine",
+      "name": "rsi_regime",
+      "owner_decision_status": "FROZEN_AT_R14B"
+    },
+    {
+      "governs": "ADX trend-strength confirmation threshold",
+      "module": "FlowConfirmationEngine",
+      "name": "adx_trigger",
+      "owner_decision_status": "FROZEN_AT_R14B"
+    },
+    {
+      "governs": "window for trend-join continuation logic",
+      "module": "LifecycleIntentRouter",
+      "name": "trend_join_window",
+      "owner_decision_status": "FROZEN_AT_R14B"
+    },
+    {
+      "governs": "baseline trailing liquidity context threshold",
+      "module": "ExecutionLiquidityAssessment",
+      "name": "min_daily_value_kwd",
+      "owner_decision_status": "FROZEN_AT_R14B"
+    },
+    {
+      "governs": "optional ML probability floor if ML gate enabled",
+      "module": "FlowConfirmationEngine",
+      "name": "ml_prob_min",
+      "owner_decision_status": "FROZEN_AT_R14B"
+    },
+    {
+      "governs": "pilot size fraction for EARLY_ACCUMULATION_ENTRY",
+      "module": "StagedPositionPolicy",
+      "name": "EARLY_TIER_SIZE_FRACTION",
+      "owner_decision_status": "PENDING_OWNER_RATIFICATION_AT_R14B"
+    },
+    {
+      "governs": "max percent of daily traded value for early-tier entry",
+      "module": "StagedPositionPolicy",
+      "name": "EARLY_TIER_PARTICIPATION_CAP",
+      "owner_decision_status": "PENDING_OWNER_RATIFICATION_AT_R14B"
+    },
+    {
+      "governs": "sessions allowed pre-confirmation before exit/review",
+      "module": "StagedPositionPolicy",
+      "name": "EARLY_TIER_TIME_STOP",
+      "owner_decision_status": "PENDING_OWNER_RATIFICATION_AT_R14B"
+    },
+    {
+      "governs": "add-on behavior at BREAKOUT_CONFIRMED_ENTRY",
+      "module": "StagedPositionPolicy",
+      "name": "SCALE_ON_CONFIRMATION",
+      "owner_decision_status": "PENDING_OWNER_RATIFICATION_AT_R14B"
+    },
+    {
+      "governs": "advisory extension band under TOLERANT_WITH_ADVISORY chase policy",
+      "module": "FlowConfirmationEngine",
+      "name": "CHASE_ADVISORY_BAND",
+      "owner_decision_status": "PENDING_OWNER_RATIFICATION_AT_R14B"
+    },
+    {
+      "governs": "execution-size denominator for current/arriving liquidity sufficiency",
+      "module": "ExecutionLiquidityAssessment",
+      "name": "LIQUIDITY_EXECUTION_SIZE_PARAMETER",
+      "owner_decision_status": "PENDING_OWNER_RATIFICATION_AT_R14B"
+    },
+    {
+      "governs": "tier assignment by median_daily_value_traded_kwd thresholds",
+      "module": "TierRule",
+      "name": "TIER_RULE_CANDIDATE_A",
+      "owner_decision_status": "PENDING_OWNER_RATIFICATION_AT_R14B"
+    },
+    {
+      "governs": "tier assignment by cross-universe tercile definition",
+      "module": "TierRule",
+      "name": "TIER_RULE_CANDIDATE_B",
+      "owner_decision_status": "PENDING_OWNER_RATIFICATION_AT_R14B"
+    },
+    {
+      "governs": "fixed grading horizons for forward prediction outcomes",
+      "module": "ForwardOutcomeGrader",
+      "name": "GRADING_HORIZONS",
+      "owner_decision_status": "PENDING_OWNER_RATIFICATION_AT_R14B"
+    },
+    {
+      "governs": "criterion used to classify whether markup materialized",
+      "module": "ForwardOutcomeGrader",
+      "name": "MARKUP_MATERIALIZATION_CRITERION",
+      "owner_decision_status": "PENDING_OWNER_RATIFICATION_AT_R14B"
+    },
+    {
+      "governs": "minimum elapsed forward window before threshold/model changes may use forward calibration evidence",
+      "module": "ForwardPredictionGovernance",
+      "name": "MIN_CALIBRATION_WINDOW",
+      "owner_decision_status": "PENDING_OWNER_RATIFICATION_AT_R14B"
+    }
+  ],
+  "r14_b_readiness_checklist": {
+    "governance_required_for_r14b": [
+      "Issue new versioned baseline ID for implementation branch.",
+      "Freeze semantics: no parameter mutation after R14-B freeze without explicit change request and reseal.",
+      "Restate Set B quarantine during implementation and dry-run validation.",
+      "Require permanent-script-only execution and manifest sealing for all producing runs."
+    ],
+    "owner_required_for_r14b": [
+      "Ratify all pending named-parameter values in parameter registry.",
+      "Ratify tier rule candidate definition (A or B).",
+      "Ratify early-tier participation and time-stop policy values.",
+      "Ratify chase advisory band semantics and escalation policy."
+    ],
+    "r15_gate_conditions": [
+      "All acceptance criteria per symbol evaluated on sealed runtime surface.",
+      "Early-tier false-positive cost reported separately (count and aggregate P&L).",
+      "No criterion marked pass without corresponding state/telemetry evidence rows.",
+      "Set B remains excluded until R15 gate completion and owner ratification."
+    ],
+    "r16_gate_conditions": [
+      "R17 capital deployment requires forward calibration tables to be directionally consistent with R15 backtest results; divergence is a finding and halts scale-up."
+    ]
+  },
+  "r15_acceptance_criteria": {
+    "BPCC": [
+      "The 2025-04-22 near-miss cluster yields a candidate intent or confirmed entry without requiring a same-bar multiple shock. [state_ref: BREAKOUT_CONFIRMED_ENTRY]",
+      "M2-only blockade frequency materially declines in the owner window. [metric_source: daily_term_row predicate_name predicate_pass symbol trade_date; D1_V3_BLOCKING_TERM_COUNTS]",
+      "Extended entries beyond the current valid reference must emit advisory telemetry rather than hard rejection when flow confirmation holds. [state_ref: BREAKOUT_WATCH]"
+    ],
+    "MABANEE": [
+      "The decline interval remains avoided with zero long entries during the avoid-dominant regime. [state_ref: AVOID]",
+      "Avoid veto authority remains sufficient to block downtrend participation. [state_ref: AVOID]",
+      "MABANEE must generate zero EARLY_ACCUMULATION_ENTRY events during the avoid-dominant decline.",
+      "No EARLY_ACCUMULATION_ENTRY state rows may appear while AVOID_CONDITION_ACTIVE is true."
+    ],
+    "SANAM": [
+      "The 2025-05-08 through 2025-05-21 window produces at least one confirmed entry event. [state_ref: BREAKOUT_CONFIRMED_ENTRY]",
+      "Width-rule dominance in the owner window drops below one-quarter of blocking rows. [metric_source: daily_term_row predicate_name='BASE_GEOMETRY_WIDTH_OK' predicate_pass; D1_V3_BLOCKING_TERM_COUNTS]",
+      "The 2025-05-18 session specifically must produce BREAKOUT_CONFIRMED or an explicit, fully-telemetried veto naming its blocking term.",
+      "No stale original-freeze chase guard may block a day where the current valid reference has advanced through confirmed accumulation. [state_ref: BREAKOUT_WATCH]",
+      "The 2025-05-18 session must produce a confirmed entry across all layers. [state_ref: BREAKOUT_CONFIRMED_ENTRY]",
+      "No Set A high-volume day may be blocked by trailing-liquidity alone when same-day value exceeds the execution-size parameter. [metric_source: daily_term_row current_day_value_kwd trailing_liquidity_context_value predicate_name='CONFIRM_LIQUIDITY_OK']",
+      "SANAM must generate an EARLY_ACCUMULATION_ENTRY within its owner-window accumulation before 2025-05-08.",
+      "The 2025-05-18 session must still produce a confirmed entry across all layers. [state_ref: BREAKOUT_CONFIRMED_ENTRY]",
+      "The early-tier false-positive cost must be reported separately as count and aggregate P&L for early entries that hit time-stop without confirmation. [metric_source: execution_outcome_row entry_tier dead_money_sessions net_return]",
+      "EARLY_ACCUMULATION_ENTRY and BREAKOUT_CONFIRMED_ENTRY states must both be evidenced by daily_state_snapshot rows for the owner-window sequence.",
+      "dead_money_sessions telemetry must be present for all early-tier positions and reported in execution_outcome_row."
+    ],
+    "TIJARA": [
+      "PHASE_PROGRESSED_NO_CANDIDATE share over 2024-2026 falls below one-quarter of trading days. [metric_source: daily_term_row predicate_name predicate_pass symbol trade_date]",
+      "At least one owner-window breakout cluster produces BREAKOUT_CONFIRMED or DEFERRED_INTENT instead of persistent BREAKOUT_WATCH stagnation.",
+      "At least one 2025 high-volume cluster must operate with an explicit valid base reference rather than unresolved M1 disarm. [state_ref: BREAKOUT_WATCH]",
+      "TIJARA must generate an EARLY_ACCUMULATION_ENTRY before its markup onset.",
+      "The early-tier false-positive cost must be reported separately as count and aggregate P&L for early entries that hit time-stop without confirmation. [metric_source: execution_outcome_row entry_tier dead_money_sessions net_return]",
+      "EARLY_ACCUMULATION_ENTRY state transition must appear prior to markup onset with flow_evidence_snapshot telemetry persisted."
+    ],
+    "ZAIN": [
+      "Owner-window no-candidate share falls below one-third of trading days. [metric_source: D1_V3_CATEGORY_COUNTS no_candidate_share]",
+      "At least one breakout-above-owner-threshold cluster yields BREAKOUT_CONFIRMED or DEFERRED_INTENT."
+    ]
+  },
+  "r15_criterion_classification": {
+    "BPCC": [
+      "STATE_REFERENCING",
+      "METRIC_REFERENCING",
+      "STATE_REFERENCING"
+    ],
+    "MABANEE": [
+      "STATE_REFERENCING",
+      "STATE_REFERENCING",
+      "STATE_REFERENCING",
+      "STATE_REFERENCING"
+    ],
+    "SANAM": [
+      "STATE_REFERENCING",
+      "METRIC_REFERENCING",
+      "STATE_REFERENCING",
+      "STATE_REFERENCING",
+      "STATE_REFERENCING",
+      "METRIC_REFERENCING",
+      "STATE_REFERENCING",
+      "STATE_REFERENCING",
+      "METRIC_REFERENCING",
+      "STATE_REFERENCING",
+      "STATE_REFERENCING"
+    ],
+    "TIJARA": [
+      "METRIC_REFERENCING",
+      "STATE_REFERENCING",
+      "STATE_REFERENCING",
+      "STATE_REFERENCING",
+      "METRIC_REFERENCING",
+      "STATE_REFERENCING"
+    ],
+    "ZAIN": [
+      "METRIC_REFERENCING",
+      "STATE_REFERENCING"
+    ]
+  },
+  "state_machine": {
+    "named_predicate_terms": {
+      "accumulation": [
+        "FLOW_OBV_SLOPE_OK",
+        "FLOW_ANV_SLOPE_OK",
+        "FLOW_ACCUMULATION_DIVERGENCE_OK",
+        "ACCUMULATION_CONTEXT_OK"
+      ],
+      "avoid": [
+        "AVOID_CONDITION_ACTIVE"
+      ],
+      "base": [
+        "BASE_GEOMETRY_WIDTH_OK",
+        "BASE_DWELL_OK",
+        "BASE_RANGE_INCLUSION_OK",
+        "BASE_VOLATILITY_REGIME_OK"
+      ],
+      "confirmation": [
+        "CONFIRM_FLOW_CORE_OK",
+        "CONFIRM_STRUCTURE_OK",
+        "CONFIRM_RELATIVE_VOLUME_CONTEXT_OK",
+        "CONFIRM_CHASE_GUARD_OK",
+        "CONFIRM_LIQUIDITY_OK",
+        "CHASE_EXTENSION_ADVISORY_ONLY",
+        "CURRENT_DAY_LIQUIDITY_OK",
+        "LIQUIDITY_CONTEXT_OK",
+        "EARLY_ENTRY_FLOW_OK",
+        "EARLY_ENTRY_BASE_VALID_OK",
+        "EARLY_ENTRY_PARTICIPATION_OK",
+        "EARLY_ENTRY_TIME_STOP_OK",
+        "DEAD_MONEY_TRACKING_OK"
+      ],
+      "lifecycle": [
+        "BASE_REFERENCE_PRESENT",
+        "BASE_REFERENCE_VALID",
+        "DEFERRED_INTENT_ACTIVE",
+        "DEFERRED_INTENT_EXPIRY_OK",
+        "BASE_REFERENCE_ADVANCE_OK",
+        "CHASE_GUARD_CURRENT_REF_OK",
+        "EARLY_INTENT_ACTIVE",
+        "EARLY_INTENT_SCALE_READY"
+      ],
+      "warmup": [
+        "READINESS_LONG_LOOKBACK_READY",
+        "READINESS_SEGMENT_RESTART_READY",
+        "READINESS_FALLBACK_ELIGIBLE"
+      ],
+      "watch": [
+        "WATCH_NEAR_BASE_OK",
+        "WATCH_FLOW_PERSISTENCE_OK",
+        "WATCH_STRUCTURE_OK"
+      ]
+    },
+    "states": [
+      "READINESS_PENDING",
+      "READINESS_LIMITED",
+      "NEUTRAL",
+      "BASE_FORMING",
+      "ACCUMULATION",
+      "BREAKOUT_WATCH",
+      "BREAKOUT_CONFIRMED",
+      "MARKUP",
+      "DISTRIBUTION_WARNING",
+      "EXIT",
+      "AVOID",
+      "DEFERRED_INTENT",
+      "EARLY_ACCUMULATION_ENTRY",
+      "BREAKOUT_CONFIRMED_ENTRY"
+    ],
+    "transition_principles": [
+      "All transitions are gated by named predicates only.",
+      "All threshold-bearing terms are represented by named configuration parameters, not literal values.",
+      "Readiness states are explicit and segment-aware.",
+      "Base references persist as first-class state objects.",
+      "Candidate intent may persist independently of immediate execution eligibility."
+    ]
+  },
+  "supersedes": [
+    "R14_DESIGN_SPEC_CONSOLIDATED_V2_1_ORIGINAL",
+    "R14_DESIGN_SPEC_CONSOLIDATED_V2_1_OVERWRITTEN"
+  ],
+  "supersession_table": [
+    {
+      "amendment": "v1",
+      "contribution": "Initial unified design skeleton (Proposal C) + confirmation core (Proposal A) + adaptive geometry (Proposal B); base module/interfaces/state machine/telemetry foundation."
+    },
+    {
+      "amendment": "v1.1",
+      "contribution": "F8b race response: advancing current-valid references and chase guard anchored to current valid reference; strengthened telemetry semantics."
+    },
+    {
+      "amendment": "v1.2",
+      "contribution": "CHASE_POLICY=TOLERANT_WITH_ADVISORY and liquidity principle: current/arriving weighted, trailing as context-only; F9 response and related R15 additions."
+    },
+    {
+      "amendment": "v1.3",
+      "contribution": "Early-stage entry requirement: EARLY_ACCUMULATION_ENTRY tier, staged-position policy, early/deferred intent unification, and early-tier R15 criteria."
+    }
+  ],
+  "telemetry_schema": {
+    "daily_state_snapshot": [
+      "symbol",
+      "trade_date",
+      "readiness_state",
+      "phase_state",
+      "base_reference_snapshot",
+      "intent_snapshot",
+      "avoid_state",
+      "risk_budget_state"
+    ],
+    "daily_term_row": [
+      "symbol",
+      "trade_date",
+      "segment_id",
+      "phase_before",
+      "phase_after",
+      "readiness_state",
+      "base_reference_id",
+      "intent_id",
+      "predicate_namespace",
+      "predicate_name",
+      "predicate_value",
+      "predicate_threshold_parameter",
+      "predicate_pass",
+      "recoverability_state",
+      "recoverability_reason",
+      "source_payload_fields",
+      "base_reference_version",
+      "base_reference_origin",
+      "base_reference_current_flag",
+      "extension_pct_vs_current_valid_reference",
+      "chase_advisory_flag",
+      "current_day_value_kwd",
+      "trailing_liquidity_context_value",
+      "early_tier_flag",
+      "dead_money_sessions",
+      "flow_obv_slope_40",
+      "flow_anv_slope_40",
+      "flow_accumulation_divergence",
+      "accumulation_context_ok",
+      "participation_cap_pct",
+      "pilot_size_fraction",
+      "time_stop_sessions",
+      "entry_tier",
+      "flow_evidence_snapshot",
+      "current_valid_reference_value"
+    ],
+    "execution_outcome_row": [
+      "symbol",
+      "trade_date",
+      "candidate_intent_state",
+      "execution_state",
+      "veto_plane",
+      "veto_reason",
+      "opened_trade_flag",
+      "trade_id",
+      "chase_advisory_emitted",
+      "chase_advisory_extension_pct",
+      "entry_tier",
+      "dead_money_sessions"
+    ]
+  },
+  "v2_2_disposition_note": {
+    "entry_1_finding_anchoring": "Applied exact module/state/predicate anchors to EARLY_TIER, F1, F6, F8, F8a, F8b, F8c, F9 without changing meaning.",
+    "entry_2_module_fix": "Defined ExecutionLiquidityAssessment in module_boundaries to resolve registry/module mismatch for min_daily_value_kwd and LIQUIDITY_EXECUTION_SIZE_PARAMETER.",
+    "lineage_repair": "Both v2_1 byte variants are recorded as non-authoritative; v2_2 is the append-only authoritative continuation."
+  },
+  "version_id": "R14_DESIGN_SPEC_CONSOLIDATED_V2_2"
+}

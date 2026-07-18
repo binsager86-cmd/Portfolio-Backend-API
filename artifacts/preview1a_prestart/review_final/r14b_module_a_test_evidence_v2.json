@@ -1,0 +1,197 @@
+{
+  "append_only_trigger_results": {
+    "daily_state_snapshot": {
+      "delete": "BLOCKED:append-only table: daily_state_snapshot delete blocked",
+      "update": "BLOCKED:append-only table: daily_state_snapshot update blocked"
+    },
+    "daily_term_row": {
+      "delete": "BLOCKED:append-only table: daily_term_row delete blocked",
+      "update": "BLOCKED:append-only table: daily_term_row update blocked"
+    },
+    "execution_outcome_row": {
+      "delete": "BLOCKED:append-only table: execution_outcome_row delete blocked",
+      "update": "BLOCKED:append-only table: execution_outcome_row update blocked"
+    }
+  },
+  "harness_db_hash_sha256": "4d0ce05ea69cc03bd3f83a02e5a6c56510f6742598a572cddc0bcdac44f0d066",
+  "harness_db_path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_module_a_harness_surface_v2.db",
+  "harness_output_lines": [
+    "R14B_MODULE_A_HARNESS_V2_START",
+    "HARNESS_DB C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_module_a_harness_surface_v2.db",
+    "DDL_APPLIED count=16 dialect=sqlite",
+    "WRITE_READ_OK",
+    "APPEND_ONLY_TRIGGER_CHECK_COMPLETE",
+    "SIDECAR_CHAIN_EMITTED trade_date=2026-07-13 chain_hash=20959a1dac14dae29d882357baafc1dd70e93f3c74a9d6998fcbf91f4bec044d",
+    "INTERFACE_CONFORMANCE pass=True"
+  ],
+  "sidecar_chain": {
+    "chain_hash": "20959a1dac14dae29d882357baafc1dd70e93f3c74a9d6998fcbf91f4bec044d",
+    "content_hash": "342a1ad53254468b9596618bef131fb6a166141e8b3e30d75f6ea8338a3ed92a",
+    "previous_hash": "GENESIS",
+    "sidecar_path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_module_a_daily_ledger_chain_v2.sha256",
+    "trade_date": "2026-07-13"
+  },
+  "trade_date": "2026-07-13",
+  "version_id": "R14B_MODULE_A_TEST_EVIDENCE_V2",
+  "writable_readable": {
+    "read_results": {
+      "daily_state_snapshot": {
+        "fields_present": [
+          "avoid_state",
+          "base_reference_snapshot",
+          "intent_snapshot",
+          "phase_state",
+          "readiness_state",
+          "risk_budget_state",
+          "symbol",
+          "trade_date"
+        ],
+        "row_count": 1,
+        "sample": {
+          "avoid_state": "NONE",
+          "base_reference_snapshot": "{\"id\":\"BR_SANAM_001\",\"value\":233.0}",
+          "intent_snapshot": "{\"intent\":\"EARLY_ACCUMULATION_ENTRY\"}",
+          "phase_state": "BREAKOUT_WATCH",
+          "readiness_state": "READINESS_LONG_LOOKBACK_READY",
+          "risk_budget_state": "WITHIN_CAP",
+          "row_id": 1,
+          "symbol": "SANAM",
+          "trade_date": "2026-07-13"
+        }
+      },
+      "daily_term_row": {
+        "fields_present": [
+          "accumulation_context_ok",
+          "base_reference_current_flag",
+          "base_reference_id",
+          "base_reference_origin",
+          "base_reference_version",
+          "chase_advisory_flag",
+          "current_day_value_kwd",
+          "current_valid_reference_value",
+          "dead_money_sessions",
+          "early_tier_flag",
+          "entry_tier",
+          "extension_pct_vs_current_valid_reference",
+          "flow_accumulation_divergence",
+          "flow_anv_slope_40",
+          "flow_evidence_snapshot",
+          "flow_obv_slope_40",
+          "intent_id",
+          "lookback_fallback_sessions",
+          "lookback_long_sessions",
+          "lookback_segment_sessions",
+          "masked_context_flag",
+          "participation_cap_pct",
+          "phase_after",
+          "phase_before",
+          "pilot_size_fraction",
+          "predicate_name",
+          "predicate_namespace",
+          "predicate_pass",
+          "predicate_threshold_parameter",
+          "predicate_value",
+          "readiness_state",
+          "readiness_transition_event",
+          "readiness_transition_from_state",
+          "readiness_transition_to_state",
+          "recoverability_reason",
+          "recoverability_state",
+          "segment_day_index",
+          "segment_id",
+          "segment_restart_flag",
+          "source_payload_fields",
+          "symbol",
+          "time_stop_sessions",
+          "trade_date",
+          "trailing_liquidity_context_value"
+        ],
+        "row_count": 1,
+        "sample": {
+          "accumulation_context_ok": 1,
+          "base_reference_current_flag": 1,
+          "base_reference_id": "BR_SANAM_001",
+          "base_reference_origin": "AUTO",
+          "base_reference_version": "V1",
+          "chase_advisory_flag": 0,
+          "current_day_value_kwd": 650000.0,
+          "current_valid_reference_value": 233.0,
+          "dead_money_sessions": 0,
+          "early_tier_flag": 1,
+          "entry_tier": "EARLY",
+          "extension_pct_vs_current_valid_reference": 0.04,
+          "flow_accumulation_divergence": 0.07,
+          "flow_anv_slope_40": 0.11,
+          "flow_evidence_snapshot": "{\"obv\":0.13,\"anv\":0.11,\"div\":0.07}",
+          "flow_obv_slope_40": 0.13,
+          "intent_id": "INT_SANAM_001",
+          "lookback_fallback_sessions": 60,
+          "lookback_long_sessions": 180,
+          "lookback_segment_sessions": 20,
+          "masked_context_flag": 0,
+          "participation_cap_pct": 0.1,
+          "phase_after": "BREAKOUT_WATCH",
+          "phase_before": "ACCUMULATION",
+          "pilot_size_fraction": 0.3,
+          "predicate_name": "CONFIRM_FLOW_CORE_OK",
+          "predicate_namespace": "confirmation",
+          "predicate_pass": 1,
+          "predicate_threshold_parameter": "cmf_floor",
+          "predicate_value": 1.0,
+          "readiness_state": "READINESS_LONG_LOOKBACK_READY",
+          "readiness_transition_event": "ACCUMULATION_TO_BREAKOUT_WATCH",
+          "readiness_transition_from_state": "ACCUMULATION",
+          "readiness_transition_to_state": "BREAKOUT_WATCH",
+          "recoverability_reason": "NONE",
+          "recoverability_state": "RECOVERABLE",
+          "row_id": 1,
+          "segment_day_index": 0,
+          "segment_id": "SEG_A",
+          "segment_restart_flag": 0,
+          "source_payload_fields": "close,volume,value_kwd",
+          "symbol": "SANAM",
+          "time_stop_sessions": 60,
+          "trade_date": "2026-07-13",
+          "trailing_liquidity_context_value": 220000.0
+        }
+      },
+      "execution_outcome_row": {
+        "fields_present": [
+          "candidate_intent_state",
+          "chase_advisory_emitted",
+          "chase_advisory_extension_pct",
+          "dead_money_sessions",
+          "entry_tier",
+          "execution_state",
+          "opened_trade_flag",
+          "symbol",
+          "trade_date",
+          "trade_id",
+          "veto_plane",
+          "veto_reason"
+        ],
+        "row_count": 1,
+        "sample": {
+          "candidate_intent_state": "EARLY_ACCUMULATION_ENTRY",
+          "chase_advisory_emitted": 0,
+          "chase_advisory_extension_pct": 0.0,
+          "dead_money_sessions": 0,
+          "entry_tier": "EARLY",
+          "execution_state": "OPENED",
+          "opened_trade_flag": 1,
+          "row_id": 1,
+          "symbol": "SANAM",
+          "trade_date": "2026-07-13",
+          "trade_id": "TR_SANAM_001",
+          "veto_plane": "NONE",
+          "veto_reason": "NONE"
+        }
+      }
+    },
+    "write_results": {
+      "daily_state_snapshot": "WRITE_OK",
+      "daily_term_row": "WRITE_OK",
+      "execution_outcome_row": "WRITE_OK"
+    }
+  }
+}

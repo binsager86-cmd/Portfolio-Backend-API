@@ -1,0 +1,38 @@
+{
+  "freeze_v2_attestation": {
+    "actual_json_sha256": "7483faa40aafa21687bc7b00f0b0dc340b9c6d455df71445f1230c707625915a",
+    "byte_match": true,
+    "expected_json_sha256": "7483faa40aafa21687bc7b00f0b0dc340b9c6d455df71445f1230c707625915a",
+    "freeze_json": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_parameter_freeze_v2.json",
+    "freeze_sha_sidecar": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_parameter_freeze_v2.sha256"
+  },
+  "frozen_policy_assertions": {
+    "chase_advisory": 0.08,
+    "chase_escalation": 0.15,
+    "max_rearms": 2,
+    "participation_cap": 0.1,
+    "pilot_fraction": 0.3,
+    "scale_on_confirmation": "SINGLE_ADD_TO_FULL_TARGET",
+    "time_stop_sessions": 60
+  },
+  "inputs": [
+    "candidate_intent",
+    "base_state",
+    "confirmation_state",
+    "risk_budget_state"
+  ],
+  "module": "LifecycleIntentRouter+StagedPositionPolicy",
+  "outputs": [
+    "execution_intent",
+    "deferred_intent",
+    "veto_record",
+    "lifecycle_terms"
+  ],
+  "required_lifecycle_predicates": [
+    "DEFERRED_INTENT_ACTIVE",
+    "DEFERRED_INTENT_EXPIRY_OK",
+    "EARLY_INTENT_ACTIVE",
+    "EARLY_INTENT_SCALE_READY"
+  ],
+  "version_id": "R14E_MODULE_E_INTERFACE_CONFORMANCE_V1"
+}

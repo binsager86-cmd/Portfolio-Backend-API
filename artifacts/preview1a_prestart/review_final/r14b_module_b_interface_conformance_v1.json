@@ -1,0 +1,78 @@
+{
+  "daily_term_row_columns": [
+    "row_id",
+    "symbol",
+    "trade_date",
+    "segment_id",
+    "phase_before",
+    "phase_after",
+    "readiness_state",
+    "base_reference_id",
+    "intent_id",
+    "predicate_namespace",
+    "predicate_name",
+    "predicate_value",
+    "predicate_threshold_parameter",
+    "predicate_pass",
+    "recoverability_state",
+    "recoverability_reason",
+    "source_payload_fields",
+    "base_reference_version",
+    "base_reference_origin",
+    "base_reference_current_flag",
+    "extension_pct_vs_current_valid_reference",
+    "chase_advisory_flag",
+    "current_day_value_kwd",
+    "trailing_liquidity_context_value",
+    "early_tier_flag",
+    "dead_money_sessions",
+    "flow_obv_slope_40",
+    "flow_anv_slope_40",
+    "flow_accumulation_divergence",
+    "accumulation_context_ok",
+    "participation_cap_pct",
+    "pilot_size_fraction",
+    "time_stop_sessions",
+    "entry_tier",
+    "flow_evidence_snapshot",
+    "current_valid_reference_value"
+  ],
+  "module_boundary": {
+    "DataSurfaceAdapter_inputs": [
+      "ohlcv_day",
+      "indicator_day",
+      "segment_context",
+      "calendar_context"
+    ],
+    "DataSurfaceAdapter_outputs": [
+      "normalized_day_payload",
+      "readiness_context"
+    ],
+    "WarmupReadinessEngine_inputs": [
+      "normalized_day_payload",
+      "coverage_history",
+      "segment_restart_flag"
+    ],
+    "WarmupReadinessEngine_outputs": [
+      "readiness_state",
+      "readiness_reason",
+      "readiness_transition_event"
+    ]
+  },
+  "normalized_payload_fields": [
+    "trade_date",
+    "symbol",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "value_kwd",
+    "indicator_terms",
+    "segment_id",
+    "segment_day_index",
+    "masked_context"
+  ],
+  "pass": true,
+  "version_id": "R14B_MODULE_B_INTERFACE_CONFORMANCE_V1"
+}

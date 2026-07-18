@@ -1,0 +1,328 @@
+{
+  "conduct_ledger_pending": {
+    "mitigation": "read-only probes, sealed evidence from permanent scripts, self-caught harness defect",
+    "owner_options": [
+      "(a) record as entry #5 and run suitability review",
+      "(b) record as noted-marginal without incrementing"
+    ],
+    "record": "Two inline piped-Python executions occurred this cycle against the permanent-script rule.",
+    "status": "PENDING_OWNER_RULING"
+  },
+  "fallback_lookback_accounting": [
+    {
+      "classification": "NAMED_PARAMETER",
+      "file": "app/services/eagle_eye_v2/warmup_readiness_engine.py",
+      "line": 12,
+      "registry_status": "PENDING_R14B_PARAMETER_GATE",
+      "token": "READINESS_LONG_LOOKBACK_MIN_SESSIONS"
+    },
+    {
+      "classification": "NAMED_PARAMETER",
+      "file": "app/services/eagle_eye_v2/warmup_readiness_engine.py",
+      "line": 13,
+      "registry_status": "PENDING_R14B_PARAMETER_GATE",
+      "token": "READINESS_SEGMENT_RESTART_MIN_SESSIONS"
+    },
+    {
+      "classification": "NAMED_PARAMETER",
+      "file": "app/services/eagle_eye_v2/warmup_readiness_engine.py",
+      "line": 14,
+      "registry_status": "PENDING_R14B_PARAMETER_GATE",
+      "token": "READINESS_FALLBACK_MIN_SESSIONS"
+    },
+    {
+      "classification": "STRUCTURAL_DATE_PARSING",
+      "file": "app/services/eagle_eye_v2/data_surface_adapter.py",
+      "line": 65,
+      "registry_status": "NOT_THRESHOLD_BEARING",
+      "token": "10,4,7"
+    },
+    {
+      "classification": "STRUCTURAL_EPOCH_DETECTION",
+      "file": "app/services/eagle_eye_v2/data_surface_adapter.py",
+      "line": 67,
+      "registry_status": "NOT_THRESHOLD_BEARING",
+      "token": "10"
+    },
+    {
+      "classification": "STRUCTURAL_SEGMENT_LABEL_SEED",
+      "file": "app/services/eagle_eye_v2/data_surface_adapter.py",
+      "line": 94,
+      "registry_status": "NOT_THRESHOLD_BEARING",
+      "token": "SEG0001"
+    },
+    {
+      "classification": "STRUCTURAL_SEGMENT_SEQUENCE_INCREMENT",
+      "file": "app/services/eagle_eye_v2/data_surface_adapter.py",
+      "line": 98,
+      "registry_status": "NOT_THRESHOLD_BEARING",
+      "token": "+1"
+    }
+  ],
+  "module_c_gate": "REMAINS_BLOCKED_PENDING_CONDITIONAL_CLOSURE",
+  "processed_dates_range": {
+    "count": 42,
+    "end": "2026-07-09",
+    "start": "2026-05-06"
+  },
+  "readiness_transition_evidence_status": {
+    "available_sequences": {
+      "AAYAN": {
+        "transitions": [
+          "READINESS_PENDING_TO_READINESS_LIMITED",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION"
+        ]
+      },
+      "SANAM": {
+        "transitions": [
+          "READINESS_PENDING_TO_READINESS_LIMITED",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION"
+        ]
+      },
+      "THURAYA": {
+        "transitions": [
+          "READINESS_PENDING_TO_READINESS_LIMITED",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION",
+          "NO_TRANSITION"
+        ]
+      }
+    },
+    "dated_transition_rows_available": false,
+    "reason": "Existing v1 evidence stores transition sequence per symbol but does not map transitions to dates."
+  },
+  "seam_detail": {
+    "AAYAN": {
+      "per_day_records_for_touched_dates": [],
+      "restart_events": [
+        {
+          "masked_flag": false,
+          "matched_intervals": [],
+          "segment_day_index": 0,
+          "segment_id": "AAYAN::SEG0001",
+          "trade_date": "2026-05-10"
+        }
+      ],
+      "seam_boundary_samples": {
+        "pre_and_post": [
+          {
+            "masked_flag": false,
+            "matched_intervals": [],
+            "segment_day_index": 30,
+            "segment_id": "AAYAN::SEG0001",
+            "trade_date": "2026-06-28"
+          },
+          {
+            "masked_flag": false,
+            "matched_intervals": [],
+            "segment_day_index": 31,
+            "segment_id": "AAYAN::SEG0001",
+            "trade_date": "2026-06-29"
+          },
+          {
+            "masked_flag": false,
+            "matched_intervals": [],
+            "segment_day_index": 32,
+            "segment_id": "AAYAN::SEG0001",
+            "trade_date": "2026-06-30"
+          }
+        ]
+      },
+      "touched_dates": [],
+      "touched_intervals_in_slice": []
+    },
+    "SANAM": {
+      "per_day_records_for_touched_dates": [],
+      "restart_events": [
+        {
+          "masked_flag": false,
+          "matched_intervals": [],
+          "segment_day_index": 0,
+          "segment_id": "SANAM::SEG0001",
+          "trade_date": "2026-05-10"
+        }
+      ],
+      "seam_boundary_samples": {
+        "pre_and_post": [
+          {
+            "masked_flag": false,
+            "matched_intervals": [],
+            "segment_day_index": 30,
+            "segment_id": "SANAM::SEG0001",
+            "trade_date": "2026-06-28"
+          },
+          {
+            "masked_flag": false,
+            "matched_intervals": [],
+            "segment_day_index": 31,
+            "segment_id": "SANAM::SEG0001",
+            "trade_date": "2026-06-29"
+          },
+          {
+            "masked_flag": false,
+            "matched_intervals": [],
+            "segment_day_index": 32,
+            "segment_id": "SANAM::SEG0001",
+            "trade_date": "2026-06-30"
+          }
+        ]
+      },
+      "touched_dates": [],
+      "touched_intervals_in_slice": []
+    },
+    "THURAYA": {
+      "per_day_records_for_touched_dates": [],
+      "restart_events": [
+        {
+          "masked_flag": false,
+          "matched_intervals": [],
+          "segment_day_index": 0,
+          "segment_id": "THURAYA::SEG0001",
+          "trade_date": "2026-05-06"
+        }
+      ],
+      "seam_boundary_samples": {
+        "pre_and_post": [
+          {
+            "masked_flag": false,
+            "matched_intervals": [],
+            "segment_day_index": 32,
+            "segment_id": "THURAYA::SEG0001",
+            "trade_date": "2026-06-30"
+          }
+        ]
+      },
+      "touched_dates": [
+        "2026-06-28",
+        "2026-06-29"
+      ],
+      "touched_intervals_in_slice": [
+        {
+          "end_date": "2026-06-29",
+          "source_final_class": "SUSPECTED_CORPORATE_ACTION",
+          "source_rule": "R-3",
+          "start_date": "2026-06-28"
+        }
+      ]
+    }
+  },
+  "source_table_used_in_harness": "ee_ohlcv",
+  "target_db_confirmation": {
+    "basis": "Derived from app/core/config.py database_abs_path with default DATABASE_PATH ../dev_portfolio.db and evidence target_trigger_presence.target_db",
+    "is_r15_runtime_target": true,
+    "target_db_path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\dev_portfolio.db"
+  },
+  "version_id": "R14B_MODULE_B_CONDITIONAL_REVIEW_V1"
+}

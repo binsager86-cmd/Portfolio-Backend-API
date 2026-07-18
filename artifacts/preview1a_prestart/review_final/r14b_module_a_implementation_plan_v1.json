@@ -1,0 +1,120 @@
+{
+  "adversarial_review_gate": {
+    "proceed_rule": "NO_PROGRESSION_TO_MODULE_B_UNTIL_MODULE_A_REVIEW_PASS",
+    "required_artifacts": [
+      "r14b_module_a_implementation_report_v1.md",
+      "r14b_module_a_interface_conformance_v1.json",
+      "r14b_module_a_test_evidence_v1.json"
+    ],
+    "required_checks": [
+      "Per-file SHA-256 manifest for all touched implementation files",
+      "Interface conformance check against v2_2 module boundary and telemetry schema",
+      "Append-only behavior verification: no UPDATE/DELETE in telemetry write path",
+      "Migration reversibility and idempotency validation",
+      "Read-only comparison harness setup for later avoid authority byte-compat phase"
+    ]
+  },
+  "baseline_id": "EE_V2_20260713T170715Z",
+  "build_order_binding_position": "(a)",
+  "interfaces_to_conform": {
+    "module_boundary": {
+      "inputs": [
+        "all_module_terms",
+        "state_transitions",
+        "execution_outcomes"
+      ],
+      "outputs": [
+        "daily_term_row",
+        "state_snapshot_row",
+        "audit_row"
+      ],
+      "responsibility": "Persist every predicate term, every day, for every symbol."
+    },
+    "schema_fields_required": {
+      "daily_state_snapshot": [
+        "symbol",
+        "trade_date",
+        "readiness_state",
+        "phase_state",
+        "base_reference_snapshot",
+        "intent_snapshot",
+        "avoid_state",
+        "risk_budget_state"
+      ],
+      "daily_term_row": [
+        "symbol",
+        "trade_date",
+        "segment_id",
+        "phase_before",
+        "phase_after",
+        "readiness_state",
+        "base_reference_id",
+        "intent_id",
+        "predicate_namespace",
+        "predicate_name",
+        "predicate_value",
+        "predicate_threshold_parameter",
+        "predicate_pass",
+        "recoverability_state",
+        "recoverability_reason",
+        "source_payload_fields",
+        "base_reference_version",
+        "base_reference_origin",
+        "base_reference_current_flag",
+        "extension_pct_vs_current_valid_reference",
+        "chase_advisory_flag",
+        "current_day_value_kwd",
+        "trailing_liquidity_context_value",
+        "early_tier_flag",
+        "dead_money_sessions",
+        "flow_obv_slope_40",
+        "flow_anv_slope_40",
+        "flow_accumulation_divergence",
+        "accumulation_context_ok",
+        "participation_cap_pct",
+        "pilot_size_fraction",
+        "time_stop_sessions",
+        "entry_tier",
+        "flow_evidence_snapshot",
+        "current_valid_reference_value"
+      ],
+      "execution_outcome_row": [
+        "symbol",
+        "trade_date",
+        "candidate_intent_state",
+        "execution_state",
+        "veto_plane",
+        "veto_reason",
+        "opened_trade_flag",
+        "trade_id",
+        "chase_advisory_emitted",
+        "chase_advisory_extension_pct",
+        "entry_tier",
+        "dead_money_sessions"
+      ]
+    }
+  },
+  "module": "PredicateTelemetryLedger",
+  "prohibitions_reaffirmed": {
+    "r15_preview": "PROHIBITED",
+    "set_b_contact": "PROHIBITED",
+    "statistical_run": "PROHIBITED",
+    "temporary_scripts": "PROHIBITED"
+  },
+  "scope": {
+    "core": [
+      "Implement PredicateTelemetryLedger in app/services/eagle_eye_v2/",
+      "Create schema migrations for daily_term_row, daily_state_snapshot, execution_outcome_row",
+      "Implement immutable write path and append-only protections"
+    ],
+    "must_precede_decisioning": "Telemetry must be live and validated before any deciding modules progress."
+  },
+  "test_matrix": [
+    "Schema migration applies cleanly on empty and populated staging replicas",
+    "One synthetic day writes exactly one row per predicate term and state transition",
+    "Write path rejects mutation attempts on existing telemetry rows",
+    "Hash-seal sidecar generation includes all module-a artifacts",
+    "No calls to backtest/statistical runners during module-a execution"
+  ],
+  "version_id": "R14B_MODULE_A_IMPLEMENTATION_PLAN_V1"
+}

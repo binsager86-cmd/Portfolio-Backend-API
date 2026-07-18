@@ -1,0 +1,1377 @@
+# R14-C Module (c) AdaptiveBaseGeometry Implementation Report v4
+
+Provisional parameter status: PROVISIONAL_PENDING_PARAMETER_GATE
+
+No outcome-targeted tuning was performed in this harness.
+
+## Carry-in Defect Fix Check
+```json
+{
+  "expectation": "first-bar computed value near 1.0, not threshold echo",
+  "first_bar_long_lookback_predicate_value": 1.0,
+  "first_symbol": "SANAM",
+  "first_trade_date": "2021-01-06",
+  "pass": true
+}
+```
+
+## SANAM Lifecycle (Observed)
+```json
+{
+  "final_state": "VALID",
+  "freeze_count": 1,
+  "freeze_events": [
+    {
+      "base_reference": {
+        "base_high_ref": 59.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {}
+      },
+      "base_state": "BASE_FROZEN",
+      "base_transition_terms": {
+        "base_freeze_event": "BASE_FROZEN",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "NONE",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "segment_day_index": 63,
+      "trade_date": "2021-06-23"
+    }
+  ],
+  "ratchet_count": 37,
+  "ratchet_events": [
+    {
+      "base_reference": {
+        "base_high_ref": 63.8,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "segment_day_index": 67,
+      "trade_date": "2021-06-29"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 67.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "segment_day_index": 68,
+      "trade_date": "2021-06-30"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 68.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "segment_day_index": 84,
+      "trade_date": "2021-07-29"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 69.5,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "segment_day_index": 85,
+      "trade_date": "2021-08-01"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 74.8,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "segment_day_index": 86,
+      "trade_date": "2021-08-02"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 76.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "segment_day_index": 87,
+      "trade_date": "2021-08-03"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 85.8,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "segment_day_index": 149,
+      "trade_date": "2021-11-16"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 91.5,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "segment_day_index": 150,
+      "trade_date": "2021-11-17"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 92.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 229,
+      "trade_date": "2022-03-14"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 93.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 232,
+      "trade_date": "2022-03-17"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 167.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 515,
+      "trade_date": "2023-09-06"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 169.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 525,
+      "trade_date": "2023-09-20"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 172.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 527,
+      "trade_date": "2023-09-24"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 174.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 530,
+      "trade_date": "2023-09-27"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 183.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 531,
+      "trade_date": "2023-10-01"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 199.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 532,
+      "trade_date": "2023-10-02"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 203.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 569,
+      "trade_date": "2023-11-22"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 214.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 600,
+      "trade_date": "2024-01-11"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 215.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 601,
+      "trade_date": "2024-01-14"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 245.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 602,
+      "trade_date": "2024-01-17"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 250.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 927,
+      "trade_date": "2025-05-18"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 256.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 929,
+      "trade_date": "2025-05-20"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 268.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 936,
+      "trade_date": "2025-05-29"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 270.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 1156,
+      "trade_date": "2026-04-23"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 275.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 1157,
+      "trade_date": "2026-04-26"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 282.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 1158,
+      "trade_date": "2026-04-27"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 284.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 1160,
+      "trade_date": "2026-04-29"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 292.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 1161,
+      "trade_date": "2026-04-30"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 296.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 1162,
+      "trade_date": "2026-05-03"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 304.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 1165,
+      "trade_date": "2026-05-06"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 309.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 1166,
+      "trade_date": "2026-05-07"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 319.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 1167,
+      "trade_date": "2026-05-10"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 326.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 1188,
+      "trade_date": "2026-06-14"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 332.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 1189,
+      "trade_date": "2026-06-15"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 345.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 1191,
+      "trade_date": "2026-06-18"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 347.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 1202,
+      "trade_date": "2026-07-05"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 372.0,
+        "base_low_ref": 47.6,
+        "base_origin_date": "2021-06-23",
+        "base_reference_id": "SANAM::2021-06-23::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 1203,
+      "trade_date": "2026-07-06"
+    }
+  ],
+  "retire_count": 0,
+  "retire_events": []
+}
+```
+
+## TIJARA Lifecycle (Observed)
+```json
+{
+  "final_state": "RETIRED",
+  "freeze_count": 1,
+  "freeze_events": [
+    {
+      "base_reference": {
+        "base_high_ref": 55.8,
+        "base_low_ref": 47.5,
+        "base_origin_date": "2021-10-11",
+        "base_reference_id": "TIJARA::2021-10-11::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {}
+      },
+      "base_state": "BASE_FROZEN",
+      "base_transition_terms": {
+        "base_freeze_event": "BASE_FROZEN",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "NONE",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "segment_day_index": 59,
+      "trade_date": "2021-10-11"
+    }
+  ],
+  "ratchet_count": 15,
+  "ratchet_events": [
+    {
+      "base_reference": {
+        "base_high_ref": 57.0,
+        "base_low_ref": 47.5,
+        "base_origin_date": "2021-10-11",
+        "base_reference_id": "TIJARA::2021-10-11::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "segment_day_index": 62,
+      "trade_date": "2021-10-14"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 61.0,
+        "base_low_ref": 47.5,
+        "base_origin_date": "2021-10-11",
+        "base_reference_id": "TIJARA::2021-10-11::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "segment_day_index": 63,
+      "trade_date": "2021-10-17"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 61.2,
+        "base_low_ref": 47.5,
+        "base_origin_date": "2021-10-11",
+        "base_reference_id": "TIJARA::2021-10-11::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "segment_day_index": 68,
+      "trade_date": "2021-10-25"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 61.9,
+        "base_low_ref": 47.5,
+        "base_origin_date": "2021-10-11",
+        "base_reference_id": "TIJARA::2021-10-11::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "segment_day_index": 69,
+      "trade_date": "2021-10-26"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 65.4,
+        "base_low_ref": 47.5,
+        "base_origin_date": "2021-10-11",
+        "base_reference_id": "TIJARA::2021-10-11::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "segment_day_index": 70,
+      "trade_date": "2021-10-27"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 67.3,
+        "base_low_ref": 47.5,
+        "base_origin_date": "2021-10-11",
+        "base_reference_id": "TIJARA::2021-10-11::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "segment_day_index": 71,
+      "trade_date": "2021-10-28"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 67.8,
+        "base_low_ref": 47.5,
+        "base_origin_date": "2021-10-11",
+        "base_reference_id": "TIJARA::2021-10-11::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "segment_day_index": 74,
+      "trade_date": "2021-11-02"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 68.0,
+        "base_low_ref": 47.5,
+        "base_origin_date": "2021-10-11",
+        "base_reference_id": "TIJARA::2021-10-11::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "segment_day_index": 75,
+      "trade_date": "2021-11-03"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 69.6,
+        "base_low_ref": 47.5,
+        "base_origin_date": "2021-10-11",
+        "base_reference_id": "TIJARA::2021-10-11::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "segment_day_index": 76,
+      "trade_date": "2021-11-04"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 71.0,
+        "base_low_ref": 47.5,
+        "base_origin_date": "2021-10-11",
+        "base_reference_id": "TIJARA::2021-10-11::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "segment_day_index": 77,
+      "trade_date": "2021-11-07"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 73.4,
+        "base_low_ref": 47.5,
+        "base_origin_date": "2021-10-11",
+        "base_reference_id": "TIJARA::2021-10-11::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 191,
+      "trade_date": "2022-04-21"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 76.9,
+        "base_low_ref": 47.5,
+        "base_origin_date": "2021-10-11",
+        "base_reference_id": "TIJARA::2021-10-11::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 192,
+      "trade_date": "2022-04-24"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 78.5,
+        "base_low_ref": 47.5,
+        "base_origin_date": "2021-10-11",
+        "base_reference_id": "TIJARA::2021-10-11::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 196,
+      "trade_date": "2022-04-28"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 81.1,
+        "base_low_ref": 47.5,
+        "base_origin_date": "2021-10-11",
+        "base_reference_id": "TIJARA::2021-10-11::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 197,
+      "trade_date": "2022-05-05"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": 84.0,
+        "base_low_ref": 47.5,
+        "base_origin_date": "2021-10-11",
+        "base_reference_id": "TIJARA::2021-10-11::BASE01",
+        "base_retirement_reason": "NONE",
+        "base_validity_state": "VALID",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 0
+        }
+      },
+      "base_state": "BASE_VALID",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "BASE_REFERENCE_ADVANCE_OK",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 199,
+      "trade_date": "2022-05-09"
+    }
+  ],
+  "retire_count": 1,
+  "retire_events": [
+    {
+      "base_reference": {
+        "base_high_ref": 84.0,
+        "base_low_ref": 47.5,
+        "base_origin_date": "2021-10-11",
+        "base_reference_id": "TIJARA::2021-10-11::BASE01",
+        "base_retirement_reason": "CLOSE_BELOW_BASE_LOW_N(n=1)",
+        "base_validity_state": "RETIRED",
+        "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+        "invalidation_rule_state": {
+          "streak": 1
+        }
+      },
+      "base_state": "BASE_RETIRED",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "BASE_INVALIDATED",
+        "base_rachet_event": "NONE",
+        "no_freeze_reason": "NONE"
+      },
+      "readiness_state": "READY",
+      "segment_day_index": 227,
+      "trade_date": "2022-06-19"
+    }
+  ]
+}
+```
+
+## Harness Output (Verbatim)
+```text
+R14C_MODULE_C_HARNESS_V4_START
+HARNESS_DB C:\Users\Sager\OneDrive\Desktop\portfolio_app\mobile-migration\backend-api-main-release\artifacts\preview1a_prestart\review_final\r14c_module_c_harness_surface_v4.db
+DEFAULT_INVALIDATION_FORM CLOSE_BELOW_BASE_LOW_N
+DEFAULT_INVALIDATION_PARAMS {"n_sessions": 1}
+CARRY_IN_FIX first_bar_long_lookback_predicate_value=1.0
+SANAM freeze=1 ratchet=37 retire=0 final=VALID
+TIJARA freeze=1 ratchet=15 retire=1 final=RETIRED
+MECHANICS freeze=True ratchet=True retire=True
+R14C_MODULE_C_HARNESS_V4_COMPLETE
+
+```

@@ -1,0 +1,1593 @@
+{
+  "calendar_authority": "BK_CAL_V4_1783783330",
+  "day_surface_rows": [
+    {
+      "lookback_fallback_sessions": 80,
+      "lookback_long_sessions": 120,
+      "lookback_segment_sessions": 1,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_PENDING",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "READINESS_PENDING_TO_READINESS_LIMITED",
+      "readiness_transition_from_state": "READINESS_PENDING",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 0,
+      "segment_id": "AAYAN::SEG0001",
+      "segment_restart_flag": true,
+      "symbol": "AAYAN",
+      "trade_date": "2025-07-21",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 80.0,
+        "READINESS_LONG_LOOKBACK_READY": 120.0,
+        "READINESS_SEGMENT_RESTART_READY": 1.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 81,
+      "lookback_long_sessions": 121,
+      "lookback_segment_sessions": 2,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 1,
+      "segment_id": "AAYAN::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "AAYAN",
+      "trade_date": "2025-07-22",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 81.0,
+        "READINESS_LONG_LOOKBACK_READY": 121.0,
+        "READINESS_SEGMENT_RESTART_READY": 2.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 82,
+      "lookback_long_sessions": 122,
+      "lookback_segment_sessions": 3,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 2,
+      "segment_id": "AAYAN::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "AAYAN",
+      "trade_date": "2025-07-23",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 82.0,
+        "READINESS_LONG_LOOKBACK_READY": 122.0,
+        "READINESS_SEGMENT_RESTART_READY": 3.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 83,
+      "lookback_long_sessions": 123,
+      "lookback_segment_sessions": 4,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 3,
+      "segment_id": "AAYAN::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "AAYAN",
+      "trade_date": "2025-07-24",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 83.0,
+        "READINESS_LONG_LOOKBACK_READY": 123.0,
+        "READINESS_SEGMENT_RESTART_READY": 4.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 84,
+      "lookback_long_sessions": 124,
+      "lookback_segment_sessions": 5,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 4,
+      "segment_id": "AAYAN::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "AAYAN",
+      "trade_date": "2025-07-27",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 84.0,
+        "READINESS_LONG_LOOKBACK_READY": 124.0,
+        "READINESS_SEGMENT_RESTART_READY": 5.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 85,
+      "lookback_long_sessions": 125,
+      "lookback_segment_sessions": 6,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 5,
+      "segment_id": "AAYAN::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "AAYAN",
+      "trade_date": "2025-07-28",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 85.0,
+        "READINESS_LONG_LOOKBACK_READY": 125.0,
+        "READINESS_SEGMENT_RESTART_READY": 6.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 86,
+      "lookback_long_sessions": 126,
+      "lookback_segment_sessions": 7,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 6,
+      "segment_id": "AAYAN::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "AAYAN",
+      "trade_date": "2025-07-29",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 86.0,
+        "READINESS_LONG_LOOKBACK_READY": 126.0,
+        "READINESS_SEGMENT_RESTART_READY": 7.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 87,
+      "lookback_long_sessions": 127,
+      "lookback_segment_sessions": 8,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 7,
+      "segment_id": "AAYAN::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "AAYAN",
+      "trade_date": "2025-07-30",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 87.0,
+        "READINESS_LONG_LOOKBACK_READY": 127.0,
+        "READINESS_SEGMENT_RESTART_READY": 8.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 88,
+      "lookback_long_sessions": 128,
+      "lookback_segment_sessions": 9,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 8,
+      "segment_id": "AAYAN::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "AAYAN",
+      "trade_date": "2026-06-25",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 88.0,
+        "READINESS_LONG_LOOKBACK_READY": 128.0,
+        "READINESS_SEGMENT_RESTART_READY": 9.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 89,
+      "lookback_long_sessions": 129,
+      "lookback_segment_sessions": 10,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 9,
+      "segment_id": "AAYAN::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "AAYAN",
+      "trade_date": "2026-06-28",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 89.0,
+        "READINESS_LONG_LOOKBACK_READY": 129.0,
+        "READINESS_SEGMENT_RESTART_READY": 10.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 90,
+      "lookback_long_sessions": 130,
+      "lookback_segment_sessions": 11,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 10,
+      "segment_id": "AAYAN::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "AAYAN",
+      "trade_date": "2026-06-29",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 90.0,
+        "READINESS_LONG_LOOKBACK_READY": 130.0,
+        "READINESS_SEGMENT_RESTART_READY": 11.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 91,
+      "lookback_long_sessions": 131,
+      "lookback_segment_sessions": 12,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 11,
+      "segment_id": "AAYAN::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "AAYAN",
+      "trade_date": "2026-06-30",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 91.0,
+        "READINESS_LONG_LOOKBACK_READY": 131.0,
+        "READINESS_SEGMENT_RESTART_READY": 12.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 92,
+      "lookback_long_sessions": 132,
+      "lookback_segment_sessions": 13,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 12,
+      "segment_id": "AAYAN::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "AAYAN",
+      "trade_date": "2026-07-01",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 92.0,
+        "READINESS_LONG_LOOKBACK_READY": 132.0,
+        "READINESS_SEGMENT_RESTART_READY": 13.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 93,
+      "lookback_long_sessions": 133,
+      "lookback_segment_sessions": 14,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 13,
+      "segment_id": "AAYAN::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "AAYAN",
+      "trade_date": "2026-07-02",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 93.0,
+        "READINESS_LONG_LOOKBACK_READY": 133.0,
+        "READINESS_SEGMENT_RESTART_READY": 14.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 80,
+      "lookback_long_sessions": 120,
+      "lookback_segment_sessions": 1,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_PENDING",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "READINESS_PENDING_TO_READINESS_LIMITED",
+      "readiness_transition_from_state": "READINESS_PENDING",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 0,
+      "segment_id": "SANAM::SEG0001",
+      "segment_restart_flag": true,
+      "symbol": "SANAM",
+      "trade_date": "2025-07-21",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 80.0,
+        "READINESS_LONG_LOOKBACK_READY": 120.0,
+        "READINESS_SEGMENT_RESTART_READY": 1.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 81,
+      "lookback_long_sessions": 121,
+      "lookback_segment_sessions": 2,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 1,
+      "segment_id": "SANAM::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "SANAM",
+      "trade_date": "2025-07-22",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 81.0,
+        "READINESS_LONG_LOOKBACK_READY": 121.0,
+        "READINESS_SEGMENT_RESTART_READY": 2.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 82,
+      "lookback_long_sessions": 122,
+      "lookback_segment_sessions": 3,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 2,
+      "segment_id": "SANAM::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "SANAM",
+      "trade_date": "2025-07-23",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 82.0,
+        "READINESS_LONG_LOOKBACK_READY": 122.0,
+        "READINESS_SEGMENT_RESTART_READY": 3.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 83,
+      "lookback_long_sessions": 123,
+      "lookback_segment_sessions": 4,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 3,
+      "segment_id": "SANAM::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "SANAM",
+      "trade_date": "2025-07-24",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 83.0,
+        "READINESS_LONG_LOOKBACK_READY": 123.0,
+        "READINESS_SEGMENT_RESTART_READY": 4.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 84,
+      "lookback_long_sessions": 124,
+      "lookback_segment_sessions": 5,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 4,
+      "segment_id": "SANAM::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "SANAM",
+      "trade_date": "2025-07-27",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 84.0,
+        "READINESS_LONG_LOOKBACK_READY": 124.0,
+        "READINESS_SEGMENT_RESTART_READY": 5.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 85,
+      "lookback_long_sessions": 125,
+      "lookback_segment_sessions": 6,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 5,
+      "segment_id": "SANAM::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "SANAM",
+      "trade_date": "2025-07-28",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 85.0,
+        "READINESS_LONG_LOOKBACK_READY": 125.0,
+        "READINESS_SEGMENT_RESTART_READY": 6.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 86,
+      "lookback_long_sessions": 126,
+      "lookback_segment_sessions": 7,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 6,
+      "segment_id": "SANAM::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "SANAM",
+      "trade_date": "2025-07-29",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 86.0,
+        "READINESS_LONG_LOOKBACK_READY": 126.0,
+        "READINESS_SEGMENT_RESTART_READY": 7.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 87,
+      "lookback_long_sessions": 127,
+      "lookback_segment_sessions": 8,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 7,
+      "segment_id": "SANAM::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "SANAM",
+      "trade_date": "2025-07-30",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 87.0,
+        "READINESS_LONG_LOOKBACK_READY": 127.0,
+        "READINESS_SEGMENT_RESTART_READY": 8.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 88,
+      "lookback_long_sessions": 128,
+      "lookback_segment_sessions": 9,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 8,
+      "segment_id": "SANAM::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "SANAM",
+      "trade_date": "2026-06-25",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 88.0,
+        "READINESS_LONG_LOOKBACK_READY": 128.0,
+        "READINESS_SEGMENT_RESTART_READY": 9.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 89,
+      "lookback_long_sessions": 129,
+      "lookback_segment_sessions": 10,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 9,
+      "segment_id": "SANAM::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "SANAM",
+      "trade_date": "2026-06-28",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 89.0,
+        "READINESS_LONG_LOOKBACK_READY": 129.0,
+        "READINESS_SEGMENT_RESTART_READY": 10.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 90,
+      "lookback_long_sessions": 130,
+      "lookback_segment_sessions": 11,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 10,
+      "segment_id": "SANAM::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "SANAM",
+      "trade_date": "2026-06-29",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 90.0,
+        "READINESS_LONG_LOOKBACK_READY": 130.0,
+        "READINESS_SEGMENT_RESTART_READY": 11.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 91,
+      "lookback_long_sessions": 131,
+      "lookback_segment_sessions": 12,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 11,
+      "segment_id": "SANAM::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "SANAM",
+      "trade_date": "2026-06-30",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 91.0,
+        "READINESS_LONG_LOOKBACK_READY": 131.0,
+        "READINESS_SEGMENT_RESTART_READY": 12.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 92,
+      "lookback_long_sessions": 132,
+      "lookback_segment_sessions": 13,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 12,
+      "segment_id": "SANAM::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "SANAM",
+      "trade_date": "2026-07-01",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 92.0,
+        "READINESS_LONG_LOOKBACK_READY": 132.0,
+        "READINESS_SEGMENT_RESTART_READY": 13.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 93,
+      "lookback_long_sessions": 133,
+      "lookback_segment_sessions": 14,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 13,
+      "segment_id": "SANAM::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "SANAM",
+      "trade_date": "2026-07-02",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 93.0,
+        "READINESS_LONG_LOOKBACK_READY": 133.0,
+        "READINESS_SEGMENT_RESTART_READY": 14.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 80,
+      "lookback_long_sessions": 120,
+      "lookback_segment_sessions": 1,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_PENDING",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "READINESS_PENDING_TO_READINESS_LIMITED",
+      "readiness_transition_from_state": "READINESS_PENDING",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 0,
+      "segment_id": "THURAYA::SEG0001",
+      "segment_restart_flag": true,
+      "symbol": "THURAYA",
+      "trade_date": "2025-07-21",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 80.0,
+        "READINESS_LONG_LOOKBACK_READY": 120.0,
+        "READINESS_SEGMENT_RESTART_READY": 1.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 81,
+      "lookback_long_sessions": 121,
+      "lookback_segment_sessions": 2,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 1,
+      "segment_id": "THURAYA::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "THURAYA",
+      "trade_date": "2025-07-22",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 81.0,
+        "READINESS_LONG_LOOKBACK_READY": 121.0,
+        "READINESS_SEGMENT_RESTART_READY": 2.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 82,
+      "lookback_long_sessions": 122,
+      "lookback_segment_sessions": 3,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 2,
+      "segment_id": "THURAYA::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "THURAYA",
+      "trade_date": "2025-07-23",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 82.0,
+        "READINESS_LONG_LOOKBACK_READY": 122.0,
+        "READINESS_SEGMENT_RESTART_READY": 3.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 80,
+      "lookback_long_sessions": 120,
+      "lookback_segment_sessions": 1,
+      "masked_context_flag": true,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 0,
+      "segment_id": "THURAYA::SEG0002",
+      "segment_restart_flag": true,
+      "symbol": "THURAYA",
+      "trade_date": "2025-07-24",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 80.0,
+        "READINESS_LONG_LOOKBACK_READY": 120.0,
+        "READINESS_SEGMENT_RESTART_READY": 1.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 80,
+      "lookback_long_sessions": 120,
+      "lookback_segment_sessions": 1,
+      "masked_context_flag": true,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 0,
+      "segment_id": "THURAYA::SEG0003",
+      "segment_restart_flag": true,
+      "symbol": "THURAYA",
+      "trade_date": "2025-07-25",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 80.0,
+        "READINESS_LONG_LOOKBACK_READY": 120.0,
+        "READINESS_SEGMENT_RESTART_READY": 1.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 80,
+      "lookback_long_sessions": 120,
+      "lookback_segment_sessions": 1,
+      "masked_context_flag": true,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 0,
+      "segment_id": "THURAYA::SEG0004",
+      "segment_restart_flag": true,
+      "symbol": "THURAYA",
+      "trade_date": "2025-07-26",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 80.0,
+        "READINESS_LONG_LOOKBACK_READY": 120.0,
+        "READINESS_SEGMENT_RESTART_READY": 1.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 80,
+      "lookback_long_sessions": 120,
+      "lookback_segment_sessions": 1,
+      "masked_context_flag": true,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 0,
+      "segment_id": "THURAYA::SEG0005",
+      "segment_restart_flag": true,
+      "symbol": "THURAYA",
+      "trade_date": "2025-07-27",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 80.0,
+        "READINESS_LONG_LOOKBACK_READY": 120.0,
+        "READINESS_SEGMENT_RESTART_READY": 1.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 83,
+      "lookback_long_sessions": 123,
+      "lookback_segment_sessions": 4,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 3,
+      "segment_id": "THURAYA::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "THURAYA",
+      "trade_date": "2025-07-28",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 80.0,
+        "READINESS_LONG_LOOKBACK_READY": 120.0,
+        "READINESS_SEGMENT_RESTART_READY": 1.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 84,
+      "lookback_long_sessions": 124,
+      "lookback_segment_sessions": 5,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 4,
+      "segment_id": "THURAYA::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "THURAYA",
+      "trade_date": "2025-07-29",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 81.0,
+        "READINESS_LONG_LOOKBACK_READY": 121.0,
+        "READINESS_SEGMENT_RESTART_READY": 2.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 85,
+      "lookback_long_sessions": 125,
+      "lookback_segment_sessions": 6,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 5,
+      "segment_id": "THURAYA::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "THURAYA",
+      "trade_date": "2025-07-30",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 82.0,
+        "READINESS_LONG_LOOKBACK_READY": 122.0,
+        "READINESS_SEGMENT_RESTART_READY": 3.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 86,
+      "lookback_long_sessions": 126,
+      "lookback_segment_sessions": 7,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 6,
+      "segment_id": "THURAYA::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "THURAYA",
+      "trade_date": "2026-06-25",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 83.0,
+        "READINESS_LONG_LOOKBACK_READY": 123.0,
+        "READINESS_SEGMENT_RESTART_READY": 4.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 84,
+      "lookback_long_sessions": 124,
+      "lookback_segment_sessions": 5,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 4,
+      "segment_id": "THURAYA::SEG0006",
+      "segment_restart_flag": false,
+      "symbol": "THURAYA",
+      "trade_date": "2026-06-26",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 84.0,
+        "READINESS_LONG_LOOKBACK_READY": 124.0,
+        "READINESS_SEGMENT_RESTART_READY": 5.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 85,
+      "lookback_long_sessions": 125,
+      "lookback_segment_sessions": 6,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 5,
+      "segment_id": "THURAYA::SEG0006",
+      "segment_restart_flag": false,
+      "symbol": "THURAYA",
+      "trade_date": "2026-06-27",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 85.0,
+        "READINESS_LONG_LOOKBACK_READY": 125.0,
+        "READINESS_SEGMENT_RESTART_READY": 6.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 80,
+      "lookback_long_sessions": 120,
+      "lookback_segment_sessions": 1,
+      "masked_context_flag": true,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 0,
+      "segment_id": "THURAYA::SEG0007",
+      "segment_restart_flag": true,
+      "symbol": "THURAYA",
+      "trade_date": "2026-06-28",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 80.0,
+        "READINESS_LONG_LOOKBACK_READY": 120.0,
+        "READINESS_SEGMENT_RESTART_READY": 1.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 80,
+      "lookback_long_sessions": 120,
+      "lookback_segment_sessions": 1,
+      "masked_context_flag": true,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 0,
+      "segment_id": "THURAYA::SEG0008",
+      "segment_restart_flag": true,
+      "symbol": "THURAYA",
+      "trade_date": "2026-06-29",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 80.0,
+        "READINESS_LONG_LOOKBACK_READY": 120.0,
+        "READINESS_SEGMENT_RESTART_READY": 1.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 87,
+      "lookback_long_sessions": 127,
+      "lookback_segment_sessions": 8,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 7,
+      "segment_id": "THURAYA::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "THURAYA",
+      "trade_date": "2026-06-30",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 80.0,
+        "READINESS_LONG_LOOKBACK_READY": 120.0,
+        "READINESS_SEGMENT_RESTART_READY": 1.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 88,
+      "lookback_long_sessions": 128,
+      "lookback_segment_sessions": 9,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 8,
+      "segment_id": "THURAYA::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "THURAYA",
+      "trade_date": "2026-07-01",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 81.0,
+        "READINESS_LONG_LOOKBACK_READY": 121.0,
+        "READINESS_SEGMENT_RESTART_READY": 2.0
+      }
+    },
+    {
+      "lookback_fallback_sessions": 89,
+      "lookback_long_sessions": 129,
+      "lookback_segment_sessions": 10,
+      "masked_context_flag": false,
+      "phase_after": "READINESS_LIMITED",
+      "phase_before": "READINESS_LIMITED",
+      "readiness_state": "READINESS_LIMITED",
+      "readiness_transition_event": "NO_TRANSITION",
+      "readiness_transition_from_state": "READINESS_LIMITED",
+      "readiness_transition_to_state": "READINESS_LIMITED",
+      "segment_day_index": 9,
+      "segment_id": "THURAYA::SEG0001",
+      "segment_restart_flag": false,
+      "symbol": "THURAYA",
+      "trade_date": "2026-07-02",
+      "triggering_predicate_values": {
+        "READINESS_FALLBACK_ELIGIBLE": 82.0,
+        "READINESS_LONG_LOOKBACK_READY": 122.0,
+        "READINESS_SEGMENT_RESTART_READY": 3.0
+      }
+    }
+  ],
+  "ledger_predicate_check": {
+    "expected_predicate_rows": 138,
+    "observed_predicate_names": [
+      "READINESS_FALLBACK_ELIGIBLE",
+      "READINESS_LONG_LOOKBACK_READY",
+      "READINESS_SEGMENT_RESTART_READY"
+    ],
+    "observed_warmup_rows": 390,
+    "pass": true,
+    "required_predicate_names": [
+      "READINESS_FALLBACK_ELIGIBLE",
+      "READINESS_LONG_LOOKBACK_READY",
+      "READINESS_SEGMENT_RESTART_READY"
+    ],
+    "transition_rows_with_date_symbol_segment_state": 390
+  },
+  "mask_authority": "R12_MASKED_INTERVALS_MANIFEST_V4_3_FINAL",
+  "per_symbol_results": {
+    "AAYAN": {
+      "input_rows": 14,
+      "normalized_rows": 14,
+      "predicates_logged_expected": 42,
+      "segment_restarts": 1
+    },
+    "SANAM": {
+      "input_rows": 14,
+      "normalized_rows": 14,
+      "predicates_logged_expected": 42,
+      "segment_restarts": 1
+    },
+    "THURAYA": {
+      "input_rows": 18,
+      "normalized_rows": 18,
+      "predicates_logged_expected": 54,
+      "segment_restarts": 9
+    }
+  },
+  "processed_dates": [
+    "2025-07-21",
+    "2025-07-22",
+    "2025-07-23",
+    "2025-07-24",
+    "2025-07-25",
+    "2025-07-26",
+    "2025-07-27",
+    "2025-07-28",
+    "2025-07-29",
+    "2025-07-30",
+    "2026-06-25",
+    "2026-06-26",
+    "2026-06-27",
+    "2026-06-28",
+    "2026-06-29",
+    "2026-06-30",
+    "2026-07-01",
+    "2026-07-02"
+  ],
+  "r15_surface_binding": {
+    "binding_artifact": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r15_surface_binding_v1.json",
+    "target_surface_db": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\ee_v2_runtime_surface_r15_v1.db"
+  },
+  "replay_date_count": 18,
+  "set_b_distinction": "THURAYA replay is sealed historical data-surface plumbing verification only, not parameter selection or threshold tuning.",
+  "sidecar_chain_rows": [
+    {
+      "chain_hash": "4de9b5d6c8aa44d6d0bdcaa94e9436cd661ee49c75cb4839893c86659ec2dec2",
+      "content_hash": "056498981a1a786e6b3aea521cfac3fa2caa13a2c2933d870b6fce6964dddebc",
+      "previous_hash": "64bcc720420cb350b0dfa79b68a1dbb391445351899be76c5be297b351e80fff",
+      "sidecar_path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_module_b_daily_ledger_chain_v2.sha256",
+      "trade_date": "2025-07-21"
+    },
+    {
+      "chain_hash": "46385150914f34edeaaca010a23b54ecd09ed74d7a50d4dd9013e7b20bbf471b",
+      "content_hash": "ce830231b097221cf06c314c6904efbdec5a26f1c6a4d949a1480fe267bfa3fb",
+      "previous_hash": "4de9b5d6c8aa44d6d0bdcaa94e9436cd661ee49c75cb4839893c86659ec2dec2",
+      "sidecar_path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_module_b_daily_ledger_chain_v2.sha256",
+      "trade_date": "2025-07-22"
+    },
+    {
+      "chain_hash": "ec3883ce9192dd528e5634bbb76aa4b77dee3ed924a6f97b22513ae8470b3744",
+      "content_hash": "51c710b11be1b25615575f8e646006e66eab5f2d13d36d4e5f171732015611dd",
+      "previous_hash": "46385150914f34edeaaca010a23b54ecd09ed74d7a50d4dd9013e7b20bbf471b",
+      "sidecar_path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_module_b_daily_ledger_chain_v2.sha256",
+      "trade_date": "2025-07-23"
+    },
+    {
+      "chain_hash": "1fae735b2a0dd55234dee79e5b6882eb16f8320f1904b836f1c726065632b258",
+      "content_hash": "c7b2f034d6cb6eec48fee270b1e3438564283bca7ce5470711a1526a64a15868",
+      "previous_hash": "ec3883ce9192dd528e5634bbb76aa4b77dee3ed924a6f97b22513ae8470b3744",
+      "sidecar_path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_module_b_daily_ledger_chain_v2.sha256",
+      "trade_date": "2025-07-24"
+    },
+    {
+      "chain_hash": "77e30eb538095b83e31bd092ec810e09101d3bf4e75e212ca76688666b35b76e",
+      "content_hash": "97d12c48241ed2df37c8ea123c9687f0c744928df92dd53f553ccef5b5c1bb2e",
+      "previous_hash": "1fae735b2a0dd55234dee79e5b6882eb16f8320f1904b836f1c726065632b258",
+      "sidecar_path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_module_b_daily_ledger_chain_v2.sha256",
+      "trade_date": "2025-07-25"
+    },
+    {
+      "chain_hash": "07ae267f8af7208d863e17401dfb2aed23a250e2614511a3ce6e155c107eb382",
+      "content_hash": "08cd274b1adb2457364409ee53942db4639ef8863e2ee2514ba24e78d9782c81",
+      "previous_hash": "77e30eb538095b83e31bd092ec810e09101d3bf4e75e212ca76688666b35b76e",
+      "sidecar_path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_module_b_daily_ledger_chain_v2.sha256",
+      "trade_date": "2025-07-26"
+    },
+    {
+      "chain_hash": "71a5671a50f9d0055f5738678250713e7149fd457d589df12aa2897c36b8f1a9",
+      "content_hash": "d99e97be7a62fd76fee770c0218df6b614e543be8456f9a29f00e06ea25ed1a2",
+      "previous_hash": "07ae267f8af7208d863e17401dfb2aed23a250e2614511a3ce6e155c107eb382",
+      "sidecar_path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_module_b_daily_ledger_chain_v2.sha256",
+      "trade_date": "2025-07-27"
+    },
+    {
+      "chain_hash": "2a583de720e131b21e1d1818c8a58ad4042c5016378fbb77e50d2e1a976de921",
+      "content_hash": "a813e18540cf094e2796ed2aeb34e1d65800d635c566456300c303ca0fbd882d",
+      "previous_hash": "71a5671a50f9d0055f5738678250713e7149fd457d589df12aa2897c36b8f1a9",
+      "sidecar_path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_module_b_daily_ledger_chain_v2.sha256",
+      "trade_date": "2025-07-28"
+    },
+    {
+      "chain_hash": "d1ebd0e3202a7d3d86efa8c5782296cf394b7158b274cbdf3903053c8af16b74",
+      "content_hash": "08c928546cf7039cfcf81ebe5b2dc128e132a4cb4c0464c94a24ec57108c9c35",
+      "previous_hash": "2a583de720e131b21e1d1818c8a58ad4042c5016378fbb77e50d2e1a976de921",
+      "sidecar_path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_module_b_daily_ledger_chain_v2.sha256",
+      "trade_date": "2025-07-29"
+    },
+    {
+      "chain_hash": "a589f0541c750324a2bc5ca61b4dfcdf8c77766997394cfe7582040e4ec789f7",
+      "content_hash": "45053c656e91e7f350a080667489d2d2a4635b82b766c4d63fd163b940db06cf",
+      "previous_hash": "d1ebd0e3202a7d3d86efa8c5782296cf394b7158b274cbdf3903053c8af16b74",
+      "sidecar_path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_module_b_daily_ledger_chain_v2.sha256",
+      "trade_date": "2025-07-30"
+    },
+    {
+      "chain_hash": "47941243875e4b5786807dc7e79949990933ae3fa1aad3166c6aec28f47ec44a",
+      "content_hash": "eb16be83658be04671dd95ee18c91d5bc8c38e7a12f27062d3b50457d700897d",
+      "previous_hash": "a589f0541c750324a2bc5ca61b4dfcdf8c77766997394cfe7582040e4ec789f7",
+      "sidecar_path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_module_b_daily_ledger_chain_v2.sha256",
+      "trade_date": "2026-06-25"
+    },
+    {
+      "chain_hash": "63631be5c86042e0c2ee8c9f0d849e30e95f285e801ea15aa4e4a1930c86affc",
+      "content_hash": "9d314822393abb1002d0dc6d860eff8097f8051dbac5370c6fd3c87f0feffbf2",
+      "previous_hash": "47941243875e4b5786807dc7e79949990933ae3fa1aad3166c6aec28f47ec44a",
+      "sidecar_path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_module_b_daily_ledger_chain_v2.sha256",
+      "trade_date": "2026-06-26"
+    },
+    {
+      "chain_hash": "07c3dae98b2d8ebc410c2acc12446aeac7167989989ae5c0906813ac7d7a6243",
+      "content_hash": "381855bc8cc1cca108e2c0b716e14c9737382733eb94fd6a4c550c608ee65cfc",
+      "previous_hash": "63631be5c86042e0c2ee8c9f0d849e30e95f285e801ea15aa4e4a1930c86affc",
+      "sidecar_path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_module_b_daily_ledger_chain_v2.sha256",
+      "trade_date": "2026-06-27"
+    },
+    {
+      "chain_hash": "c0618a7d5a84a626695bed2923b06ec63fb3f4bc4373411e687cf163e09344bf",
+      "content_hash": "07e8bff628cfb6bb8635861b2dcaa95a710ef3dbfbc6297885ed37270184dfb5",
+      "previous_hash": "07c3dae98b2d8ebc410c2acc12446aeac7167989989ae5c0906813ac7d7a6243",
+      "sidecar_path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_module_b_daily_ledger_chain_v2.sha256",
+      "trade_date": "2026-06-28"
+    },
+    {
+      "chain_hash": "ba2978761a04c0d59abe258e25acad56b6fe3f30cd08b2078b8aa4edac2b58d7",
+      "content_hash": "1e7e43090944bfeb600ab946bc7423c9d36c07d408adcd33f02dcdf412df95fa",
+      "previous_hash": "c0618a7d5a84a626695bed2923b06ec63fb3f4bc4373411e687cf163e09344bf",
+      "sidecar_path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_module_b_daily_ledger_chain_v2.sha256",
+      "trade_date": "2026-06-29"
+    },
+    {
+      "chain_hash": "266bcd762231d70ffdbb72f413c98f70b7433d4c0495ef31df5f9be22048158c",
+      "content_hash": "332f2fe93b04b1242e5f74637432b8c9be1cc33ecbc6dffa8ea33373ddd7b1ae",
+      "previous_hash": "ba2978761a04c0d59abe258e25acad56b6fe3f30cd08b2078b8aa4edac2b58d7",
+      "sidecar_path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_module_b_daily_ledger_chain_v2.sha256",
+      "trade_date": "2026-06-30"
+    },
+    {
+      "chain_hash": "86f845c0ca91c437c55d64498a1495277752b153705da809bfff78dc9a1e8dd2",
+      "content_hash": "3542c13baa448dc1d123113a111d4b5df19a353392b02f047ab731e49aa738f7",
+      "previous_hash": "266bcd762231d70ffdbb72f413c98f70b7433d4c0495ef31df5f9be22048158c",
+      "sidecar_path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_module_b_daily_ledger_chain_v2.sha256",
+      "trade_date": "2026-07-01"
+    },
+    {
+      "chain_hash": "e9b41d62851a5df088ee37fea96e0c4030df904eb3ace105e5e9ae5c5bacf081",
+      "content_hash": "3d5e37d779f1e0a4082a3771da28eac027d840b08e9510c002ba06292437b353",
+      "previous_hash": "86f845c0ca91c437c55d64498a1495277752b153705da809bfff78dc9a1e8dd2",
+      "sidecar_path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_module_b_daily_ledger_chain_v2.sha256",
+      "trade_date": "2026-07-02"
+    }
+  ],
+  "target_intervals": {
+    "june_interval": {
+      "end_date": "2026-06-29",
+      "source_final_class": "SUSPECTED_CORPORATE_ACTION",
+      "source_rule": "R-3",
+      "span_days": 2,
+      "start_date": "2026-06-28"
+    },
+    "suspension_interval": {
+      "end_date": "2025-07-27",
+      "source_final_class": "SUSPECTED_CORPORATE_ACTION",
+      "source_rule": "R-3",
+      "span_days": 4,
+      "start_date": "2025-07-24"
+    }
+  },
+  "target_trigger_presence": {
+    "dialect": "sqlite",
+    "missing_triggers": [],
+    "pass": true,
+    "present_triggers": [
+      "trg_daily_state_snapshot_block_delete",
+      "trg_daily_state_snapshot_block_update",
+      "trg_daily_term_row_block_delete",
+      "trg_daily_term_row_block_update",
+      "trg_execution_outcome_row_block_delete",
+      "trg_execution_outcome_row_block_update",
+      "trg_ledger_daily_hash_chain_block_delete",
+      "trg_ledger_daily_hash_chain_block_update"
+    ],
+    "required_triggers": [
+      "trg_daily_term_row_block_update",
+      "trg_daily_term_row_block_delete",
+      "trg_daily_state_snapshot_block_update",
+      "trg_daily_state_snapshot_block_delete",
+      "trg_execution_outcome_row_block_update",
+      "trg_execution_outcome_row_block_delete",
+      "trg_ledger_daily_hash_chain_block_update",
+      "trg_ledger_daily_hash_chain_block_delete"
+    ],
+    "target_db": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\ee_v2_runtime_surface_r15_v1.db"
+  },
+  "thuraya_seam_surface": {
+    "june_2026_06_28_interval_surface": {
+      "interval": {
+        "end_date": "2026-06-29",
+        "source_final_class": "SUSPECTED_CORPORATE_ACTION",
+        "source_rule": "R-3",
+        "span_days": 2,
+        "start_date": "2026-06-28"
+      },
+      "no_cross_seam_samples": [
+        {
+          "curr_lookback_segment_sessions": 1,
+          "curr_segment_day_index": 0,
+          "curr_segment_id": "THURAYA::SEG0007",
+          "prev_segment_day_index": 5,
+          "prev_segment_id": "THURAYA::SEG0006",
+          "prev_trade_date": "2026-06-27",
+          "trade_date": "2026-06-28"
+        },
+        {
+          "curr_lookback_segment_sessions": 1,
+          "curr_segment_day_index": 0,
+          "curr_segment_id": "THURAYA::SEG0008",
+          "prev_segment_day_index": 0,
+          "prev_segment_id": "THURAYA::SEG0007",
+          "prev_trade_date": "2026-06-28",
+          "trade_date": "2026-06-29"
+        }
+      ],
+      "reset_rows": [
+        {
+          "lookback_segment_sessions": 1,
+          "segment_day_index": 0,
+          "segment_id": "THURAYA::SEG0007",
+          "trade_date": "2026-06-28"
+        },
+        {
+          "lookback_segment_sessions": 1,
+          "segment_day_index": 0,
+          "segment_id": "THURAYA::SEG0008",
+          "trade_date": "2026-06-29"
+        }
+      ],
+      "window_rows": [
+        {
+          "lookback_fallback_sessions": 85,
+          "lookback_long_sessions": 125,
+          "lookback_segment_sessions": 6,
+          "masked_context_flag": false,
+          "phase_after": "READINESS_LIMITED",
+          "phase_before": "READINESS_LIMITED",
+          "readiness_state": "READINESS_LIMITED",
+          "readiness_transition_event": "NO_TRANSITION",
+          "readiness_transition_from_state": "READINESS_LIMITED",
+          "readiness_transition_to_state": "READINESS_LIMITED",
+          "segment_day_index": 5,
+          "segment_id": "THURAYA::SEG0006",
+          "segment_restart_flag": false,
+          "symbol": "THURAYA",
+          "trade_date": "2026-06-27",
+          "triggering_predicate_values": {
+            "READINESS_FALLBACK_ELIGIBLE": 85.0,
+            "READINESS_LONG_LOOKBACK_READY": 125.0,
+            "READINESS_SEGMENT_RESTART_READY": 6.0
+          }
+        },
+        {
+          "lookback_fallback_sessions": 80,
+          "lookback_long_sessions": 120,
+          "lookback_segment_sessions": 1,
+          "masked_context_flag": true,
+          "phase_after": "READINESS_LIMITED",
+          "phase_before": "READINESS_LIMITED",
+          "readiness_state": "READINESS_LIMITED",
+          "readiness_transition_event": "NO_TRANSITION",
+          "readiness_transition_from_state": "READINESS_LIMITED",
+          "readiness_transition_to_state": "READINESS_LIMITED",
+          "segment_day_index": 0,
+          "segment_id": "THURAYA::SEG0007",
+          "segment_restart_flag": true,
+          "symbol": "THURAYA",
+          "trade_date": "2026-06-28",
+          "triggering_predicate_values": {
+            "READINESS_FALLBACK_ELIGIBLE": 80.0,
+            "READINESS_LONG_LOOKBACK_READY": 120.0,
+            "READINESS_SEGMENT_RESTART_READY": 1.0
+          }
+        },
+        {
+          "lookback_fallback_sessions": 80,
+          "lookback_long_sessions": 120,
+          "lookback_segment_sessions": 1,
+          "masked_context_flag": true,
+          "phase_after": "READINESS_LIMITED",
+          "phase_before": "READINESS_LIMITED",
+          "readiness_state": "READINESS_LIMITED",
+          "readiness_transition_event": "NO_TRANSITION",
+          "readiness_transition_from_state": "READINESS_LIMITED",
+          "readiness_transition_to_state": "READINESS_LIMITED",
+          "segment_day_index": 0,
+          "segment_id": "THURAYA::SEG0008",
+          "segment_restart_flag": true,
+          "symbol": "THURAYA",
+          "trade_date": "2026-06-29",
+          "triggering_predicate_values": {
+            "READINESS_FALLBACK_ELIGIBLE": 80.0,
+            "READINESS_LONG_LOOKBACK_READY": 120.0,
+            "READINESS_SEGMENT_RESTART_READY": 1.0
+          }
+        },
+        {
+          "lookback_fallback_sessions": 87,
+          "lookback_long_sessions": 127,
+          "lookback_segment_sessions": 8,
+          "masked_context_flag": false,
+          "phase_after": "READINESS_LIMITED",
+          "phase_before": "READINESS_LIMITED",
+          "readiness_state": "READINESS_LIMITED",
+          "readiness_transition_event": "NO_TRANSITION",
+          "readiness_transition_from_state": "READINESS_LIMITED",
+          "readiness_transition_to_state": "READINESS_LIMITED",
+          "segment_day_index": 7,
+          "segment_id": "THURAYA::SEG0001",
+          "segment_restart_flag": false,
+          "symbol": "THURAYA",
+          "trade_date": "2026-06-30",
+          "triggering_predicate_values": {
+            "READINESS_FALLBACK_ELIGIBLE": 80.0,
+            "READINESS_LONG_LOOKBACK_READY": 120.0,
+            "READINESS_SEGMENT_RESTART_READY": 1.0
+          }
+        }
+      ]
+    },
+    "suspension_interval_surface": {
+      "interval": {
+        "end_date": "2025-07-27",
+        "source_final_class": "SUSPECTED_CORPORATE_ACTION",
+        "source_rule": "R-3",
+        "span_days": 4,
+        "start_date": "2025-07-24"
+      },
+      "no_cross_seam_samples": [
+        {
+          "curr_lookback_segment_sessions": 1,
+          "curr_segment_day_index": 0,
+          "curr_segment_id": "THURAYA::SEG0002",
+          "prev_segment_day_index": 2,
+          "prev_segment_id": "THURAYA::SEG0001",
+          "prev_trade_date": "2025-07-23",
+          "trade_date": "2025-07-24"
+        },
+        {
+          "curr_lookback_segment_sessions": 1,
+          "curr_segment_day_index": 0,
+          "curr_segment_id": "THURAYA::SEG0003",
+          "prev_segment_day_index": 0,
+          "prev_segment_id": "THURAYA::SEG0002",
+          "prev_trade_date": "2025-07-24",
+          "trade_date": "2025-07-25"
+        },
+        {
+          "curr_lookback_segment_sessions": 1,
+          "curr_segment_day_index": 0,
+          "curr_segment_id": "THURAYA::SEG0004",
+          "prev_segment_day_index": 0,
+          "prev_segment_id": "THURAYA::SEG0003",
+          "prev_trade_date": "2025-07-25",
+          "trade_date": "2025-07-26"
+        },
+        {
+          "curr_lookback_segment_sessions": 1,
+          "curr_segment_day_index": 0,
+          "curr_segment_id": "THURAYA::SEG0005",
+          "prev_segment_day_index": 0,
+          "prev_segment_id": "THURAYA::SEG0004",
+          "prev_trade_date": "2025-07-26",
+          "trade_date": "2025-07-27"
+        }
+      ],
+      "reset_rows": [
+        {
+          "lookback_segment_sessions": 1,
+          "segment_day_index": 0,
+          "segment_id": "THURAYA::SEG0002",
+          "trade_date": "2025-07-24"
+        },
+        {
+          "lookback_segment_sessions": 1,
+          "segment_day_index": 0,
+          "segment_id": "THURAYA::SEG0003",
+          "trade_date": "2025-07-25"
+        },
+        {
+          "lookback_segment_sessions": 1,
+          "segment_day_index": 0,
+          "segment_id": "THURAYA::SEG0004",
+          "trade_date": "2025-07-26"
+        },
+        {
+          "lookback_segment_sessions": 1,
+          "segment_day_index": 0,
+          "segment_id": "THURAYA::SEG0005",
+          "trade_date": "2025-07-27"
+        }
+      ],
+      "window_rows": [
+        {
+          "lookback_fallback_sessions": 82,
+          "lookback_long_sessions": 122,
+          "lookback_segment_sessions": 3,
+          "masked_context_flag": false,
+          "phase_after": "READINESS_LIMITED",
+          "phase_before": "READINESS_LIMITED",
+          "readiness_state": "READINESS_LIMITED",
+          "readiness_transition_event": "NO_TRANSITION",
+          "readiness_transition_from_state": "READINESS_LIMITED",
+          "readiness_transition_to_state": "READINESS_LIMITED",
+          "segment_day_index": 2,
+          "segment_id": "THURAYA::SEG0001",
+          "segment_restart_flag": false,
+          "symbol": "THURAYA",
+          "trade_date": "2025-07-23",
+          "triggering_predicate_values": {
+            "READINESS_FALLBACK_ELIGIBLE": 82.0,
+            "READINESS_LONG_LOOKBACK_READY": 122.0,
+            "READINESS_SEGMENT_RESTART_READY": 3.0
+          }
+        },
+        {
+          "lookback_fallback_sessions": 80,
+          "lookback_long_sessions": 120,
+          "lookback_segment_sessions": 1,
+          "masked_context_flag": true,
+          "phase_after": "READINESS_LIMITED",
+          "phase_before": "READINESS_LIMITED",
+          "readiness_state": "READINESS_LIMITED",
+          "readiness_transition_event": "NO_TRANSITION",
+          "readiness_transition_from_state": "READINESS_LIMITED",
+          "readiness_transition_to_state": "READINESS_LIMITED",
+          "segment_day_index": 0,
+          "segment_id": "THURAYA::SEG0002",
+          "segment_restart_flag": true,
+          "symbol": "THURAYA",
+          "trade_date": "2025-07-24",
+          "triggering_predicate_values": {
+            "READINESS_FALLBACK_ELIGIBLE": 80.0,
+            "READINESS_LONG_LOOKBACK_READY": 120.0,
+            "READINESS_SEGMENT_RESTART_READY": 1.0
+          }
+        },
+        {
+          "lookback_fallback_sessions": 80,
+          "lookback_long_sessions": 120,
+          "lookback_segment_sessions": 1,
+          "masked_context_flag": true,
+          "phase_after": "READINESS_LIMITED",
+          "phase_before": "READINESS_LIMITED",
+          "readiness_state": "READINESS_LIMITED",
+          "readiness_transition_event": "NO_TRANSITION",
+          "readiness_transition_from_state": "READINESS_LIMITED",
+          "readiness_transition_to_state": "READINESS_LIMITED",
+          "segment_day_index": 0,
+          "segment_id": "THURAYA::SEG0003",
+          "segment_restart_flag": true,
+          "symbol": "THURAYA",
+          "trade_date": "2025-07-25",
+          "triggering_predicate_values": {
+            "READINESS_FALLBACK_ELIGIBLE": 80.0,
+            "READINESS_LONG_LOOKBACK_READY": 120.0,
+            "READINESS_SEGMENT_RESTART_READY": 1.0
+          }
+        },
+        {
+          "lookback_fallback_sessions": 80,
+          "lookback_long_sessions": 120,
+          "lookback_segment_sessions": 1,
+          "masked_context_flag": true,
+          "phase_after": "READINESS_LIMITED",
+          "phase_before": "READINESS_LIMITED",
+          "readiness_state": "READINESS_LIMITED",
+          "readiness_transition_event": "NO_TRANSITION",
+          "readiness_transition_from_state": "READINESS_LIMITED",
+          "readiness_transition_to_state": "READINESS_LIMITED",
+          "segment_day_index": 0,
+          "segment_id": "THURAYA::SEG0004",
+          "segment_restart_flag": true,
+          "symbol": "THURAYA",
+          "trade_date": "2025-07-26",
+          "triggering_predicate_values": {
+            "READINESS_FALLBACK_ELIGIBLE": 80.0,
+            "READINESS_LONG_LOOKBACK_READY": 120.0,
+            "READINESS_SEGMENT_RESTART_READY": 1.0
+          }
+        },
+        {
+          "lookback_fallback_sessions": 80,
+          "lookback_long_sessions": 120,
+          "lookback_segment_sessions": 1,
+          "masked_context_flag": true,
+          "phase_after": "READINESS_LIMITED",
+          "phase_before": "READINESS_LIMITED",
+          "readiness_state": "READINESS_LIMITED",
+          "readiness_transition_event": "NO_TRANSITION",
+          "readiness_transition_from_state": "READINESS_LIMITED",
+          "readiness_transition_to_state": "READINESS_LIMITED",
+          "segment_day_index": 0,
+          "segment_id": "THURAYA::SEG0005",
+          "segment_restart_flag": true,
+          "symbol": "THURAYA",
+          "trade_date": "2025-07-27",
+          "triggering_predicate_values": {
+            "READINESS_FALLBACK_ELIGIBLE": 80.0,
+            "READINESS_LONG_LOOKBACK_READY": 120.0,
+            "READINESS_SEGMENT_RESTART_READY": 1.0
+          }
+        },
+        {
+          "lookback_fallback_sessions": 83,
+          "lookback_long_sessions": 123,
+          "lookback_segment_sessions": 4,
+          "masked_context_flag": false,
+          "phase_after": "READINESS_LIMITED",
+          "phase_before": "READINESS_LIMITED",
+          "readiness_state": "READINESS_LIMITED",
+          "readiness_transition_event": "NO_TRANSITION",
+          "readiness_transition_from_state": "READINESS_LIMITED",
+          "readiness_transition_to_state": "READINESS_LIMITED",
+          "segment_day_index": 3,
+          "segment_id": "THURAYA::SEG0001",
+          "segment_restart_flag": false,
+          "symbol": "THURAYA",
+          "trade_date": "2025-07-28",
+          "triggering_predicate_values": {
+            "READINESS_FALLBACK_ELIGIBLE": 80.0,
+            "READINESS_LONG_LOOKBACK_READY": 120.0,
+            "READINESS_SEGMENT_RESTART_READY": 1.0
+          }
+        }
+      ]
+    }
+  },
+  "version_id": "R14B_MODULE_B_TEST_EVIDENCE_V2"
+}

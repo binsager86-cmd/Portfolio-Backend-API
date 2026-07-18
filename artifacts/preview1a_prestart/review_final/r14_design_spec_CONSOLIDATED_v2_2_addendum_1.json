@@ -1,0 +1,38 @@
+{
+  "version_id": "r14_design_spec_CONSOLIDATED_v2_2_addendum_1",
+  "status": "owner_authorized_module_code_remediation",
+  "authority": "append_only_addendum_to_r14_design_spec_CONSOLIDATED_v2_2",
+  "motivating_defect_record": {
+    "artifact": "artifacts/preview1a_prestart/review_final/r14e_module_e_test_evidence_v5.json",
+    "finding": "65 of 65 INTENT_FORMED rows across SANAM and TIJARA fell through to execution_state=NONE because confirmed first-touch intents did not activate deferred intent and had no direct execution branch."
+  },
+  "confirmed_direct_entry": {
+    "trigger": [
+      "candidate_intent.intent_state == INTENT_FORMED",
+      "base_state in {BASE_VALID, BASE_FROZEN}",
+      "confirmation_state == CONFIRMED",
+      "no active deferred intent already exists",
+      "no veto is active"
+    ],
+    "precedence": [
+      "existing deferred/early/scale paths unchanged",
+      "existing deferred path takes precedence when a deferred intent is already active"
+    ],
+    "action": {
+      "execution_state": "EXECUTE_CONFIRMED_DIRECT",
+      "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+      "target_fraction": 1.0,
+      "pilot_size_fraction": 0.0,
+      "participation_cap_pct": 0.10,
+      "chase_advisory": "evaluated",
+      "time_stop_sessions": null,
+      "position_governance": "invalidation_plus_exit_lifecycle"
+    },
+    "non_goals": [
+      "do not alter deferred intent formation",
+      "do not alter early pilot sizing",
+      "do not alter confirmed add scaling from existing deferred/early state",
+      "do not tune avoid logic to match historical records"
+    ]
+  }
+}

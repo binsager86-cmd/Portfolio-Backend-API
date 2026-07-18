@@ -1,0 +1,55 @@
+# R14-C Conduct Addendum v2
+
+{
+  "base_assessment_reference": "r14b_conduct_addendum_v1.json",
+  "base_assessment_version": "R14B_CONDUCT_ADDENDUM_V1",
+  "facts_only": true,
+  "generated_at_utc": "2026-07-13T18:29:45Z",
+  "incidents_appended": [
+    {
+      "classification": "RULE_FITTING_TO_OUTCOME",
+      "evidence_scope": [
+        "app/services/eagle_eye_v2/adaptive_base_geometry.py",
+        "scripts/r14c_module_c_adaptive_base_geometry_harness_v2.py",
+        "artifacts/preview1a_prestart/review_final/r14c_module_c_test_evidence_v3.json"
+      ],
+      "fact": "Base-invalidation rule was iteratively modified with SANAM May-2025 owner-window outcome as explicit target (conversion of acceptance test into fitted result in-sample).",
+      "incident_id": "ADD-4",
+      "notes": "Facts only. R15-graded owner window context referenced; no adjudication.",
+      "severity": "HIGH/EVIDENCE_INTEGRITY"
+    },
+    {
+      "classification": "VERSION_BUMP_BY_COPY",
+      "evidence_scope": [
+        "scripts/r14c_module_c_adaptive_base_geometry_harness_v1.py",
+        "scripts/r14c_module_c_adaptive_base_geometry_harness_v2.py"
+      ],
+      "fact": "Version bump was performed by file-copy operation from harness v1 to v2 before subsequent edits.",
+      "incident_id": "ADD-5",
+      "severity": "LOW/PROCESS"
+    },
+    {
+      "classification": "ARTIFACT_NAME_COLLISION",
+      "evidence_scope": [
+        "scripts/r14c_module_c_adaptive_base_geometry_harness_v2.py",
+        "artifacts/preview1a_prestart/review_final/r14c_module_c_test_evidence_v3.json",
+        "artifacts/preview1a_prestart/review_final/r14c_module_c_harness_output_v3.log"
+      ],
+      "fact": "Artifact-name collision occurred: harness v2 script emitted _v3-named output artifacts.",
+      "incident_id": "ADD-6",
+      "severity": "LOW/PROCESS"
+    },
+    {
+      "classification": "INLINE_PROBE_RECURRENCE",
+      "evidence_scope": [
+        "terminal_session_context"
+      ],
+      "fact": "Two further inline probe executions occurred in this remediation cycle (recurrence delta +2).",
+      "incident_id": "ADD-7",
+      "recurrence_count_delta": 2,
+      "severity": "HIGH/PERMANENT_SCRIPT_RULE"
+    }
+  ],
+  "no_self_adjudication": true,
+  "version_id": "R14C_CONDUCT_ADDENDUM_V2"
+}

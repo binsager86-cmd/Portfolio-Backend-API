@@ -1,0 +1,335 @@
+{
+  "architecture_blueprint": {
+    "avoid_plane": "Preserved byte-compatible in authority",
+    "base_module": "Proposal B adaptive volatility-regime-aware base geometry with advancing current-valid base references",
+    "confirmation_core": "Proposal A accumulation-window flow confirmation",
+    "skeleton": "Proposal C stateful lifecycle, deferred intent, and full daily predicate telemetry",
+    "warmup_module": "Explicit readiness states and fallback behavior"
+  },
+  "authorization": {
+    "R14_A": "AUTHORIZED_DESIGN_ONLY",
+    "R14_B": "NOT_AUTHORIZED",
+    "R15": "NOT_AUTHORIZED"
+  },
+  "authorization_status": {
+    "R14_A": "AUTHORIZED",
+    "R14_B": "NOT_AUTHORIZED",
+    "R15": "NOT_AUTHORIZED"
+  },
+  "citations": {
+    "code_refs": [
+      "app/services/eagle_eye/scanner_service.py#L713",
+      "app/services/eagle_eye/scanner_service.py#L718",
+      "app/services/eagle_eye/scanner_service.py#L859",
+      "app/services/eagle_eye/scanner_service.py#L108",
+      "app/services/eagle_eye/scanner_service.py#L288",
+      "app/services/eagle_eye/scanner_service.py#L770"
+    ],
+    "findings_artifacts": [
+      "artifacts/preview1a_prestart/review_final/r13_findings_of_record_v1_1.md",
+      "artifacts/preview1a_prestart/review_final/r13_volume_arrival_audit_v1.json",
+      "artifacts/preview1a_prestart/review_final/r13_set_a_causal_attribution_v3.json"
+    ]
+  },
+  "final_probe_note": {
+    "design_response": "Advance references during confirmed accumulation and require full telemetry for any retained blocking layer.",
+    "source": "artifacts/preview1a_prestart/review_final/r13_f8_forensic_v1_1.json",
+    "summary": "Identified blocker on 2025-05-18: M5_liquidity"
+  },
+  "finding_response_map": {
+    "F1": "Solved by FlowConfirmationEngine replacing same-bar multiple as sole confirmation core.",
+    "F2": "Solved by AdaptiveBaseGeometry replacing fixed-width geometry with regime-aware geometry.",
+    "F3": "Addressed by LifecycleIntentRouter and persistent base references; to be validated in R15.",
+    "F4": "Solved by WarmupReadinessEngine with explicit readiness states and fallback.",
+    "F5": "Preserved by AvoidAuthorityPlane retaining avoid veto semantics.",
+    "F6": "Explained by moving emphasis from veto gates to candidate-intent and confirmation persistence.",
+    "F7": "Solved by PredicateTelemetryLedger persisting every term every day.",
+    "F8": "Tested by combining adaptive base geometry with persistent base references and deferred intent.",
+    "F8a": "Solved by persistent base references plus readiness-aware base freeze so missing-reference disarm cannot persist silently.",
+    "F8b": "Solved by advancing current-valid references during confirmed accumulation and referencing chase guard to the current valid reference, not the original freeze.",
+    "F8c": "Not established by sealed evidence; however, any remaining veto-capable post-mandatory authority must be fully telemetried as named predicates if retained."
+  },
+  "governing_constraints": {
+    "all_thresholds_named_config_parameters_only": true,
+    "no_engine_code_changes_in_this_batch": true,
+    "no_threshold_values_in_spec": true,
+    "set_b_exposure_prohibited_until_r14_b_gate": true,
+    "unauditable_blocking_authority_prohibited": true
+  },
+  "interfaces": {
+    "base_reference": [
+      "base_reference_id",
+      "base_high_ref",
+      "base_low_ref",
+      "base_origin_date",
+      "base_validity_state",
+      "base_retirement_reason"
+    ],
+    "candidate_intent": [
+      "intent_id",
+      "symbol",
+      "trade_date",
+      "phase_state",
+      "confirmation_state",
+      "intent_reason",
+      "base_reference_id"
+    ],
+    "normalized_day_payload": [
+      "trade_date",
+      "symbol",
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume",
+      "value_kwd",
+      "indicator_terms",
+      "segment_id",
+      "segment_day_index",
+      "masked_context"
+    ],
+    "veto_record": [
+      "intent_id",
+      "veto_plane",
+      "veto_reason",
+      "blocking_term_name",
+      "blocking_term_value"
+    ]
+  },
+  "module_boundaries": [
+    {
+      "inputs": [
+        "ohlcv_day",
+        "indicator_day",
+        "segment_context",
+        "calendar_context"
+      ],
+      "module": "DataSurfaceAdapter",
+      "outputs": [
+        "normalized_day_payload",
+        "readiness_context"
+      ],
+      "responsibility": "Provide day-normalized input payloads and segment-aware readiness context."
+    },
+    {
+      "inputs": [
+        "normalized_day_payload",
+        "coverage_history",
+        "segment_restart_flag"
+      ],
+      "module": "WarmupReadinessEngine",
+      "outputs": [
+        "readiness_state",
+        "readiness_reason",
+        "readiness_transition_event"
+      ],
+      "responsibility": "Determine readiness state, warmup fallback, and reset semantics for new listings and segment restarts."
+    },
+    {
+      "inputs": [
+        "normalized_day_payload",
+        "readiness_state",
+        "price_history_window",
+        "volatility_regime_state"
+      ],
+      "module": "AdaptiveBaseGeometry",
+      "outputs": [
+        "base_state",
+        "base_transition_terms",
+        "base_reference"
+      ],
+      "responsibility": "Detect, freeze, ratchet, invalidate, and retire bases using regime-aware geometry."
+    },
+    {
+      "inputs": [
+        "normalized_day_payload",
+        "base_reference",
+        "flow_history_window",
+        "structure_terms"
+      ],
+      "module": "FlowConfirmationEngine",
+      "outputs": [
+        "confirmation_state",
+        "confirmation_terms",
+        "candidate_intent"
+      ],
+      "responsibility": "Score confirmation using accumulation-window flow evidence plus breakout structure."
+    },
+    {
+      "inputs": [
+        "candidate_intent",
+        "base_state",
+        "confirmation_state",
+        "risk_budget_state"
+      ],
+      "module": "LifecycleIntentRouter",
+      "outputs": [
+        "execution_intent",
+        "deferred_intent",
+        "veto_record"
+      ],
+      "responsibility": "Persist candidate intent, survive delayed volume arrival, and hand off to risk/capacity layer."
+    },
+    {
+      "inputs": [
+        "normalized_day_payload",
+        "trend_state"
+      ],
+      "module": "AvoidAuthorityPlane",
+      "outputs": [
+        "avoid_state",
+        "avoid_veto"
+      ],
+      "responsibility": "Retain current avoid authority semantics as a veto plane on top of the architecture."
+    },
+    {
+      "inputs": [
+        "all_module_terms",
+        "state_transitions",
+        "execution_outcomes"
+      ],
+      "module": "PredicateTelemetryLedger",
+      "outputs": [
+        "daily_term_row",
+        "state_snapshot_row",
+        "audit_row"
+      ],
+      "responsibility": "Persist every predicate term, every day, for every symbol."
+    }
+  ],
+  "r15_acceptance_criteria": {
+    "BPCC": [
+      "The 2025-04-22 near-miss cluster yields a candidate intent or confirmed entry without requiring a same-bar multiple shock.",
+      "M2-only blockade frequency materially declines in the owner window."
+    ],
+    "MABANEE": [
+      "The decline interval remains avoided with zero long entries during the avoid-dominant regime.",
+      "Avoid veto authority remains sufficient to block downtrend participation."
+    ],
+    "SANAM": [
+      "The 2025-05-08 through 2025-05-21 window produces at least one confirmed entry event.",
+      "Width-rule dominance in the owner window drops below one-quarter of blocking rows.",
+      "The 2025-05-18 session specifically must produce BREAKOUT_CONFIRMED or an explicit, fully-telemetried veto naming its blocking term.",
+      "No stale original-freeze chase guard may block a day where the current valid reference has advanced through confirmed accumulation."
+    ],
+    "TIJARA": [
+      "PHASE_PROGRESSED_NO_CANDIDATE share over 2024-2026 falls below one-quarter of trading days.",
+      "At least one owner-window breakout cluster produces BREAKOUT_CONFIRMED or DEFERRED_INTENT instead of persistent BREAKOUT_WATCH stagnation.",
+      "At least one 2025 high-volume cluster must operate with an explicit valid base reference rather than unresolved M1 disarm."
+    ],
+    "ZAIN": [
+      "Owner-window no-candidate share falls below one-third of trading days.",
+      "At least one breakout-above-owner-threshold cluster yields BREAKOUT_CONFIRMED or DEFERRED_INTENT."
+    ]
+  },
+  "state_machine": {
+    "named_predicate_terms": {
+      "accumulation": [
+        "FLOW_OBV_SLOPE_OK",
+        "FLOW_ANV_SLOPE_OK",
+        "FLOW_ACCUMULATION_DIVERGENCE_OK",
+        "ACCUMULATION_CONTEXT_OK"
+      ],
+      "avoid": [
+        "AVOID_CONDITION_ACTIVE"
+      ],
+      "base": [
+        "BASE_GEOMETRY_WIDTH_OK",
+        "BASE_DWELL_OK",
+        "BASE_RANGE_INCLUSION_OK",
+        "BASE_VOLATILITY_REGIME_OK"
+      ],
+      "confirmation": [
+        "CONFIRM_FLOW_CORE_OK",
+        "CONFIRM_STRUCTURE_OK",
+        "CONFIRM_RELATIVE_VOLUME_CONTEXT_OK",
+        "CONFIRM_CHASE_GUARD_OK",
+        "CONFIRM_LIQUIDITY_OK"
+      ],
+      "lifecycle": [
+        "BASE_REFERENCE_PRESENT",
+        "BASE_REFERENCE_VALID",
+        "DEFERRED_INTENT_ACTIVE",
+        "DEFERRED_INTENT_EXPIRY_OK",
+        "BASE_REFERENCE_ADVANCE_OK",
+        "CHASE_GUARD_CURRENT_REF_OK"
+      ],
+      "warmup": [
+        "READINESS_LONG_LOOKBACK_READY",
+        "READINESS_SEGMENT_RESTART_READY",
+        "READINESS_FALLBACK_ELIGIBLE"
+      ],
+      "watch": [
+        "WATCH_NEAR_BASE_OK",
+        "WATCH_FLOW_PERSISTENCE_OK",
+        "WATCH_STRUCTURE_OK"
+      ]
+    },
+    "states": [
+      "READINESS_PENDING",
+      "READINESS_LIMITED",
+      "NEUTRAL",
+      "BASE_FORMING",
+      "ACCUMULATION",
+      "BREAKOUT_WATCH",
+      "BREAKOUT_CONFIRMED",
+      "MARKUP",
+      "DISTRIBUTION_WARNING",
+      "EXIT",
+      "AVOID",
+      "DEFERRED_INTENT"
+    ],
+    "transition_principles": [
+      "All transitions are gated by named predicates only.",
+      "All threshold-bearing terms are represented by named configuration parameters, not literal values.",
+      "Readiness states are explicit and segment-aware.",
+      "Base references persist as first-class state objects.",
+      "Candidate intent may persist independently of immediate execution eligibility."
+    ]
+  },
+  "supersedes": "R14_DESIGN_SPEC_V1",
+  "telemetry_schema": {
+    "daily_state_snapshot": [
+      "symbol",
+      "trade_date",
+      "readiness_state",
+      "phase_state",
+      "base_reference_snapshot",
+      "intent_snapshot",
+      "avoid_state",
+      "risk_budget_state"
+    ],
+    "daily_term_row": [
+      "symbol",
+      "trade_date",
+      "segment_id",
+      "phase_before",
+      "phase_after",
+      "readiness_state",
+      "base_reference_id",
+      "intent_id",
+      "predicate_namespace",
+      "predicate_name",
+      "predicate_value",
+      "predicate_threshold_parameter",
+      "predicate_pass",
+      "recoverability_state",
+      "recoverability_reason",
+      "source_payload_fields",
+      "base_reference_version",
+      "base_reference_origin",
+      "base_reference_current_flag"
+    ],
+    "execution_outcome_row": [
+      "symbol",
+      "trade_date",
+      "candidate_intent_state",
+      "execution_state",
+      "veto_plane",
+      "veto_reason",
+      "opened_trade_flag",
+      "trade_id"
+    ]
+  },
+  "version_id": "R14_DESIGN_SPEC_V1_1"
+}

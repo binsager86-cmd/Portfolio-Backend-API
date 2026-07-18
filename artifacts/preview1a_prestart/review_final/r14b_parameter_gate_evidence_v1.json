@@ -1,0 +1,1446 @@
+{
+  "agent_ratification": "NONE",
+  "blocked_modules_pending_owner_ratification": [
+    "module_e",
+    "module_f",
+    "module_g"
+  ],
+  "facts_only": true,
+  "flow_core_composition_analysis": {
+    "definitions": {
+      "cmf_floor_core": "(obv_slope>=0.10 OR anv_slope>=0.10 OR accumulation_divergence) AND cmf_10>=0.05",
+      "forward_return_horizon_sessions": 60,
+      "obv_anv_slope_core": "obv_slope>=0.10 OR anv_slope>=0.10"
+    },
+    "distribution": {
+      "cmf_floor_core": {
+        "days_passing": 38858,
+        "days_passing_pct": 28.114983612013514,
+        "days_total": 138211,
+        "median_fwd60_fail": 0.006756756756756799,
+        "median_fwd60_pass": 0.0,
+        "median_fwd60_uplift_pass_minus_fail": -0.006756756756756799,
+        "per_tier": {
+          "HIGH": {
+            "days_passing": 4433,
+            "days_passing_pct": 25.463840542248263,
+            "days_total": 17409,
+            "median_fwd60_fail": -0.0016694490818029983,
+            "median_fwd60_pass": 0.0029239766081872176,
+            "median_fwd60_uplift_pass_minus_fail": 0.004593425689990216
+          },
+          "LOW": {
+            "days_passing": 25374,
+            "days_passing_pct": 29.378936643201186,
+            "days_total": 86368,
+            "median_fwd60_fail": 0.012072434607645732,
+            "median_fwd60_pass": 0.0,
+            "median_fwd60_uplift_pass_minus_fail": -0.012072434607645732
+          },
+          "MID": {
+            "days_passing": 9051,
+            "days_passing_pct": 26.28506708485799,
+            "days_total": 34434,
+            "median_fwd60_fail": 0.0011123470522802492,
+            "median_fwd60_pass": -0.013100436681222738,
+            "median_fwd60_uplift_pass_minus_fail": -0.014212783733502987
+          }
+        },
+        "positive_fwd60_rate_diff_pass_minus_fail": -2.436973326848772,
+        "positive_fwd60_rate_fail": 51.453906776846196,
+        "positive_fwd60_rate_pass": 49.016933449997424
+      },
+      "obv_anv_slope_core": {
+        "days_passing": 75741,
+        "days_passing_pct": 54.80099268509743,
+        "days_total": 138211,
+        "median_fwd60_fail": 0.013513513513513598,
+        "median_fwd60_pass": -0.0034364261168384758,
+        "median_fwd60_uplift_pass_minus_fail": -0.016949939630352073,
+        "per_tier": {
+          "HIGH": {
+            "days_passing": 9856,
+            "days_passing_pct": 56.61439485323683,
+            "days_total": 17409,
+            "median_fwd60_fail": 0.0013812154696133394,
+            "median_fwd60_pass": -0.002807085280235766,
+            "median_fwd60_uplift_pass_minus_fail": -0.004188300749849105
+          },
+          "LOW": {
+            "days_passing": 46505,
+            "days_passing_pct": 53.84517413856984,
+            "days_total": 86368,
+            "median_fwd60_fail": 0.018018018018018056,
+            "median_fwd60_pass": 0.0,
+            "median_fwd60_uplift_pass_minus_fail": -0.018018018018018056
+          },
+          "MID": {
+            "days_passing": 19380,
+            "days_passing_pct": 56.28158215717024,
+            "days_total": 34434,
+            "median_fwd60_fail": 0.01208703443976944,
+            "median_fwd60_pass": -0.014674412866467756,
+            "median_fwd60_uplift_pass_minus_fail": -0.026761447306237196
+          }
+        },
+        "positive_fwd60_rate_diff_pass_minus_fail": -5.277650992073248,
+        "positive_fwd60_rate_fail": 53.660957259484555,
+        "positive_fwd60_rate_pass": 48.38330626741131
+      },
+      "sample_count": 138211
+    },
+    "flow_core_lag_citations": {
+      "finding_ids": [
+        "FLOW_CORE_LAG",
+        "BPCC_STRUCTURE_CHAIN"
+      ],
+      "source": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14d_parameter_gate_findings_v2.json",
+      "verbatim_extract": [
+        {
+          "fact": "During SANAM quiet accumulation (2025-05-05..2025-05-14), OBV/ANV slopes and accumulation context passed while CMF-based flow-core stayed negative and failed; in run1 confirmation appeared post-markup and in compliant run2 confirmations were absent due to retired base-state chain.",
+          "finding_id": "FLOW_CORE_LAG",
+          "gate_implication": "Parameter gate must weigh slope-based accumulation evidence vs CMF-floor composition lag.",
+          "post_markup_points": [
+            {
+              "base_state": "BASE_RETIRED",
+              "confirm_flow_core": 0.11208870965264389,
+              "confirm_structure": 1.0,
+              "trade_date": "2025-05-15"
+            },
+            {
+              "base_state": "BASE_RETIRED",
+              "confirm_flow_core": 0.30886713453486847,
+              "confirm_structure": 1.0,
+              "trade_date": "2025-05-18"
+            },
+            {
+              "base_state": "BASE_RETIRED",
+              "confirm_flow_core": 0.22271371833162196,
+              "confirm_structure": 1.0,
+              "trade_date": "2025-05-19"
+            },
+            {
+              "base_state": "BASE_RETIRED",
+              "confirm_flow_core": 0.29967056287781285,
+              "confirm_structure": 1.0,
+              "trade_date": "2025-05-20"
+            },
+            {
+              "base_state": "BASE_RETIRED",
+              "confirm_flow_core": 0.15972783798692086,
+              "confirm_structure": 1.0,
+              "trade_date": "2025-05-21"
+            },
+            {
+              "base_state": "BASE_RETIRED",
+              "confirm_flow_core": 0.11392250551163166,
+              "confirm_structure": 1.0,
+              "trade_date": "2025-05-22"
+            }
+          ],
+          "quiet_window_points": [
+            {
+              "acc_ctx": 1.0,
+              "confirm_flow_core": -0.48555564005530627,
+              "flow_anv": 610.8374338624392,
+              "flow_obv": 0.5787771873177945,
+              "trade_date": "2025-05-05"
+            },
+            {
+              "acc_ctx": 1.0,
+              "confirm_flow_core": -0.5160647026576999,
+              "flow_anv": 603.3519293808811,
+              "flow_obv": 0.5713740709418194,
+              "trade_date": "2025-05-06"
+            },
+            {
+              "acc_ctx": 1.0,
+              "confirm_flow_core": -0.5466278786629762,
+              "flow_anv": 582.2316314339874,
+              "flow_obv": 0.5503561412921087,
+              "trade_date": "2025-05-07"
+            },
+            {
+              "acc_ctx": 1.0,
+              "confirm_flow_core": -0.17011757795524743,
+              "flow_anv": 506.5664043184294,
+              "flow_obv": 0.47649917643471146,
+              "trade_date": "2025-05-08"
+            },
+            {
+              "acc_ctx": 1.0,
+              "confirm_flow_core": -0.2549522822100031,
+              "flow_anv": 471.7992523444526,
+              "flow_obv": 0.4433678597785264,
+              "trade_date": "2025-05-11"
+            },
+            {
+              "acc_ctx": 1.0,
+              "confirm_flow_core": -0.2996478804225496,
+              "flow_anv": 416.0596642015643,
+              "flow_obv": 0.39179073696459465,
+              "trade_date": "2025-05-12"
+            },
+            {
+              "acc_ctx": 1.0,
+              "confirm_flow_core": -0.022197482240240995,
+              "flow_anv": 392.6703048244482,
+              "flow_obv": 0.371903278076662,
+              "trade_date": "2025-05-13"
+            },
+            {
+              "acc_ctx": 1.0,
+              "confirm_flow_core": -0.26045574516668574,
+              "flow_anv": 329.1519987525321,
+              "flow_obv": 0.31309548590777553,
+              "trade_date": "2025-05-14"
+            }
+          ],
+          "severity": "PARAMETER_GATE"
+        },
+        {
+          "bpcc_points": [
+            {
+              "base_state": "BASE_RETIRED",
+              "confirm_chase_guard": 0.0,
+              "confirm_flow_core": 0.10913082281480561,
+              "confirm_relvol_ctx": 0.7063025728744122,
+              "confirm_structure": 0.0,
+              "current_liq_ok": 1,
+              "trade_date": "2025-04-15",
+              "trailing_liq_ok": 1
+            },
+            {
+              "base_state": "BASE_RETIRED",
+              "confirm_chase_guard": 0.0,
+              "confirm_flow_core": 0.11086382992066365,
+              "confirm_relvol_ctx": 1.1342046540597306,
+              "confirm_structure": 0.0,
+              "current_liq_ok": 1,
+              "trade_date": "2025-04-16",
+              "trailing_liq_ok": 1
+            },
+            {
+              "base_state": "BASE_RETIRED",
+              "confirm_chase_guard": 0.0,
+              "confirm_flow_core": 0.06797816748746399,
+              "confirm_relvol_ctx": 1.2246159113549087,
+              "confirm_structure": 0.0,
+              "current_liq_ok": 1,
+              "trade_date": "2025-04-17",
+              "trailing_liq_ok": 1
+            },
+            {
+              "base_state": "BASE_RETIRED",
+              "confirm_chase_guard": 0.0,
+              "confirm_flow_core": 0.08695545171153946,
+              "confirm_relvol_ctx": 0.9723294648589073,
+              "confirm_structure": 0.0,
+              "current_liq_ok": 1,
+              "trade_date": "2025-04-20",
+              "trailing_liq_ok": 1
+            },
+            {
+              "base_state": "BASE_RETIRED",
+              "confirm_chase_guard": 0.0,
+              "confirm_flow_core": 0.2539404287001087,
+              "confirm_relvol_ctx": 1.3074680833937549,
+              "confirm_structure": 0.0,
+              "current_liq_ok": 1,
+              "trade_date": "2025-04-21",
+              "trailing_liq_ok": 1
+            },
+            {
+              "base_state": "BASE_RETIRED",
+              "confirm_chase_guard": 0.0,
+              "confirm_flow_core": 0.4198962915250539,
+              "confirm_relvol_ctx": 2.1563101859019342,
+              "confirm_structure": 0.0,
+              "current_liq_ok": 1,
+              "trade_date": "2025-04-22",
+              "trailing_liq_ok": 1
+            },
+            {
+              "base_state": "BASE_RETIRED",
+              "confirm_chase_guard": 0.0,
+              "confirm_flow_core": 0.4574912553895283,
+              "confirm_relvol_ctx": 0.950042278878346,
+              "confirm_structure": 0.0,
+              "current_liq_ok": 1,
+              "trade_date": "2025-04-23",
+              "trailing_liq_ok": 1
+            },
+            {
+              "base_state": "BASE_RETIRED",
+              "confirm_chase_guard": 0.0,
+              "confirm_flow_core": 0.47779010650345793,
+              "confirm_relvol_ctx": 1.2975723053454176,
+              "confirm_structure": 0.0,
+              "current_liq_ok": 1,
+              "trade_date": "2025-04-24",
+              "trailing_liq_ok": 1
+            },
+            {
+              "base_state": "BASE_RETIRED",
+              "confirm_chase_guard": 0.0,
+              "confirm_flow_core": 0.6237540612447802,
+              "confirm_relvol_ctx": 0.275937622452503,
+              "confirm_structure": 0.0,
+              "current_liq_ok": 1,
+              "trade_date": "2025-04-27",
+              "trailing_liq_ok": 1
+            },
+            {
+              "base_state": "BASE_RETIRED",
+              "confirm_chase_guard": 0.0,
+              "confirm_flow_core": 0.5637980116463914,
+              "confirm_relvol_ctx": 0.529305227300787,
+              "confirm_structure": 0.0,
+              "current_liq_ok": 1,
+              "trade_date": "2025-04-28",
+              "trailing_liq_ok": 1
+            },
+            {
+              "base_state": "BASE_RETIRED",
+              "confirm_chase_guard": 0.0,
+              "confirm_flow_core": 0.5168240604052586,
+              "confirm_relvol_ctx": 0.9445322402321894,
+              "confirm_structure": 0.0,
+              "current_liq_ok": 1,
+              "trade_date": "2025-04-29",
+              "trailing_liq_ok": 1
+            },
+            {
+              "base_state": "BASE_RETIRED",
+              "confirm_chase_guard": 0.0,
+              "confirm_flow_core": 0.38315138209408345,
+              "confirm_relvol_ctx": 1.2468320595787763,
+              "confirm_structure": 0.0,
+              "current_liq_ok": 1,
+              "trade_date": "2025-04-30",
+              "trailing_liq_ok": 1
+            }
+          ],
+          "fact": "BPCC zero-composition remained dominated by structure/chase/relative-volume blockers while flow-core and liquidity stayed green; dependency on invalidation/base survival remains explicit in v2 where base_state is retired across owner days.",
+          "finding_id": "BPCC_STRUCTURE_CHAIN",
+          "gate_implication": "Resolve at parameter gate with compliant rerun data; base survival is the active dependency.",
+          "severity": "PARAMETER_GATE"
+        }
+      ]
+    }
+  },
+  "generated_at_utc": "2026-07-13T19:27:51Z",
+  "input_artifacts": {
+    "flow_findings": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14d_parameter_gate_findings_v2.json",
+    "freeze": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_parameter_freeze_v1.json",
+    "runtime_db": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r12_exam_surface_v4_5_runtime.db",
+    "runtime_db_sha256": "480e4186c17f2e4b20c3e8f2674f2f84c4bd4127eb25d5ca648d057a57bb037d",
+    "set_membership": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r13_gate_conflict_analysis_v1_2.json",
+    "tier_profile": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r13_universe_tier_profile_v1_2.json"
+  },
+  "invalidation_rule_gate_analysis": {
+    "grid_widening_policy": "Gate-proposed coverage-of-space widening only; no parameter selected from symbol outcomes.",
+    "registered_forms_evaluated": [
+      "CLOSE_BELOW_BASE_LOW_N",
+      "CLOSE_BELOW_BASE_LOW_BY_ATR_X_N",
+      "TIME_STALE_AND_FLOW_DECAY"
+    ],
+    "runs": [
+      {
+        "gate_proposed_grid_basis": "Coverage-of-space widening from prior registered values; not selected using any symbol outcome.",
+        "metrics": {
+          "overall": {
+            "base_count": 746,
+            "false_persistence_cost_proxy_pct": 0.0,
+            "false_persistence_observation_count": 15,
+            "median_base_lifetime_sessions": 37.5,
+            "survive_ge_100_pct": 34.45040214477212,
+            "survive_ge_40_pct": 49.32975871313673,
+            "survive_ge_60_pct": 41.8230563002681
+          },
+          "per_tier": {
+            "HIGH": {
+              "base_count": 118,
+              "false_persistence_cost_proxy_pct": 0.0,
+              "false_persistence_observation_count": 1,
+              "median_base_lifetime_sessions": 49.0,
+              "survive_ge_100_pct": 33.05084745762712,
+              "survive_ge_40_pct": 53.389830508474574,
+              "survive_ge_60_pct": 43.220338983050844
+            },
+            "LOW": {
+              "base_count": 416,
+              "false_persistence_cost_proxy_pct": 0.0,
+              "false_persistence_observation_count": 10,
+              "median_base_lifetime_sessions": 36.5,
+              "survive_ge_100_pct": 36.05769230769231,
+              "survive_ge_40_pct": 48.79807692307692,
+              "survive_ge_60_pct": 42.06730769230769
+            },
+            "MID": {
+              "base_count": 212,
+              "false_persistence_cost_proxy_pct": 0.0,
+              "false_persistence_observation_count": 4,
+              "median_base_lifetime_sessions": 33.5,
+              "survive_ge_100_pct": 32.075471698113205,
+              "survive_ge_40_pct": 48.113207547169814,
+              "survive_ge_60_pct": 40.56603773584906
+            }
+          }
+        },
+        "params": {
+          "n_sessions": 2
+        },
+        "rule_form": "CLOSE_BELOW_BASE_LOW_N"
+      },
+      {
+        "gate_proposed_grid_basis": "Coverage-of-space widening from prior registered values; not selected using any symbol outcome.",
+        "metrics": {
+          "overall": {
+            "base_count": 645,
+            "false_persistence_cost_proxy_pct": 0.0,
+            "false_persistence_observation_count": 18,
+            "median_base_lifetime_sessions": 53.0,
+            "survive_ge_100_pct": 39.53488372093023,
+            "survive_ge_40_pct": 55.81395348837209,
+            "survive_ge_60_pct": 46.82170542635659
+          },
+          "per_tier": {
+            "HIGH": {
+              "base_count": 103,
+              "false_persistence_cost_proxy_pct": 0.0,
+              "false_persistence_observation_count": 1,
+              "median_base_lifetime_sessions": 56.0,
+              "survive_ge_100_pct": 36.89320388349515,
+              "survive_ge_40_pct": 58.25242718446602,
+              "survive_ge_60_pct": 48.54368932038835
+            },
+            "LOW": {
+              "base_count": 355,
+              "false_persistence_cost_proxy_pct": 0.0,
+              "false_persistence_observation_count": 13,
+              "median_base_lifetime_sessions": 53.0,
+              "survive_ge_100_pct": 42.25352112676056,
+              "survive_ge_40_pct": 55.774647887323944,
+              "survive_ge_60_pct": 47.32394366197183
+            },
+            "MID": {
+              "base_count": 187,
+              "false_persistence_cost_proxy_pct": 0.0,
+              "false_persistence_observation_count": 4,
+              "median_base_lifetime_sessions": 51.0,
+              "survive_ge_100_pct": 35.82887700534759,
+              "survive_ge_40_pct": 54.54545454545455,
+              "survive_ge_60_pct": 44.919786096256686
+            }
+          }
+        },
+        "params": {
+          "n_sessions": 3
+        },
+        "rule_form": "CLOSE_BELOW_BASE_LOW_N"
+      },
+      {
+        "gate_proposed_grid_basis": "Coverage-of-space widening from prior registered values; not selected using any symbol outcome.",
+        "metrics": {
+          "overall": {
+            "base_count": 534,
+            "false_persistence_cost_proxy_pct": 3.0303030303030303,
+            "false_persistence_observation_count": 33,
+            "median_base_lifetime_sessions": 89.5,
+            "survive_ge_100_pct": 48.50187265917603,
+            "survive_ge_40_pct": 65.54307116104869,
+            "survive_ge_60_pct": 55.99250936329588
+          },
+          "per_tier": {
+            "HIGH": {
+              "base_count": 86,
+              "false_persistence_cost_proxy_pct": 0.0,
+              "false_persistence_observation_count": 1,
+              "median_base_lifetime_sessions": 67.5,
+              "survive_ge_100_pct": 45.348837209302324,
+              "survive_ge_40_pct": 65.11627906976744,
+              "survive_ge_60_pct": 54.651162790697676
+            },
+            "LOW": {
+              "base_count": 290,
+              "false_persistence_cost_proxy_pct": 4.166666666666667,
+              "false_persistence_observation_count": 24,
+              "median_base_lifetime_sessions": 114.5,
+              "survive_ge_100_pct": 51.724137931034484,
+              "survive_ge_40_pct": 67.24137931034483,
+              "survive_ge_60_pct": 57.241379310344826
+            },
+            "MID": {
+              "base_count": 158,
+              "false_persistence_cost_proxy_pct": 0.0,
+              "false_persistence_observation_count": 8,
+              "median_base_lifetime_sessions": 74.5,
+              "survive_ge_100_pct": 44.30379746835443,
+              "survive_ge_40_pct": 62.65822784810127,
+              "survive_ge_60_pct": 54.43037974683544
+            }
+          }
+        },
+        "params": {
+          "n_sessions": 5
+        },
+        "rule_form": "CLOSE_BELOW_BASE_LOW_N"
+      },
+      {
+        "gate_proposed_grid_basis": "Coverage-of-space widening from prior registered values; not selected using any symbol outcome.",
+        "metrics": {
+          "overall": {
+            "base_count": 468,
+            "false_persistence_cost_proxy_pct": 4.25531914893617,
+            "false_persistence_observation_count": 47,
+            "median_base_lifetime_sessions": 126.5,
+            "survive_ge_100_pct": 54.914529914529915,
+            "survive_ge_40_pct": 73.5042735042735,
+            "survive_ge_60_pct": 64.74358974358974
+          },
+          "per_tier": {
+            "HIGH": {
+              "base_count": 75,
+              "false_persistence_cost_proxy_pct": 0.0,
+              "false_persistence_observation_count": 2,
+              "median_base_lifetime_sessions": 89.0,
+              "survive_ge_100_pct": 49.333333333333336,
+              "survive_ge_40_pct": 73.33333333333333,
+              "survive_ge_60_pct": 65.33333333333333
+            },
+            "LOW": {
+              "base_count": 255,
+              "false_persistence_cost_proxy_pct": 6.25,
+              "false_persistence_observation_count": 32,
+              "median_base_lifetime_sessions": 183.0,
+              "survive_ge_100_pct": 59.21568627450981,
+              "survive_ge_40_pct": 74.50980392156863,
+              "survive_ge_60_pct": 65.88235294117646
+            },
+            "MID": {
+              "base_count": 138,
+              "false_persistence_cost_proxy_pct": 0.0,
+              "false_persistence_observation_count": 13,
+              "median_base_lifetime_sessions": 99.5,
+              "survive_ge_100_pct": 50.0,
+              "survive_ge_40_pct": 71.73913043478261,
+              "survive_ge_60_pct": 62.31884057971015
+            }
+          }
+        },
+        "params": {
+          "n_sessions": 8
+        },
+        "rule_form": "CLOSE_BELOW_BASE_LOW_N"
+      },
+      {
+        "gate_proposed_grid_basis": "Coverage-of-space widening from prior registered values; not selected using any symbol outcome.",
+        "metrics": {
+          "overall": {
+            "base_count": 411,
+            "false_persistence_cost_proxy_pct": 4.838709677419355,
+            "false_persistence_observation_count": 62,
+            "median_base_lifetime_sessions": 188.0,
+            "survive_ge_100_pct": 61.80048661800487,
+            "survive_ge_40_pct": 81.99513381995133,
+            "survive_ge_60_pct": 73.47931873479318
+          },
+          "per_tier": {
+            "HIGH": {
+              "base_count": 65,
+              "false_persistence_cost_proxy_pct": 0.0,
+              "false_persistence_observation_count": 3,
+              "median_base_lifetime_sessions": 141.0,
+              "survive_ge_100_pct": 58.46153846153846,
+              "survive_ge_40_pct": 84.61538461538461,
+              "survive_ge_60_pct": 78.46153846153847
+            },
+            "LOW": {
+              "base_count": 227,
+              "false_persistence_cost_proxy_pct": 5.0,
+              "false_persistence_observation_count": 40,
+              "median_base_lifetime_sessions": 269.0,
+              "survive_ge_100_pct": 65.63876651982379,
+              "survive_ge_40_pct": 84.14096916299559,
+              "survive_ge_60_pct": 74.00881057268722
+            },
+            "MID": {
+              "base_count": 119,
+              "false_persistence_cost_proxy_pct": 5.2631578947368425,
+              "false_persistence_observation_count": 19,
+              "median_base_lifetime_sessions": 143.0,
+              "survive_ge_100_pct": 56.30252100840336,
+              "survive_ge_40_pct": 76.47058823529412,
+              "survive_ge_60_pct": 69.74789915966386
+            }
+          }
+        },
+        "params": {
+          "n_sessions": 13
+        },
+        "rule_form": "CLOSE_BELOW_BASE_LOW_N"
+      },
+      {
+        "gate_proposed_grid_basis": "Coverage-of-space widening across ATR buffer distances; n_sessions held fixed for comparability.",
+        "metrics": {
+          "overall": {
+            "base_count": 617,
+            "false_persistence_cost_proxy_pct": 0.0,
+            "false_persistence_observation_count": 19,
+            "median_base_lifetime_sessions": 54.0,
+            "survive_ge_100_pct": 41.9773095623987,
+            "survive_ge_40_pct": 56.72609400324149,
+            "survive_ge_60_pct": 47.64991896272285
+          },
+          "per_tier": {
+            "HIGH": {
+              "base_count": 104,
+              "false_persistence_cost_proxy_pct": 0.0,
+              "false_persistence_observation_count": 1,
+              "median_base_lifetime_sessions": 57.0,
+              "survive_ge_100_pct": 38.46153846153846,
+              "survive_ge_40_pct": 56.73076923076923,
+              "survive_ge_60_pct": 48.07692307692308
+            },
+            "LOW": {
+              "base_count": 336,
+              "false_persistence_cost_proxy_pct": 0.0,
+              "false_persistence_observation_count": 13,
+              "median_base_lifetime_sessions": 56.0,
+              "survive_ge_100_pct": 44.642857142857146,
+              "survive_ge_40_pct": 57.73809523809524,
+              "survive_ge_60_pct": 48.51190476190476
+            },
+            "MID": {
+              "base_count": 177,
+              "false_persistence_cost_proxy_pct": 0.0,
+              "false_persistence_observation_count": 5,
+              "median_base_lifetime_sessions": 51.0,
+              "survive_ge_100_pct": 38.983050847457626,
+              "survive_ge_40_pct": 54.80225988700565,
+              "survive_ge_60_pct": 45.76271186440678
+            }
+          }
+        },
+        "params": {
+          "atr_mult": 0.5,
+          "n_sessions": 2
+        },
+        "rule_form": "CLOSE_BELOW_BASE_LOW_BY_ATR_X_N"
+      },
+      {
+        "gate_proposed_grid_basis": "Coverage-of-space widening across ATR buffer distances; n_sessions held fixed for comparability.",
+        "metrics": {
+          "overall": {
+            "base_count": 522,
+            "false_persistence_cost_proxy_pct": 0.0,
+            "false_persistence_observation_count": 20,
+            "median_base_lifetime_sessions": 93.5,
+            "survive_ge_100_pct": 49.23371647509578,
+            "survive_ge_40_pct": 66.47509578544062,
+            "survive_ge_60_pct": 57.088122605363985
+          },
+          "per_tier": {
+            "HIGH": {
+              "base_count": 88,
+              "false_persistence_cost_proxy_pct": 0.0,
+              "false_persistence_observation_count": 1,
+              "median_base_lifetime_sessions": 70.0,
+              "survive_ge_100_pct": 44.31818181818182,
+              "survive_ge_40_pct": 62.5,
+              "survive_ge_60_pct": 53.40909090909091
+            },
+            "LOW": {
+              "base_count": 284,
+              "false_persistence_cost_proxy_pct": 0.0,
+              "false_persistence_observation_count": 12,
+              "median_base_lifetime_sessions": 124.0,
+              "survive_ge_100_pct": 52.46478873239437,
+              "survive_ge_40_pct": 68.66197183098592,
+              "survive_ge_60_pct": 59.50704225352113
+            },
+            "MID": {
+              "base_count": 150,
+              "false_persistence_cost_proxy_pct": 0.0,
+              "false_persistence_observation_count": 7,
+              "median_base_lifetime_sessions": 80.5,
+              "survive_ge_100_pct": 46.0,
+              "survive_ge_40_pct": 64.66666666666667,
+              "survive_ge_60_pct": 54.666666666666664
+            }
+          }
+        },
+        "params": {
+          "atr_mult": 1.0,
+          "n_sessions": 2
+        },
+        "rule_form": "CLOSE_BELOW_BASE_LOW_BY_ATR_X_N"
+      },
+      {
+        "gate_proposed_grid_basis": "Coverage-of-space widening across ATR buffer distances; n_sessions held fixed for comparability.",
+        "metrics": {
+          "overall": {
+            "base_count": 450,
+            "false_persistence_cost_proxy_pct": 2.6315789473684212,
+            "false_persistence_observation_count": 38,
+            "median_base_lifetime_sessions": 143.5,
+            "survive_ge_100_pct": 56.888888888888886,
+            "survive_ge_40_pct": 74.44444444444444,
+            "survive_ge_60_pct": 65.55555555555556
+          },
+          "per_tier": {
+            "HIGH": {
+              "base_count": 73,
+              "false_persistence_cost_proxy_pct": 0.0,
+              "false_persistence_observation_count": 2,
+              "median_base_lifetime_sessions": 118.0,
+              "survive_ge_100_pct": 53.42465753424658,
+              "survive_ge_40_pct": 72.6027397260274,
+              "survive_ge_60_pct": 63.013698630136986
+            },
+            "LOW": {
+              "base_count": 244,
+              "false_persistence_cost_proxy_pct": 3.5714285714285716,
+              "false_persistence_observation_count": 28,
+              "median_base_lifetime_sessions": 213.5,
+              "survive_ge_100_pct": 61.47540983606557,
+              "survive_ge_40_pct": 77.8688524590164,
+              "survive_ge_60_pct": 69.67213114754098
+            },
+            "MID": {
+              "base_count": 133,
+              "false_persistence_cost_proxy_pct": 0.0,
+              "false_persistence_observation_count": 8,
+              "median_base_lifetime_sessions": 105.0,
+              "survive_ge_100_pct": 50.37593984962406,
+              "survive_ge_40_pct": 69.17293233082707,
+              "survive_ge_60_pct": 59.3984962406015
+            }
+          }
+        },
+        "params": {
+          "atr_mult": 1.5,
+          "n_sessions": 2
+        },
+        "rule_form": "CLOSE_BELOW_BASE_LOW_BY_ATR_X_N"
+      },
+      {
+        "gate_proposed_grid_basis": "Coverage-of-space widening for stale-age and flow-decay dimensions; no per-symbol optimization.",
+        "metrics": {
+          "overall": {
+            "base_count": 1788,
+            "false_persistence_cost_proxy_pct": 3.8461538461538463,
+            "false_persistence_observation_count": 260,
+            "median_base_lifetime_sessions": 64.0,
+            "survive_ge_100_pct": 21.252796420581657,
+            "survive_ge_40_pct": 96.02908277404921,
+            "survive_ge_60_pct": 55.42505592841163
+          },
+          "per_tier": {
+            "HIGH": {
+              "base_count": 257,
+              "false_persistence_cost_proxy_pct": 0.0,
+              "false_persistence_observation_count": 17,
+              "median_base_lifetime_sessions": 59.0,
+              "survive_ge_100_pct": 16.342412451361866,
+              "survive_ge_40_pct": 96.49805447470817,
+              "survive_ge_60_pct": 49.416342412451364
+            },
+            "LOW": {
+              "base_count": 1051,
+              "false_persistence_cost_proxy_pct": 5.113636363636363,
+              "false_persistence_observation_count": 176,
+              "median_base_lifetime_sessions": 66.0,
+              "survive_ge_100_pct": 24.548049476688867,
+              "survive_ge_40_pct": 95.43292102759277,
+              "survive_ge_60_pct": 57.18363463368221
+            },
+            "MID": {
+              "base_count": 480,
+              "false_persistence_cost_proxy_pct": 1.492537313432836,
+              "false_persistence_observation_count": 67,
+              "median_base_lifetime_sessions": 64.0,
+              "survive_ge_100_pct": 16.666666666666668,
+              "survive_ge_40_pct": 97.08333333333333,
+              "survive_ge_60_pct": 54.791666666666664
+            }
+          }
+        },
+        "params": {
+          "flow_decay_n": 5,
+          "min_age_sessions": 40
+        },
+        "rule_form": "TIME_STALE_AND_FLOW_DECAY"
+      },
+      {
+        "gate_proposed_grid_basis": "Coverage-of-space widening for stale-age and flow-decay dimensions; no per-symbol optimization.",
+        "metrics": {
+          "overall": {
+            "base_count": 563,
+            "false_persistence_cost_proxy_pct": 24.68354430379747,
+            "false_persistence_observation_count": 158,
+            "median_base_lifetime_sessions": 182.0,
+            "survive_ge_100_pct": 74.24511545293073,
+            "survive_ge_40_pct": 96.62522202486679,
+            "survive_ge_60_pct": 90.05328596802842
+          },
+          "per_tier": {
+            "HIGH": {
+              "base_count": 93,
+              "false_persistence_cost_proxy_pct": 7.142857142857143,
+              "false_persistence_observation_count": 14,
+              "median_base_lifetime_sessions": 150.0,
+              "survive_ge_100_pct": 67.74193548387096,
+              "survive_ge_40_pct": 96.7741935483871,
+              "survive_ge_60_pct": 86.02150537634408
+            },
+            "LOW": {
+              "base_count": 308,
+              "false_persistence_cost_proxy_pct": 31.428571428571427,
+              "false_persistence_observation_count": 105,
+              "median_base_lifetime_sessions": 197.0,
+              "survive_ge_100_pct": 75.97402597402598,
+              "survive_ge_40_pct": 96.75324675324676,
+              "survive_ge_60_pct": 92.20779220779221
+            },
+            "MID": {
+              "base_count": 162,
+              "false_persistence_cost_proxy_pct": 12.820512820512821,
+              "false_persistence_observation_count": 39,
+              "median_base_lifetime_sessions": 154.5,
+              "survive_ge_100_pct": 74.69135802469135,
+              "survive_ge_40_pct": 96.29629629629629,
+              "survive_ge_60_pct": 88.27160493827161
+            }
+          }
+        },
+        "params": {
+          "flow_decay_n": 8,
+          "min_age_sessions": 40
+        },
+        "rule_form": "TIME_STALE_AND_FLOW_DECAY"
+      },
+      {
+        "gate_proposed_grid_basis": "Coverage-of-space widening for stale-age and flow-decay dimensions; no per-symbol optimization.",
+        "metrics": {
+          "overall": {
+            "base_count": 172,
+            "false_persistence_cost_proxy_pct": 79.26829268292683,
+            "false_persistence_observation_count": 82,
+            "median_base_lifetime_sessions": 985.0,
+            "survive_ge_100_pct": 97.09302325581395,
+            "survive_ge_40_pct": 100.0,
+            "survive_ge_60_pct": 98.25581395348837
+          },
+          "per_tier": {
+            "HIGH": {
+              "base_count": 25,
+              "false_persistence_cost_proxy_pct": 45.45454545454545,
+              "false_persistence_observation_count": 11,
+              "median_base_lifetime_sessions": 769.0,
+              "survive_ge_100_pct": 96.0,
+              "survive_ge_40_pct": 100.0,
+              "survive_ge_60_pct": 100.0
+            },
+            "LOW": {
+              "base_count": 104,
+              "false_persistence_cost_proxy_pct": 90.56603773584905,
+              "false_persistence_observation_count": 53,
+              "median_base_lifetime_sessions": 1023.5,
+              "survive_ge_100_pct": 97.11538461538461,
+              "survive_ge_40_pct": 100.0,
+              "survive_ge_60_pct": 98.07692307692308
+            },
+            "MID": {
+              "base_count": 43,
+              "false_persistence_cost_proxy_pct": 66.66666666666667,
+              "false_persistence_observation_count": 18,
+              "median_base_lifetime_sessions": 992.0,
+              "survive_ge_100_pct": 97.67441860465117,
+              "survive_ge_40_pct": 100.0,
+              "survive_ge_60_pct": 97.67441860465117
+            }
+          }
+        },
+        "params": {
+          "flow_decay_n": 13,
+          "min_age_sessions": 40
+        },
+        "rule_form": "TIME_STALE_AND_FLOW_DECAY"
+      },
+      {
+        "gate_proposed_grid_basis": "Coverage-of-space widening for stale-age and flow-decay dimensions; no per-symbol optimization.",
+        "metrics": {
+          "overall": {
+            "base_count": 1453,
+            "false_persistence_cost_proxy_pct": 5.46875,
+            "false_persistence_observation_count": 256,
+            "median_base_lifetime_sessions": 83.0,
+            "survive_ge_100_pct": 33.10392291810048,
+            "survive_ge_40_pct": 95.87061252580867,
+            "survive_ge_60_pct": 94.76944253269099
+          },
+          "per_tier": {
+            "HIGH": {
+              "base_count": 202,
+              "false_persistence_cost_proxy_pct": 0.0,
+              "false_persistence_observation_count": 17,
+              "median_base_lifetime_sessions": 82.5,
+              "survive_ge_100_pct": 30.198019801980198,
+              "survive_ge_40_pct": 95.04950495049505,
+              "survive_ge_60_pct": 93.56435643564356
+            },
+            "LOW": {
+              "base_count": 858,
+              "false_persistence_cost_proxy_pct": 6.976744186046512,
+              "false_persistence_observation_count": 172,
+              "median_base_lifetime_sessions": 86.0,
+              "survive_ge_100_pct": 36.36363636363637,
+              "survive_ge_40_pct": 95.57109557109557,
+              "survive_ge_60_pct": 94.63869463869464
+            },
+            "MID": {
+              "base_count": 393,
+              "false_persistence_cost_proxy_pct": 2.985074626865672,
+              "false_persistence_observation_count": 67,
+              "median_base_lifetime_sessions": 79.0,
+              "survive_ge_100_pct": 27.480916030534353,
+              "survive_ge_40_pct": 96.94656488549619,
+              "survive_ge_60_pct": 95.67430025445293
+            }
+          }
+        },
+        "params": {
+          "flow_decay_n": 5,
+          "min_age_sessions": 60
+        },
+        "rule_form": "TIME_STALE_AND_FLOW_DECAY"
+      },
+      {
+        "gate_proposed_grid_basis": "Coverage-of-space widening for stale-age and flow-decay dimensions; no per-symbol optimization.",
+        "metrics": {
+          "overall": {
+            "base_count": 535,
+            "false_persistence_cost_proxy_pct": 24.074074074074073,
+            "false_persistence_observation_count": 162,
+            "median_base_lifetime_sessions": 194.0,
+            "survive_ge_100_pct": 79.06542056074767,
+            "survive_ge_40_pct": 96.82242990654206,
+            "survive_ge_60_pct": 96.6355140186916
+          },
+          "per_tier": {
+            "HIGH": {
+              "base_count": 85,
+              "false_persistence_cost_proxy_pct": 5.555555555555555,
+              "false_persistence_observation_count": 18,
+              "median_base_lifetime_sessions": 158.0,
+              "survive_ge_100_pct": 75.29411764705883,
+              "survive_ge_40_pct": 96.47058823529412,
+              "survive_ge_60_pct": 96.47058823529412
+            },
+            "LOW": {
+              "base_count": 296,
+              "false_persistence_cost_proxy_pct": 30.8411214953271,
+              "false_persistence_observation_count": 107,
+              "median_base_lifetime_sessions": 203.5,
+              "survive_ge_100_pct": 80.06756756756756,
+              "survive_ge_40_pct": 96.95945945945945,
+              "survive_ge_60_pct": 96.95945945945945
+            },
+            "MID": {
+              "base_count": 154,
+              "false_persistence_cost_proxy_pct": 13.513513513513514,
+              "false_persistence_observation_count": 37,
+              "median_base_lifetime_sessions": 167.0,
+              "survive_ge_100_pct": 79.22077922077922,
+              "survive_ge_40_pct": 96.75324675324676,
+              "survive_ge_60_pct": 96.1038961038961
+            }
+          }
+        },
+        "params": {
+          "flow_decay_n": 8,
+          "min_age_sessions": 60
+        },
+        "rule_form": "TIME_STALE_AND_FLOW_DECAY"
+      },
+      {
+        "gate_proposed_grid_basis": "Coverage-of-space widening for stale-age and flow-decay dimensions; no per-symbol optimization.",
+        "metrics": {
+          "overall": {
+            "base_count": 169,
+            "false_persistence_cost_proxy_pct": 79.26829268292683,
+            "false_persistence_observation_count": 82,
+            "median_base_lifetime_sessions": 992.0,
+            "survive_ge_100_pct": 99.40828402366864,
+            "survive_ge_40_pct": 100.0,
+            "survive_ge_60_pct": 100.0
+          },
+          "per_tier": {
+            "HIGH": {
+              "base_count": 25,
+              "false_persistence_cost_proxy_pct": 45.45454545454545,
+              "false_persistence_observation_count": 11,
+              "median_base_lifetime_sessions": 769.0,
+              "survive_ge_100_pct": 96.0,
+              "survive_ge_40_pct": 100.0,
+              "survive_ge_60_pct": 100.0
+            },
+            "LOW": {
+              "base_count": 102,
+              "false_persistence_cost_proxy_pct": 90.38461538461539,
+              "false_persistence_observation_count": 52,
+              "median_base_lifetime_sessions": 1030.0,
+              "survive_ge_100_pct": 100.0,
+              "survive_ge_40_pct": 100.0,
+              "survive_ge_60_pct": 100.0
+            },
+            "MID": {
+              "base_count": 42,
+              "false_persistence_cost_proxy_pct": 68.42105263157895,
+              "false_persistence_observation_count": 19,
+              "median_base_lifetime_sessions": 1008.0,
+              "survive_ge_100_pct": 100.0,
+              "survive_ge_40_pct": 100.0,
+              "survive_ge_60_pct": 100.0
+            }
+          }
+        },
+        "params": {
+          "flow_decay_n": 13,
+          "min_age_sessions": 60
+        },
+        "rule_form": "TIME_STALE_AND_FLOW_DECAY"
+      },
+      {
+        "gate_proposed_grid_basis": "Coverage-of-space widening for stale-age and flow-decay dimensions; no per-symbol optimization.",
+        "metrics": {
+          "overall": {
+            "base_count": 1065,
+            "false_persistence_cost_proxy_pct": 7.003891050583658,
+            "false_persistence_observation_count": 257,
+            "median_base_lifetime_sessions": 123.0,
+            "survive_ge_100_pct": 91.92488262910798,
+            "survive_ge_40_pct": 95.30516431924883,
+            "survive_ge_60_pct": 94.36619718309859
+          },
+          "per_tier": {
+            "HIGH": {
+              "base_count": 146,
+              "false_persistence_cost_proxy_pct": 0.0,
+              "false_persistence_observation_count": 22,
+              "median_base_lifetime_sessions": 118.5,
+              "survive_ge_100_pct": 92.46575342465754,
+              "survive_ge_40_pct": 95.89041095890411,
+              "survive_ge_60_pct": 94.52054794520548
+            },
+            "LOW": {
+              "base_count": 640,
+              "false_persistence_cost_proxy_pct": 9.941520467836257,
+              "false_persistence_observation_count": 171,
+              "median_base_lifetime_sessions": 126.0,
+              "survive_ge_100_pct": 91.875,
+              "survive_ge_40_pct": 94.53125,
+              "survive_ge_60_pct": 93.75
+            },
+            "MID": {
+              "base_count": 279,
+              "false_persistence_cost_proxy_pct": 1.5625,
+              "false_persistence_observation_count": 64,
+              "median_base_lifetime_sessions": 120.0,
+              "survive_ge_100_pct": 91.75627240143369,
+              "survive_ge_40_pct": 96.7741935483871,
+              "survive_ge_60_pct": 95.6989247311828
+            }
+          }
+        },
+        "params": {
+          "flow_decay_n": 5,
+          "min_age_sessions": 100
+        },
+        "rule_form": "TIME_STALE_AND_FLOW_DECAY"
+      },
+      {
+        "gate_proposed_grid_basis": "Coverage-of-space widening for stale-age and flow-decay dimensions; no per-symbol optimization.",
+        "metrics": {
+          "overall": {
+            "base_count": 473,
+            "false_persistence_cost_proxy_pct": 25.157232704402517,
+            "false_persistence_observation_count": 159,
+            "median_base_lifetime_sessions": 218.0,
+            "survive_ge_100_pct": 95.13742071881607,
+            "survive_ge_40_pct": 97.25158562367865,
+            "survive_ge_60_pct": 97.04016913319239
+          },
+          "per_tier": {
+            "HIGH": {
+              "base_count": 75,
+              "false_persistence_cost_proxy_pct": 5.2631578947368425,
+              "false_persistence_observation_count": 19,
+              "median_base_lifetime_sessions": 210.0,
+              "survive_ge_100_pct": 94.66666666666667,
+              "survive_ge_40_pct": 96.0,
+              "survive_ge_60_pct": 96.0
+            },
+            "LOW": {
+              "base_count": 266,
+              "false_persistence_cost_proxy_pct": 31.372549019607842,
+              "false_persistence_observation_count": 102,
+              "median_base_lifetime_sessions": 241.0,
+              "survive_ge_100_pct": 94.73684210526316,
+              "survive_ge_40_pct": 96.99248120300751,
+              "survive_ge_60_pct": 96.99248120300751
+            },
+            "MID": {
+              "base_count": 132,
+              "false_persistence_cost_proxy_pct": 18.42105263157895,
+              "false_persistence_observation_count": 38,
+              "median_base_lifetime_sessions": 214.0,
+              "survive_ge_100_pct": 96.21212121212122,
+              "survive_ge_40_pct": 98.48484848484848,
+              "survive_ge_60_pct": 97.72727272727273
+            }
+          }
+        },
+        "params": {
+          "flow_decay_n": 8,
+          "min_age_sessions": 100
+        },
+        "rule_form": "TIME_STALE_AND_FLOW_DECAY"
+      },
+      {
+        "gate_proposed_grid_basis": "Coverage-of-space widening for stale-age and flow-decay dimensions; no per-symbol optimization.",
+        "metrics": {
+          "overall": {
+            "base_count": 169,
+            "false_persistence_cost_proxy_pct": 79.26829268292683,
+            "false_persistence_observation_count": 82,
+            "median_base_lifetime_sessions": 992.0,
+            "survive_ge_100_pct": 99.40828402366864,
+            "survive_ge_40_pct": 100.0,
+            "survive_ge_60_pct": 100.0
+          },
+          "per_tier": {
+            "HIGH": {
+              "base_count": 25,
+              "false_persistence_cost_proxy_pct": 45.45454545454545,
+              "false_persistence_observation_count": 11,
+              "median_base_lifetime_sessions": 769.0,
+              "survive_ge_100_pct": 96.0,
+              "survive_ge_40_pct": 100.0,
+              "survive_ge_60_pct": 100.0
+            },
+            "LOW": {
+              "base_count": 102,
+              "false_persistence_cost_proxy_pct": 90.38461538461539,
+              "false_persistence_observation_count": 52,
+              "median_base_lifetime_sessions": 1030.0,
+              "survive_ge_100_pct": 100.0,
+              "survive_ge_40_pct": 100.0,
+              "survive_ge_60_pct": 100.0
+            },
+            "MID": {
+              "base_count": 42,
+              "false_persistence_cost_proxy_pct": 68.42105263157895,
+              "false_persistence_observation_count": 19,
+              "median_base_lifetime_sessions": 1008.0,
+              "survive_ge_100_pct": 100.0,
+              "survive_ge_40_pct": 100.0,
+              "survive_ge_60_pct": 100.0
+            }
+          }
+        },
+        "params": {
+          "flow_decay_n": 13,
+          "min_age_sessions": 100
+        },
+        "rule_form": "TIME_STALE_AND_FLOW_DECAY"
+      }
+    ]
+  },
+  "owner_decision_sheet": [
+    {
+      "decision_key": "CLOSE_BELOW_BASE_LOW_N::{\"n_sessions\": 2}",
+      "decision_type": "INVALIDATION_FORM_VALUE",
+      "evidence_basis": "base_count=746, median_life=37.50, survive60=41.82%, false_persistence=0.00%",
+      "proposal": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "decision_key": "CLOSE_BELOW_BASE_LOW_N::{\"n_sessions\": 3}",
+      "decision_type": "INVALIDATION_FORM_VALUE",
+      "evidence_basis": "base_count=645, median_life=53.00, survive60=46.82%, false_persistence=0.00%",
+      "proposal": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "decision_key": "CLOSE_BELOW_BASE_LOW_N::{\"n_sessions\": 5}",
+      "decision_type": "INVALIDATION_FORM_VALUE",
+      "evidence_basis": "base_count=534, median_life=89.50, survive60=55.99%, false_persistence=3.03%",
+      "proposal": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "decision_key": "CLOSE_BELOW_BASE_LOW_N::{\"n_sessions\": 8}",
+      "decision_type": "INVALIDATION_FORM_VALUE",
+      "evidence_basis": "base_count=468, median_life=126.50, survive60=64.74%, false_persistence=4.26%",
+      "proposal": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "decision_key": "CLOSE_BELOW_BASE_LOW_N::{\"n_sessions\": 13}",
+      "decision_type": "INVALIDATION_FORM_VALUE",
+      "evidence_basis": "base_count=411, median_life=188.00, survive60=73.48%, false_persistence=4.84%",
+      "proposal": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "decision_key": "CLOSE_BELOW_BASE_LOW_BY_ATR_X_N::{\"atr_mult\": 0.5, \"n_sessions\": 2}",
+      "decision_type": "INVALIDATION_FORM_VALUE",
+      "evidence_basis": "base_count=617, median_life=54.00, survive60=47.65%, false_persistence=0.00%",
+      "proposal": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "decision_key": "CLOSE_BELOW_BASE_LOW_BY_ATR_X_N::{\"atr_mult\": 1.0, \"n_sessions\": 2}",
+      "decision_type": "INVALIDATION_FORM_VALUE",
+      "evidence_basis": "base_count=522, median_life=93.50, survive60=57.09%, false_persistence=0.00%",
+      "proposal": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "decision_key": "CLOSE_BELOW_BASE_LOW_BY_ATR_X_N::{\"atr_mult\": 1.5, \"n_sessions\": 2}",
+      "decision_type": "INVALIDATION_FORM_VALUE",
+      "evidence_basis": "base_count=450, median_life=143.50, survive60=65.56%, false_persistence=2.63%",
+      "proposal": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "decision_key": "TIME_STALE_AND_FLOW_DECAY::{\"flow_decay_n\": 5, \"min_age_sessions\": 40}",
+      "decision_type": "INVALIDATION_FORM_VALUE",
+      "evidence_basis": "base_count=1788, median_life=64.00, survive60=55.43%, false_persistence=3.85%",
+      "proposal": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "decision_key": "TIME_STALE_AND_FLOW_DECAY::{\"flow_decay_n\": 8, \"min_age_sessions\": 40}",
+      "decision_type": "INVALIDATION_FORM_VALUE",
+      "evidence_basis": "base_count=563, median_life=182.00, survive60=90.05%, false_persistence=24.68%",
+      "proposal": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "decision_key": "TIME_STALE_AND_FLOW_DECAY::{\"flow_decay_n\": 13, \"min_age_sessions\": 40}",
+      "decision_type": "INVALIDATION_FORM_VALUE",
+      "evidence_basis": "base_count=172, median_life=985.00, survive60=98.26%, false_persistence=79.27%",
+      "proposal": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "decision_key": "TIME_STALE_AND_FLOW_DECAY::{\"flow_decay_n\": 5, \"min_age_sessions\": 60}",
+      "decision_type": "INVALIDATION_FORM_VALUE",
+      "evidence_basis": "base_count=1453, median_life=83.00, survive60=94.77%, false_persistence=5.47%",
+      "proposal": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "decision_key": "TIME_STALE_AND_FLOW_DECAY::{\"flow_decay_n\": 8, \"min_age_sessions\": 60}",
+      "decision_type": "INVALIDATION_FORM_VALUE",
+      "evidence_basis": "base_count=535, median_life=194.00, survive60=96.64%, false_persistence=24.07%",
+      "proposal": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "decision_key": "TIME_STALE_AND_FLOW_DECAY::{\"flow_decay_n\": 13, \"min_age_sessions\": 60}",
+      "decision_type": "INVALIDATION_FORM_VALUE",
+      "evidence_basis": "base_count=169, median_life=992.00, survive60=100.00%, false_persistence=79.27%",
+      "proposal": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "decision_key": "TIME_STALE_AND_FLOW_DECAY::{\"flow_decay_n\": 5, \"min_age_sessions\": 100}",
+      "decision_type": "INVALIDATION_FORM_VALUE",
+      "evidence_basis": "base_count=1065, median_life=123.00, survive60=94.37%, false_persistence=7.00%",
+      "proposal": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "decision_key": "TIME_STALE_AND_FLOW_DECAY::{\"flow_decay_n\": 8, \"min_age_sessions\": 100}",
+      "decision_type": "INVALIDATION_FORM_VALUE",
+      "evidence_basis": "base_count=473, median_life=218.00, survive60=97.04%, false_persistence=25.16%",
+      "proposal": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "decision_key": "TIME_STALE_AND_FLOW_DECAY::{\"flow_decay_n\": 13, \"min_age_sessions\": 100}",
+      "decision_type": "INVALIDATION_FORM_VALUE",
+      "evidence_basis": "base_count=169, median_life=992.00, survive60=100.00%, false_persistence=79.27%",
+      "proposal": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "decision_key": "CMF_FLOOR_CORE",
+      "decision_type": "FLOW_CORE_COMPOSITION",
+      "evidence_basis": "days_passing=38858/138211, uplift=-0.006757",
+      "proposal": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "decision_key": "OBV_ANV_SLOPE_CORE",
+      "decision_type": "FLOW_CORE_COMPOSITION",
+      "evidence_basis": "days_passing=75741/138211, uplift=-0.016950",
+      "proposal": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "decision_key": "base_min_sessions",
+      "decision_type": "PENDING_PARAMETER",
+      "evidence_basis": "Distribution of base-forming window widths and dwell observations on EX_SET_B supports a minimum stabilization window around two trading weeks.",
+      "proposal": 10
+    },
+    {
+      "decision_key": "base_max_width_pct",
+      "decision_type": "PENDING_PARAMETER",
+      "evidence_basis": "EX_SET_B range_width_pct distribution: p90=0.5123, p95=0.6794; proposal keeps cap below high-dispersion tail.",
+      "proposal": 0.24
+    },
+    {
+      "decision_key": "atr_squeeze_pctile",
+      "decision_type": "PENDING_PARAMETER",
+      "evidence_basis": "EX_SET_B atr_pct_percentile_252 distribution: p90=0.9175, p95=0.9659; proposal aligns with upper-tail squeeze gating.",
+      "proposal": 0.95
+    },
+    {
+      "decision_key": "cmf_floor",
+      "decision_type": "PENDING_PARAMETER",
+      "evidence_basis": "EX_SET_B CMF distribution anchors near neutral-to-positive band (p55=0.0764, p60=0.1240); retains positive-flow requirement.",
+      "proposal": 0.05
+    },
+    {
+      "decision_key": "volume_breakout_mult",
+      "decision_type": "PENDING_PARAMETER",
+      "evidence_basis": "EX_SET_B relative-volume context distribution upper-middle tail (p70=1.1057, p75=1.2680) supports 2.5 as selective context gate.",
+      "proposal": 2.5
+    },
+    {
+      "decision_key": "rsi_regime",
+      "decision_type": "PENDING_PARAMETER",
+      "evidence_basis": "EX_SET_B RSI central band quantiles (p55=50.7929, p60=52.2119) support using midpoint regime threshold.",
+      "proposal": 50.0
+    },
+    {
+      "decision_key": "adx_trigger",
+      "decision_type": "PENDING_PARAMETER",
+      "evidence_basis": "EX_SET_B ADX quantiles (p55=25.1713, p60=26.8751) center around low-trend activation zone.",
+      "proposal": 15.0
+    },
+    {
+      "decision_key": "LIQUIDITY_EXECUTION_SIZE_PARAMETER",
+      "decision_type": "PENDING_PARAMETER",
+      "evidence_basis": "EX_SET_B traded-value distribution (p50=67019.66, p60=139228.35) with existing freeze ratified participation cap text suggests 10% as conservative execution fraction.",
+      "proposal": 0.1
+    },
+    {
+      "decision_key": "ml_prob_min",
+      "decision_type": "PENDING_PARAMETER",
+      "evidence_basis": "No ml-probability field is present in EX_SET_B ee_indicators payload_json; proposal is a conservative placeholder pending explicit ML score surface publication.",
+      "proposal": 0.55
+    }
+  ],
+  "pending_parameter_proposals": [
+    {
+      "citation": "EX_SET_B base geometry simulation grid in this artifact (invalidation section).",
+      "evidence_basis": "Distribution of base-forming window widths and dwell observations on EX_SET_B supports a minimum stabilization window around two trading weeks.",
+      "flow_composition_sample_count": 138211,
+      "name": "base_min_sessions",
+      "proposed_value": 10,
+      "sensitivity_notes": "Sensitivity checked against 8 and 13 sessions in invalidation n-grid coverage.",
+      "status": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "citation": "EX_SET_B ee_indicators.payload_json.range_width_pct distribution in this artifact.",
+      "evidence_basis": "EX_SET_B range_width_pct distribution: p90=0.5123, p95=0.6794; proposal keeps cap below high-dispersion tail.",
+      "flow_composition_sample_count": 138211,
+      "name": "base_max_width_pct",
+      "proposed_value": 0.24,
+      "sensitivity_notes": "Consider 0.20 tighter / 0.28 looser in ratification sensitivity pass.",
+      "status": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "citation": "EX_SET_B ee_indicators.payload_json.atr_pct_percentile_252 distribution in this artifact.",
+      "evidence_basis": "EX_SET_B atr_pct_percentile_252 distribution: p90=0.9175, p95=0.9659; proposal aligns with upper-tail squeeze gating.",
+      "flow_composition_sample_count": 138211,
+      "name": "atr_squeeze_pctile",
+      "proposed_value": 0.95,
+      "sensitivity_notes": "Evaluate 0.90 and 0.97 in follow-on stress table if requested by owner.",
+      "status": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "citation": "Flow-core composition section in this artifact.",
+      "evidence_basis": "EX_SET_B CMF distribution anchors near neutral-to-positive band (p55=0.0764, p60=0.1240); retains positive-flow requirement.",
+      "flow_composition_sample_count": 138211,
+      "name": "cmf_floor",
+      "proposed_value": 0.05,
+      "sensitivity_notes": "Sensitivity around 0.00 and 0.10 materially shifts days-passing percentage.",
+      "status": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "citation": "EX_SET_B ee_indicators.payload_json.rel_volume distribution in this artifact.",
+      "evidence_basis": "EX_SET_B relative-volume context distribution upper-middle tail (p70=1.1057, p75=1.2680) supports 2.5 as selective context gate.",
+      "flow_composition_sample_count": 138211,
+      "name": "volume_breakout_mult",
+      "proposed_value": 2.5,
+      "sensitivity_notes": "2.0 increases pass density; 3.0 sharply reduces pass density in thinner tiers.",
+      "status": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "citation": "EX_SET_B ee_indicators.payload_json.rsi_14 distribution in this artifact.",
+      "evidence_basis": "EX_SET_B RSI central band quantiles (p55=50.7929, p60=52.2119) support using midpoint regime threshold.",
+      "flow_composition_sample_count": 138211,
+      "name": "rsi_regime",
+      "proposed_value": 50.0,
+      "sensitivity_notes": "45/55 are plausible alternates with expected trade-off between early capture and false positives.",
+      "status": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "citation": "EX_SET_B ee_indicators.payload_json.adx_19 distribution in this artifact.",
+      "evidence_basis": "EX_SET_B ADX quantiles (p55=25.1713, p60=26.8751) center around low-trend activation zone.",
+      "flow_composition_sample_count": 138211,
+      "name": "adx_trigger",
+      "proposed_value": 15.0,
+      "sensitivity_notes": "12/18 should be reviewed if owner seeks broader or stricter trend admission.",
+      "status": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "citation": "EX_SET_B value_kwd distribution in this artifact + freeze artifact ratified values text.",
+      "evidence_basis": "EX_SET_B traded-value distribution (p50=67019.66, p60=139228.35) with existing freeze ratified participation cap text suggests 10% as conservative execution fraction.",
+      "flow_composition_sample_count": 138211,
+      "name": "LIQUIDITY_EXECUTION_SIZE_PARAMETER",
+      "proposed_value": 0.1,
+      "sensitivity_notes": "0.08 and 0.12 should be checked for impact on slippage/participation stress.",
+      "status": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "citation": "Schema field availability probe in this session: payload contains no ml/prob keys.",
+      "evidence_basis": "No ml-probability field is present in EX_SET_B ee_indicators payload_json; proposal is a conservative placeholder pending explicit ML score surface publication.",
+      "flow_composition_sample_count": 138211,
+      "name": "ml_prob_min",
+      "proposed_value": 0.55,
+      "sensitivity_notes": "Re-estimate from EX_SET_B once ml score field is available; evaluate 0.50/0.60.",
+      "status": "PROPOSED_PENDING_OWNER_RATIFICATION"
+    },
+    {
+      "citation": "r14b_parameter_freeze_v1.json",
+      "evidence_basis": "Included as frozen reference context; not a pending parameter in this gate package.",
+      "name": "FROZEN_REFERENCE_CHASE_ADVISORY_BAND",
+      "proposed_value": {
+        "advisory": 0.08,
+        "escalation": 0.15,
+        "verbatim": "advisory flag > 0.08 extension vs current valid reference; escalation flag > 0.15"
+      },
+      "sensitivity_notes": "Frozen. Not mutable in this evidence package.",
+      "status": "FROZEN_REFERENCE_ONLY"
+    }
+  ],
+  "scope": "EX_SET_B only (Set B untouched).",
+  "set_membership": {
+    "ex_set_b_symbol_count": 134,
+    "set_a": [
+      "BPCC",
+      "MABANEE",
+      "SANAM",
+      "TIJARA",
+      "ZAIN"
+    ],
+    "set_b": [
+      "CGC",
+      "IFA",
+      "KRE",
+      "SPEC",
+      "THURAYA"
+    ]
+  },
+  "version_id": "R14B_PARAMETER_GATE_EVIDENCE_V1"
+}

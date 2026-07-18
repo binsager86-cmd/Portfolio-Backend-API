@@ -1,0 +1,657 @@
+# R14-B Flow Core Conditional v1
+
+{
+  "decision_return": "OWNER",
+  "distribution": {
+    "cmf_floor_core": {
+      "days_passing": 38474,
+      "days_passing_pct": 28.826385350795697,
+      "days_total": 133468,
+      "median_fwd60_fail": 0.004566210045662045,
+      "median_fwd60_pass": 0.0,
+      "median_fwd60_uplift_pass_minus_fail": -0.004566210045662045,
+      "positive_fwd60_rate_diff_pass_minus_fail": -1.8517871191059285,
+      "positive_fwd60_rate_fail": 50.8095248120934,
+      "positive_fwd60_rate_pass": 48.95773769298747
+    },
+    "obv_anv_slope_core": {
+      "days_passing": 74958,
+      "days_passing_pct": 56.16177660562832,
+      "days_total": 133468,
+      "median_fwd60_fail": 0.010309278350515427,
+      "median_fwd60_pass": -0.0036496350364964014,
+      "median_fwd60_uplift_pass_minus_fail": -0.013958913387011829,
+      "positive_fwd60_rate_diff_pass_minus_fail": -4.502933150568651,
+      "positive_fwd60_rate_fail": 52.80464877798667,
+      "positive_fwd60_rate_pass": 48.30171562741802
+    },
+    "per_tier": {
+      "HIGH": {
+        "cmf_floor_core": {
+          "days_passing": 4432,
+          "days_passing_pct": 25.928742760194233,
+          "days_total": 17093,
+          "median_fwd60_fail": -0.002574002574002643,
+          "median_fwd60_pass": 0.0029282639639176544,
+          "median_fwd60_uplift_pass_minus_fail": 0.005502266537920297,
+          "positive_fwd60_rate_diff_pass_minus_fail": 2.5673762373837903,
+          "positive_fwd60_rate_fail": 48.29002448463787,
+          "positive_fwd60_rate_pass": 50.85740072202166
+        },
+        "obv_anv_slope_core": {
+          "days_passing": 9839,
+          "days_passing_pct": 57.56157491370737,
+          "days_total": 17093,
+          "median_fwd60_fail": 0.0010170630816959125,
+          "median_fwd60_pass": -0.002743484224965731,
+          "median_fwd60_uplift_pass_minus_fail": -0.0037605473066616435,
+          "positive_fwd60_rate_diff_pass_minus_fail": -1.9100052897416262,
+          "positive_fwd60_rate_fail": 50.05514199062586,
+          "positive_fwd60_rate_pass": 48.14513670088424
+        },
+        "sample_count": 17093
+      },
+      "LOW": {
+        "cmf_floor_core": {
+          "days_passing": 25027,
+          "days_passing_pct": 30.186471751821294,
+          "days_total": 82908,
+          "median_fwd60_fail": 0.00917431192660545,
+          "median_fwd60_pass": 0.0,
+          "median_fwd60_uplift_pass_minus_fail": -0.00917431192660545,
+          "positive_fwd60_rate_diff_pass_minus_fail": -1.9881959007569705,
+          "positive_fwd60_rate_fail": 51.88231025725195,
+          "positive_fwd60_rate_pass": 49.89411435649498
+        },
+        "obv_anv_slope_core": {
+          "days_passing": 45871,
+          "days_passing_pct": 55.32759202971969,
+          "days_total": 82908,
+          "median_fwd60_fail": 0.01379310344827589,
+          "median_fwd60_pass": 0.0,
+          "median_fwd60_uplift_pass_minus_fail": -0.01379310344827589,
+          "positive_fwd60_rate_diff_pass_minus_fail": -3.4630264296066215,
+          "positive_fwd60_rate_fail": 53.1981531981532,
+          "positive_fwd60_rate_pass": 49.73512676854658
+        },
+        "sample_count": 82908
+      },
+      "MID": {
+        "cmf_floor_core": {
+          "days_passing": 9015,
+          "days_passing_pct": 26.936982699375505,
+          "days_total": 33467,
+          "median_fwd60_fail": 0.0,
+          "median_fwd60_pass": -0.01320132013201325,
+          "median_fwd60_uplift_pass_minus_fail": -0.01320132013201325,
+          "positive_fwd60_rate_diff_pass_minus_fail": -4.150384072785613,
+          "positive_fwd60_rate_fail": 49.574676918043515,
+          "positive_fwd60_rate_pass": 45.4242928452579
+        },
+        "obv_anv_slope_core": {
+          "days_passing": 19248,
+          "days_passing_pct": 57.51337138076314,
+          "days_total": 33467,
+          "median_fwd60_fail": 0.009960159362549792,
+          "median_fwd60_pass": -0.014851507896756322,
+          "median_fwd60_uplift_pass_minus_fail": -0.024811667259306114,
+          "positive_fwd60_rate_diff_pass_minus_fail": -8.216650905614514,
+          "positive_fwd60_rate_fail": 53.18236162880653,
+          "positive_fwd60_rate_pass": 44.96571072319202
+        },
+        "sample_count": 33467
+      }
+    },
+    "sample_count": 133468
+  },
+  "freeze_v2_attestation": {
+    "path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_parameter_freeze_v2.json",
+    "ratification_status": "OWNER_RATIFIED_AT_PARAMETER_GATE",
+    "sha256": "7483faa40aafa21687bc7b00f0b0dc340b9c6d455df71445f1230c707625915a"
+  },
+  "mode": "DESCRIPTIVE_ONLY_OWNER_DECISION_PENDING",
+  "pass_day_counts": {
+    "conditional_samples_total": 133468,
+    "per_symbol": {
+      "AAYAN": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1140
+      },
+      "AAYANRE": {
+        "bars_loaded": 1210,
+        "conditional_days_used": 1129
+      },
+      "ABAR": {
+        "bars_loaded": 1197,
+        "conditional_days_used": 1103
+      },
+      "ABK": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1152
+      },
+      "ACICO": {
+        "bars_loaded": 1033,
+        "conditional_days_used": 878
+      },
+      "AINS": {
+        "bars_loaded": 786,
+        "conditional_days_used": 717
+      },
+      "ALAQARIA": {
+        "bars_loaded": 1046,
+        "conditional_days_used": 922
+      },
+      "ALDEERA": {
+        "bars_loaded": 923,
+        "conditional_days_used": 815
+      },
+      "ALEID": {
+        "bars_loaded": 1042,
+        "conditional_days_used": 953
+      },
+      "ALFTAQA": {
+        "bars_loaded": 134,
+        "conditional_days_used": 65
+      },
+      "ALG": {
+        "bars_loaded": 1001,
+        "conditional_days_used": 932
+      },
+      "ALIMTIAZ": {
+        "bars_loaded": 1325,
+        "conditional_days_used": 1162
+      },
+      "ALKOUT": {
+        "bars_loaded": 311,
+        "conditional_days_used": 211
+      },
+      "ALMANAR": {
+        "bars_loaded": 1066,
+        "conditional_days_used": 986
+      },
+      "ALOLA": {
+        "bars_loaded": 1338,
+        "conditional_days_used": 1250
+      },
+      "ALSAFAT": {
+        "bars_loaded": 1156,
+        "conditional_days_used": 1038
+      },
+      "ALTIJARIA": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1150
+      },
+      "AMAR": {
+        "bars_loaded": 861,
+        "conditional_days_used": 747
+      },
+      "AQAR": {
+        "bars_loaded": 1044,
+        "conditional_days_used": 940
+      },
+      "ARABREC": {
+        "bars_loaded": 1338,
+        "conditional_days_used": 1269
+      },
+      "AREEC": {
+        "bars_loaded": 987,
+        "conditional_days_used": 918
+      },
+      "ARGAN": {
+        "bars_loaded": 1136,
+        "conditional_days_used": 1054
+      },
+      "ARKAN": {
+        "bars_loaded": 1019,
+        "conditional_days_used": 925
+      },
+      "ARZAN": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1133
+      },
+      "ASC": {
+        "bars_loaded": 1097,
+        "conditional_days_used": 1028
+      },
+      "ASIYA": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1100
+      },
+      "ATC": {
+        "bars_loaded": 545,
+        "conditional_days_used": 396
+      },
+      "AZNOULA": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1140
+      },
+      "BAYANINV": {
+        "bars_loaded": 1206,
+        "conditional_days_used": 1000
+      },
+      "BEYOUT": {
+        "bars_loaded": 510,
+        "conditional_days_used": 435
+      },
+      "BOUBYAN": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1146
+      },
+      "BOURSA": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1152
+      },
+      "BPCC": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1143
+      },
+      "BURG": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1143
+      },
+      "CABLE": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1152
+      },
+      "CATTL": {
+        "bars_loaded": 1223,
+        "conditional_days_used": 1124
+      },
+      "CBK": {
+        "bars_loaded": 1023,
+        "conditional_days_used": 952
+      },
+      "CLEANING": {
+        "bars_loaded": 1168,
+        "conditional_days_used": 1048
+      },
+      "COAST": {
+        "bars_loaded": 1315,
+        "conditional_days_used": 1244
+      },
+      "DALQANRE": {
+        "bars_loaded": 1164,
+        "conditional_days_used": 1046
+      },
+      "DIGITUS": {
+        "bars_loaded": 1056,
+        "conditional_days_used": 974
+      },
+      "EKTTITAB": {
+        "bars_loaded": 1128,
+        "conditional_days_used": 1034
+      },
+      "EMIRATES": {
+        "bars_loaded": 731,
+        "conditional_days_used": 567
+      },
+      "ENERGYH": {
+        "bars_loaded": 1205,
+        "conditional_days_used": 1117
+      },
+      "EQUIPMENT": {
+        "bars_loaded": 1039,
+        "conditional_days_used": 961
+      },
+      "FACIL": {
+        "bars_loaded": 1204,
+        "conditional_days_used": 1116
+      },
+      "FTI": {
+        "bars_loaded": 940,
+        "conditional_days_used": 814
+      },
+      "FUTUREKID": {
+        "bars_loaded": 1179,
+        "conditional_days_used": 1110
+      },
+      "GBK": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1151
+      },
+      "GFC": {
+        "bars_loaded": 683,
+        "conditional_days_used": 339
+      },
+      "GFH": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1152
+      },
+      "GIH": {
+        "bars_loaded": 1304,
+        "conditional_days_used": 1235
+      },
+      "GINS": {
+        "bars_loaded": 775,
+        "conditional_days_used": 687
+      },
+      "HUMANSOFT": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1142
+      },
+      "IFAHR": {
+        "bars_loaded": 1338,
+        "conditional_days_used": 1184
+      },
+      "INJAZZAT": {
+        "bars_loaded": 1088,
+        "conditional_days_used": 1019
+      },
+      "INOVEST": {
+        "bars_loaded": 1323,
+        "conditional_days_used": 1254
+      },
+      "INTEGRATED": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1151
+      },
+      "IPG": {
+        "bars_loaded": 735,
+        "conditional_days_used": 640
+      },
+      "JAZEERA": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1152
+      },
+      "JTC": {
+        "bars_loaded": 1068,
+        "conditional_days_used": 994
+      },
+      "KAMCO": {
+        "bars_loaded": 1220,
+        "conditional_days_used": 1131
+      },
+      "KBT": {
+        "bars_loaded": 1327,
+        "conditional_days_used": 1258
+      },
+      "KCEM": {
+        "bars_loaded": 1205,
+        "conditional_days_used": 1126
+      },
+      "KCIN": {
+        "bars_loaded": 662,
+        "conditional_days_used": 593
+      },
+      "KCPC": {
+        "bars_loaded": 1192,
+        "conditional_days_used": 1083
+      },
+      "KFH": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1150
+      },
+      "KFIC": {
+        "bars_loaded": 1149,
+        "conditional_days_used": 1080
+      },
+      "KFOUC": {
+        "bars_loaded": 1276,
+        "conditional_days_used": 1207
+      },
+      "KGL": {
+        "bars_loaded": 1196,
+        "conditional_days_used": 1080
+      },
+      "KHOT": {
+        "bars_loaded": 642,
+        "conditional_days_used": 573
+      },
+      "KIB": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1142
+      },
+      "KINS": {
+        "bars_loaded": 1160,
+        "conditional_days_used": 1090
+      },
+      "KINV": {
+        "bars_loaded": 1217,
+        "conditional_days_used": 1092
+      },
+      "KMEFIC": {
+        "bars_loaded": 1034,
+        "conditional_days_used": 928
+      },
+      "KPPC": {
+        "bars_loaded": 1326,
+        "conditional_days_used": 1221
+      },
+      "KPROJ": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1123
+      },
+      "KUWAITRE": {
+        "bars_loaded": 569,
+        "conditional_days_used": 411
+      },
+      "MABANEE": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1152
+      },
+      "MADAR": {
+        "bars_loaded": 1024,
+        "conditional_days_used": 887
+      },
+      "MANAZEL": {
+        "bars_loaded": 1347,
+        "conditional_days_used": 1228
+      },
+      "MARAKEZ": {
+        "bars_loaded": 1225,
+        "conditional_days_used": 1135
+      },
+      "MARKAZ": {
+        "bars_loaded": 1202,
+        "conditional_days_used": 1106
+      },
+      "MASAKEN": {
+        "bars_loaded": 1079,
+        "conditional_days_used": 851
+      },
+      "MASHAER": {
+        "bars_loaded": 1149,
+        "conditional_days_used": 1071
+      },
+      "MAZAYA": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1085
+      },
+      "MENA": {
+        "bars_loaded": 1039,
+        "conditional_days_used": 970
+      },
+      "MEZZAN": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1129
+      },
+      "MIDAN": {
+        "bars_loaded": 226,
+        "conditional_days_used": 38
+      },
+      "MKHZN": {
+        "bars_loaded": 1349,
+        "conditional_days_used": 1218
+      },
+      "MRC": {
+        "bars_loaded": 1083,
+        "conditional_days_used": 920
+      },
+      "MUBARRAD": {
+        "bars_loaded": 1169,
+        "conditional_days_used": 1088
+      },
+      "MUNSHAAT": {
+        "bars_loaded": 1067,
+        "conditional_days_used": 998
+      },
+      "MUNTAZAHAT": {
+        "bars_loaded": 1173,
+        "conditional_days_used": 1102
+      },
+      "NAPESCO": {
+        "bars_loaded": 866,
+        "conditional_days_used": 795
+      },
+      "NBK": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1152
+      },
+      "NCCI": {
+        "bars_loaded": 1331,
+        "conditional_days_used": 1244
+      },
+      "NICBM": {
+        "bars_loaded": 953,
+        "conditional_days_used": 881
+      },
+      "NIH": {
+        "bars_loaded": 1311,
+        "conditional_days_used": 1241
+      },
+      "NIND": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1149
+      },
+      "NINV": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1152
+      },
+      "NOOR": {
+        "bars_loaded": 1211,
+        "conditional_days_used": 1111
+      },
+      "NRE": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1083
+      },
+      "OOREDOO": {
+        "bars_loaded": 1346,
+        "conditional_days_used": 1277
+      },
+      "OSOS": {
+        "bars_loaded": 907,
+        "conditional_days_used": 820
+      },
+      "OSOUL": {
+        "bars_loaded": 1041,
+        "conditional_days_used": 933
+      },
+      "OULAFUEL": {
+        "bars_loaded": 1343,
+        "conditional_days_used": 1272
+      },
+      "PAPCO": {
+        "bars_loaded": 731,
+        "conditional_days_used": 501
+      },
+      "PCEM": {
+        "bars_loaded": 1200,
+        "conditional_days_used": 1123
+      },
+      "QIC": {
+        "bars_loaded": 547,
+        "conditional_days_used": 477
+      },
+      "RASIYAT": {
+        "bars_loaded": 1216,
+        "conditional_days_used": 1147
+      },
+      "SANAM": {
+        "bars_loaded": 1207,
+        "conditional_days_used": 1137
+      },
+      "SECH": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1094
+      },
+      "SENERGY": {
+        "bars_loaded": 1264,
+        "conditional_days_used": 1195
+      },
+      "SHIP": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1151
+      },
+      "SOKOUK": {
+        "bars_loaded": 1218,
+        "conditional_days_used": 1147
+      },
+      "SOOR": {
+        "bars_loaded": 1341,
+        "conditional_days_used": 1270
+      },
+      "SRE": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1145
+      },
+      "STC": {
+        "bars_loaded": 1347,
+        "conditional_days_used": 1256
+      },
+      "TAHSSILAT": {
+        "bars_loaded": 1031,
+        "conditional_days_used": 843
+      },
+      "TAM": {
+        "bars_loaded": 1140,
+        "conditional_days_used": 1050
+      },
+      "TAMINV": {
+        "bars_loaded": 682,
+        "conditional_days_used": 592
+      },
+      "TIJARA": {
+        "bars_loaded": 1203,
+        "conditional_days_used": 1134
+      },
+      "UNICAP": {
+        "bars_loaded": 1224,
+        "conditional_days_used": 1155
+      },
+      "UPAC": {
+        "bars_loaded": 1132,
+        "conditional_days_used": 985
+      },
+      "URC": {
+        "bars_loaded": 1205,
+        "conditional_days_used": 1133
+      },
+      "VALMORE": {
+        "bars_loaded": 1180,
+        "conditional_days_used": 1105
+      },
+      "WARBABANK": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1145
+      },
+      "WARBACAP": {
+        "bars_loaded": 1248,
+        "conditional_days_used": 1179
+      },
+      "WETHAQ": {
+        "bars_loaded": 1243,
+        "conditional_days_used": 1174
+      },
+      "WINSRE": {
+        "bars_loaded": 1293,
+        "conditional_days_used": 1180
+      },
+      "ZAIN": {
+        "bars_loaded": 1221,
+        "conditional_days_used": 1143
+      }
+    },
+    "symbols_with_samples": 132
+  },
+  "scope": {
+    "conditioning": [
+      "base_valid_under_CLOSE_BELOW_BASE_LOW_BY_ATR_X_N(atr_mult=1.0,n_sessions=2)",
+      "avoid_plane_clear_day_only"
+    ],
+    "forward_horizon_sessions": 60,
+    "seam_safe_method": "per_symbol_deduped_trade_date_series_no_cross_symbol_joins",
+    "universe": "EX_SET_B_ONLY"
+  },
+  "version_id": "R14B_FLOW_CORE_CONDITIONAL_V1"
+}

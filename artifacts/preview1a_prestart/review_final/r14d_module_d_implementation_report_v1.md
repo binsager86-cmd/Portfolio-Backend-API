@@ -1,0 +1,2294 @@
+# R14-D Module (d) FlowConfirmationEngine Implementation Report v1
+
+Mechanics-only review scope. R15 target outcomes are explicitly non-criteria here.
+
+## SANAM Owner Window Confirmation Table (Verbatim)
+```json
+[
+  {
+    "base_reference": {
+      "base_high_ref": 231.0,
+      "base_low_ref": 209.0,
+      "base_origin_date": "2025-01-28",
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "base_retirement_reason": "NONE",
+      "base_validity_state": "VALID",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 0
+      }
+    },
+    "base_state": "BASE_VALID",
+    "candidate_intent": {
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "SANAM::2025-05-01::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "SANAM",
+      "trade_date": "2025-05-01"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": true,
+      "confirm_flow_core_ok": false,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": true,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": true,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 21.222602175878237,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": true,
+      "rsi_14": 51.86870938001007
+    },
+    "trade_date": "2025-05-01"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 231.0,
+      "base_low_ref": 209.0,
+      "base_origin_date": "2025-01-28",
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "base_retirement_reason": "NONE",
+      "base_validity_state": "VALID",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 0
+      }
+    },
+    "base_state": "BASE_VALID",
+    "candidate_intent": {
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "SANAM::2025-05-04::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "SANAM",
+      "trade_date": "2025-05-04"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": true,
+      "confirm_flow_core_ok": false,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": true,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": true,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 22.0040089285465,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": true,
+      "rsi_14": 49.1472582051374
+    },
+    "trade_date": "2025-05-04"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 231.0,
+      "base_low_ref": 209.0,
+      "base_origin_date": "2025-01-28",
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "base_retirement_reason": "NONE",
+      "base_validity_state": "VALID",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 0
+      }
+    },
+    "base_state": "BASE_VALID",
+    "candidate_intent": {
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "SANAM::2025-05-05::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "SANAM",
+      "trade_date": "2025-05-05"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": true,
+      "confirm_flow_core_ok": false,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": true,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": true,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 22.7442890100217,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": true,
+      "rsi_14": 52.71002663010004
+    },
+    "trade_date": "2025-05-05"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 231.0,
+      "base_low_ref": 209.0,
+      "base_origin_date": "2025-01-28",
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "base_retirement_reason": "NONE",
+      "base_validity_state": "VALID",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 0
+      }
+    },
+    "base_state": "BASE_VALID",
+    "candidate_intent": {
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "SANAM::2025-05-06::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "SANAM",
+      "trade_date": "2025-05-06"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": true,
+      "confirm_flow_core_ok": false,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": true,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": true,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 23.44560698194557,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": true,
+      "rsi_14": 49.01207683816964
+    },
+    "trade_date": "2025-05-06"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 231.0,
+      "base_low_ref": 209.0,
+      "base_origin_date": "2025-01-28",
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "base_retirement_reason": "NONE",
+      "base_validity_state": "VALID",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 0
+      }
+    },
+    "base_state": "BASE_VALID",
+    "candidate_intent": {
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "SANAM::2025-05-07::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "SANAM",
+      "trade_date": "2025-05-07"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": true,
+      "confirm_flow_core_ok": false,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": true,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": true,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 23.84844854309849,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": true,
+      "rsi_14": 48.10348463705495
+    },
+    "trade_date": "2025-05-07"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 231.0,
+      "base_low_ref": 209.0,
+      "base_origin_date": "2025-01-28",
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "base_retirement_reason": "NONE",
+      "base_validity_state": "VALID",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 0
+      }
+    },
+    "base_state": "BASE_VALID",
+    "candidate_intent": {
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": true
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "SANAM::2025-05-08::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "SANAM",
+      "trade_date": "2025-05-08"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": true,
+      "confirm_flow_core_ok": false,
+      "confirm_relative_volume_context_ok": true,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": true,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": true,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 23.308203021224074,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": true,
+      "rsi_14": 48.10348463705495
+    },
+    "trade_date": "2025-05-08"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 231.0,
+      "base_low_ref": 209.0,
+      "base_origin_date": "2025-01-28",
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "base_retirement_reason": "NONE",
+      "base_validity_state": "VALID",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 0
+      }
+    },
+    "base_state": "BASE_VALID",
+    "candidate_intent": {
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": true
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "SANAM::2025-05-11::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "SANAM",
+      "trade_date": "2025-05-11"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": true,
+      "confirm_flow_core_ok": false,
+      "confirm_relative_volume_context_ok": true,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": true,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": true,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 22.796391474185157,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": true,
+      "rsi_14": 49.19576760012774
+    },
+    "trade_date": "2025-05-11"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 231.0,
+      "base_low_ref": 209.0,
+      "base_origin_date": "2025-01-28",
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "base_retirement_reason": "NONE",
+      "base_validity_state": "VALID",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 0
+      }
+    },
+    "base_state": "BASE_VALID",
+    "candidate_intent": {
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": true
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "SANAM::2025-05-12::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "SANAM",
+      "trade_date": "2025-05-12"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": true,
+      "confirm_flow_core_ok": false,
+      "confirm_relative_volume_context_ok": true,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": true,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": true,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 22.474711130713903,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": true,
+      "rsi_14": 51.39898319281926
+    },
+    "trade_date": "2025-05-12"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 231.0,
+      "base_low_ref": 209.0,
+      "base_origin_date": "2025-01-28",
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "base_retirement_reason": "NONE",
+      "base_validity_state": "VALID",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 0
+      }
+    },
+    "base_state": "BASE_VALID",
+    "candidate_intent": {
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": true
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "SANAM::2025-05-13::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "SANAM",
+      "trade_date": "2025-05-13"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": true,
+      "confirm_flow_core_ok": false,
+      "confirm_relative_volume_context_ok": true,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": true,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": true,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 22.478731041245396,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": true,
+      "rsi_14": 57.37156888937287
+    },
+    "trade_date": "2025-05-13"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 231.0,
+      "base_low_ref": 209.0,
+      "base_origin_date": "2025-01-28",
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "base_retirement_reason": "NONE",
+      "base_validity_state": "VALID",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 0
+      }
+    },
+    "base_state": "BASE_VALID",
+    "candidate_intent": {
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": true
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "SANAM::2025-05-14::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "SANAM",
+      "trade_date": "2025-05-14"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": true,
+      "confirm_flow_core_ok": false,
+      "confirm_relative_volume_context_ok": true,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": true,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": true,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 22.891414734380792,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": true,
+      "rsi_14": 53.81082011739317
+    },
+    "trade_date": "2025-05-14"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 231.0,
+      "base_low_ref": 209.0,
+      "base_origin_date": "2025-01-28",
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "base_retirement_reason": "NONE",
+      "base_validity_state": "VALID",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 0
+      }
+    },
+    "base_state": "BASE_VALID",
+    "candidate_intent": {
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": true
+      },
+      "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+      "extension_pct_vs_current_valid_reference": 0.004329004329004329,
+      "intent_id": "SANAM::2025-05-15::FLOW_INTENT_V1",
+      "intent_state": "INTENT_FORMED",
+      "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+      "symbol": "SANAM",
+      "trade_date": "2025-05-15"
+    },
+    "confirmation_state": "CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": true,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": true,
+      "confirm_structure_ok": true,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.004329004329004329,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": true,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 23.46676644814144,
+      "close_gt_base_ref": true,
+      "ema10_gt_ema30": true,
+      "rsi_14": 64.79254778772929
+    },
+    "trade_date": "2025-05-15"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 231.0,
+      "base_low_ref": 209.0,
+      "base_origin_date": "2025-01-28",
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "base_retirement_reason": "NONE",
+      "base_validity_state": "VALID",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 0
+      }
+    },
+    "base_state": "BASE_VALID",
+    "candidate_intent": {
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "chase_advisory_flag": 1,
+      "confirmation_state": "CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": true
+      },
+      "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+      "extension_pct_vs_current_valid_reference": 0.08225108225108226,
+      "intent_id": "SANAM::2025-05-18::FLOW_INTENT_V1",
+      "intent_state": "INTENT_FORMED",
+      "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+      "symbol": "SANAM",
+      "trade_date": "2025-05-18"
+    },
+    "confirmation_state": "CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 1,
+      "confirm_chase_guard_ok": true,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": true,
+      "confirm_structure_ok": true,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.08225108225108226,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": true,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 24.88802733299893,
+      "close_gt_base_ref": true,
+      "ema10_gt_ema30": true,
+      "rsi_14": 73.5122951125881
+    },
+    "trade_date": "2025-05-18"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 231.0,
+      "base_low_ref": 209.0,
+      "base_origin_date": "2025-01-28",
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "base_retirement_reason": "NONE",
+      "base_validity_state": "VALID",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 0
+      }
+    },
+    "base_state": "BASE_VALID",
+    "candidate_intent": {
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "chase_advisory_flag": 1,
+      "confirmation_state": "CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+      "extension_pct_vs_current_valid_reference": 0.05194805194805195,
+      "intent_id": "SANAM::2025-05-19::FLOW_INTENT_V1",
+      "intent_state": "INTENT_FORMED",
+      "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+      "symbol": "SANAM",
+      "trade_date": "2025-05-19"
+    },
+    "confirmation_state": "CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 1,
+      "confirm_chase_guard_ok": true,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": true,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.05194805194805195,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": true,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 26.270414764470846,
+      "close_gt_base_ref": true,
+      "ema10_gt_ema30": true,
+      "rsi_14": 66.60387100184978
+    },
+    "trade_date": "2025-05-19"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 231.0,
+      "base_low_ref": 209.0,
+      "base_origin_date": "2025-01-28",
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "base_retirement_reason": "NONE",
+      "base_validity_state": "VALID",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 0
+      }
+    },
+    "base_state": "BASE_VALID",
+    "candidate_intent": {
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "chase_advisory_flag": 1,
+      "confirmation_state": "CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+      "extension_pct_vs_current_valid_reference": 0.10822510822510822,
+      "intent_id": "SANAM::2025-05-20::FLOW_INTENT_V1",
+      "intent_state": "INTENT_FORMED",
+      "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+      "symbol": "SANAM",
+      "trade_date": "2025-05-20"
+    },
+    "confirmation_state": "CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 1,
+      "confirm_chase_guard_ok": true,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": true,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.10822510822510822,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": true,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 27.721429520539495,
+      "close_gt_base_ref": true,
+      "ema10_gt_ema30": true,
+      "rsi_14": 71.88766548254412
+    },
+    "trade_date": "2025-05-20"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 231.0,
+      "base_low_ref": 209.0,
+      "base_origin_date": "2025-01-28",
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "base_retirement_reason": "NONE",
+      "base_validity_state": "VALID",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 0
+      }
+    },
+    "base_state": "BASE_VALID",
+    "candidate_intent": {
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "chase_advisory_flag": 1,
+      "confirmation_state": "CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": true
+      },
+      "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+      "extension_pct_vs_current_valid_reference": 0.06926406926406926,
+      "intent_id": "SANAM::2025-05-21::FLOW_INTENT_V1",
+      "intent_state": "INTENT_FORMED",
+      "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+      "symbol": "SANAM",
+      "trade_date": "2025-05-21"
+    },
+    "confirmation_state": "CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 1,
+      "confirm_chase_guard_ok": true,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": true,
+      "confirm_structure_ok": true,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.06926406926406926,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": true,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 29.260438322951522,
+      "close_gt_base_ref": true,
+      "ema10_gt_ema30": true,
+      "rsi_14": 64.30255584315496
+    },
+    "trade_date": "2025-05-21"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 231.0,
+      "base_low_ref": 209.0,
+      "base_origin_date": "2025-01-28",
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "base_retirement_reason": "NONE",
+      "base_validity_state": "VALID",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 0
+      }
+    },
+    "base_state": "BASE_VALID",
+    "candidate_intent": {
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "chase_advisory_flag": 1,
+      "confirmation_state": "CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+      "extension_pct_vs_current_valid_reference": 0.05194805194805195,
+      "intent_id": "SANAM::2025-05-22::FLOW_INTENT_V1",
+      "intent_state": "INTENT_FORMED",
+      "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+      "symbol": "SANAM",
+      "trade_date": "2025-05-22"
+    },
+    "confirmation_state": "CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 1,
+      "confirm_chase_guard_ok": true,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": true,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.05194805194805195,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": true,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 30.489021179826352,
+      "close_gt_base_ref": true,
+      "ema10_gt_ema30": true,
+      "rsi_14": 61.211257309793176
+    },
+    "trade_date": "2025-05-22"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 231.0,
+      "base_low_ref": 209.0,
+      "base_origin_date": "2025-01-28",
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "base_retirement_reason": "NONE",
+      "base_validity_state": "VALID",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 0
+      }
+    },
+    "base_state": "BASE_VALID",
+    "candidate_intent": {
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "chase_advisory_flag": 1,
+      "confirmation_state": "CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+      "extension_pct_vs_current_valid_reference": 0.06493506493506493,
+      "intent_id": "SANAM::2025-05-25::FLOW_INTENT_V1",
+      "intent_state": "INTENT_FORMED",
+      "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+      "symbol": "SANAM",
+      "trade_date": "2025-05-25"
+    },
+    "confirmation_state": "CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 1,
+      "confirm_chase_guard_ok": true,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": true,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.06493506493506493,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": true,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 31.65294178107619,
+      "close_gt_base_ref": true,
+      "ema10_gt_ema30": true,
+      "rsi_14": 62.66109773640959
+    },
+    "trade_date": "2025-05-25"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 231.0,
+      "base_low_ref": 209.0,
+      "base_origin_date": "2025-01-28",
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "base_retirement_reason": "NONE",
+      "base_validity_state": "VALID",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 0
+      }
+    },
+    "base_state": "BASE_VALID",
+    "candidate_intent": {
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "chase_advisory_flag": 1,
+      "confirmation_state": "CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+      "extension_pct_vs_current_valid_reference": 0.06926406926406926,
+      "intent_id": "SANAM::2025-05-26::FLOW_INTENT_V1",
+      "intent_state": "INTENT_FORMED",
+      "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+      "symbol": "SANAM",
+      "trade_date": "2025-05-26"
+    },
+    "confirmation_state": "CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 1,
+      "confirm_chase_guard_ok": true,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": true,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.06926406926406926,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": true,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 32.830475364142174,
+      "close_gt_base_ref": true,
+      "ema10_gt_ema30": true,
+      "rsi_14": 63.155466467724224
+    },
+    "trade_date": "2025-05-26"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 231.0,
+      "base_low_ref": 209.0,
+      "base_origin_date": "2025-01-28",
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "base_retirement_reason": "NONE",
+      "base_validity_state": "VALID",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 0
+      }
+    },
+    "base_state": "BASE_VALID",
+    "candidate_intent": {
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "chase_advisory_flag": 1,
+      "confirmation_state": "CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+      "extension_pct_vs_current_valid_reference": 0.06060606060606061,
+      "intent_id": "SANAM::2025-05-27::FLOW_INTENT_V1",
+      "intent_state": "INTENT_FORMED",
+      "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+      "symbol": "SANAM",
+      "trade_date": "2025-05-27"
+    },
+    "confirmation_state": "CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 1,
+      "confirm_chase_guard_ok": true,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": true,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.06060606060606061,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": true,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 33.57826347856635,
+      "close_gt_base_ref": true,
+      "ema10_gt_ema30": true,
+      "rsi_14": 61.40439612804992
+    },
+    "trade_date": "2025-05-27"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 231.0,
+      "base_low_ref": 209.0,
+      "base_origin_date": "2025-01-28",
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "base_retirement_reason": "NONE",
+      "base_validity_state": "VALID",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 0
+      }
+    },
+    "base_state": "BASE_VALID",
+    "candidate_intent": {
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "chase_advisory_flag": 1,
+      "confirmation_state": "CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+      "extension_pct_vs_current_valid_reference": 0.06926406926406926,
+      "intent_id": "SANAM::2025-05-28::FLOW_INTENT_V1",
+      "intent_state": "INTENT_FORMED",
+      "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+      "symbol": "SANAM",
+      "trade_date": "2025-05-28"
+    },
+    "confirmation_state": "CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 1,
+      "confirm_chase_guard_ok": true,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": true,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.06926406926406926,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": true,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 34.330489370755,
+      "close_gt_base_ref": true,
+      "ema10_gt_ema30": true,
+      "rsi_14": 62.5234148166683
+    },
+    "trade_date": "2025-05-28"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 231.0,
+      "base_low_ref": 209.0,
+      "base_origin_date": "2025-01-28",
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "base_retirement_reason": "NONE",
+      "base_validity_state": "VALID",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 0
+      }
+    },
+    "base_state": "BASE_VALID",
+    "candidate_intent": {
+      "base_reference_id": "SANAM::2025-01-28::BASE01",
+      "chase_advisory_flag": 1,
+      "confirmation_state": "CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+      "extension_pct_vs_current_valid_reference": 0.16017316017316016,
+      "intent_id": "SANAM::2025-05-29::FLOW_INTENT_V1",
+      "intent_state": "INTENT_FORMED",
+      "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+      "symbol": "SANAM",
+      "trade_date": "2025-05-29"
+    },
+    "confirmation_state": "CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 1,
+      "confirm_chase_guard_ok": true,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": true,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.16017316017316016,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": true,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 35.72649488088059,
+      "close_gt_base_ref": true,
+      "ema10_gt_ema30": true,
+      "rsi_14": 71.7764645586097
+    },
+    "trade_date": "2025-05-29"
+  }
+]
+```
+
+## BPCC Owner Window Confirmation Table (Verbatim)
+```json
+[
+  {
+    "base_reference": {
+      "base_high_ref": 708.0,
+      "base_low_ref": 680.0,
+      "base_origin_date": "2024-12-24",
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "base_retirement_reason": "CLOSE_BELOW_BASE_LOW_N(n=5)",
+      "base_validity_state": "RETIRED",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 5
+      }
+    },
+    "base_state": "BASE_RETIRED",
+    "candidate_intent": {
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "BPCC::2025-04-02::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "BPCC",
+      "trade_date": "2025-04-02"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": false,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": true,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": false,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 16.672636899198384,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": false,
+      "rsi_14": 60.47654944932901
+    },
+    "trade_date": "2025-04-02"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 708.0,
+      "base_low_ref": 680.0,
+      "base_origin_date": "2024-12-24",
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "base_retirement_reason": "CLOSE_BELOW_BASE_LOW_N(n=5)",
+      "base_validity_state": "RETIRED",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 5
+      }
+    },
+    "base_state": "BASE_RETIRED",
+    "candidate_intent": {
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "BPCC::2025-04-03::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "BPCC",
+      "trade_date": "2025-04-03"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": false,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": true,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": false,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 16.87893527586076,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": true,
+      "rsi_14": 60.92354061335463
+    },
+    "trade_date": "2025-04-03"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 708.0,
+      "base_low_ref": 680.0,
+      "base_origin_date": "2024-12-24",
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "base_retirement_reason": "CLOSE_BELOW_BASE_LOW_N(n=5)",
+      "base_validity_state": "RETIRED",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 5
+      }
+    },
+    "base_state": "BASE_RETIRED",
+    "candidate_intent": {
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "BPCC::2025-04-06::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "BPCC",
+      "trade_date": "2025-04-06"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": false,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": false,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 16.913639831169228,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": false,
+      "rsi_14": 39.9834837905649
+    },
+    "trade_date": "2025-04-06"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 708.0,
+      "base_low_ref": 680.0,
+      "base_origin_date": "2024-12-24",
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "base_retirement_reason": "CLOSE_BELOW_BASE_LOW_N(n=5)",
+      "base_validity_state": "RETIRED",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 5
+      }
+    },
+    "base_state": "BASE_RETIRED",
+    "candidate_intent": {
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "BPCC::2025-04-07::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "BPCC",
+      "trade_date": "2025-04-07"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": false,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": false,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 17.20025971883258,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": false,
+      "rsi_14": 35.959418976519146
+    },
+    "trade_date": "2025-04-07"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 708.0,
+      "base_low_ref": 680.0,
+      "base_origin_date": "2024-12-24",
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "base_retirement_reason": "CLOSE_BELOW_BASE_LOW_N(n=5)",
+      "base_validity_state": "RETIRED",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 5
+      }
+    },
+    "base_state": "BASE_RETIRED",
+    "candidate_intent": {
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "BPCC::2025-04-08::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "BPCC",
+      "trade_date": "2025-04-08"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": false,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": false,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 17.18690910836141,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": false,
+      "rsi_14": 40.42934706263902
+    },
+    "trade_date": "2025-04-08"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 708.0,
+      "base_low_ref": 680.0,
+      "base_origin_date": "2024-12-24",
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "base_retirement_reason": "CLOSE_BELOW_BASE_LOW_N(n=5)",
+      "base_validity_state": "RETIRED",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 5
+      }
+    },
+    "base_state": "BASE_RETIRED",
+    "candidate_intent": {
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "BPCC::2025-04-09::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "BPCC",
+      "trade_date": "2025-04-09"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": false,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": false,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 17.273989369149056,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": false,
+      "rsi_14": 39.44111734204376
+    },
+    "trade_date": "2025-04-09"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 708.0,
+      "base_low_ref": 680.0,
+      "base_origin_date": "2024-12-24",
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "base_retirement_reason": "CLOSE_BELOW_BASE_LOW_N(n=5)",
+      "base_validity_state": "RETIRED",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 5
+      }
+    },
+    "base_state": "BASE_RETIRED",
+    "candidate_intent": {
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "BPCC::2025-04-10::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "BPCC",
+      "trade_date": "2025-04-10"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": false,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": false,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 16.64456753308765,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": false,
+      "rsi_14": 47.701273060152666
+    },
+    "trade_date": "2025-04-10"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 708.0,
+      "base_low_ref": 680.0,
+      "base_origin_date": "2024-12-24",
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "base_retirement_reason": "CLOSE_BELOW_BASE_LOW_N(n=5)",
+      "base_validity_state": "RETIRED",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 5
+      }
+    },
+    "base_state": "BASE_RETIRED",
+    "candidate_intent": {
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "BPCC::2025-04-13::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "BPCC",
+      "trade_date": "2025-04-13"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": false,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": false,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 16.19358894758125,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": false,
+      "rsi_14": 45.12361960965238
+    },
+    "trade_date": "2025-04-13"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 708.0,
+      "base_low_ref": 680.0,
+      "base_origin_date": "2024-12-24",
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "base_retirement_reason": "CLOSE_BELOW_BASE_LOW_N(n=5)",
+      "base_validity_state": "RETIRED",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 5
+      }
+    },
+    "base_state": "BASE_RETIRED",
+    "candidate_intent": {
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "BPCC::2025-04-14::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "BPCC",
+      "trade_date": "2025-04-14"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": false,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": false,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 15.766346077101504,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": false,
+      "rsi_14": 46.021120856013574
+    },
+    "trade_date": "2025-04-14"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 708.0,
+      "base_low_ref": 680.0,
+      "base_origin_date": "2024-12-24",
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "base_retirement_reason": "CLOSE_BELOW_BASE_LOW_N(n=5)",
+      "base_validity_state": "RETIRED",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 5
+      }
+    },
+    "base_state": "BASE_RETIRED",
+    "candidate_intent": {
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "BPCC::2025-04-15::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "BPCC",
+      "trade_date": "2025-04-15"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": false,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": false,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 15.226280146873327,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": false,
+      "rsi_14": 48.29770705407964
+    },
+    "trade_date": "2025-04-15"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 708.0,
+      "base_low_ref": 680.0,
+      "base_origin_date": "2024-12-24",
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "base_retirement_reason": "CLOSE_BELOW_BASE_LOW_N(n=5)",
+      "base_validity_state": "RETIRED",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 5
+      }
+    },
+    "base_state": "BASE_RETIRED",
+    "candidate_intent": {
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "BPCC::2025-04-16::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "BPCC",
+      "trade_date": "2025-04-16"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": false,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": false,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 14.623216305408981,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": false,
+      "rsi_14": 48.763140318706505
+    },
+    "trade_date": "2025-04-16"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 708.0,
+      "base_low_ref": 680.0,
+      "base_origin_date": "2024-12-24",
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "base_retirement_reason": "CLOSE_BELOW_BASE_LOW_N(n=5)",
+      "base_validity_state": "RETIRED",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 5
+      }
+    },
+    "base_state": "BASE_RETIRED",
+    "candidate_intent": {
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "BPCC::2025-04-17::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "BPCC",
+      "trade_date": "2025-04-17"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": false,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": false,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 14.051892666126971,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": false,
+      "rsi_14": 48.29493762498896
+    },
+    "trade_date": "2025-04-17"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 708.0,
+      "base_low_ref": 680.0,
+      "base_origin_date": "2024-12-24",
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "base_retirement_reason": "CLOSE_BELOW_BASE_LOW_N(n=5)",
+      "base_validity_state": "RETIRED",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 5
+      }
+    },
+    "base_state": "BASE_RETIRED",
+    "candidate_intent": {
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "BPCC::2025-04-20::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "BPCC",
+      "trade_date": "2025-04-20"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": false,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": false,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 13.364384639743099,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": false,
+      "rsi_14": 48.82410416939389
+    },
+    "trade_date": "2025-04-20"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 708.0,
+      "base_low_ref": 680.0,
+      "base_origin_date": "2024-12-24",
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "base_retirement_reason": "CLOSE_BELOW_BASE_LOW_N(n=5)",
+      "base_validity_state": "RETIRED",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 5
+      }
+    },
+    "base_state": "BASE_RETIRED",
+    "candidate_intent": {
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "BPCC::2025-04-21::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "BPCC",
+      "trade_date": "2025-04-21"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": false,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": false,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 13.148862321347833,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": false,
+      "rsi_14": 56.49585691140771
+    },
+    "trade_date": "2025-04-21"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 708.0,
+      "base_low_ref": 680.0,
+      "base_origin_date": "2024-12-24",
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "base_retirement_reason": "CLOSE_BELOW_BASE_LOW_N(n=5)",
+      "base_validity_state": "RETIRED",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 5
+      }
+    },
+    "base_state": "BASE_RETIRED",
+    "candidate_intent": {
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "BPCC::2025-04-22::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "BPCC",
+      "trade_date": "2025-04-22"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": false,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": false,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 13.47563528477685,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": true,
+      "rsi_14": 61.5406066452796
+    },
+    "trade_date": "2025-04-22"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 708.0,
+      "base_low_ref": 680.0,
+      "base_origin_date": "2024-12-24",
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "base_retirement_reason": "CLOSE_BELOW_BASE_LOW_N(n=5)",
+      "base_validity_state": "RETIRED",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 5
+      }
+    },
+    "base_state": "BASE_RETIRED",
+    "candidate_intent": {
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "BPCC::2025-04-23::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "BPCC",
+      "trade_date": "2025-04-23"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": false,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": false,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 13.988471970255787,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": true,
+      "rsi_14": 63.303186095221804
+    },
+    "trade_date": "2025-04-23"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 708.0,
+      "base_low_ref": 680.0,
+      "base_origin_date": "2024-12-24",
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "base_retirement_reason": "CLOSE_BELOW_BASE_LOW_N(n=5)",
+      "base_validity_state": "RETIRED",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 5
+      }
+    },
+    "base_state": "BASE_RETIRED",
+    "candidate_intent": {
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "BPCC::2025-04-24::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "BPCC",
+      "trade_date": "2025-04-24"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": false,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": false,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 13.460224797290142,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": true,
+      "rsi_14": 62.07764969945059
+    },
+    "trade_date": "2025-04-24"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 708.0,
+      "base_low_ref": 680.0,
+      "base_origin_date": "2024-12-24",
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "base_retirement_reason": "CLOSE_BELOW_BASE_LOW_N(n=5)",
+      "base_validity_state": "RETIRED",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 5
+      }
+    },
+    "base_state": "BASE_RETIRED",
+    "candidate_intent": {
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "BPCC::2025-04-27::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "BPCC",
+      "trade_date": "2025-04-27"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": false,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": false,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 12.959780107112161,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": true,
+      "rsi_14": 62.468892815029314
+    },
+    "trade_date": "2025-04-27"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 708.0,
+      "base_low_ref": 680.0,
+      "base_origin_date": "2024-12-24",
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "base_retirement_reason": "CLOSE_BELOW_BASE_LOW_N(n=5)",
+      "base_validity_state": "RETIRED",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 5
+      }
+    },
+    "base_state": "BASE_RETIRED",
+    "candidate_intent": {
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "BPCC::2025-04-28::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "BPCC",
+      "trade_date": "2025-04-28"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": false,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": false,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": false,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 12.442686969200118,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": true,
+      "rsi_14": 58.5647669013413
+    },
+    "trade_date": "2025-04-28"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 708.0,
+      "base_low_ref": 680.0,
+      "base_origin_date": "2024-12-24",
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "base_retirement_reason": "CLOSE_BELOW_BASE_LOW_N(n=5)",
+      "base_validity_state": "RETIRED",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 5
+      }
+    },
+    "base_state": "BASE_RETIRED",
+    "candidate_intent": {
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "BPCC::2025-04-29::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "BPCC",
+      "trade_date": "2025-04-29"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": false,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": true,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": false,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 11.908160244255052,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": true,
+      "rsi_14": 59.024407814661494
+    },
+    "trade_date": "2025-04-29"
+  },
+  {
+    "base_reference": {
+      "base_high_ref": 708.0,
+      "base_low_ref": 680.0,
+      "base_origin_date": "2024-12-24",
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "base_retirement_reason": "CLOSE_BELOW_BASE_LOW_N(n=5)",
+      "base_validity_state": "RETIRED",
+      "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+      "invalidation_rule_state": {
+        "streak": 5
+      }
+    },
+    "base_state": "BASE_RETIRED",
+    "candidate_intent": {
+      "base_reference_id": "BPCC::2024-12-24::BASE01",
+      "chase_advisory_flag": 0,
+      "confirmation_state": "NOT_CONFIRMED",
+      "context_flags": {
+        "liquidity_context_ok": true,
+        "relative_volume_context_ok": false
+      },
+      "entry_tier": "NONE",
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "intent_id": "BPCC::2025-04-30::FLOW_INTENT_V1",
+      "intent_state": "INTENT_NONE",
+      "reason": "PREDICATE_BLOCK",
+      "symbol": "BPCC",
+      "trade_date": "2025-04-30"
+    },
+    "confirmation_state": "NOT_CONFIRMED",
+    "confirmation_terms": {
+      "accumulation_context_ok": true,
+      "chase_advisory_flag": 0,
+      "confirm_chase_guard_ok": false,
+      "confirm_flow_core_ok": true,
+      "confirm_relative_volume_context_ok": false,
+      "confirm_structure_ok": false,
+      "current_day_liquidity_ok": true,
+      "extension_pct_vs_current_valid_reference": 0.0,
+      "flow_accumulation_divergence_ok": true,
+      "flow_anv_slope_ok": true,
+      "flow_obv_slope_ok": true,
+      "liquidity_context_ok": true
+    },
+    "readiness_state": "READINESS_LIMITED",
+    "structure_terms": {
+      "adx_19": 11.309878415640467,
+      "close_gt_base_ref": false,
+      "ema10_gt_ema30": true,
+      "rsi_14": 56.982226740003995
+    },
+    "trade_date": "2025-04-30"
+  }
+]
+```
+
+## Harness Output (Verbatim)
+```text
+R14D_MODULE_D_HARNESS_V1_START
+HARNESS_DB C:\Users\Sager\OneDrive\Desktop\portfolio_app\mobile-migration\backend-api-main-release\artifacts\preview1a_prestart\review_final\r14d_module_d_harness_surface_v1.db
+CARRY_IN_FIX first_bar_long_lookback_predicate_value=1.0
+SANAM confirmed=11 intents=11 chase_advisory=10
+BPCC confirmed=0 intents=0 chase_advisory=0
+R14D_MODULE_D_HARNESS_V1_COMPLETE
+
+```

@@ -1,0 +1,81 @@
+{
+  "daily_term_row_columns": [
+    "row_id",
+    "symbol",
+    "trade_date",
+    "segment_id",
+    "segment_day_index",
+    "phase_before",
+    "phase_after",
+    "readiness_state",
+    "readiness_transition_event",
+    "readiness_transition_from_state",
+    "readiness_transition_to_state",
+    "segment_restart_flag",
+    "masked_context_flag",
+    "lookback_long_sessions",
+    "lookback_segment_sessions",
+    "lookback_fallback_sessions",
+    "base_reference_id",
+    "intent_id",
+    "predicate_namespace",
+    "predicate_name",
+    "predicate_value",
+    "predicate_threshold_parameter",
+    "predicate_pass",
+    "recoverability_state",
+    "recoverability_reason",
+    "source_payload_fields",
+    "base_reference_version",
+    "base_reference_origin",
+    "base_reference_current_flag",
+    "extension_pct_vs_current_valid_reference",
+    "chase_advisory_flag",
+    "current_day_value_kwd",
+    "trailing_liquidity_context_value",
+    "early_tier_flag",
+    "dead_money_sessions",
+    "flow_obv_slope_40",
+    "flow_anv_slope_40",
+    "flow_accumulation_divergence",
+    "accumulation_context_ok",
+    "participation_cap_pct",
+    "pilot_size_fraction",
+    "time_stop_sessions",
+    "entry_tier",
+    "flow_evidence_snapshot",
+    "current_valid_reference_value"
+  ],
+  "module_boundary": {
+    "inputs": [
+      "normalized_day_payload",
+      "base_reference",
+      "flow_history_window",
+      "structure_terms"
+    ],
+    "outputs": [
+      "confirmation_state",
+      "confirmation_terms",
+      "candidate_intent"
+    ]
+  },
+  "named_parameters_status": "PROVISIONAL_PENDING_PARAMETER_GATE",
+  "namespaces": {
+    "accumulation": [
+      "FLOW_OBV_SLOPE_OK",
+      "FLOW_ANV_SLOPE_OK",
+      "FLOW_ACCUMULATION_DIVERGENCE_OK",
+      "ACCUMULATION_CONTEXT_OK"
+    ],
+    "confirmation": [
+      "CONFIRM_FLOW_CORE_OK",
+      "CONFIRM_STRUCTURE_OK",
+      "CONFIRM_RELATIVE_VOLUME_CONTEXT_OK",
+      "CONFIRM_CHASE_GUARD_OK",
+      "CURRENT_DAY_LIQUIDITY_OK",
+      "LIQUIDITY_CONTEXT_OK"
+    ]
+  },
+  "pass": true,
+  "version_id": "R14D_MODULE_D_INTERFACE_CONFORMANCE_V1"
+}

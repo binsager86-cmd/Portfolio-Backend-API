@@ -1,0 +1,96 @@
+{
+  "bpcc_base_survival_assessment": {
+    "answer": "NO",
+    "evidence": "BPCC base_state is BASE_RETIRED on each disclosed owner-window day in v2.",
+    "question": "Does a base survive to give structure a reference under compliant parameters?"
+  },
+  "compliant_parameter_attestation": {
+    "freeze_attestation": {
+      "advisory_threshold_ratified": 0.08,
+      "chase_text_contains_0_08": true,
+      "chase_text_contains_0_15": true,
+      "escalation_threshold_ratified": 0.15,
+      "freeze_artifact": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_parameter_freeze_v1.json",
+      "freeze_sha256_actual": "77baef52297b73df0049cec0f940bec06f2f333d751dbe9269693a824ac05846",
+      "freeze_sha256_expected": "77baef52297b73df0049cec0f940bec06f2f333d751dbe9269693a824ac05846",
+      "freeze_sha256_file": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_parameter_freeze_v1.sha256",
+      "freeze_sha256_match": true,
+      "ratified_chase_text": "advisory flag > 0.08 extension vs current valid reference; escalation flag > 0.15"
+    },
+    "frozen_parameters": {
+      "CHASE_ADVISORY_BAND": {
+        "advisory_threshold": 0.08,
+        "escalation_threshold": 0.15,
+        "status": "FROZEN_R14B_PARAMETER_FREEZE_V1"
+      }
+    },
+    "invalidation_rule_form": "CLOSE_BELOW_BASE_LOW_N",
+    "invalidation_rule_params": {
+      "n_sessions": 2
+    },
+    "provisional_parameters_unchanged": {
+      "adx_trigger": 15.0,
+      "anv_slope_min": 0.1,
+      "cmf_floor": 0.05,
+      "min_current_day_value_kwd": 50000.0,
+      "min_daily_value_kwd": 100000.0,
+      "obv_slope_min": 0.1,
+      "rsi_regime": 50.0,
+      "volume_breakout_mult": 2.5
+    }
+  },
+  "deltas": {
+    "bpcc_chase_advisory_delta": 0,
+    "bpcc_confirmed_delta": 0,
+    "bpcc_intent_delta": 0,
+    "sanam_chase_advisory_delta": -10,
+    "sanam_confirmed_delta": -11,
+    "sanam_intent_delta": -11
+  },
+  "generated_at_utc": "2026-07-13T19:18:09Z",
+  "run1_summary": {
+    "bpcc": {
+      "chase_advisory_count": 0,
+      "confirmed_count": 0,
+      "confirmed_dates": [],
+      "day_count": 21,
+      "intent_formed_count": 0
+    },
+    "sanam": {
+      "chase_advisory_count": 10,
+      "confirmed_count": 11,
+      "confirmed_dates": [
+        "2025-05-15",
+        "2025-05-18",
+        "2025-05-19",
+        "2025-05-20",
+        "2025-05-21",
+        "2025-05-22",
+        "2025-05-25",
+        "2025-05-26",
+        "2025-05-27",
+        "2025-05-28",
+        "2025-05-29"
+      ],
+      "day_count": 21,
+      "intent_formed_count": 11
+    }
+  },
+  "run2_summary": {
+    "bpcc": {
+      "chase_advisory_count": 0,
+      "confirmed_count": 0,
+      "confirmed_dates": [],
+      "day_count": 21,
+      "intent_formed_count": 0
+    },
+    "sanam": {
+      "chase_advisory_count": 0,
+      "confirmed_count": 0,
+      "confirmed_dates": [],
+      "day_count": 21,
+      "intent_formed_count": 0
+    }
+  },
+  "version_id": "R14D_MODULE_D_RERUN_DELTA_V2"
+}

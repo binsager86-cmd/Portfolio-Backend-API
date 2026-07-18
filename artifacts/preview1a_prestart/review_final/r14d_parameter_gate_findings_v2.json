@@ -1,0 +1,242 @@
+{
+  "facts_only": true,
+  "findings": [
+    {
+      "fact": "During SANAM quiet accumulation (2025-05-05..2025-05-14), OBV/ANV slopes and accumulation context passed while CMF-based flow-core stayed negative and failed; in run1 confirmation appeared post-markup and in compliant run2 confirmations were absent due to retired base-state chain.",
+      "finding_id": "FLOW_CORE_LAG",
+      "gate_implication": "Parameter gate must weigh slope-based accumulation evidence vs CMF-floor composition lag.",
+      "post_markup_points": [
+        {
+          "base_state": "BASE_RETIRED",
+          "confirm_flow_core": 0.11208870965264389,
+          "confirm_structure": 1.0,
+          "trade_date": "2025-05-15"
+        },
+        {
+          "base_state": "BASE_RETIRED",
+          "confirm_flow_core": 0.30886713453486847,
+          "confirm_structure": 1.0,
+          "trade_date": "2025-05-18"
+        },
+        {
+          "base_state": "BASE_RETIRED",
+          "confirm_flow_core": 0.22271371833162196,
+          "confirm_structure": 1.0,
+          "trade_date": "2025-05-19"
+        },
+        {
+          "base_state": "BASE_RETIRED",
+          "confirm_flow_core": 0.29967056287781285,
+          "confirm_structure": 1.0,
+          "trade_date": "2025-05-20"
+        },
+        {
+          "base_state": "BASE_RETIRED",
+          "confirm_flow_core": 0.15972783798692086,
+          "confirm_structure": 1.0,
+          "trade_date": "2025-05-21"
+        },
+        {
+          "base_state": "BASE_RETIRED",
+          "confirm_flow_core": 0.11392250551163166,
+          "confirm_structure": 1.0,
+          "trade_date": "2025-05-22"
+        }
+      ],
+      "quiet_window_points": [
+        {
+          "acc_ctx": 1.0,
+          "confirm_flow_core": -0.48555564005530627,
+          "flow_anv": 610.8374338624392,
+          "flow_obv": 0.5787771873177945,
+          "trade_date": "2025-05-05"
+        },
+        {
+          "acc_ctx": 1.0,
+          "confirm_flow_core": -0.5160647026576999,
+          "flow_anv": 603.3519293808811,
+          "flow_obv": 0.5713740709418194,
+          "trade_date": "2025-05-06"
+        },
+        {
+          "acc_ctx": 1.0,
+          "confirm_flow_core": -0.5466278786629762,
+          "flow_anv": 582.2316314339874,
+          "flow_obv": 0.5503561412921087,
+          "trade_date": "2025-05-07"
+        },
+        {
+          "acc_ctx": 1.0,
+          "confirm_flow_core": -0.17011757795524743,
+          "flow_anv": 506.5664043184294,
+          "flow_obv": 0.47649917643471146,
+          "trade_date": "2025-05-08"
+        },
+        {
+          "acc_ctx": 1.0,
+          "confirm_flow_core": -0.2549522822100031,
+          "flow_anv": 471.7992523444526,
+          "flow_obv": 0.4433678597785264,
+          "trade_date": "2025-05-11"
+        },
+        {
+          "acc_ctx": 1.0,
+          "confirm_flow_core": -0.2996478804225496,
+          "flow_anv": 416.0596642015643,
+          "flow_obv": 0.39179073696459465,
+          "trade_date": "2025-05-12"
+        },
+        {
+          "acc_ctx": 1.0,
+          "confirm_flow_core": -0.022197482240240995,
+          "flow_anv": 392.6703048244482,
+          "flow_obv": 0.371903278076662,
+          "trade_date": "2025-05-13"
+        },
+        {
+          "acc_ctx": 1.0,
+          "confirm_flow_core": -0.26045574516668574,
+          "flow_anv": 329.1519987525321,
+          "flow_obv": 0.31309548590777553,
+          "trade_date": "2025-05-14"
+        }
+      ],
+      "severity": "PARAMETER_GATE"
+    },
+    {
+      "bpcc_points": [
+        {
+          "base_state": "BASE_RETIRED",
+          "confirm_chase_guard": 0.0,
+          "confirm_flow_core": 0.10913082281480561,
+          "confirm_relvol_ctx": 0.7063025728744122,
+          "confirm_structure": 0.0,
+          "current_liq_ok": 1,
+          "trade_date": "2025-04-15",
+          "trailing_liq_ok": 1
+        },
+        {
+          "base_state": "BASE_RETIRED",
+          "confirm_chase_guard": 0.0,
+          "confirm_flow_core": 0.11086382992066365,
+          "confirm_relvol_ctx": 1.1342046540597306,
+          "confirm_structure": 0.0,
+          "current_liq_ok": 1,
+          "trade_date": "2025-04-16",
+          "trailing_liq_ok": 1
+        },
+        {
+          "base_state": "BASE_RETIRED",
+          "confirm_chase_guard": 0.0,
+          "confirm_flow_core": 0.06797816748746399,
+          "confirm_relvol_ctx": 1.2246159113549087,
+          "confirm_structure": 0.0,
+          "current_liq_ok": 1,
+          "trade_date": "2025-04-17",
+          "trailing_liq_ok": 1
+        },
+        {
+          "base_state": "BASE_RETIRED",
+          "confirm_chase_guard": 0.0,
+          "confirm_flow_core": 0.08695545171153946,
+          "confirm_relvol_ctx": 0.9723294648589073,
+          "confirm_structure": 0.0,
+          "current_liq_ok": 1,
+          "trade_date": "2025-04-20",
+          "trailing_liq_ok": 1
+        },
+        {
+          "base_state": "BASE_RETIRED",
+          "confirm_chase_guard": 0.0,
+          "confirm_flow_core": 0.2539404287001087,
+          "confirm_relvol_ctx": 1.3074680833937549,
+          "confirm_structure": 0.0,
+          "current_liq_ok": 1,
+          "trade_date": "2025-04-21",
+          "trailing_liq_ok": 1
+        },
+        {
+          "base_state": "BASE_RETIRED",
+          "confirm_chase_guard": 0.0,
+          "confirm_flow_core": 0.4198962915250539,
+          "confirm_relvol_ctx": 2.1563101859019342,
+          "confirm_structure": 0.0,
+          "current_liq_ok": 1,
+          "trade_date": "2025-04-22",
+          "trailing_liq_ok": 1
+        },
+        {
+          "base_state": "BASE_RETIRED",
+          "confirm_chase_guard": 0.0,
+          "confirm_flow_core": 0.4574912553895283,
+          "confirm_relvol_ctx": 0.950042278878346,
+          "confirm_structure": 0.0,
+          "current_liq_ok": 1,
+          "trade_date": "2025-04-23",
+          "trailing_liq_ok": 1
+        },
+        {
+          "base_state": "BASE_RETIRED",
+          "confirm_chase_guard": 0.0,
+          "confirm_flow_core": 0.47779010650345793,
+          "confirm_relvol_ctx": 1.2975723053454176,
+          "confirm_structure": 0.0,
+          "current_liq_ok": 1,
+          "trade_date": "2025-04-24",
+          "trailing_liq_ok": 1
+        },
+        {
+          "base_state": "BASE_RETIRED",
+          "confirm_chase_guard": 0.0,
+          "confirm_flow_core": 0.6237540612447802,
+          "confirm_relvol_ctx": 0.275937622452503,
+          "confirm_structure": 0.0,
+          "current_liq_ok": 1,
+          "trade_date": "2025-04-27",
+          "trailing_liq_ok": 1
+        },
+        {
+          "base_state": "BASE_RETIRED",
+          "confirm_chase_guard": 0.0,
+          "confirm_flow_core": 0.5637980116463914,
+          "confirm_relvol_ctx": 0.529305227300787,
+          "confirm_structure": 0.0,
+          "current_liq_ok": 1,
+          "trade_date": "2025-04-28",
+          "trailing_liq_ok": 1
+        },
+        {
+          "base_state": "BASE_RETIRED",
+          "confirm_chase_guard": 0.0,
+          "confirm_flow_core": 0.5168240604052586,
+          "confirm_relvol_ctx": 0.9445322402321894,
+          "confirm_structure": 0.0,
+          "current_liq_ok": 1,
+          "trade_date": "2025-04-29",
+          "trailing_liq_ok": 1
+        },
+        {
+          "base_state": "BASE_RETIRED",
+          "confirm_chase_guard": 0.0,
+          "confirm_flow_core": 0.38315138209408345,
+          "confirm_relvol_ctx": 1.2468320595787763,
+          "confirm_structure": 0.0,
+          "current_liq_ok": 1,
+          "trade_date": "2025-04-30",
+          "trailing_liq_ok": 1
+        }
+      ],
+      "fact": "BPCC zero-composition remained dominated by structure/chase/relative-volume blockers while flow-core and liquidity stayed green; dependency on invalidation/base survival remains explicit in v2 where base_state is retired across owner days.",
+      "finding_id": "BPCC_STRUCTURE_CHAIN",
+      "gate_implication": "Resolve at parameter gate with compliant rerun data; base survival is the active dependency.",
+      "severity": "PARAMETER_GATE"
+    }
+  ],
+  "generated_at_utc": "2026-07-13T19:18:09Z",
+  "source_artifacts": [
+    "artifacts/preview1a_prestart/review_final/r14d_module_d_per_day_table_v2.csv",
+    "artifacts/preview1a_prestart/review_final/r14d_module_d_test_evidence_v1.json",
+    "artifacts/preview1a_prestart/review_final/r14d_module_d_test_evidence_v2.json"
+  ],
+  "version_id": "R14D_PARAMETER_GATE_FINDINGS_V2"
+}

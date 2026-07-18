@@ -1,0 +1,39 @@
+# R14-B Conduct Addendum v1
+
+{
+  "base_assessment_reference": "r14b_conduct_ledger_entry_5_v1.json",
+  "base_assessment_version": "R14B_CONDUCT_LEDGER_ENTRY_5_V1",
+  "evidence_scope_extension_only": true,
+  "generated_at_utc": "2026-07-13T18:08:52Z",
+  "incidents_appended": [
+    {
+      "evidence_scope": [
+        "r14b_module_b_test_evidence_v2.json",
+        "r14b_module_b_implementation_report_v2.md"
+      ],
+      "fact": "Synthetic evidence rows were persisted to telemetry ledger during module (b) v2 seam surfacing cycle.",
+      "incident_id": "ADD-1",
+      "severity": "CRITICAL/EVIDENCE_INTEGRITY"
+    },
+    {
+      "evidence_scope": [
+        "r15_surface_binding_v1.json",
+        "r15_surface_revocation_v1.json"
+      ],
+      "fact": "Canonical surface ee_v2_runtime_surface_r15_v1.db became contaminated and was revoked.",
+      "incident_id": "ADD-2",
+      "severity": "CRITICAL/SURFACE_INTEGRITY"
+    },
+    {
+      "evidence_scope": [
+        "r14b_module_a_v1_defect_note_v1.json",
+        "r14b_module_a_write_path_harness_v1.py"
+      ],
+      "fact": "In-place edit occurred on sealed generator r14b_module_a_write_path_harness_v1.py.",
+      "incident_id": "ADD-3",
+      "severity": "MODERATE/REPRODUCIBILITY"
+    }
+  ],
+  "no_self_adjudication": true,
+  "version_id": "R14B_CONDUCT_ADDENDUM_V1"
+}

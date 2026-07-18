@@ -1,0 +1,404 @@
+{
+  "carry_in_fix_check": {
+    "expectation": "approximately 1 on first bar; must not echo threshold constants",
+    "first_bar_long_lookback_predicate_value": 1.0,
+    "first_symbol": "SANAM",
+    "first_trade_date": "2024-11-03",
+    "pass": true
+  },
+  "ddl_statement_count": 16,
+  "harness_db_hash_sha256": "69e52f07e99f3da48468cd9d90ff804bd6e0590f1c531fd16e5bd37ffba9a21d",
+  "harness_db_path": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14c_module_c_harness_surface_v1.db",
+  "provisional_parameter_status": "PROVISIONAL_PENDING_PARAMETER_GATE",
+  "sanam_acceptance": {
+    "freeze_events": [],
+    "has_freeze": false,
+    "has_ratchet": false,
+    "may_18_rows": [
+      {
+        "base_reference": {
+          "base_high_ref": null,
+          "base_low_ref": null,
+          "base_origin_date": null,
+          "base_reference_id": null,
+          "base_retirement_reason": "READINESS_PENDING,DWELL_NOT_OK",
+          "base_validity_state": "NONE"
+        },
+        "base_state": "BASE_RETIRED",
+        "base_transition_terms": {
+          "base_freeze_event": "NONE",
+          "base_invalidate_event": "NONE",
+          "base_rachet_event": "NONE",
+          "no_freeze_reason": "NONE"
+        },
+        "provisional_marking": "PROVISIONAL_PENDING_PARAMETER_GATE",
+        "readiness_state": "READINESS_LIMITED",
+        "segment_day_index": 130,
+        "trade_date": "2025-05-18"
+      }
+    ],
+    "ratchet_events": [],
+    "valid_into_may_18": false
+  },
+  "set_b_guard": "No provisional geometry parameter was tuned from Set B; values are explicit placeholders pending parameter gate.",
+  "tijara_lifecycle_rows": [
+    {
+      "base_reference": {
+        "base_high_ref": null,
+        "base_low_ref": null,
+        "base_origin_date": null,
+        "base_reference_id": null,
+        "base_retirement_reason": "READINESS_PENDING,DWELL_NOT_OK",
+        "base_validity_state": "NONE"
+      },
+      "base_state": "BASE_FORMING",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "NONE",
+        "no_freeze_reason": "READINESS_PENDING,DWELL_NOT_OK"
+      },
+      "provisional_marking": "PROVISIONAL_PENDING_PARAMETER_GATE",
+      "readiness_state": "READINESS_PENDING",
+      "segment_day_index": 0,
+      "trade_date": "2025-05-01"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": null,
+        "base_low_ref": null,
+        "base_origin_date": null,
+        "base_reference_id": null,
+        "base_retirement_reason": "READINESS_PENDING,DWELL_NOT_OK",
+        "base_validity_state": "NONE"
+      },
+      "base_state": "BASE_RETIRED",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "NONE",
+        "no_freeze_reason": "NONE"
+      },
+      "provisional_marking": "PROVISIONAL_PENDING_PARAMETER_GATE",
+      "readiness_state": "READINESS_PENDING",
+      "segment_day_index": 1,
+      "trade_date": "2025-05-04"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": null,
+        "base_low_ref": null,
+        "base_origin_date": null,
+        "base_reference_id": null,
+        "base_retirement_reason": "READINESS_PENDING,DWELL_NOT_OK",
+        "base_validity_state": "NONE"
+      },
+      "base_state": "BASE_RETIRED",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "NONE",
+        "no_freeze_reason": "NONE"
+      },
+      "provisional_marking": "PROVISIONAL_PENDING_PARAMETER_GATE",
+      "readiness_state": "READINESS_PENDING",
+      "segment_day_index": 2,
+      "trade_date": "2025-05-05"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": null,
+        "base_low_ref": null,
+        "base_origin_date": null,
+        "base_reference_id": null,
+        "base_retirement_reason": "READINESS_PENDING,DWELL_NOT_OK",
+        "base_validity_state": "NONE"
+      },
+      "base_state": "BASE_RETIRED",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "NONE",
+        "no_freeze_reason": "NONE"
+      },
+      "provisional_marking": "PROVISIONAL_PENDING_PARAMETER_GATE",
+      "readiness_state": "READINESS_PENDING",
+      "segment_day_index": 3,
+      "trade_date": "2025-05-06"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": null,
+        "base_low_ref": null,
+        "base_origin_date": null,
+        "base_reference_id": null,
+        "base_retirement_reason": "READINESS_PENDING,DWELL_NOT_OK",
+        "base_validity_state": "NONE"
+      },
+      "base_state": "BASE_RETIRED",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "NONE",
+        "no_freeze_reason": "NONE"
+      },
+      "provisional_marking": "PROVISIONAL_PENDING_PARAMETER_GATE",
+      "readiness_state": "READINESS_PENDING",
+      "segment_day_index": 4,
+      "trade_date": "2025-05-07"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": null,
+        "base_low_ref": null,
+        "base_origin_date": null,
+        "base_reference_id": null,
+        "base_retirement_reason": "READINESS_PENDING,DWELL_NOT_OK",
+        "base_validity_state": "NONE"
+      },
+      "base_state": "BASE_RETIRED",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "NONE",
+        "no_freeze_reason": "NONE"
+      },
+      "provisional_marking": "PROVISIONAL_PENDING_PARAMETER_GATE",
+      "readiness_state": "READINESS_PENDING",
+      "segment_day_index": 5,
+      "trade_date": "2025-05-08"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": null,
+        "base_low_ref": null,
+        "base_origin_date": null,
+        "base_reference_id": null,
+        "base_retirement_reason": "READINESS_PENDING,DWELL_NOT_OK",
+        "base_validity_state": "NONE"
+      },
+      "base_state": "BASE_RETIRED",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "NONE",
+        "no_freeze_reason": "NONE"
+      },
+      "provisional_marking": "PROVISIONAL_PENDING_PARAMETER_GATE",
+      "readiness_state": "READINESS_PENDING",
+      "segment_day_index": 6,
+      "trade_date": "2025-05-11"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": null,
+        "base_low_ref": null,
+        "base_origin_date": null,
+        "base_reference_id": null,
+        "base_retirement_reason": "READINESS_PENDING,DWELL_NOT_OK",
+        "base_validity_state": "NONE"
+      },
+      "base_state": "BASE_RETIRED",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "NONE",
+        "no_freeze_reason": "NONE"
+      },
+      "provisional_marking": "PROVISIONAL_PENDING_PARAMETER_GATE",
+      "readiness_state": "READINESS_PENDING",
+      "segment_day_index": 7,
+      "trade_date": "2025-05-12"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": null,
+        "base_low_ref": null,
+        "base_origin_date": null,
+        "base_reference_id": null,
+        "base_retirement_reason": "READINESS_PENDING,DWELL_NOT_OK",
+        "base_validity_state": "NONE"
+      },
+      "base_state": "BASE_RETIRED",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "NONE",
+        "no_freeze_reason": "NONE"
+      },
+      "provisional_marking": "PROVISIONAL_PENDING_PARAMETER_GATE",
+      "readiness_state": "READINESS_PENDING",
+      "segment_day_index": 8,
+      "trade_date": "2025-05-13"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": null,
+        "base_low_ref": null,
+        "base_origin_date": null,
+        "base_reference_id": null,
+        "base_retirement_reason": "READINESS_PENDING,DWELL_NOT_OK",
+        "base_validity_state": "NONE"
+      },
+      "base_state": "BASE_RETIRED",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "NONE",
+        "no_freeze_reason": "NONE"
+      },
+      "provisional_marking": "PROVISIONAL_PENDING_PARAMETER_GATE",
+      "readiness_state": "READINESS_PENDING",
+      "segment_day_index": 9,
+      "trade_date": "2025-05-14"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": null,
+        "base_low_ref": null,
+        "base_origin_date": null,
+        "base_reference_id": null,
+        "base_retirement_reason": "READINESS_PENDING,DWELL_NOT_OK",
+        "base_validity_state": "NONE"
+      },
+      "base_state": "BASE_RETIRED",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "NONE",
+        "no_freeze_reason": "NONE"
+      },
+      "provisional_marking": "PROVISIONAL_PENDING_PARAMETER_GATE",
+      "readiness_state": "READINESS_PENDING",
+      "segment_day_index": 10,
+      "trade_date": "2025-05-15"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": null,
+        "base_low_ref": null,
+        "base_origin_date": null,
+        "base_reference_id": null,
+        "base_retirement_reason": "READINESS_PENDING,DWELL_NOT_OK",
+        "base_validity_state": "NONE"
+      },
+      "base_state": "BASE_RETIRED",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "NONE",
+        "no_freeze_reason": "NONE"
+      },
+      "provisional_marking": "PROVISIONAL_PENDING_PARAMETER_GATE",
+      "readiness_state": "READINESS_PENDING",
+      "segment_day_index": 11,
+      "trade_date": "2025-05-18"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": null,
+        "base_low_ref": null,
+        "base_origin_date": null,
+        "base_reference_id": null,
+        "base_retirement_reason": "READINESS_PENDING,DWELL_NOT_OK",
+        "base_validity_state": "NONE"
+      },
+      "base_state": "BASE_RETIRED",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "NONE",
+        "no_freeze_reason": "NONE"
+      },
+      "provisional_marking": "PROVISIONAL_PENDING_PARAMETER_GATE",
+      "readiness_state": "READINESS_PENDING",
+      "segment_day_index": 12,
+      "trade_date": "2025-05-19"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": null,
+        "base_low_ref": null,
+        "base_origin_date": null,
+        "base_reference_id": null,
+        "base_retirement_reason": "READINESS_PENDING,DWELL_NOT_OK",
+        "base_validity_state": "NONE"
+      },
+      "base_state": "BASE_RETIRED",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "NONE",
+        "no_freeze_reason": "NONE"
+      },
+      "provisional_marking": "PROVISIONAL_PENDING_PARAMETER_GATE",
+      "readiness_state": "READINESS_PENDING",
+      "segment_day_index": 13,
+      "trade_date": "2025-05-20"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": null,
+        "base_low_ref": null,
+        "base_origin_date": null,
+        "base_reference_id": null,
+        "base_retirement_reason": "READINESS_PENDING,DWELL_NOT_OK",
+        "base_validity_state": "NONE"
+      },
+      "base_state": "BASE_RETIRED",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "NONE",
+        "no_freeze_reason": "NONE"
+      },
+      "provisional_marking": "PROVISIONAL_PENDING_PARAMETER_GATE",
+      "readiness_state": "READINESS_PENDING",
+      "segment_day_index": 14,
+      "trade_date": "2025-05-21"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": null,
+        "base_low_ref": null,
+        "base_origin_date": null,
+        "base_reference_id": null,
+        "base_retirement_reason": "READINESS_PENDING,DWELL_NOT_OK",
+        "base_validity_state": "NONE"
+      },
+      "base_state": "BASE_RETIRED",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "NONE",
+        "no_freeze_reason": "NONE"
+      },
+      "provisional_marking": "PROVISIONAL_PENDING_PARAMETER_GATE",
+      "readiness_state": "READINESS_PENDING",
+      "segment_day_index": 15,
+      "trade_date": "2025-05-22"
+    },
+    {
+      "base_reference": {
+        "base_high_ref": null,
+        "base_low_ref": null,
+        "base_origin_date": null,
+        "base_reference_id": null,
+        "base_retirement_reason": "READINESS_PENDING,DWELL_NOT_OK",
+        "base_validity_state": "NONE"
+      },
+      "base_state": "BASE_RETIRED",
+      "base_transition_terms": {
+        "base_freeze_event": "NONE",
+        "base_invalidate_event": "NONE",
+        "base_rachet_event": "NONE",
+        "no_freeze_reason": "NONE"
+      },
+      "provisional_marking": "PROVISIONAL_PENDING_PARAMETER_GATE",
+      "readiness_state": "READINESS_PENDING",
+      "segment_day_index": 16,
+      "trade_date": "2025-05-25"
+    }
+  ],
+  "version_id": "R14C_MODULE_C_TEST_EVIDENCE_V1"
+}

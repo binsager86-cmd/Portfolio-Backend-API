@@ -1,0 +1,33 @@
+{
+  "facts_only": true,
+  "freeze_byte_match": {
+    "freeze_file": "artifacts/preview1a_prestart/review_final/r14b_parameter_freeze_v1.json",
+    "freeze_sha256_actual": "77baef52297b73df0049cec0f940bec06f2f333d751dbe9269693a824ac05846",
+    "freeze_sha256_expected": "77baef52297b73df0049cec0f940bec06f2f333d751dbe9269693a824ac05846",
+    "match": true
+  },
+  "generated_at_utc": "2026-07-13T19:18:09Z",
+  "incidents_appended": [
+    {
+      "classification": "UNREGISTERED_INVALIDATION_VALUE",
+      "evidence_scope": [
+        "scripts/r14d_module_d_flow_confirmation_harness_v1.py",
+        "artifacts/preview1a_prestart/review_final/r14c_invalidation_rule_candidates_v1.json"
+      ],
+      "fact": "Harness v1 used CLOSE_BELOW_BASE_LOW_N with n_sessions=5 while registered candidate grid lists n_sessions values {1,2}.",
+      "incident_id": "ADD-1",
+      "severity": "HIGH/RULE_REGISTRATION_INTEGRITY"
+    },
+    {
+      "classification": "FREEZE_OVERRIDE",
+      "evidence_scope": [
+        "artifacts/preview1a_prestart/review_final/r14b_parameter_freeze_v1.json",
+        "scripts/r14d_module_d_flow_confirmation_harness_v1.py"
+      ],
+      "fact": "Ratified frozen CHASE_ADVISORY_BAND (advisory 0.08 / escalation 0.15 per r14b_parameter_freeze_v1) was overridden to 0.02 in harness v1. Frozen values are non-variable in any harness context.",
+      "incident_id": "ADD-2",
+      "severity": "HIGH/FREEZE_INTEGRITY"
+    }
+  ],
+  "version_id": "R14D_CONDUCT_ADDENDUM_V1"
+}

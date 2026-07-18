@@ -1,0 +1,15046 @@
+# R14-E Module (e) Harness v1
+
+- Scope: LifecycleIntentRouter + StagedPositionPolicy
+- Authority: r14b_parameter_freeze_v2
+- Mode: harness-db only
+
+## Freeze Attestation
+{
+  "actual_json_sha256": "7483faa40aafa21687bc7b00f0b0dc340b9c6d455df71445f1230c707625915a",
+  "byte_match": true,
+  "expected_json_sha256": "7483faa40aafa21687bc7b00f0b0dc340b9c6d455df71445f1230c707625915a",
+  "freeze_json": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_parameter_freeze_v2.json",
+  "freeze_sha_sidecar": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r14b_parameter_freeze_v2.sha256"
+}
+
+## Owner Windows
+{
+  "SANAM": {
+    "owner_end": "2025-05-31",
+    "owner_start": "2025-05-01",
+    "replay_end": "2025-05-31",
+    "replay_start": "2024-11-01"
+  },
+  "TIJARA": {
+    "owner_end": "2025-12-31",
+    "owner_start": "2025-01-01",
+    "replay_end": "2025-12-31",
+    "replay_start": "2024-07-01"
+  }
+}
+
+## Per-day Intent Lifecycle Tables
+{
+  "SANAM": [
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.0,
+        "intent_id": "SANAM::2025-05-01::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "SANAM",
+        "trade_date": "2025-05-01"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-05-01",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.0,
+        "intent_id": "SANAM::2025-05-04::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "SANAM",
+        "trade_date": "2025-05-04"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-05-04",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.0,
+        "intent_id": "SANAM::2025-05-05::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "SANAM",
+        "trade_date": "2025-05-05"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-05-05",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.0,
+        "intent_id": "SANAM::2025-05-06::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "SANAM",
+        "trade_date": "2025-05-06"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-05-06",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.0,
+        "intent_id": "SANAM::2025-05-07::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "SANAM",
+        "trade_date": "2025-05-07"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-05-07",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.0,
+        "intent_id": "SANAM::2025-05-08::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "SANAM",
+        "trade_date": "2025-05-08"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-05-08",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.0,
+        "intent_id": "SANAM::2025-05-11::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "SANAM",
+        "trade_date": "2025-05-11"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-05-11",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.0,
+        "intent_id": "SANAM::2025-05-12::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "SANAM",
+        "trade_date": "2025-05-12"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-05-12",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.0,
+        "intent_id": "SANAM::2025-05-13::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "SANAM",
+        "trade_date": "2025-05-13"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-05-13",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.0,
+        "intent_id": "SANAM::2025-05-14::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "SANAM",
+        "trade_date": "2025-05-14"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-05-14",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.004329004329004329,
+        "intent_id": "SANAM::2025-05-15::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "SANAM",
+        "trade_date": "2025-05-15"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.004329004329004329
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-05-15",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.08225108225108226,
+        "intent_id": "SANAM::2025-05-18::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "SANAM",
+        "trade_date": "2025-05-18"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.08225108225108226
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-05-18",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.05194805194805195,
+        "intent_id": "SANAM::2025-05-19::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "SANAM",
+        "trade_date": "2025-05-19"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.05194805194805195
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-05-19",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.10822510822510822,
+        "intent_id": "SANAM::2025-05-20::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "SANAM",
+        "trade_date": "2025-05-20"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.10822510822510822
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-05-20",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.06926406926406926,
+        "intent_id": "SANAM::2025-05-21::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "SANAM",
+        "trade_date": "2025-05-21"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.06926406926406926
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-05-21",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.05194805194805195,
+        "intent_id": "SANAM::2025-05-22::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "SANAM",
+        "trade_date": "2025-05-22"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.05194805194805195
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-05-22",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.06493506493506493,
+        "intent_id": "SANAM::2025-05-25::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "SANAM",
+        "trade_date": "2025-05-25"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.06493506493506493
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-05-25",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.06926406926406926,
+        "intent_id": "SANAM::2025-05-26::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "SANAM",
+        "trade_date": "2025-05-26"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.06926406926406926
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-05-26",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.06060606060606061,
+        "intent_id": "SANAM::2025-05-27::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "SANAM",
+        "trade_date": "2025-05-27"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.06060606060606061
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-05-27",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.06926406926406926,
+        "intent_id": "SANAM::2025-05-28::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "SANAM",
+        "trade_date": "2025-05-28"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.06926406926406926
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-05-28",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.16017316017316016,
+        "intent_id": "SANAM::2025-05-29::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "SANAM",
+        "trade_date": "2025-05-29"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "SANAM::2025-01-28::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.16017316017316016
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-05-29",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    }
+  ],
+  "TIJARA": [
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.030721966205837177,
+        "intent_id": "TIJARA::2025-01-05::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-01-05"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.030721966205837177
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-01-05",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.027649769585253635,
+        "intent_id": "TIJARA::2025-01-06::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-01-06"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.027649769585253635
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-01-06",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.02457757296466987,
+        "intent_id": "TIJARA::2025-01-07::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-01-07"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.02457757296466987
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-01-07",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.026113671274961642,
+        "intent_id": "TIJARA::2025-01-08::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-01-08"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.026113671274961642
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-01-08",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.04301075268817222,
+        "intent_id": "TIJARA::2025-01-09::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-01-09"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.04301075268817222
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-01-09",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.030721966205837177,
+        "intent_id": "TIJARA::2025-01-12::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-01-12"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.030721966205837177
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-01-12",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.029185867895545406,
+        "intent_id": "TIJARA::2025-01-13::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-01-13"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.029185867895545406
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-01-13",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.07834101382488493,
+        "intent_id": "TIJARA::2025-01-14::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-01-14"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.07834101382488493
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-01-14",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.07219662058371741,
+        "intent_id": "TIJARA::2025-01-15::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-01-15"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.07219662058371741
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-01-15",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.05529953917050705,
+        "intent_id": "TIJARA::2025-01-16::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-01-16"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.05529953917050705
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-01-16",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.052227342549923284,
+        "intent_id": "TIJARA::2025-01-19::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-01-19"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.052227342549923284
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-01-19",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.07066052227342563,
+        "intent_id": "TIJARA::2025-01-20::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-01-20"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.07066052227342563
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-01-20",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.07219662058371741,
+        "intent_id": "TIJARA::2025-01-21::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-01-21"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.07219662058371741
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-01-21",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.06298003072196634,
+        "intent_id": "TIJARA::2025-01-22::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-01-22"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.06298003072196634
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-01-22",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.049155145929339526,
+        "intent_id": "TIJARA::2025-01-23::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-01-23"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.049155145929339526
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-01-23",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.03840245775729647,
+        "intent_id": "TIJARA::2025-01-26::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-01-26"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.03840245775729647
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-01-26",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.03225806451612916,
+        "intent_id": "TIJARA::2025-01-27::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-01-27"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.03225806451612916
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-01-27",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.05069124423963151,
+        "intent_id": "TIJARA::2025-01-28::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-01-28"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.05069124423963151
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-01-28",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.04454685099846399,
+        "intent_id": "TIJARA::2025-01-29::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-01-29"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.04454685099846399
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-01-29",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.05990783410138258,
+        "intent_id": "TIJARA::2025-02-02::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-02-02"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.05990783410138258
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-02-02",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.06298003072196634,
+        "intent_id": "TIJARA::2025-02-03::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-02-03"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.06298003072196634
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-02-03",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.06451612903225812,
+        "intent_id": "TIJARA::2025-02-04::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-02-04"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.06451612903225812
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-02-04",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.0660522273425501,
+        "intent_id": "TIJARA::2025-02-05::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-02-05"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0660522273425501
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-02-05",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.07066052227342563,
+        "intent_id": "TIJARA::2025-02-06::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-02-06"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.07066052227342563
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-02-06",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.0737327188940094,
+        "intent_id": "TIJARA::2025-02-09::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-02-09"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0737327188940094
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-02-09",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.130568356374808,
+        "intent_id": "TIJARA::2025-02-10::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-02-10"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.130568356374808
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-02-10",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.10599078341013835,
+        "intent_id": "TIJARA::2025-02-11::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-02-11"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.10599078341013835
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-02-11",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.12903225806451624,
+        "intent_id": "TIJARA::2025-02-12::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-02-12"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.12903225806451624
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-02-12",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.11367127496159764,
+        "intent_id": "TIJARA::2025-02-13::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-02-13"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.11367127496159764
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-02-13",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.09370199692780352,
+        "intent_id": "TIJARA::2025-02-16::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-02-16"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.09370199692780352
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-02-16",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.12596006144393246,
+        "intent_id": "TIJARA::2025-02-17::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-02-17"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.12596006144393246
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-02-17",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.15053763440860235,
+        "intent_id": "TIJARA::2025-02-18::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-02-18"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.15053763440860235
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-02-18",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.14439324116743482,
+        "intent_id": "TIJARA::2025-02-19::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-02-19"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.14439324116743482
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-02-19",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.17204301075268824,
+        "intent_id": "TIJARA::2025-02-20::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-02-20"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.17204301075268824
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-02-20",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.16436251920122893,
+        "intent_id": "TIJARA::2025-02-23::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-02-23"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.16436251920122893
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-02-23",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.16129032258064518,
+        "intent_id": "TIJARA::2025-02-24::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-02-24"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.16129032258064518
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-02-24",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.130568356374808,
+        "intent_id": "TIJARA::2025-03-02::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-03-02"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.130568356374808
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-03-02",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.1167434715821814,
+        "intent_id": "TIJARA::2025-03-03::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-03-03"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.1167434715821814
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-03-03",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.11520737327188942,
+        "intent_id": "TIJARA::2025-03-04::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-03-04"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.11520737327188942
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-03-04",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.10599078341013835,
+        "intent_id": "TIJARA::2025-03-05::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-03-05"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.10599078341013835
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-03-05",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.09831029185867905,
+        "intent_id": "TIJARA::2025-03-06::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-03-06"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.09831029185867905
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-03-06",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.09062980030721976,
+        "intent_id": "TIJARA::2025-03-09::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-03-09"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.09062980030721976
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-03-09",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.10291858678955458,
+        "intent_id": "TIJARA::2025-03-10::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-03-10"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.10291858678955458
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-03-10",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.09984639016897082,
+        "intent_id": "TIJARA::2025-03-11::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-03-11"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.09984639016897082
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-03-11",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.09216589861751152,
+        "intent_id": "TIJARA::2025-03-12::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-03-12"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.09216589861751152
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-03-12",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.09831029185867905,
+        "intent_id": "TIJARA::2025-03-13::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-03-13"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.09831029185867905
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-03-13",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.09062980030721976,
+        "intent_id": "TIJARA::2025-03-16::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-03-16"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.09062980030721976
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-03-16",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.09831029185867905,
+        "intent_id": "TIJARA::2025-03-17::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-03-17"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.09831029185867905
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-03-17",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.09370199692780352,
+        "intent_id": "TIJARA::2025-03-18::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-03-18"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.09370199692780352
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-03-18",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.087557603686636,
+        "intent_id": "TIJARA::2025-03-19::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-03-19"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.087557603686636
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-03-19",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.09062980030721976,
+        "intent_id": "TIJARA::2025-03-20::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-03-20"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.09062980030721976
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-03-20",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.08602150537634422,
+        "intent_id": "TIJARA::2025-03-23::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-03-23"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.08602150537634422
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-03-23",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.08448540706605223,
+        "intent_id": "TIJARA::2025-03-24::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-03-24"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.08448540706605223
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-03-24",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.09831029185867905,
+        "intent_id": "TIJARA::2025-03-25::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-03-25"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.09831029185867905
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-03-25",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.09677419354838727,
+        "intent_id": "TIJARA::2025-03-26::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-03-26"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.09677419354838727
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READINESS_LIMITED",
+      "trade_date": "2025-03-26",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.09677419354838727,
+        "intent_id": "TIJARA::2025-03-27::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-03-27"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.09677419354838727
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-03-27",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.08448540706605223,
+        "intent_id": "TIJARA::2025-04-02::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-04-02"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.08448540706605223
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-04-02",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.09523809523809529,
+        "intent_id": "TIJARA::2025-04-03::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-04-03"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.09523809523809529
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-04-03",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.0015360983102919899,
+        "intent_id": "TIJARA::2025-04-06::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-04-06"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0015360983102919899
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-04-06",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.0,
+        "intent_id": "TIJARA::2025-04-07::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-04-07"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-04-07",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.029185867895545406,
+        "intent_id": "TIJARA::2025-04-08::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-04-08"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.029185867895545406
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-04-08",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.01843317972350235,
+        "intent_id": "TIJARA::2025-04-09::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-04-09"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.01843317972350235
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-04-09",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.04454685099846399,
+        "intent_id": "TIJARA::2025-04-10::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-04-10"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.04454685099846399
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-04-10",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.049155145929339526,
+        "intent_id": "TIJARA::2025-04-13::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-04-13"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.049155145929339526
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-04-13",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.05990783410138258,
+        "intent_id": "TIJARA::2025-04-14::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-04-14"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.05990783410138258
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-04-14",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.061443932411674354,
+        "intent_id": "TIJARA::2025-04-15::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-04-15"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.061443932411674354
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-04-15",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.06758832565284187,
+        "intent_id": "TIJARA::2025-04-16::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-04-16"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.06758832565284187
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-04-16",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.07219662058371741,
+        "intent_id": "TIJARA::2025-04-17::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-04-17"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.07219662058371741
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-04-17",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.07526881720430117,
+        "intent_id": "TIJARA::2025-04-20::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-04-20"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.07526881720430117
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-04-20",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.07680491551459294,
+        "intent_id": "TIJARA::2025-04-21::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-04-21"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.07680491551459294
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-04-21",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.061443932411674354,
+        "intent_id": "TIJARA::2025-04-22::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-04-22"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.061443932411674354
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-04-22",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.0737327188940094,
+        "intent_id": "TIJARA::2025-04-23::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-04-23"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0737327188940094
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-04-23",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.06298003072196634,
+        "intent_id": "TIJARA::2025-04-24::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-04-24"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.06298003072196634
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-04-24",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.08909370199692798,
+        "intent_id": "TIJARA::2025-04-27::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-04-27"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.08909370199692798
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-04-27",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.09062980030721976,
+        "intent_id": "TIJARA::2025-04-28::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-04-28"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.09062980030721976
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-04-28",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.07834101382488493,
+        "intent_id": "TIJARA::2025-04-29::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-04-29"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.07834101382488493
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-04-29",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.08141321044546869,
+        "intent_id": "TIJARA::2025-04-30::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-04-30"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.08141321044546869
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-04-30",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.09523809523809529,
+        "intent_id": "TIJARA::2025-05-01::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-05-01"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.09523809523809529
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-05-01",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.12135176651305693,
+        "intent_id": "TIJARA::2025-05-04::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-05-04"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.12135176651305693
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-05-04",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.10291858678955458,
+        "intent_id": "TIJARA::2025-05-05::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-05-05"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.10291858678955458
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-05-05",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.11059907834101387,
+        "intent_id": "TIJARA::2025-05-06::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-05-06"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.11059907834101387
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-05-06",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.10291858678955458,
+        "intent_id": "TIJARA::2025-05-07::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-05-07"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.10291858678955458
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-05-07",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.027649769585253635,
+        "intent_id": "TIJARA::2025-05-08::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-05-08"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.027649769585253635
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-05-08",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.027649769585253635,
+        "intent_id": "TIJARA::2025-05-11::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-05-11"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.027649769585253635
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-05-11",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.029185867895545406,
+        "intent_id": "TIJARA::2025-05-12::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-05-12"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.029185867895545406
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-05-12",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.0368663594470047,
+        "intent_id": "TIJARA::2025-05-13::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-05-13"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0368663594470047
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-05-13",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.03533026113671293,
+        "intent_id": "TIJARA::2025-05-14::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-05-14"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.03533026113671293
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-05-14",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.04454685099846399,
+        "intent_id": "TIJARA::2025-05-15::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-05-15"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.04454685099846399
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-05-15",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.02457757296466987,
+        "intent_id": "TIJARA::2025-05-18::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-05-18"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.02457757296466987
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-05-18",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.03993855606758846,
+        "intent_id": "TIJARA::2025-05-19::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-05-19"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.03993855606758846
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-05-19",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.03840245775729647,
+        "intent_id": "TIJARA::2025-05-20::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-05-20"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.03840245775729647
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-05-20",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.029185867895545406,
+        "intent_id": "TIJARA::2025-05-21::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-05-21"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.029185867895545406
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-05-21",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.029185867895545406,
+        "intent_id": "TIJARA::2025-05-22::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-05-22"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.029185867895545406
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-05-22",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.03993855606758846,
+        "intent_id": "TIJARA::2025-05-25::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-05-25"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.03993855606758846
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-05-25",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.016897081413210578,
+        "intent_id": "TIJARA::2025-05-26::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-05-26"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.016897081413210578
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-05-26",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.029185867895545406,
+        "intent_id": "TIJARA::2025-05-27::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-05-27"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.029185867895545406
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-05-27",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.02457757296466987,
+        "intent_id": "TIJARA::2025-05-28::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-05-28"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.02457757296466987
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-05-28",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.01843317972350235,
+        "intent_id": "TIJARA::2025-05-29::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-05-29"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.01843317972350235
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-05-29",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.02457757296466987,
+        "intent_id": "TIJARA::2025-06-01::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-06-01"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.02457757296466987
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-06-01",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.02457757296466987,
+        "intent_id": "TIJARA::2025-06-02::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-06-02"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.02457757296466987
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-06-02",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.02150537634408611,
+        "intent_id": "TIJARA::2025-06-03::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-06-03"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.02150537634408611
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-06-03",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.029185867895545406,
+        "intent_id": "TIJARA::2025-06-04::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-06-04"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.029185867895545406
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-06-04",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.030721966205837177,
+        "intent_id": "TIJARA::2025-06-10::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-06-10"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.030721966205837177
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-06-10",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.026113671274961642,
+        "intent_id": "TIJARA::2025-06-11::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-06-11"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.026113671274961642
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-06-11",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.007680491551459294,
+        "intent_id": "TIJARA::2025-06-12::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-06-12"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.007680491551459294
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-06-12",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.0,
+        "intent_id": "TIJARA::2025-06-15::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-06-15"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-06-15",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.0,
+        "intent_id": "TIJARA::2025-06-16::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-06-16"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-06-16",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.0,
+        "intent_id": "TIJARA::2025-06-17::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-06-17"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-06-17",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.0,
+        "intent_id": "TIJARA::2025-06-18::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-06-18"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-06-18",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.0,
+        "intent_id": "TIJARA::2025-06-19::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-06-19"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-06-19",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.003072196620583761,
+        "intent_id": "TIJARA::2025-06-22::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-06-22"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.003072196620583761
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-06-22",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.02457757296466987,
+        "intent_id": "TIJARA::2025-06-23::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-06-23"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.02457757296466987
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-06-23",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.0368663594470047,
+        "intent_id": "TIJARA::2025-06-24::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-06-24"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0368663594470047
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-06-24",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.02457757296466987,
+        "intent_id": "TIJARA::2025-06-25::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-06-25"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.02457757296466987
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-06-25",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.03533026113671293,
+        "intent_id": "TIJARA::2025-06-29::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-06-29"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.03533026113671293
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-06-29",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.04454685099846399,
+        "intent_id": "TIJARA::2025-06-30::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-06-30"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.04454685099846399
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-06-30",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.0368663594470047,
+        "intent_id": "TIJARA::2025-07-01::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-01"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.0368663594470047
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-01",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.04454685099846399,
+        "intent_id": "TIJARA::2025-07-02::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-02"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.04454685099846399
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-02",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.05837173579109081,
+        "intent_id": "TIJARA::2025-07-03::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-03"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.05837173579109081
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-03",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.05837173579109081,
+        "intent_id": "TIJARA::2025-07-06::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-06"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.05837173579109081
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-06",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.08294930875576047,
+        "intent_id": "TIJARA::2025-07-07::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-07"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.08294930875576047
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-07",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.09831029185867905,
+        "intent_id": "TIJARA::2025-07-08::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-08"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.09831029185867905
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-08",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.09831029185867905,
+        "intent_id": "TIJARA::2025-07-09::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-09"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.09831029185867905
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-09",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.11367127496159764,
+        "intent_id": "TIJARA::2025-07-10::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-10"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.11367127496159764
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-10",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.08602150537634422,
+        "intent_id": "TIJARA::2025-07-13::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-13"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.08602150537634422
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-13",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 0,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.07526881720430117,
+        "intent_id": "TIJARA::2025-07-14::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-14"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": false,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.07526881720430117
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-14",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.08909370199692798,
+        "intent_id": "TIJARA::2025-07-15::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-15"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.08909370199692798
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-15",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.13671274961597552,
+        "intent_id": "TIJARA::2025-07-16::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-16"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": false,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.13671274961597552
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-16",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.175115207373272,
+        "intent_id": "TIJARA::2025-07-17::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-17"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.175115207373272
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-17",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.2104454685099847,
+        "intent_id": "TIJARA::2025-07-20::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-20"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.2104454685099847
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-20",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.262672811059908,
+        "intent_id": "TIJARA::2025-07-21::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-21"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.262672811059908
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-21",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.23655913978494633,
+        "intent_id": "TIJARA::2025-07-22::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-22"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.23655913978494633
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-22",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.23041474654377883,
+        "intent_id": "TIJARA::2025-07-23::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-23"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.23041474654377883
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-23",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.22887864823348705,
+        "intent_id": "TIJARA::2025-07-24::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-24"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.22887864823348705
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-24",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.20430107526881738,
+        "intent_id": "TIJARA::2025-07-27::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-27"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.20430107526881738
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-27",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.21351766513056847,
+        "intent_id": "TIJARA::2025-07-28::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-28"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.21351766513056847
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-28",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.20583717357910916,
+        "intent_id": "TIJARA::2025-07-29::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-29"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.20583717357910916
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-29",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.1950844854070661,
+        "intent_id": "TIJARA::2025-07-30::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-30"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.1950844854070661
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-30",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.19354838709677435,
+        "intent_id": "TIJARA::2025-07-31::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-07-31"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.19354838709677435
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-07-31",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.20430107526881738,
+        "intent_id": "TIJARA::2025-08-03::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-08-03"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.20430107526881738
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-08-03",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.1827956989247313,
+        "intent_id": "TIJARA::2025-08-04::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-08-04"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.1827956989247313
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-08-04",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.19047619047619058,
+        "intent_id": "TIJARA::2025-08-05::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-08-05"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.19047619047619058
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-08-05",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.1889400921658988,
+        "intent_id": "TIJARA::2025-08-06::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-08-06"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.1889400921658988
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-08-06",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.18433179723502305,
+        "intent_id": "TIJARA::2025-08-07::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-08-07"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.18433179723502305
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-08-07",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.20583717357910916,
+        "intent_id": "TIJARA::2025-08-10::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-08-10"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.20583717357910916
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-08-10",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.19047619047619058,
+        "intent_id": "TIJARA::2025-08-11::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-08-11"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.19047619047619058
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-08-11",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.1950844854070661,
+        "intent_id": "TIJARA::2025-08-12::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-08-12"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.1950844854070661
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-08-12",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.18433179723502305,
+        "intent_id": "TIJARA::2025-08-13::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-08-13"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.18433179723502305
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-08-13",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.18740399385560683,
+        "intent_id": "TIJARA::2025-08-14::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-08-14"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.18740399385560683
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-08-14",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.1889400921658988,
+        "intent_id": "TIJARA::2025-08-17::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-08-17"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.1889400921658988
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-08-17",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.20737327188940094,
+        "intent_id": "TIJARA::2025-08-18::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-08-18"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.20737327188940094
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-08-18",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.2380952380952381,
+        "intent_id": "TIJARA::2025-08-19::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-08-19"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.2380952380952381
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-08-19",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.22119815668202775,
+        "intent_id": "TIJARA::2025-08-20::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-08-20"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.22119815668202775
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-08-20",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.22273425499231952,
+        "intent_id": "TIJARA::2025-08-21::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-08-21"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.22273425499231952
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-08-21",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.21351766513056847,
+        "intent_id": "TIJARA::2025-08-24::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-08-24"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.21351766513056847
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-08-24",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.20737327188940094,
+        "intent_id": "TIJARA::2025-08-25::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-08-25"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.20737327188940094
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-08-25",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.19969278033794163,
+        "intent_id": "TIJARA::2025-08-26::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-08-26"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.19969278033794163
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-08-26",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.19815668202764988,
+        "intent_id": "TIJARA::2025-08-27::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-08-27"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.19815668202764988
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-08-27",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.2104454685099847,
+        "intent_id": "TIJARA::2025-08-28::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-08-28"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.2104454685099847
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-08-28",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.1966205837173581,
+        "intent_id": "TIJARA::2025-08-31::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-08-31"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.1966205837173581
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-08-31",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.19047619047619058,
+        "intent_id": "TIJARA::2025-09-01::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-09-01"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.19047619047619058
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-09-01",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.1950844854070661,
+        "intent_id": "TIJARA::2025-09-02::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-09-02"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.1950844854070661
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-09-02",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.1889400921658988,
+        "intent_id": "TIJARA::2025-09-03::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-09-03"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.1889400921658988
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-09-03",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.17665130568356377,
+        "intent_id": "TIJARA::2025-09-07::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-09-07"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.17665130568356377
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-09-07",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.18740399385560683,
+        "intent_id": "TIJARA::2025-09-08::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-09-08"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.18740399385560683
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-09-08",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.1966205837173581,
+        "intent_id": "TIJARA::2025-09-09::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-09-09"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.1966205837173581
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-09-09",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.1966205837173581,
+        "intent_id": "TIJARA::2025-09-10::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-09-10"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.1966205837173581
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-09-10",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.23348694316436258,
+        "intent_id": "TIJARA::2025-09-11::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-09-11"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.23348694316436258
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-09-11",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.2565284178187405,
+        "intent_id": "TIJARA::2025-09-14::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-09-14"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.2565284178187405
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-09-14",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.28878648233486964,
+        "intent_id": "TIJARA::2025-09-15::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-09-15"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.28878648233486964
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-09-15",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.28417818740399386,
+        "intent_id": "TIJARA::2025-09-16::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-09-16"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.28417818740399386
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-09-16",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.28571428571428586,
+        "intent_id": "TIJARA::2025-09-17::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-09-17"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.28571428571428586
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-09-17",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.2980030721966207,
+        "intent_id": "TIJARA::2025-09-18::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-09-18"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.2980030721966207
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-09-18",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.30568356374808,
+        "intent_id": "TIJARA::2025-09-21::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-09-21"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.30568356374808
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-09-21",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.33179723502304165,
+        "intent_id": "TIJARA::2025-09-22::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-09-22"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.33179723502304165
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-09-22",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.3717357910906299,
+        "intent_id": "TIJARA::2025-09-23::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-09-23"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.3717357910906299
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-09-23",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.35330261136712754,
+        "intent_id": "TIJARA::2025-09-24::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-09-24"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.35330261136712754
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-09-24",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.35176651305683576,
+        "intent_id": "TIJARA::2025-09-25::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-09-25"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.35176651305683576
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-09-25",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.44546850998463905,
+        "intent_id": "TIJARA::2025-09-28::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-09-28"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.44546850998463905
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-09-28",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.566820276497696,
+        "intent_id": "TIJARA::2025-09-29::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-09-29"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.566820276497696
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-09-29",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.5161290322580647,
+        "intent_id": "TIJARA::2025-09-30::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-09-30"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5161290322580647
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-09-30",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.49001536098310305,
+        "intent_id": "TIJARA::2025-10-01::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-10-01"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.49001536098310305
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-10-01",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.49769585253456233,
+        "intent_id": "TIJARA::2025-10-02::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-10-02"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.49769585253456233
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-10-02",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.5207373271889403,
+        "intent_id": "TIJARA::2025-10-05::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-10-05"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5207373271889403
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-10-05",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.5192012288786485,
+        "intent_id": "TIJARA::2025-10-06::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-10-06"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5192012288786485
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-10-06",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.5023041474654378,
+        "intent_id": "TIJARA::2025-10-07::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-10-07"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5023041474654378
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-10-07",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.5053763440860216,
+        "intent_id": "TIJARA::2025-10-08::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-10-08"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5053763440860216
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-10-08",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.5345622119815671,
+        "intent_id": "TIJARA::2025-10-09::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-10-09"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5345622119815671
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-10-09",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.5207373271889403,
+        "intent_id": "TIJARA::2025-10-12::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-10-12"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5207373271889403
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-10-12",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.6129032258064517,
+        "intent_id": "TIJARA::2025-10-13::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-10-13"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.6129032258064517
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-10-13",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.5975422427035332,
+        "intent_id": "TIJARA::2025-10-14::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-10-14"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5975422427035332
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-10-14",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.5514592933947774,
+        "intent_id": "TIJARA::2025-10-15::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-10-15"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5514592933947774
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-10-15",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.566820276497696,
+        "intent_id": "TIJARA::2025-10-16::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-10-16"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.566820276497696
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-10-16",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.5468509984639018,
+        "intent_id": "TIJARA::2025-10-19::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-10-19"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5468509984639018
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-10-19",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.5038402457757298,
+        "intent_id": "TIJARA::2025-10-20::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-10-20"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5038402457757298
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-10-20",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.49308755760368683,
+        "intent_id": "TIJARA::2025-10-21::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-10-21"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.49308755760368683
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-10-21",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.5345622119815671,
+        "intent_id": "TIJARA::2025-10-22::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-10-22"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5345622119815671
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-10-22",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.5314900153609833,
+        "intent_id": "TIJARA::2025-10-23::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-10-23"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5314900153609833
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-10-23",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.5499231950844856,
+        "intent_id": "TIJARA::2025-10-26::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-10-26"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5499231950844856
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-10-26",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5145929339477727,
+        "intent_id": "TIJARA::2025-10-27::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-10-27"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5145929339477727
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-10-27",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5053763440860216,
+        "intent_id": "TIJARA::2025-10-28::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-10-28"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5053763440860216
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-10-28",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5407066052227344,
+        "intent_id": "TIJARA::2025-10-29::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-10-29"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5407066052227344
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-10-29",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5330261136712751,
+        "intent_id": "TIJARA::2025-10-30::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-10-30"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5330261136712751
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-10-30",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5330261136712751,
+        "intent_id": "TIJARA::2025-11-02::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-11-02"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5330261136712751
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-11-02",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5161290322580647,
+        "intent_id": "TIJARA::2025-11-03::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-11-03"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5161290322580647
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-11-03",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5053763440860216,
+        "intent_id": "TIJARA::2025-11-04::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-11-04"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5053763440860216
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-11-04",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5115207373271892,
+        "intent_id": "TIJARA::2025-11-05::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-11-05"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5115207373271892
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-11-05",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.49615975422427055,
+        "intent_id": "TIJARA::2025-11-06::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-11-06"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.49615975422427055
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-11-06",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5023041474654378,
+        "intent_id": "TIJARA::2025-11-09::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-11-09"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5023041474654378
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-11-09",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.49001536098310305,
+        "intent_id": "TIJARA::2025-11-10::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-11-10"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.49001536098310305
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-11-10",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.46697388632872516,
+        "intent_id": "TIJARA::2025-11-11::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-11-11"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.46697388632872516
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-11-11",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5514592933947774,
+        "intent_id": "TIJARA::2025-11-12::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-11-12"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5514592933947774
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-11-12",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.6282642089093703,
+        "intent_id": "TIJARA::2025-11-13::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-11-13"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.6282642089093703
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-11-13",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": true
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.6282642089093703,
+        "intent_id": "TIJARA::2025-11-16::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-11-16"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.6282642089093703
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-11-16",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5975422427035332,
+        "intent_id": "TIJARA::2025-11-17::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-11-17"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5975422427035332
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-11-17",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "BREAKOUT_CONFIRMED_ENTRY",
+        "extension_pct_vs_current_valid_reference": 0.5514592933947774,
+        "intent_id": "TIJARA::2025-11-18::FLOW_INTENT_V1",
+        "intent_state": "INTENT_FORMED",
+        "reason": "FLOW_STRUCTURE_CHASE_LIQUIDITY_PASS",
+        "symbol": "TIJARA",
+        "trade_date": "2025-11-18"
+      },
+      "confirmation_state": "CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5514592933947774
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-11-18",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5253456221198157,
+        "intent_id": "TIJARA::2025-11-19::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-11-19"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5253456221198157
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-11-19",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.566820276497696,
+        "intent_id": "TIJARA::2025-11-20::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-11-20"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.566820276497696
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-11-20",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5345622119815671,
+        "intent_id": "TIJARA::2025-11-23::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-11-23"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5345622119815671
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-11-23",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5345622119815671,
+        "intent_id": "TIJARA::2025-11-24::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-11-24"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5345622119815671
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-11-24",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5330261136712751,
+        "intent_id": "TIJARA::2025-11-25::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-11-25"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5330261136712751
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-11-25",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5284178187403995,
+        "intent_id": "TIJARA::2025-11-26::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-11-26"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5284178187403995
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-11-26",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5360983102918588,
+        "intent_id": "TIJARA::2025-11-27::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-11-27"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5360983102918588
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-11-27",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5422427035330263,
+        "intent_id": "TIJARA::2025-11-30::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-11-30"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5422427035330263
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-11-30",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5314900153609833,
+        "intent_id": "TIJARA::2025-12-01::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-01"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5314900153609833
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-01",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5053763440860216,
+        "intent_id": "TIJARA::2025-12-02::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-02"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5053763440860216
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-02",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.49462365591397855,
+        "intent_id": "TIJARA::2025-12-03::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-03"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.49462365591397855
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-03",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.4992319508448541,
+        "intent_id": "TIJARA::2025-12-04::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-04"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.4992319508448541
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-04",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5053763440860216,
+        "intent_id": "TIJARA::2025-12-07::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-07"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5053763440860216
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-07",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5207373271889403,
+        "intent_id": "TIJARA::2025-12-08::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-08"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5207373271889403
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-08",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5468509984639018,
+        "intent_id": "TIJARA::2025-12-09::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-09"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5468509984639018
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-09",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5330261136712751,
+        "intent_id": "TIJARA::2025-12-10::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-10"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5330261136712751
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-10",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5207373271889403,
+        "intent_id": "TIJARA::2025-12-11::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-11"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5207373271889403
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-11",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5268817204301077,
+        "intent_id": "TIJARA::2025-12-14::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-14"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5268817204301077
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-14",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": true,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.523809523809524,
+        "intent_id": "TIJARA::2025-12-15::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-15"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.523809523809524
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-15",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5253456221198157,
+        "intent_id": "TIJARA::2025-12-16::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-16"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5253456221198157
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-16",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5053763440860216,
+        "intent_id": "TIJARA::2025-12-17::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-17"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5053763440860216
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-17",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5053763440860216,
+        "intent_id": "TIJARA::2025-12-18::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-18"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5053763440860216
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-18",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5207373271889403,
+        "intent_id": "TIJARA::2025-12-21::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-21"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5207373271889403
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-21",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5053763440860216,
+        "intent_id": "TIJARA::2025-12-22::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-22"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5053763440860216
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-22",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5099846390168972,
+        "intent_id": "TIJARA::2025-12-23::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-23"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5099846390168972
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-23",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5053763440860216,
+        "intent_id": "TIJARA::2025-12-24::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-24"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5053763440860216
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-24",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5038402457757298,
+        "intent_id": "TIJARA::2025-12-25::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-25"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5038402457757298
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-25",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5053763440860216,
+        "intent_id": "TIJARA::2025-12-28::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-28"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5053763440860216
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-28",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.5007680491551461,
+        "intent_id": "TIJARA::2025-12-29::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-29"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.5007680491551461
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-29",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.47465437788018444,
+        "intent_id": "TIJARA::2025-12-30::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-30"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.47465437788018444
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-30",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    },
+    {
+      "base_state": "BASE_VALID",
+      "candidate_intent": {
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "chase_advisory_flag": 1,
+        "confirmation_state": "NOT_CONFIRMED",
+        "context_flags": {
+          "liquidity_context_ok": false,
+          "relative_volume_context_ok": false
+        },
+        "entry_tier": "NONE",
+        "extension_pct_vs_current_valid_reference": 0.49615975422427055,
+        "intent_id": "TIJARA::2025-12-31::FLOW_INTENT_V1",
+        "intent_state": "INTENT_NONE",
+        "reason": "PREDICATE_BLOCK",
+        "symbol": "TIJARA",
+        "trade_date": "2025-12-31"
+      },
+      "confirmation_state": "NOT_CONFIRMED",
+      "deferred_intent": {
+        "active": false,
+        "age_sessions": 0,
+        "base_reference_id": "TIJARA::2024-10-01::BASE01",
+        "expiry_ok": true,
+        "rearm_count": 0,
+        "state": "NONE"
+      },
+      "execution_intent": {
+        "chase_advisory": {
+          "advisory_flag": true,
+          "advisory_threshold": 0.08,
+          "escalation_flag": true,
+          "escalation_threshold": 0.15,
+          "extension_pct_vs_current_valid_reference": 0.49615975422427055
+        },
+        "dead_money_sessions": 0,
+        "entry_tier": "NONE",
+        "execution_state": "NONE",
+        "participation_cap_pct": 0.1,
+        "pilot_size_fraction": 0.0,
+        "time_stop_sessions": 60
+      },
+      "lifecycle_terms": {
+        "DEFERRED_INTENT_ACTIVE": false,
+        "DEFERRED_INTENT_EXPIRY_OK": true,
+        "EARLY_INTENT_ACTIVE": false,
+        "EARLY_INTENT_SCALE_READY": false
+      },
+      "readiness_state": "READY",
+      "trade_date": "2025-12-31",
+      "veto_record": {
+        "plane": "NONE",
+        "reason": "NONE",
+        "veto": false
+      }
+    }
+  ]
+}
