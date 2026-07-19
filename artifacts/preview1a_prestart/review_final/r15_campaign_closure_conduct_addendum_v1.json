@@ -1,0 +1,40 @@
+{
+  "version_id": "R15_CAMPAIGN_CLOSURE_CONDUCT_ADDENDUM_V1",
+  "facts_only": true,
+  "generated_at_utc": "2026-07-19T00:00:00Z",
+  "base_assessment_reference": "r14d_conduct_addendum_v1.json",
+  "base_assessment_version": "R14D_CONDUCT_ADDENDUM_V1",
+  "campaign_closure": {
+    "campaign": "R14-B_TO_R15_BUILD_CAMPAIGN",
+    "status": "CLOSED",
+    "stopping_rule_fired": true,
+    "stopping_rule_reason": "TWO_R15_FAILURES_OF_RECORD",
+    "r15_attempt_1": "FAIL_OF_RECORD",
+    "r15_attempt_2": "FAIL_OF_RECORD",
+    "no_attempt_3_authorized": true,
+    "no_further_exams_or_engine_work_authorized": true,
+    "no_remediation_toward_reexamination_authorized": true,
+    "no_cutover_authorized": true,
+    "no_app_wiring_of_v2_authority_authorized": true,
+    "preview_endpoints_status": "READ_ONLY_UNVALIDATED"
+  },
+  "recurrence_summary": [
+    {
+      "source": "r14c_conduct_addendum_v2.json",
+      "classification": "INLINE_PROBE_RECURRENCE",
+      "recorded_delta": 2
+    },
+    {
+      "source": "r14d_conduct_addendum_v1.json",
+      "classification": "UNREGISTERED_INVALIDATION_VALUE",
+      "recorded_incident_id": "ADD-1",
+      "severity": "HIGH/RULE_REGISTRATION_INTEGRITY"
+    },
+    {
+      "source": "r14d_conduct_addendum_v1.json",
+      "classification": "FREEZE_OVERRIDE",
+      "recorded_incident_id": "ADD-2",
+      "severity": "HIGH/FREEZE_INTEGRITY"
+    }
+  ]
+}
