@@ -1780,14 +1780,9 @@ class SimulatorEngine:
 
         now_ts = _now_ts()
         portfolio_summaries = []
-        _exec(
-            "DELETE FROM simulator_portfolios WHERE strategy_name NOT IN ('BUY','WATCHLIST')",
-            (),
-        )
-
         for strategy in STRATEGIES:
             existing = _get_portfolio(strategy.portfolio_id)
-            starting_capital = float(existing.get("starting_capital_kwd") or STARTING_CAPITAL_KWD) if existing else STARTING_CAPITAL_KWD
+            starting_capital = STARTING_CAPITAL_KWD
 
             if existing:
                 _exec(
@@ -2064,16 +2059,39 @@ class SimulatorEngine:
                    SELECT RAISE(ABORT, 'append-only table: sim_position_snapshots delete blocked');
                END""",
         )
-        # Seed portfolios if missing
-        count = _query_val("SELECT COUNT(*) FROM simulator_portfolios", ())
-        if not count or int(count) == 0:
-            now = _now_ts()
-            for strat in STRATEGIES:
+        now = _now_ts()
+        for strat in STRATEGIES:
+            _exec(
+                "UPDATE simulator_portfolios SET strategy_name = ?, updated_at = ? WHERE strategy_name = ? AND id <> ?",
+                (f"LEGACY_{strat.name}", now, strat.name, strat.portfolio_id),
+            )
+            existing = _get_portfolio(strat.portfolio_id)
+            if existing:
+                existing_starting = float(existing.get("starting_capital_kwd") or 0)
+                is_rebased = existing.get("strategy_name") != strat.name or abs(existing_starting - STARTING_CAPITAL_KWD) > 0.0001
+                _exec(
+                    """UPDATE simulator_portfolios
+                          SET strategy_name = ?,
+                              starting_capital_kwd = ?,
+                              cash_balance_kwd = ?,
+                              total_value_kwd = ?,
+                              updated_at = ?
+                        WHERE id = ?""",
+                    (
+                        strat.name,
+                        STARTING_CAPITAL_KWD,
+                        STARTING_CAPITAL_KWD if is_rebased else float(existing.get("cash_balance_kwd") or STARTING_CAPITAL_KWD),
+                        STARTING_CAPITAL_KWD if is_rebased else float(existing.get("total_value_kwd") or STARTING_CAPITAL_KWD),
+                        now,
+                        strat.portfolio_id,
+                    ),
+                )
+            else:
                 _exec(
                     """INSERT INTO simulator_portfolios
-                       (strategy_name, starting_capital_kwd, cash_balance_kwd, total_value_kwd, created_at, updated_at)
-                       VALUES (?, ?, ?, ?, ?, ?)""",
-                    (strat.name, STARTING_CAPITAL_KWD, STARTING_CAPITAL_KWD, STARTING_CAPITAL_KWD, now, now),
+                       (id, strategy_name, starting_capital_kwd, cash_balance_kwd, total_value_kwd, created_at, updated_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    (strat.portfolio_id, strat.name, STARTING_CAPITAL_KWD, STARTING_CAPITAL_KWD, STARTING_CAPITAL_KWD, now, now),
                 )
 
     # ── Manual override ──────────────────────────────────────────────────

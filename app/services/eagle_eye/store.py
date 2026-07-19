@@ -638,12 +638,12 @@ def load_rating(ticker: str) -> Optional[dict]:
     return d
 
 
-def snapshot_ratings_history(computed_date: Optional[str] = None) -> int:
+def snapshot_ratings_history(computed_date: Optional[str | date] = None) -> int:
     """Append today's current ratings cache into point-in-time ratings history."""
     from app.core.database import exec_sql, query_all
 
     ensure_tables()
-    snapshot_date = computed_date or date.today().isoformat()
+    snapshot_date = computed_date.isoformat() if isinstance(computed_date, date) else (computed_date or date.today().isoformat())
     today_str = date.today().isoformat()
     if snapshot_date != today_str:
         raise ValueError("ratings_history snapshot is forward-only; refusing to write historical ratings")
