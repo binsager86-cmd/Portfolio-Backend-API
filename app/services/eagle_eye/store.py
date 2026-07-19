@@ -145,9 +145,33 @@ def ensure_tables() -> None:
             indicators_json      TEXT,
             volume_context_json  TEXT,
             computed_at          TEXT,
+            created_at           INTEGER,
             updated_at           INTEGER,
             PRIMARY KEY (ticker, computed_date)
         )
+        """,
+        (),
+    )
+    _acim("ratings_history", "created_at", "INTEGER")
+
+    exec_sql(
+        """
+        CREATE TRIGGER IF NOT EXISTS trg_ratings_history_block_update
+        BEFORE UPDATE ON ratings_history
+        BEGIN
+            SELECT RAISE(ABORT, 'append-only table: ratings_history update blocked');
+        END
+        """,
+        (),
+    )
+
+    exec_sql(
+        """
+        CREATE TRIGGER IF NOT EXISTS trg_ratings_history_block_delete
+        BEFORE DELETE ON ratings_history
+        BEGIN
+            SELECT RAISE(ABORT, 'append-only table: ratings_history delete blocked');
+        END
         """,
         (),
     )
@@ -615,11 +639,15 @@ def load_rating(ticker: str) -> Optional[dict]:
 
 
 def snapshot_ratings_history(computed_date: Optional[str] = None) -> int:
-    """Upsert today's current ratings cache into the append-only ratings history table."""
+    """Append today's current ratings cache into point-in-time ratings history."""
     from app.core.database import exec_sql, query_all
 
     ensure_tables()
     snapshot_date = computed_date or date.today().isoformat()
+    today_str = date.today().isoformat()
+    if snapshot_date != today_str:
+        raise ValueError("ratings_history snapshot is forward-only; refusing to write historical ratings")
+
     rows = query_all(
         """
         SELECT ticker, name_en, sector, market_tier, stage, rating, confidence, thesis,
@@ -633,7 +661,7 @@ def snapshot_ratings_history(computed_date: Optional[str] = None) -> int:
         return 0
 
     written = 0
-    updated_at = int(time.time())
+    created_at = int(time.time())
     for row in rows:
         exec_sql(
             """
@@ -642,27 +670,9 @@ def snapshot_ratings_history(computed_date: Optional[str] = None) -> int:
                 stage, rating, confidence, thesis,
                 entry_primary, stop_loss, tp1, tp2, tp3, last_price,
                 signals_json, indicators_json, volume_context_json,
-                computed_at, updated_at
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            ON CONFLICT (ticker, computed_date) DO UPDATE SET
-                name_en = excluded.name_en,
-                sector = excluded.sector,
-                market_tier = excluded.market_tier,
-                stage = excluded.stage,
-                rating = excluded.rating,
-                confidence = excluded.confidence,
-                thesis = excluded.thesis,
-                entry_primary = excluded.entry_primary,
-                stop_loss = excluded.stop_loss,
-                tp1 = excluded.tp1,
-                tp2 = excluded.tp2,
-                tp3 = excluded.tp3,
-                last_price = excluded.last_price,
-                signals_json = excluded.signals_json,
-                indicators_json = excluded.indicators_json,
-                volume_context_json = excluded.volume_context_json,
-                computed_at = excluded.computed_at,
-                updated_at = excluded.updated_at
+                computed_at, created_at, updated_at
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            ON CONFLICT (ticker, computed_date) DO NOTHING
             """,
             (
                 row["ticker"],
@@ -684,7 +694,8 @@ def snapshot_ratings_history(computed_date: Optional[str] = None) -> int:
                 row.get("indicators_json"),
                 row.get("volume_context_json"),
                 row.get("computed_at") or snapshot_date,
-                updated_at,
+                created_at,
+                created_at,
             ),
         )
         written += 1

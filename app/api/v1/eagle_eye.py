@@ -51,6 +51,8 @@ from app.schemas.eagle_eye import (
     SupportResistanceLevel,
     ThresholdProfileResponse,
     VolumeContextSummary,
+    SimulationRequest,
+    SimulationResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -1687,13 +1689,13 @@ def _sim_portfolio_summary(portfolio: dict) -> dict:
 
     pid = portfolio["id"]
 
-    closed_rows = query_all(
-        """SELECT pnl_pct, pnl_kwd, exit_reason, entry_stage, entry_confidence
-           FROM simulator_positions
-           WHERE portfolio_id = ? AND status IN ('CLOSED', 'OVERRIDDEN')""",
+    tx_rows = query_all(
+        """SELECT realized_pnl_pct, outcome_class, exit_reason
+           FROM sim_transactions
+           WHERE portfolio_id = ?""",
         (pid,),
     )
-    closed = [dict(r.items()) for r in closed_rows] if closed_rows else []
+    closed = [dict(r.items()) for r in tx_rows] if tx_rows else []
 
     open_rows = query_all(
         "SELECT id FROM simulator_positions WHERE portfolio_id = ? AND status = 'OPEN'",
@@ -1701,13 +1703,15 @@ def _sim_portfolio_summary(portfolio: dict) -> dict:
     )
     open_count = len(open_rows) if open_rows else 0
 
-    wins = [r for r in closed if float(r.get("pnl_pct") or 0) > 0]
-    losses = [r for r in closed if float(r.get("pnl_pct") or 0) <= 0]
+    wins = [r for r in closed if float(r.get("realized_pnl_pct") or 0) > 0]
+    losses = [r for r in closed if float(r.get("realized_pnl_pct") or 0) <= 0]
     win_rate = (len(wins) / len(closed) * 100) if closed else 0
 
-    avg_win = (sum(float(r.get("pnl_pct") or 0) for r in wins) / len(wins)) if wins else 0
-    avg_loss = (sum(abs(float(r.get("pnl_pct") or 0)) for r in losses) / len(losses)) if losses else 0
-    profit_factor = (avg_win * len(wins)) / (avg_loss * len(losses)) if (avg_loss * len(losses)) > 0 else 0
+    avg_win = (sum(float(r.get("realized_pnl_pct") or 0) for r in wins) / len(wins)) if wins else 0
+    avg_loss = (sum(abs(float(r.get("realized_pnl_pct") or 0)) for r in losses) / len(losses)) if losses else 0
+    gross_win = sum(float(r.get("realized_pnl_pct") or 0) for r in wins)
+    gross_loss = sum(abs(float(r.get("realized_pnl_pct") or 0)) for r in losses)
+    profit_factor = (gross_win / gross_loss) if gross_loss > 0 else 0
 
     # Max drawdown from snapshots
     snap_rows = query_all(
@@ -1731,6 +1735,20 @@ def _sim_portfolio_summary(portfolio: dict) -> dict:
         for r in (equity_rows or [])
     ]
     equity_curve.reverse()
+
+    latest_exposure_row = query_all(
+        """SELECT open_positions_value_kwd, total_value_kwd
+           FROM simulator_daily_snapshots
+           WHERE portfolio_id = ?
+           ORDER BY date DESC LIMIT 1""",
+        (pid,),
+    )
+    exposure_pct = 0.0
+    if latest_exposure_row:
+        row = dict(latest_exposure_row[0].items())
+        open_val = float(row.get("open_positions_value_kwd") or 0)
+        total_val = float(row.get("total_value_kwd") or 0)
+        exposure_pct = (open_val / total_val * 100) if total_val > 0 else 0
 
     # Cumulative return
     starting = float(portfolio.get("starting_capital_kwd") or 10000)
@@ -1759,6 +1777,7 @@ def _sim_portfolio_summary(portfolio: dict) -> dict:
         "avg_win_pct": round(avg_win, 2),
         "avg_loss_pct": round(avg_loss, 2),
         "profit_factor": round(profit_factor, 2),
+        "exposure_pct": round(exposure_pct, 2),
         "max_drawdown_pct": round(max_drawdown, 2),
         "equity_curve": equity_curve,
         "live_since": live_since,
@@ -1767,14 +1786,17 @@ def _sim_portfolio_summary(portfolio: dict) -> dict:
 
 def _get_all_sim_portfolios() -> list:
     from app.core.database import query_all
-    rows = query_all("SELECT * FROM simulator_portfolios ORDER BY id", ())
+    rows = query_all(
+        "SELECT * FROM simulator_portfolios WHERE strategy_name IN ('BUY','WATCHLIST') ORDER BY id",
+        (),
+    )
     return [dict(r.items()) for r in rows] if rows else []
 
 
 def _get_sim_portfolio_by_strategy(strategy_name: str) -> Optional[dict]:
     from app.core.database import query_one
     row = query_one(
-        "SELECT * FROM simulator_portfolios WHERE strategy_name = ?",
+        "SELECT * FROM simulator_portfolios WHERE strategy_name = ? AND strategy_name IN ('BUY','WATCHLIST')",
         (strategy_name.upper(),),
     )
     return dict(row.items()) if row else None
@@ -1784,7 +1806,7 @@ def _get_sim_portfolio_by_strategy(strategy_name: str) -> Optional[dict]:
 # GET /eagle-eye/simulator/portfolios
 # ---------------------------------------------------------------------------
 
-@router.get("/simulator/portfolios", summary="All 3 simulator portfolios overview")
+@router.get("/simulator/portfolios", summary="All paper simulator card portfolios overview")
 async def get_simulator_portfolios(_user: TokenData = Depends(get_current_user)):
     portfolios = _get_all_sim_portfolios()
     summaries = [_sim_portfolio_summary(p) for p in portfolios]
@@ -1795,7 +1817,7 @@ async def get_simulator_portfolios(_user: TokenData = Depends(get_current_user))
 # GET /eagle-eye/simulator/compare
 # ---------------------------------------------------------------------------
 
-@router.get("/simulator/compare", summary="Side-by-side strategy comparison")
+@router.get("/simulator/compare", summary="Side-by-side paper card comparison")
 async def get_simulator_compare(_user: TokenData = Depends(get_current_user)):
     portfolios = _get_all_sim_portfolios()
     summaries = {p["strategy_name"]: _sim_portfolio_summary(p) for p in portfolios}
@@ -1845,17 +1867,37 @@ async def get_simulator_portfolio_detail(
     )
     open_positions = [dict(r.items()) for r in open_rows] if open_rows else []
 
-    # Recent closed trades
-    closed_rows = query_all(
-        """SELECT id, ticker, entry_date, entry_price, exit_date, exit_price,
-                  exit_reason, pnl_kwd, pnl_pct, days_held,
-                  entry_confidence, entry_stage, entry_rating
-           FROM simulator_positions
-           WHERE portfolio_id = ? AND status IN ('CLOSED', 'OVERRIDDEN')
-           ORDER BY exit_date DESC LIMIT 50""",
+    tx_rows = query_all(
+        """SELECT id, position_id, ticker, event_kind, fraction_closed,
+                  entry_date, entry_price, entry_snapshot_json,
+                  exit_date, exit_price, exit_reason,
+                  realized_pnl_pct, holding_sessions, mfe_pct, mae_pct,
+                  exit_snapshot_json, outcome_class,
+                  persisted_fields_json, flipped_fields_json, sessions_to_flip_json,
+                  mfe_gt_10, mfe_gt_20, attribution_json
+           FROM sim_transactions
+           WHERE portfolio_id = ?
+           ORDER BY exit_date DESC, id DESC
+           LIMIT 100""",
         (pid,),
     )
-    closed_trades = [dict(r.items()) for r in closed_rows] if closed_rows else []
+    transaction_history = []
+    for r in (tx_rows or []):
+        d = dict(r.items())
+        for col in (
+            "entry_snapshot_json",
+            "exit_snapshot_json",
+            "persisted_fields_json",
+            "flipped_fields_json",
+            "sessions_to_flip_json",
+            "attribution_json",
+        ):
+            if isinstance(d.get(col), str):
+                try:
+                    d[col] = json.loads(d[col])
+                except Exception:
+                    d[col] = {}
+        transaction_history.append(d)
 
     # Considered-not-taken count
     considered_count_row = query_all(
@@ -1890,7 +1932,8 @@ async def get_simulator_portfolio_detail(
         "summary": summary,
         "equity_curve": equity_curve,
         "open_positions": open_positions,
-        "recent_closed_trades": closed_trades,
+        "recent_closed_trades": [],
+        "transaction_history": transaction_history,
         "considered_not_taken_count": considered_count,
         "breakdown_by_stage": by_stage,
         "breakdown_by_exit_reason": by_exit_reason,
@@ -1970,13 +2013,26 @@ async def get_simulator_performance(
 
     pid = portfolio["id"]
     closed_rows = query_all(
-        """SELECT pnl_pct, pnl_kwd, days_held, entry_stage, entry_confidence,
-                  entry_rating, exit_reason, ticker
-           FROM simulator_positions
-           WHERE portfolio_id = ? AND status IN ('CLOSED', 'OVERRIDDEN')""",
+        """SELECT realized_pnl_pct, holding_sessions, exit_reason, ticker,
+                  entry_snapshot_json, outcome_class
+           FROM sim_transactions
+           WHERE portfolio_id = ?""",
         (pid,),
     )
     closed = [dict(r.items()) for r in closed_rows] if closed_rows else []
+
+    for item in closed:
+        raw = item.get("entry_snapshot_json")
+        if isinstance(raw, str):
+            try:
+                parsed = json.loads(raw)
+            except Exception:
+                parsed = {}
+            item["entry_stage"] = parsed.get("stage")
+            item["entry_confidence"] = parsed.get("score")
+            item["entry_rating"] = parsed.get("rating")
+        item["pnl_pct"] = float(item.get("realized_pnl_pct") or 0)
+        item["days_held"] = int(item.get("holding_sessions") or 0)
 
     wins = [r for r in closed if float(r.get("pnl_pct") or 0) > 0]
     losses = [r for r in closed if float(r.get("pnl_pct") or 0) <= 0]
@@ -2086,10 +2142,10 @@ async def close_simulator_position(
 
 
 # ---------------------------------------------------------------------------
-# GET /eagle-eye/simulator/activity   — recent feed across all 3 strategies
+# GET /eagle-eye/simulator/activity   — recent feed across paper cards
 # ---------------------------------------------------------------------------
 
-@router.get("/simulator/activity", summary="Recent activity across all strategies")
+@router.get("/simulator/activity", summary="Recent activity across paper simulator cards")
 async def get_simulator_activity(
     limit: int = Query(20, ge=1, le=100),
     _user: TokenData = Depends(get_current_user),
@@ -2649,3 +2705,198 @@ async def get_ml_methodology(
             },
         ],
     }
+
+
+# ---------------------------------------------------------------------------
+# Strategy Simulator — POST /eagle-eye/simulations
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/simulations",
+    summary="Run Eagle Eye strategy backtest simulation",
+)
+async def run_simulation(
+    request_body: "SimulationRequest",
+    _user: TokenData = Depends(get_current_user),
+):
+    """
+    Run a deterministic Eagle Eye strategy backtest.
+
+    Uses historical ratings from ratings_history table and OHLCV from
+    ee_ohlcv_cache table. Executes at next-session open by default.
+
+    Returns simulation summary. Use GET /simulations/{run_id}/result for
+    full daily ledger and trade detail.
+
+    HISTORICAL_SIGNAL_REPLAY status requires ratings_history rows.
+    If no historical rows exist, returns HISTORICAL_SIGNAL_DATA_UNAVAILABLE.
+    """
+    from app.schemas.eagle_eye import SimulationRequest, SimulationResponse
+    from app.services.eagle_eye.simulator_service import SimulatorService
+
+    if request_body.end_date < request_body.start_date:
+        raise HTTPException(status_code=422, detail="end_date must be greater than or equal to start_date")
+
+    result = SimulatorService.run_simulation(request_body)
+
+    # Simulator service returns a dict payload. Keep backward-compatible
+    # `signal_data_status` while preserving canonical `signal_source_status`.
+    if isinstance(result, dict):
+        if "signal_data_status" not in result and "signal_source_status" in result:
+            result["signal_data_status"] = result["signal_source_status"]
+        return result
+
+    return result
+
+
+@router.get(
+    "/simulations/{run_id}/result",
+    summary="Get full simulation result with ledgers",
+)
+async def get_simulation_result(
+    run_id: str,
+    _user: TokenData = Depends(get_current_user),
+):
+    """
+    Get complete simulation result including:
+    - Summary metrics
+    - Daily equity curve
+    - Trade ledger
+    - Skipped signals
+    """
+    from app.services.eagle_eye.simulator_service import SimulatorService
+    from app.core.database import query_all as fetch_all, query_one as fetch_one
+
+    # Get summary
+    row = fetch_one(
+        """
+        SELECT
+            run_id, status, signal_source_status,
+            ending_equity, ending_cash, total_return_pct, max_drawdown_pct,
+            trades_count, win_rate_pct, profit_factor,
+            buy_signals_executed, sell_signals_executed,
+            cash_recon_ok, equity_recon_ok,
+            error_message, created_at, completed_at, execution_seconds
+        FROM ee_simulations
+        WHERE run_id = ?
+        """,
+        (run_id,),
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Simulation {run_id} not found")
+
+    # Get daily ledger
+    daily_rows = fetch_all(
+        "SELECT date, cash, invested_value, total_equity, positions_count "
+        "FROM ee_simulations_daily WHERE run_id = ? ORDER BY date",
+        (run_id,),
+    )
+
+    # Get trades
+    trade_rows = fetch_all(
+        "SELECT symbol, entry_date, entry_price, exit_date, exit_price, "
+        "quantity, realized_pnl_gross, realized_pnl_pct, holding_days "
+        "FROM ee_simulations_trades WHERE run_id = ? ORDER BY entry_date",
+        (run_id,),
+    )
+
+    return {
+        "run_id": row[0],
+        "status": row[1],
+        "signal_source_status": row[2],
+        "summary": {
+            "ending_equity": row[3],
+            "ending_cash": row[4],
+            "total_return_pct": row[5],
+            "max_drawdown_pct": row[6],
+            "trades_count": row[7],
+            "win_rate_pct": row[8],
+            "profit_factor": row[9],
+            "buy_signals_executed": row[10],
+            "sell_signals_executed": row[11],
+            "cash_reconciliation_ok": bool(row[12]),
+            "equity_reconciliation_ok": bool(row[13]),
+            "error_message": row[14],
+            "created_at": row[15],
+            "completed_at": row[16],
+            "execution_seconds": row[17],
+        },
+        "daily_ledger": [
+            {
+                "date": dr[0], "cash": dr[1],
+                "invested_value": dr[2], "total_equity": dr[3],
+                "positions_count": dr[4],
+            }
+            for dr in daily_rows
+        ],
+        "trades": [
+            {
+                "symbol": tr[0], "entry_date": tr[1],
+                "entry_price": tr[2], "exit_date": tr[3],
+                "exit_price": tr[4], "quantity": tr[5],
+                "realized_pnl_gross": tr[6], "realized_pnl_pct": tr[7],
+                "holding_days": tr[8],
+            }
+            for tr in trade_rows
+        ],
+    }
+
+
+@router.get(
+    "/simulations",
+    summary="List recent simulation runs",
+)
+async def list_simulations(
+    limit: int = Query(default=20, le=100),
+    _user: TokenData = Depends(get_current_user),
+):
+    """List recent simulation runs with summary metrics."""
+    from app.core.database import query_all as fetch_all
+
+    try:
+        rows = fetch_all(
+            """
+            SELECT run_id, status, ending_equity, total_return_pct,
+                   max_drawdown_pct, trades_count, win_rate_pct,
+                   profit_factor, created_at, execution_seconds
+            FROM ee_simulations
+            ORDER BY created_at DESC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+        return {
+            "count": len(rows),
+            "simulations": [
+                {
+                    "run_id": r[0], "status": r[1],
+                    "ending_equity": r[2], "total_return_pct": r[3],
+                    "max_drawdown_pct": r[4], "trades_count": r[5],
+                    "win_rate_pct": r[6], "profit_factor": r[7],
+                    "created_at": r[8], "execution_seconds": r[9],
+                }
+                for r in rows
+            ],
+        }
+    except Exception as e:
+        # Table may not exist yet
+        logger.warning(f"Could not list simulations: {e}")
+        return {"count": 0, "simulations": []}
+
+
+@router.delete(
+    "/simulations/{run_id}",
+    summary="Delete simulation run and all associated data",
+)
+async def delete_simulation(
+    run_id: str,
+    _user: TokenData = Depends(require_admin),
+):
+    """Delete a simulation run (admin only)."""
+    from app.core.database import exec_sql
+
+    exec_sql("DELETE FROM ee_simulations_trades WHERE run_id = ?", (run_id,))
+    exec_sql("DELETE FROM ee_simulations_daily WHERE run_id = ?", (run_id,))
+    exec_sql("DELETE FROM ee_simulations WHERE run_id = ?", (run_id,))
+
+    return {"status": "deleted", "run_id": run_id}

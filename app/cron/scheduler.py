@@ -393,7 +393,7 @@ def start_scheduler() -> None:
 
         # ── Simulator daily run (Sun–Thu 14:20 — after rating recompute) ──
         def _run_eagle_eye_simulator() -> None:
-            """Paper trading simulator: exits → entries → snapshot for all 3 strategies."""
+            """Paper trading simulator: exits → entries → snapshot for all paper cards."""
             try:
                 from app.services.eagle_eye.simulator import get_engine
                 result = get_engine().run_daily()

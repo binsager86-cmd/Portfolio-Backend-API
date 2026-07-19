@@ -21,6 +21,7 @@ from app.services.eagle_eye.ml_service import resolve_labels
 from app.services.eagle_eye.rating_service import compute_rating_from_indicator, store_rating
 from app.services.eagle_eye.risk_service import liquidity_filter
 from app.services.eagle_eye.pipeline import process_bar
+from app.services.eagle_eye.store import snapshot_ratings_history
 
 
 def _system_actor() -> TokenData:
@@ -131,6 +132,7 @@ def run_eod_pipeline(source: str = "scheduler", actor: TokenData | None = None) 
             )
 
     labels_updated = resolve_labels(60)
+    ratings_history_rows = snapshot_ratings_history(run_date)
 
     summary_event = create_event(
         {
@@ -149,6 +151,7 @@ def run_eod_pipeline(source: str = "scheduler", actor: TokenData | None = None) 
                 "rating_updates": rating_updates,
                 "transitions": transitions,
                 "labels_updated": labels_updated,
+                "ratings_history_rows": ratings_history_rows,
                 "quarantined_symbols": len(quarantined),
                 "skipped_quarantined": skipped_quarantined,
                 "errors": failures,
@@ -170,6 +173,7 @@ def run_eod_pipeline(source: str = "scheduler", actor: TokenData | None = None) 
             "rating_updates": rating_updates,
             "transitions": transitions,
             "labels_updated": labels_updated,
+            "ratings_history_rows": ratings_history_rows,
             "quarantined_symbols": len(quarantined),
             "skipped_quarantined": skipped_quarantined,
             "errors": failures,

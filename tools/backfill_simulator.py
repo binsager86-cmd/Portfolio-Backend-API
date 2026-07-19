@@ -57,13 +57,14 @@ def date_range(start: date, end: date):
 
 
 def already_processed(d: date) -> bool:
-    """Return True if all three strategies already have a snapshot for this date."""
+    """Return True if all configured simulator cards already have a snapshot for this date."""
     try:
         count = query_val(
-            "SELECT COUNT(*) FROM simulator_daily_snapshots WHERE snapshot_date = ?",
+            "SELECT COUNT(*) FROM simulator_daily_snapshots WHERE date = ?",
             (d.isoformat(),),
         )
-        return (count or 0) >= 3  # one row per portfolio
+        portfolio_count = query_val("SELECT COUNT(*) FROM simulator_portfolios", ()) or 0
+        return (count or 0) >= max(1, int(portfolio_count))
     except Exception:
         return False
 
@@ -71,13 +72,6 @@ def already_processed(d: date) -> bool:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    print(
-        "historical replay disabled: no point-in-time ratings available — look-ahead unsafe",
-        file=sys.stderr,
-    )
-    print("simulator remains enabled in live-forward mode only.", file=sys.stderr)
-    sys.exit(1)
-
     parser = argparse.ArgumentParser(description="Backfill Eagle Eye simulator")
     parser.add_argument(
         "--from",
@@ -144,6 +138,15 @@ def main() -> None:
             skipped += 1
             continue
 
+        try:
+            engine._assert_rating_snapshot_available(date_str)
+        except Exception as exc:
+            print(f"  ✗ {date_str}  ERROR: {exc}")
+            errors += 1
+            if not args.dry_run:
+                continue
+            continue
+
         if args.dry_run:
             print(f"  [DRY RUN] Would process {date_str}")
             processed += 1
@@ -172,9 +175,14 @@ def main() -> None:
                 """
                 SELECT p.strategy_name,
                        p.total_value_kwd,
-                       p.total_trades,
+                       COALESCE(t.trade_count, 0) AS total_trades,
                        ROUND((p.total_value_kwd - p.starting_capital_kwd) / p.starting_capital_kwd * 100, 2) AS ret_pct
                 FROM simulator_portfolios p
+                LEFT JOIN (
+                    SELECT portfolio_id, COUNT(*) AS trade_count
+                    FROM sim_transactions
+                    GROUP BY portfolio_id
+                ) t ON t.portfolio_id = p.id
                 ORDER BY p.id
                 """,
             )

@@ -1,14 +1,13 @@
 """
 Eagle Eye Paper Trading Simulator — SimulatorEngine.
 
-Three parallel strategies run daily (after ratings recompute):
-  CONSERVATIVE: min_confidence=65, stages=[EARLY_BREAKOUT, MARKUP_TRENDING]
-  MODERATE:     min_confidence=60, stages=[STEALTH_ACCUMULATION, EARLY_BREAKOUT, MARKUP_TRENDING]
-  AGGRESSIVE:   min_confidence=55, stages=[STEALTH_ACCUMULATION, EARLY_BREAKOUT,
-                                           MARKUP_TRENDING, CAPITULATION_EXHAUSTION]
+Two parallel rating-transition cards run daily (after ratings refresh):
+    BUY:        enter when rating transitions into BUY/STRONG_BUY
+    WATCHLIST:  enter when rating transitions into WATCH/WATCHLIST
 
-Each strategy starts with 10,000 KWD fake capital, maintains independent positions,
-and never shares positions across strategies.
+Each card starts with 100,000 KWD paper capital, uses 10% of card equity per
+position, allows up to 10 concurrent positions, and enforces one position per
+symbol per card.
 """
 from __future__ import annotations
 
@@ -23,59 +22,33 @@ from typing import Any, Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 # ── Constants ────────────────────────────────────────────────────────────────
-MIN_TRADE_SIZE_KWD = 100.0      # ignore positions smaller than this
-MAX_OPEN_POSITIONS = 10         # per strategy
-SECTOR_CAP_PCT = 35.0           # max sector exposure %
-SCALE_OUT_FRACTION = 0.33       # fraction of remaining shares to close at TP1/TP2
-ADTV_LOOKBACK_DAYS = 20         # rolling lookback for liquidity cap
-MAX_PARTICIPATION_RATE = 0.10   # max 10% of average daily traded value
-
-# v9 ML decision thresholds
-ML_MIN_CONFIDENCE = 55.0
-ML_EXIT_CONFIDENCE_FLOOR = 25.0
-ML_STOP_LOSS_PCT = 8.0
-ML_PARTIAL_TAKE_PROFIT_PCT = 20.0
-ML_PARTIAL_TAKE_PROFIT_FRACTION = 0.50
+STARTING_CAPITAL_KWD = 100000.0
+MIN_TRADE_SIZE_KWD = 100.0
+MAX_OPEN_POSITIONS = 10
+POSITION_SIZE_PCT = 0.10
+ADTV_LOOKBACK_DAYS = 20
+MAX_PARTICIPATION_RATE = 0.10
 
 KUWAIT_TRADING_WEEKDAYS = {6, 0, 1, 2, 3}  # Sun-Thu using Python weekday()
-
-# Stage sets
-BEARISH_STAGES = {"DISTRIBUTION_TOPPING", "MARKDOWN_DECLINE"}
-BULLISH_ENTRY_STAGES_ALL = {
-    "STEALTH_ACCUMULATION", "EARLY_BREAKOUT",
-    "MARKUP_TRENDING", "CAPITULATION_EXHAUSTION",
-}
 
 # ── Strategy Configs ─────────────────────────────────────────────────────────
 @dataclass
 class StrategyConfig:
     name: str
-    min_confidence: float
-    allowed_stages: set[str]
+    entry_transition_to: set[str]
     portfolio_id: int
 
 
 STRATEGIES = [
     StrategyConfig(
-        name="CONSERVATIVE",
-        min_confidence=65.0,
-        allowed_stages={"EARLY_BREAKOUT", "MARKUP_TRENDING"},
+        name="BUY",
+        entry_transition_to={"BUY", "STRONG_BUY"},
         portfolio_id=1,
     ),
     StrategyConfig(
-        name="MODERATE",
-        min_confidence=60.0,
-        allowed_stages={"STEALTH_ACCUMULATION", "EARLY_BREAKOUT", "MARKUP_TRENDING"},
+        name="WATCHLIST",
+        entry_transition_to={"WATCH", "WATCHLIST"},
         portfolio_id=2,
-    ),
-    StrategyConfig(
-        name="AGGRESSIVE",
-        min_confidence=55.0,
-        allowed_stages={
-            "STEALTH_ACCUMULATION", "EARLY_BREAKOUT",
-            "MARKUP_TRENDING", "CAPITULATION_EXHAUSTION",
-        },
-        portfolio_id=3,
     ),
 ]
 
@@ -154,6 +127,14 @@ def _next_trading_day(date_str: str) -> str:
     current = date.fromisoformat(date_str)
     while True:
         current += timedelta(days=1)
+        if current.weekday() in KUWAIT_TRADING_WEEKDAYS:
+            return current.isoformat()
+
+
+def _previous_trading_day(date_str: str) -> str:
+    current = date.fromisoformat(date_str)
+    while True:
+        current -= timedelta(days=1)
         if current.weekday() in KUWAIT_TRADING_WEEKDAYS:
             return current.isoformat()
 
@@ -267,22 +248,56 @@ def _sector_exposure_pct(portfolio_id: int, sector: str, portfolio_value: float)
 class SimulatorEngine:
     """Runs daily after the Eagle Eye rating recompute."""
 
-    def _assert_live_forward_date(self, as_of_date: Optional[date | str]) -> str:
+    def _normalize_run_date(self, as_of_date: Optional[date | str]) -> str:
         if isinstance(as_of_date, date):
             target_date = as_of_date
         elif isinstance(as_of_date, str) and as_of_date:
             target_date = date.fromisoformat(as_of_date)
         else:
             target_date = date.today()
-
-        today = date.today()
-        if target_date != today:
-            raise ValueError(
-                "historical replay disabled: no point-in-time ratings available — look-ahead unsafe"
-            )
         return target_date.isoformat()
 
-    def run_daily(self, run_date: Optional[date] = None) -> Dict[str, Any]:
+    def _next_trading_date(self, date_str: str) -> str:
+        return _next_trading_day(date_str)
+
+    def _iter_trading_dates(self, start_date: str, end_date: str) -> list[str]:
+        cur = date.fromisoformat(start_date)
+        end = date.fromisoformat(end_date)
+        out: list[str] = []
+        while cur <= end:
+            if cur.weekday() in KUWAIT_TRADING_WEEKDAYS:
+                out.append(cur.isoformat())
+            cur += timedelta(days=1)
+        return out
+
+    def _assert_rating_snapshot_available(self, date_str: str) -> None:
+        rows = _query_all(
+            "SELECT created_at FROM ratings_history WHERE computed_date = ? LIMIT 5",
+            (date_str,),
+        )
+        target_date = date.fromisoformat(date_str)
+        for row in rows:
+            created_at = row.get("created_at")
+            if created_at is None:
+                continue
+            try:
+                created_date = datetime.utcfromtimestamp(int(created_at)).date()
+            except Exception:
+                continue
+            if created_date <= target_date:
+                return
+        raise ValueError(
+            f"point-in-time ratings_history missing for {date_str}; refusing to recompute past ratings for simulator input"
+        )
+
+    def _portfolio_day_processed(self, portfolio_id: int, date_str: str) -> bool:
+        cnt = _query_val(
+            "SELECT COUNT(*) FROM simulator_daily_snapshots WHERE portfolio_id = ? AND date = ?",
+            (portfolio_id, date_str),
+        )
+        return bool(cnt and int(cnt) > 0)
+
+    def run_daily(self, run_date: Optional[date | str] = None, backfill_missing: bool = True) -> Dict[str, Any]:
         """
         Called once per trading day after market close.
         For each strategy: exits → entries → snapshot.
@@ -291,13 +306,41 @@ class SimulatorEngine:
         ensure_tables()
         self._ensure_simulator_tables()
 
-        if run_date is None:
-            run_date = date.today()
+        date_str = self._normalize_run_date(run_date)
+        first_date = date_str
+        if backfill_missing:
+            last_done_row = _query_one(
+                "SELECT MAX(date) AS max_date FROM simulator_daily_snapshots WHERE portfolio_id = ?",
+                (STRATEGIES[0].portfolio_id,),
+            )
+            last_done = str(dict(last_done_row.items()).get("max_date") or "") if last_done_row else ""
+            if last_done:
+                first_date = self._next_trading_date(last_done)
 
-        date_str = self._assert_live_forward_date(run_date)
+        dates = self._iter_trading_dates(first_date, date_str) if first_date <= date_str else [date_str]
+        if not dates:
+            dates = [date_str]
+
+        all_results: Dict[str, Any] = {"processed_dates": [], "target_date": date_str}
+        for day in dates:
+            self._assert_rating_snapshot_available(day)
+            day_result = self._run_single_day(day)
+            all_results["processed_dates"].append(day)
+            all_results[day] = day_result
+
+        if not all_results["processed_dates"]:
+            self._assert_rating_snapshot_available(date_str)
+            all_results[date_str] = self._run_single_day(date_str)
+            all_results["processed_dates"].append(date_str)
+        return all_results
+
+    def _run_single_day(self, date_str: str) -> Dict[str, Any]:
         results: Dict[str, Any] = {}
-
         for strategy in STRATEGIES:
+            if self._portfolio_day_processed(strategy.portfolio_id, date_str):
+                results[strategy.name] = {"date": date_str, "status": "already_processed"}
+                continue
+
             portfolio = _get_portfolio(strategy.portfolio_id)
             if portfolio is None:
                 logger.warning("Simulator: portfolio %d not found, skipping", strategy.portfolio_id)
@@ -322,19 +365,9 @@ class SimulatorEngine:
                     "max_drawdown_pct": snapshot["drawdown_from_peak_pct"],
                     "total_value_kwd": snapshot["total_value_kwd"],
                 }
-                logger.info(
-                    "Simulator %s [%s]: %d filled exits, %d filled entries, %d exit signals, %d entry signals",
-                    strategy.name,
-                    date_str,
-                    len(filled_exits),
-                    len(filled_entries),
-                    len(exits),
-                    len(entries),
-                )
             except Exception as exc:
                 logger.exception("Simulator %s failed for %s: %s", strategy.name, date_str, exc)
                 results[strategy.name] = {"error": str(exc)}
-
         return results
 
     # ── Exits ────────────────────────────────────────────────────────────
@@ -365,57 +398,58 @@ class SimulatorEngine:
             if entry_price <= 0:
                 continue
 
-            # 1) Hard stop-loss: close immediately if intraday low breaches -8%.
-            stop_price = entry_price * (1.0 - (ML_STOP_LOSS_PCT / 100.0))
-            if l <= stop_price:
-                self._close_position(pos, portfolio, stop_price, "ML_STOP_LOSS_8", date_str, days_held)
-                closed.append({"ticker": pos["ticker"], "reason": "ML_STOP_LOSS_8"})
-                continue
-
-            # 2) ML-based exits from current rating cache.
             current_rating = self._get_current_rating(pos["ticker"], date_str)
             if current_rating:
                 current_label = str(current_rating.get("rating") or "").upper()
-                current_confidence = float(current_rating.get("confidence") or 0)
+                current_stage = str(current_rating.get("stage") or "").upper()
+                prev_rating = self._get_current_rating(
+                    pos["ticker"], self._previous_trading_day(date_str), require_snapshot=False
+                )
+                prev_label = str((prev_rating or {}).get("rating") or "").upper()
 
                 if current_label in {"SELL", "STRONG_SELL"}:
                     scheduled_date = _next_trading_day(date_str)
-                    self._queue_exit_order(pos, 1.0, "ML_SELL_SIGNAL", date_str, scheduled_date)
+                    self._queue_exit_order(pos, 1.0, "SELL_TRANSITION", date_str, scheduled_date)
                     closed.append(
-                        {"ticker": pos["ticker"], "reason": "ML_SELL_SIGNAL", "scheduled_date": scheduled_date}
+                        {"ticker": pos["ticker"], "reason": "SELL_TRANSITION", "scheduled_date": scheduled_date}
                     )
                     continue
 
-                if current_confidence < ML_EXIT_CONFIDENCE_FLOOR:
+                if "TOPPING" in current_stage:
                     scheduled_date = _next_trading_day(date_str)
-                    self._queue_exit_order(pos, 1.0, "ML_CONFIDENCE_BREAK", date_str, scheduled_date)
+                    self._queue_exit_order(pos, 1.0, "TOPPING_SIGNAL", date_str, scheduled_date)
                     closed.append(
                         {
                             "ticker": pos["ticker"],
-                            "reason": "ML_CONFIDENCE_BREAK",
+                            "reason": "TOPPING_SIGNAL",
                             "scheduled_date": scheduled_date,
                         }
                     )
                     continue
 
-            # 3) Optional partial take-profit at +20% (one-time 50% scale-out).
-            if not bool(pos.get("tp1_hit")) and c > 0:
-                pnl_pct = (c / entry_price - 1.0) * 100.0
-                if pnl_pct >= ML_PARTIAL_TAKE_PROFIT_PCT:
+                if current_label == "REDUCE" and prev_label != "REDUCE":
                     scheduled_date = _next_trading_day(date_str)
                     self._queue_exit_order(
                         pos,
-                        ML_PARTIAL_TAKE_PROFIT_FRACTION,
-                        "ML_TAKE_PROFIT_20",
+                        0.5,
+                        "REDUCE_TRANSITION",
                         date_str,
                         scheduled_date,
                     )
                     closed.append(
                         {
                             "ticker": pos["ticker"],
-                            "reason": "ML_TAKE_PROFIT_20_PARTIAL",
+                            "reason": "REDUCE_TRANSITION",
                             "scheduled_date": scheduled_date,
                         }
+                    )
+                    continue
+
+                if current_label == "AVOID" and prev_label != "AVOID":
+                    scheduled_date = _next_trading_day(date_str)
+                    self._queue_exit_order(pos, 1.0, "AVOID_TRANSITION", date_str, scheduled_date)
+                    closed.append(
+                        {"ticker": pos["ticker"], "reason": "AVOID_TRANSITION", "scheduled_date": scheduled_date}
                     )
                     continue
 
@@ -440,7 +474,7 @@ class SimulatorEngine:
                     (rating.get("ticker") or "").upper(), date_str, rating,
                     would_have_entered=(
                         decision.skip_reason
-                        not in {"CONFIDENCE_BELOW_THRESHOLD", "RATING_NOT_BUY", "ML_SCORE_MISSING"}
+                        not in {"RATING_NOT_CARD_ENTRY", "NO_TRANSITION"}
                     ),
                     skip_reason=decision.skip_reason,
                 )
@@ -459,8 +493,8 @@ class SimulatorEngine:
                 self._try_log_ml_signal(ticker, date_str, rating, would_have_entered=True, skip_reason="NO_PRICE_DATA")
                 continue
 
-            portfolio_value = float(portfolio.get("total_value_kwd") or 10000)
-            requested_size_kwd = self._compute_position_size(rating, portfolio_value, actual_price, date_str)
+            portfolio_value = float(portfolio.get("total_value_kwd") or STARTING_CAPITAL_KWD)
+            requested_size_kwd = round(portfolio_value * POSITION_SIZE_PCT, 4)
             if requested_size_kwd < MIN_TRADE_SIZE_KWD:
                 self._log_considered(strategy.portfolio_id, date_str, rating, "POSITION_TOO_SMALL")
                 self._try_log_ml_signal(ticker, date_str, rating, would_have_entered=True, skip_reason="POSITION_TOO_SMALL")
@@ -546,24 +580,17 @@ class SimulatorEngine:
     def _evaluate_entry(
         self, strategy: StrategyConfig, rating: dict, portfolio: dict, date_str: str = ""
     ) -> EntryDecision:
-        confidence = float(rating.get("confidence") or 0)
-        stage = rating.get("stage") or ""
         rating_label = str(rating.get("rating") or "HOLD").upper()
-        ml_score = rating.get("ml_score")
         ticker = rating.get("ticker") or ""
-        sector = rating.get("sector") or "UNKNOWN"
 
-        required_confidence = max(ML_MIN_CONFIDENCE, float(strategy.min_confidence))
-        if rating_label not in {"BUY", "STRONG_BUY"}:
-            return _skip("RATING_NOT_BUY")
-        if confidence < required_confidence:
-            return _skip("CONFIDENCE_BELOW_THRESHOLD")
-        if ml_score is None:
-            return _skip("ML_SCORE_MISSING")
-        try:
-            float(ml_score)
-        except (TypeError, ValueError):
-            return _skip("ML_SCORE_MISSING")
+        if rating_label not in strategy.entry_transition_to:
+            return _skip("RATING_NOT_CARD_ENTRY")
+
+        prev_date = self._previous_trading_day(date_str)
+        prev_rating = self._get_current_rating(ticker, prev_date, require_snapshot=False)
+        prev_label = str((prev_rating or {}).get("rating") or "").upper()
+        if prev_label in strategy.entry_transition_to:
+            return _skip("NO_TRANSITION")
 
         if self._already_holding(strategy.portfolio_id, ticker):
             return _skip("ALREADY_HOLDING")
@@ -580,20 +607,6 @@ class SimulatorEngine:
         open_positions = _get_open_positions(strategy.portfolio_id)
         if len(open_positions) + self._pending_entry_count(strategy.portfolio_id) >= MAX_OPEN_POSITIONS:
             return _skip("MAX_POSITIONS_REACHED")
-
-        portfolio_value = float(portfolio.get("total_value_kwd") or 10000)
-        if _sector_exposure_pct(strategy.portfolio_id, sector, portfolio_value) >= SECTOR_CAP_PCT:
-            return _skip("SECTOR_CAP_REACHED")
-
-        # ── Volume gates ─────────────────────────────────────────────────
-        vc = rating.get("volume_context") or {}
-        if vc:
-            if vc.get("liquidity_tier") == "ILLIQUID":
-                return _skip("ILLIQUID_STOCK")
-            if stage == "EARLY_BREAKOUT" and not vc.get("is_volume_confirmed", True):
-                return _skip("BREAKOUT_WITHOUT_VOLUME_CONFIRMATION")
-            if float(vc.get("relative_volume") or 1.0) < 0.5:
-                return _skip("EXTREMELY_LOW_VOLUME_DAY")
 
         return _enter()
 
@@ -694,7 +707,7 @@ class SimulatorEngine:
         actual_notional = round(shares * entry_price, 4)
         tier = self._market_tier_for_ticker(ticker_for_atr, rating, market_tier)
         entry_costs = self._leg_cost_breakdown(actual_notional, tier)
-        portfolio_value = float(portfolio.get("total_value_kwd") or 10000)
+        portfolio_value = float(portfolio.get("total_value_kwd") or STARTING_CAPITAL_KWD)
         size_pct = (actual_notional / portfolio_value * 100) if portfolio_value > 0 else 0
 
         indicators = rating.get("indicators_json") or {}
@@ -773,6 +786,25 @@ class SimulatorEngine:
             ),
         )
 
+        pos_row = _query_one(
+            """SELECT id FROM simulator_positions
+               WHERE portfolio_id = ? AND ticker = ? AND entry_date = ?
+               ORDER BY id DESC LIMIT 1""",
+            (strategy.portfolio_id, (rating.get("ticker", "") or "").upper(), entry_date),
+        )
+        pos_id = int(pos_row[0]) if pos_row else 0
+        entry_snapshot = self._snapshot_from_rating((rating.get("ticker", "") or "").upper(), rating)
+        if pos_id > 0:
+            self._record_position_snapshot(
+                position_id=pos_id,
+                portfolio_id=strategy.portfolio_id,
+                ticker=(rating.get("ticker", "") or "").upper(),
+                snapshot_kind="ENTRY",
+                snapshot_date=entry_date,
+                snapshot_price=entry_price,
+                snapshot_obj=entry_snapshot,
+            )
+
         # Deduct cash including entry-leg costs.
         new_cash = float(portfolio.get("cash_balance_kwd") or 0) - actual_notional - entry_costs["total_cost_kwd"]
         _exec(
@@ -819,6 +851,7 @@ class SimulatorEngine:
         proceeds = gross_proceeds - exit_costs["total_cost_kwd"]
         cost_basis = shares_remaining * entry_price
         leg_pnl_kwd = proceeds - cost_basis
+        leg_pnl_pct = (leg_pnl_kwd / cost_basis * 100) if cost_basis > 0 else 0
         pnl_kwd = prior_realized_pnl + leg_pnl_kwd
         pnl_pct = (pnl_kwd / cost_basis * 100) if cost_basis > 0 else 0
         exit_cost_total = prior_exit_cost + exit_costs["total_cost_kwd"]
@@ -853,6 +886,29 @@ class SimulatorEngine:
             (round(new_cash, 4), _now_ts(), portfolio_id),
         )
 
+        exit_rating = self._get_current_rating(str(pos.get("ticker") or ""), date_str)
+        exit_snapshot = self._snapshot_from_rating(str(pos.get("ticker") or ""), exit_rating, fallback=pos)
+        self._record_position_snapshot(
+            position_id=pos["id"],
+            portfolio_id=portfolio_id,
+            ticker=str(pos.get("ticker") or ""),
+            snapshot_kind="FULL_EXIT",
+            snapshot_date=date_str,
+            snapshot_price=exit_price,
+            snapshot_obj=exit_snapshot,
+        )
+        self._record_transaction(
+            pos=pos,
+            event_kind="FULL_EXIT",
+            fraction_closed=1.0,
+            exit_date=date_str,
+            exit_price=exit_price,
+            exit_reason=reason,
+            realized_pnl_pct=leg_pnl_pct,
+            holding_sessions=days_held,
+            exit_snapshot=exit_snapshot,
+        )
+
     # ── Partial close ────────────────────────────────────────────────────
 
     def _partial_close(
@@ -881,6 +937,7 @@ class SimulatorEngine:
         proceeds = gross_proceeds - exit_costs["total_cost_kwd"]
         cost_basis = shares_to_close * entry_price
         partial_pnl = proceeds - cost_basis
+        partial_pnl_pct = (partial_pnl / cost_basis * 100) if cost_basis > 0 else 0
         total_realized_pnl = prior_realized_pnl + partial_pnl
         total_exit_cost = prior_exit_cost + exit_costs["total_cost_kwd"]
         total_cost = float(pos.get("entry_cost_kwd") or 0) + total_exit_cost
@@ -920,6 +977,30 @@ class SimulatorEngine:
         _exec(
             "UPDATE simulator_portfolios SET cash_balance_kwd = ?, updated_at = ? WHERE id = ?",
             (round(new_cash, 4), _now_ts(), portfolio_id),
+        )
+
+        holding_sessions = _trading_days_between(pos.get("entry_date") or date_str, date_str)
+        exit_rating = self._get_current_rating(str(pos.get("ticker") or ""), date_str)
+        exit_snapshot = self._snapshot_from_rating(str(pos.get("ticker") or ""), exit_rating, fallback=pos)
+        self._record_position_snapshot(
+            position_id=pos["id"],
+            portfolio_id=portfolio_id,
+            ticker=str(pos.get("ticker") or ""),
+            snapshot_kind="PARTIAL_EXIT",
+            snapshot_date=date_str,
+            snapshot_price=exit_price,
+            snapshot_obj=exit_snapshot,
+        )
+        self._record_transaction(
+            pos=pos,
+            event_kind="PARTIAL_EXIT",
+            fraction_closed=fraction,
+            exit_date=date_str,
+            exit_price=exit_price,
+            exit_reason=reason,
+            realized_pnl_pct=partial_pnl_pct,
+            holding_sessions=holding_sessions,
+            exit_snapshot=exit_snapshot,
         )
 
     # ── MFE/MAE tracking ────────────────────────────────────────────────
@@ -962,7 +1043,7 @@ class SimulatorEngine:
             open_value += shares_remaining * price
 
         total_value = cash + open_value
-        starting_capital = float(portfolio.get("starting_capital_kwd") or 10000)
+        starting_capital = float(portfolio.get("starting_capital_kwd") or STARTING_CAPITAL_KWD)
         cumulative_return_pct = ((total_value - starting_capital) / starting_capital * 100) if starting_capital > 0 else 0
 
         # Previous day's total value for daily P&L
@@ -1370,26 +1451,59 @@ class SimulatorEngine:
         )
         return bool(count and int(count) > 0)
 
-    def _get_current_rating(self, ticker: str, date_str: Optional[str] = None) -> Optional[dict]:
-        self._assert_live_forward_date(date_str)
+    def _previous_trading_day(self, date_str: str) -> str:
+        return _previous_trading_day(date_str)
+
+    def _get_current_rating(
+        self, ticker: str, date_str: Optional[str] = None, require_snapshot: bool = True
+    ) -> Optional[dict]:
+        target_date = date_str or date.today().isoformat()
+        if require_snapshot:
+            self._assert_rating_snapshot_available(target_date)
         row = _query_one(
-            "SELECT stage, rating, confidence, ml_score, last_price, market_tier FROM ee_ratings_cache WHERE ticker = ?",
-            (ticker.upper(),),
+            """SELECT stage, rating, confidence, last_price, market_tier,
+                      entry_primary, stop_loss, tp1, tp2, tp3,
+                      signals_json, indicators_json, volume_context_json
+               FROM ratings_history
+               WHERE ticker = ? AND computed_date = ?""",
+            (ticker.upper(), target_date),
         )
-        return dict(row.items()) if row else None
+        if row:
+            r = dict(row.items())
+            for key in ("signals_json", "indicators_json", "volume_context_json"):
+                raw = r.get(key)
+                if isinstance(raw, str):
+                    try:
+                        r[key] = json.loads(raw)
+                    except Exception:
+                        r[key] = [] if key == "signals_json" else {}
+            return r
+        return None
 
     def _get_todays_ratings(self, date_str: str) -> List[dict]:
-        """Load all rated stocks for live-forward trading on the current date only."""
-        self._assert_live_forward_date(date_str)
+        """Load all rated stocks for a specific date from persisted ratings_history only."""
+        self._assert_rating_snapshot_available(date_str)
         rows = _query_all(
-            """SELECT ticker, name_en, sector, stage, rating, confidence, ml_score, thesis,
+            """SELECT ticker, name_en, sector, stage, rating, confidence, NULL as ml_score, thesis,
                       entry_primary, stop_loss, tp1, tp2, tp3, last_price,
                       market_tier,
                       signals_json, indicators_json, volume_context_json, computed_at
-               FROM   ee_ratings_cache
-               ORDER  BY confidence DESC""",
-            (),
+               FROM ratings_history
+               WHERE computed_date = ?
+               ORDER BY confidence DESC""",
+            (date_str,),
         )
+        if (not rows) and date_str == date.today().isoformat():
+            rows = _query_all(
+                """SELECT ticker, name_en, sector, stage, rating, confidence, ml_score, thesis,
+                          entry_primary, stop_loss, tp1, tp2, tp3, last_price,
+                          market_tier,
+                          signals_json, indicators_json, volume_context_json, computed_at
+                   FROM ee_ratings_cache
+                   ORDER BY confidence DESC""",
+                (),
+            )
+
         result = []
         for r in rows:
             indicators = r.get("indicators_json")
@@ -1422,6 +1536,193 @@ class SimulatorEngine:
             ),
         )
 
+    def _normalize_signals(self, raw_signals: Any) -> list[str]:
+        if isinstance(raw_signals, str):
+            try:
+                raw_signals = json.loads(raw_signals)
+            except Exception:
+                raw_signals = []
+        if not isinstance(raw_signals, list):
+            return []
+        out: list[str] = []
+        for item in raw_signals:
+            if isinstance(item, str):
+                out.append(item.upper())
+            elif isinstance(item, dict):
+                key = item.get("signal") or item.get("name") or item.get("type")
+                if key:
+                    out.append(str(key).upper())
+        return sorted(set(out))
+
+    def _snapshot_from_rating(
+        self,
+        ticker: str,
+        rating: Optional[dict],
+        fallback: Optional[dict] = None,
+    ) -> dict:
+        src = rating or fallback or {}
+        volume_context = src.get("volume_context_json") or src.get("volume_context") or {}
+        if isinstance(volume_context, str):
+            try:
+                volume_context = json.loads(volume_context)
+            except Exception:
+                volume_context = {}
+
+        return {
+            "ticker": ticker.upper(),
+            "rating": str(src.get("rating") or "").upper() or None,
+            "score": float(src.get("ml_score") or src.get("confidence") or 0.0),
+            "stage": str(src.get("stage") or "").upper() or None,
+            "active_signals": self._normalize_signals(src.get("signals_json") or src.get("signals")),
+            "liquidity_metrics": {
+                "market_tier": src.get("market_tier"),
+                "relative_volume": float(volume_context.get("relative_volume") or 0.0),
+                "liquidity_tier": volume_context.get("liquidity_tier"),
+                "is_volume_confirmed": bool(volume_context.get("is_volume_confirmed", True)),
+            },
+        }
+
+    def _record_position_snapshot(
+        self,
+        position_id: int,
+        portfolio_id: int,
+        ticker: str,
+        snapshot_kind: str,
+        snapshot_date: str,
+        snapshot_price: float,
+        snapshot_obj: dict,
+    ) -> None:
+        _exec(
+            """INSERT INTO sim_position_snapshots (
+                   position_id, portfolio_id, ticker, snapshot_kind,
+                   snapshot_date, snapshot_price, snapshot_json, created_at
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                position_id,
+                portfolio_id,
+                ticker.upper(),
+                snapshot_kind,
+                snapshot_date,
+                round(snapshot_price, 6) if snapshot_price > 0 else None,
+                json.dumps(snapshot_obj),
+                _now_ts(),
+            ),
+        )
+
+    def _load_entry_snapshot(self, position_id: int, ticker: str) -> dict:
+        row = _query_one(
+            """SELECT snapshot_json FROM sim_position_snapshots
+               WHERE position_id = ? AND snapshot_kind = 'ENTRY'
+               ORDER BY id ASC LIMIT 1""",
+            (position_id,),
+        )
+        if row:
+            raw = row[0]
+            if isinstance(raw, str):
+                try:
+                    return json.loads(raw)
+                except Exception:
+                    pass
+        current = self._get_current_rating(ticker, None)
+        return self._snapshot_from_rating(ticker, current)
+
+    def _outcome_class(self, realized_pnl_pct: float) -> str:
+        if realized_pnl_pct >= 2.0:
+            return "WIN"
+        if realized_pnl_pct <= -2.0:
+            return "LOSS"
+        return "SCRATCH"
+
+    def _build_attribution(
+        self,
+        entry_snapshot: dict,
+        exit_snapshot: dict,
+        holding_sessions: int,
+        mfe_pct: float,
+    ) -> dict:
+        persisted: list[str] = []
+        flipped: list[str] = []
+        sessions_to_flip: dict[str, Optional[int]] = {}
+
+        for key in ("rating", "stage"):
+            if entry_snapshot.get(key) == exit_snapshot.get(key):
+                persisted.append(key)
+                sessions_to_flip[key] = None
+            else:
+                flipped.append(key)
+                sessions_to_flip[key] = holding_sessions
+
+        entry_signals = set(entry_snapshot.get("active_signals") or [])
+        exit_signals = set(exit_snapshot.get("active_signals") or [])
+        if entry_signals.intersection(exit_signals):
+            persisted.append("active_signals")
+            sessions_to_flip["active_signals"] = None
+        else:
+            flipped.append("active_signals")
+            sessions_to_flip["active_signals"] = holding_sessions
+
+        return {
+            "persisted_fields": sorted(set(persisted)),
+            "flipped_fields": sorted(set(flipped)),
+            "sessions_to_flip": sessions_to_flip,
+            "mfe_gt_10": mfe_pct >= 10.0,
+            "mfe_gt_20": mfe_pct >= 20.0,
+        }
+
+    def _record_transaction(
+        self,
+        pos: dict,
+        event_kind: str,
+        fraction_closed: float,
+        exit_date: str,
+        exit_price: float,
+        exit_reason: str,
+        realized_pnl_pct: float,
+        holding_sessions: int,
+        exit_snapshot: dict,
+    ) -> None:
+        entry_snapshot = self._load_entry_snapshot(pos["id"], pos["ticker"])
+        mfe_pct = float(pos.get("max_unrealized_gain_pct") or 0.0)
+        mae_pct = float(pos.get("max_unrealized_loss_pct") or 0.0)
+        attribution = self._build_attribution(entry_snapshot, exit_snapshot, holding_sessions, mfe_pct)
+        _exec(
+            """INSERT INTO sim_transactions (
+                   portfolio_id, position_id, ticker, event_kind, fraction_closed,
+                   entry_date, entry_price, entry_snapshot_json,
+                   exit_date, exit_price, exit_reason,
+                   realized_pnl_pct, holding_sessions, mfe_pct, mae_pct,
+                   exit_snapshot_json, outcome_class,
+                   persisted_fields_json, flipped_fields_json, sessions_to_flip_json,
+                   mfe_gt_10, mfe_gt_20, attribution_json, created_at
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                pos["portfolio_id"],
+                pos["id"],
+                str(pos.get("ticker") or "").upper(),
+                event_kind,
+                round(fraction_closed, 6),
+                pos.get("entry_date") or exit_date,
+                round(float(pos.get("entry_price") or 0.0), 6),
+                json.dumps(entry_snapshot),
+                exit_date,
+                round(exit_price, 6),
+                exit_reason,
+                round(realized_pnl_pct, 4),
+                int(holding_sessions),
+                round(mfe_pct, 4),
+                round(mae_pct, 4),
+                json.dumps(exit_snapshot),
+                self._outcome_class(realized_pnl_pct),
+                json.dumps(attribution["persisted_fields"]),
+                json.dumps(attribution["flipped_fields"]),
+                json.dumps(attribution["sessions_to_flip"]),
+                1 if attribution["mfe_gt_10"] else 0,
+                1 if attribution["mfe_gt_20"] else 0,
+                json.dumps(attribution),
+                _now_ts(),
+            ),
+        )
+
     # Mapping from simulator internal skip reasons to ML signal-logger vocabulary.
     _SKIP_TO_ML: Dict[str, str] = {
         "CONFIDENCE_BELOW_THRESHOLD": "BELOW_CONFIDENCE_THRESHOLD",
@@ -1437,7 +1738,7 @@ class SimulatorEngine:
     def reset_all(self, reset_date: Optional[date | str] = None) -> dict:
         """Clear simulator state and restart all portfolios from today."""
         self._ensure_simulator_tables()
-        date_str = self._assert_live_forward_date(reset_date)
+        date_str = self._normalize_run_date(reset_date)
 
         from app.core.config import get_settings
 
@@ -1448,7 +1749,7 @@ class SimulatorEngine:
                      FROM information_schema.tables
                     WHERE table_schema = current_schema()
                       AND table_type = 'BASE TABLE'
-                      AND table_name LIKE 'simulator_%'
+                      AND (table_name LIKE 'simulator_%' OR table_name LIKE 'sim_%')
                     ORDER BY table_name""",
                 (),
             )
@@ -1456,7 +1757,7 @@ class SimulatorEngine:
             table_rows = _query_all(
                 """SELECT name
                      FROM sqlite_master
-                    WHERE type = 'table' AND name LIKE 'simulator_%'
+                    WHERE type = 'table' AND (name LIKE 'simulator_%' OR name LIKE 'sim_%')
                     ORDER BY name""",
                 (),
             )
@@ -1464,7 +1765,7 @@ class SimulatorEngine:
         simulator_tables = []
         for row in table_rows:
             table_name = str(row.get("name") or "").strip()
-            if re.fullmatch(r"simulator_[a-z0-9_]+", table_name):
+            if re.fullmatch(r"(simulator|sim)_[a-z0-9_]+", table_name):
                 simulator_tables.append(table_name)
 
         cleared_rows: dict[str, int] = {}
@@ -1479,10 +1780,14 @@ class SimulatorEngine:
 
         now_ts = _now_ts()
         portfolio_summaries = []
+        _exec(
+            "DELETE FROM simulator_portfolios WHERE strategy_name NOT IN ('BUY','WATCHLIST')",
+            (),
+        )
 
         for strategy in STRATEGIES:
             existing = _get_portfolio(strategy.portfolio_id)
-            starting_capital = float(existing.get("starting_capital_kwd") or 10000.0) if existing else 10000.0
+            starting_capital = float(existing.get("starting_capital_kwd") or STARTING_CAPITAL_KWD) if existing else STARTING_CAPITAL_KWD
 
             if existing:
                 _exec(
@@ -1597,9 +1902,9 @@ class SimulatorEngine:
             """CREATE TABLE IF NOT EXISTS simulator_portfolios (
                id INTEGER PRIMARY KEY AUTOINCREMENT,
                strategy_name TEXT NOT NULL,
-               starting_capital_kwd REAL NOT NULL DEFAULT 10000,
-               cash_balance_kwd REAL NOT NULL DEFAULT 10000,
-               total_value_kwd REAL NOT NULL DEFAULT 10000,
+               starting_capital_kwd REAL NOT NULL DEFAULT 100000,
+               cash_balance_kwd REAL NOT NULL DEFAULT 100000,
+               total_value_kwd REAL NOT NULL DEFAULT 100000,
                created_at TEXT, updated_at TEXT
             )""",
         )
@@ -1689,6 +1994,76 @@ class SimulatorEngine:
                date TEXT, ticker TEXT, confidence REAL, stage TEXT, reason_skipped TEXT
             )""",
         )
+        _exec(
+            """CREATE TABLE IF NOT EXISTS sim_position_snapshots (
+               id INTEGER PRIMARY KEY AUTOINCREMENT,
+               position_id INTEGER NOT NULL,
+               portfolio_id INTEGER NOT NULL,
+               ticker TEXT NOT NULL,
+               snapshot_kind TEXT NOT NULL,
+               snapshot_date TEXT NOT NULL,
+               snapshot_price REAL,
+               snapshot_json TEXT NOT NULL,
+               created_at TEXT NOT NULL
+            )""",
+        )
+        _exec(
+            """CREATE TABLE IF NOT EXISTS sim_transactions (
+               id INTEGER PRIMARY KEY AUTOINCREMENT,
+               portfolio_id INTEGER NOT NULL,
+               position_id INTEGER NOT NULL,
+               ticker TEXT NOT NULL,
+               event_kind TEXT NOT NULL,
+               fraction_closed REAL NOT NULL,
+               entry_date TEXT NOT NULL,
+               entry_price REAL NOT NULL,
+               entry_snapshot_json TEXT NOT NULL,
+               exit_date TEXT NOT NULL,
+               exit_price REAL NOT NULL,
+               exit_reason TEXT NOT NULL,
+               realized_pnl_pct REAL,
+               holding_sessions INTEGER,
+               mfe_pct REAL,
+               mae_pct REAL,
+               exit_snapshot_json TEXT,
+               outcome_class TEXT,
+               persisted_fields_json TEXT,
+               flipped_fields_json TEXT,
+               sessions_to_flip_json TEXT,
+               mfe_gt_10 INTEGER NOT NULL DEFAULT 0,
+               mfe_gt_20 INTEGER NOT NULL DEFAULT 0,
+               attribution_json TEXT,
+               created_at TEXT NOT NULL
+            )""",
+        )
+        _exec(
+            """CREATE TRIGGER IF NOT EXISTS trg_sim_transactions_block_update
+               BEFORE UPDATE ON sim_transactions
+               BEGIN
+                   SELECT RAISE(ABORT, 'append-only table: sim_transactions update blocked');
+               END""",
+        )
+        _exec(
+            """CREATE TRIGGER IF NOT EXISTS trg_sim_transactions_block_delete
+               BEFORE DELETE ON sim_transactions
+               BEGIN
+                   SELECT RAISE(ABORT, 'append-only table: sim_transactions delete blocked');
+               END""",
+        )
+        _exec(
+            """CREATE TRIGGER IF NOT EXISTS trg_sim_position_snapshots_block_update
+               BEFORE UPDATE ON sim_position_snapshots
+               BEGIN
+                   SELECT RAISE(ABORT, 'append-only table: sim_position_snapshots update blocked');
+               END""",
+        )
+        _exec(
+            """CREATE TRIGGER IF NOT EXISTS trg_sim_position_snapshots_block_delete
+               BEFORE DELETE ON sim_position_snapshots
+               BEGIN
+                   SELECT RAISE(ABORT, 'append-only table: sim_position_snapshots delete blocked');
+               END""",
+        )
         # Seed portfolios if missing
         count = _query_val("SELECT COUNT(*) FROM simulator_portfolios", ())
         if not count or int(count) == 0:
@@ -1697,8 +2072,8 @@ class SimulatorEngine:
                 _exec(
                     """INSERT INTO simulator_portfolios
                        (strategy_name, starting_capital_kwd, cash_balance_kwd, total_value_kwd, created_at, updated_at)
-                       VALUES (?, 10000, 10000, 10000, ?, ?)""",
-                    (strat.name, now, now),
+                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    (strat.name, STARTING_CAPITAL_KWD, STARTING_CAPITAL_KWD, STARTING_CAPITAL_KWD, now, now),
                 )
 
     # ── Manual override ──────────────────────────────────────────────────
