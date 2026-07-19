@@ -96,5 +96,27 @@
     "no_app_wiring_of_v2_authority_authorized": true,
     "preview_endpoints_status": "READ_ONLY_UNVALIDATED",
     "final_exam_result": "R15_ATTEMPT_2_FAIL_OF_RECORD"
+  },
+  "final_ledger_entry": {
+    "finding_id": "RETIRED_BASE_TERMINAL_STATE",
+    "statement": "In r15_exam_v2, after RETIRED_SUPERSEDED_BY_MARKUP, AdaptiveBaseGeometry produced no successor base over the remaining full-history run.",
+    "evidence_reference": "artifacts/preview1a_prestart/review_final/r15_postmortem_mechanism_v1.md",
+    "evidence": {
+      "SANAM_2025_05_08": {
+        "base_state": "BASE_RETIRED",
+        "live_base_evaluations": 0,
+        "criterion_window_disposition_rows": 0
+      },
+      "TIJARA_2024_09_01": {
+        "base_state": "BASE_RETIRED",
+        "live_base_evaluations": 0,
+        "criterion_window_disposition_rows": 0
+      }
+    },
+    "consequence_of_record": "R15 attempts 1 and 2 each failed on mechanism before reaching the thesis; thesis status = UNTESTED_BY_CAMPAIGN.",
+    "campaign_closure_confirmed_final": true,
+    "stopping_rule_entry_confirmed_final": true,
+    "conduct_addendum_confirmed_final": true,
+    "no_further_work_authorized": true
   }
 }

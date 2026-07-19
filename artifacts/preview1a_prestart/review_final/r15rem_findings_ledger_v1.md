@@ -61,3 +61,18 @@ Sealed artifact hashes:
 ## Campaign Closure
 
 R15_ATTEMPT_2 = FAIL_OF_RECORD. STOPPING_RULE_FIRED: two R15 failures. The R14-B to R15 build campaign is CLOSED. No attempt 3. No remediation toward re-examination. No cutover. No app wiring of v2 authority. Preview endpoints remain read-only UNVALIDATED.
+
+## Final Ledger Entry
+
+### RETIRED_BASE_TERMINAL_STATE
+
+In `r15_exam_v2`, after `RETIRED_SUPERSEDED_BY_MARKUP`, `AdaptiveBaseGeometry` produced no successor base over the remaining full-history run. Evidence: `r15_postmortem_mechanism_v1.md`.
+
+symbol|criterion_window_start|base_state|live_base_evaluations|criterion_window_disposition_rows
+---|---|---|---:|---:
+SANAM|2025-05-08|BASE_RETIRED|0|0
+TIJARA|2024-09-01|BASE_RETIRED|0|0
+
+Consequence of record: R15 attempts 1 and 2 each failed on mechanism before reaching the thesis; thesis status = UNTESTED_BY_CAMPAIGN.
+
+Campaign closure, stopping-rule entry, and conduct addendum confirmed final. No further work authorized.
