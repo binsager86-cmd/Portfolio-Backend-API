@@ -1,0 +1,33 @@
+{
+  "amendment_id": "R14B_PARAMETER_FREEZE_V2_AMENDMENT_2",
+  "amends": "R14B_PARAMETER_FREEZE_V2",
+  "append_only": true,
+  "status": "OWNER_RATIFIED_BY_DELEGATION",
+  "ratified_parameter": {
+    "name": "UPWARD_RETIREMENT_MFE_THRESHOLD",
+    "value": 0.2,
+    "retirement_reason": "RETIRED_SUPERSEDED_BY_MARKUP",
+    "ratification_status": "OWNER_RATIFIED_BY_DELEGATION"
+  },
+  "authority_statement": {
+    "rule": "A base is RETIRED_SUPERSEDED_BY_MARKUP when MFE from base_high_ref is >= +0.20 within 120 sessions of markup onset.",
+    "retirement_permanence": "PERMANENT",
+    "materialization_definition": "SINGLE_SHARED_DEFINITION_WITH_FORWARD_GRADER_AND_FROZEN_MATERIALIZATION_CRITERION",
+    "canonical_surface_unchanged": true,
+    "set_b_quarantine_reaffirmed": true
+  },
+  "evidence_citation": {
+    "source": "r15rem_upward_retirement_evidence_v2",
+    "findings": [
+      "196/304 stale early executions suppressed at all candidate thresholds",
+      "extension p75 reduced from 2.5084745762711864 to 0.017955801104972375",
+      "suppression concentrated in SANAM=146 and TIJARA=50",
+      "re-formation 2/2 with median sessions approximately 62"
+    ]
+  },
+  "conduct": {
+    "extension_mode": "APPEND_ONLY",
+    "attempt_2_authorization_dependency": "R15_ATTEMPT2_CRITERIA_OF_RECORD_V1"
+  },
+  "version_id": "R14B_PARAMETER_FREEZE_V2_AMENDMENT_2"
+}

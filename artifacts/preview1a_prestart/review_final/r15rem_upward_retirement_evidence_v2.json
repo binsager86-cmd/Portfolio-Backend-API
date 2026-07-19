@@ -1,0 +1,1339 @@
+{
+  "criterion_iii_options": {
+    "execution_rows": 53,
+    "option_a_candidate_state_strict": {
+      "candidate_intent_days": 249,
+      "no_candidate_count": 954,
+      "no_candidate_rate": 0.7930174563591023,
+      "verdict_under_25pct_rule": "FAIL",
+      "wording": "TIJARA no-candidate means candidate_intent.intent_state != INTENT_FORMED; veto days remain no-candidate days."
+    },
+    "option_b_explicit_disposition_coverage": {
+      "explicit_disposition_rows": 411,
+      "no_record_count": 792,
+      "no_record_rate": 0.6583541147132169,
+      "verdict_under_25pct_rule": "FAIL",
+      "wording": "TIJARA no-candidate means no sealed forward-prediction disposition row; veto rows count as explicit non-entry dispositions."
+    },
+    "prediction_rows": 411,
+    "suppression_rows": 196,
+    "total_days": 1203,
+    "veto_rows": 162
+  },
+  "early_execution_row_definition": "ee_v2_forward_predictions.execution_state == EXECUTE_EARLY_PILOT",
+  "exam_artifact_mutation": "NONE",
+  "mode": "READ_ONLY_SEALED_R15_EXAM_DB_PLUS_RUNTIME_OHLCV_LOOKUP",
+  "r15_windows": {
+    "BPCC": {
+      "end": "2026-07-09",
+      "start": "2021-07-11"
+    },
+    "MABANEE": {
+      "end": "2026-07-09",
+      "start": "2021-07-11"
+    },
+    "SANAM": {
+      "end": "2026-07-09",
+      "start": "2021-01-06"
+    },
+    "TIJARA": {
+      "end": "2026-07-09",
+      "start": "2021-07-11"
+    },
+    "ZAIN": {
+      "end": "2026-07-09",
+      "start": "2021-07-11"
+    }
+  },
+  "retirement_rule": "base retires when high/base_high_ref - 1 >= threshold within 120 sessions after base_origin_date; row suppressed when materialization_date <= intent date",
+  "sealed_exam_db": "C:\\Users\\Sager\\OneDrive\\Desktop\\portfolio_app\\mobile-migration\\backend-api-main-release\\artifacts\\preview1a_prestart\\review_final\\r15_exam_v1_harness.db",
+  "summary_by_threshold": {
+    "0.15": {
+      "early_execution_rows": 304,
+      "extension_distribution_after": {
+        "count": 108,
+        "max": 0.08888888888888889,
+        "median": 0.0,
+        "p75": 0.017955801104972375
+      },
+      "extension_distribution_before": {
+        "count": 304,
+        "max": 3.0847457627118646,
+        "median": 0.2840501792114696,
+        "p75": 2.5084745762711864
+      },
+      "median_sessions_to_reformation": 62.5,
+      "reformation_sample_rows": [
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "materialization_date": "2021-06-30",
+          "materialized": true,
+          "max_mfe_120": 0.2966101694915255,
+          "new_base_high_ref": 77.0,
+          "new_base_low_ref": 65.1,
+          "reformation_date": "2021-09-08",
+          "reformed_strict": true,
+          "sessions_to_materialization": 5,
+          "sessions_to_reformation": 98,
+          "symbol": "SANAM"
+        },
+        {
+          "base_high_ref": 55.8,
+          "base_low_ref": 47.5,
+          "base_origin_date": "2021-10-11",
+          "base_reference_id": "TIJARA::2021-10-11::BASE01",
+          "materialization_date": "2021-10-27",
+          "materialized": true,
+          "max_mfe_120": 0.17383512544802882,
+          "new_base_high_ref": 73.0,
+          "new_base_low_ref": 60.2,
+          "reformation_date": "2021-11-22",
+          "reformed_strict": true,
+          "sessions_to_materialization": 11,
+          "sessions_to_reformation": 27,
+          "symbol": "TIJARA"
+        }
+      ],
+      "reformation_strict_definition": "new valid base candidate with base_low_ref > retired base_high_ref within 120 sessions after upward materialization",
+      "reformed_above_retired_high_count": 2,
+      "reformed_above_retired_high_share": 1.0,
+      "remaining_after_suppression_count": 108,
+      "suppressed_by_symbol": {
+        "BPCC": 0,
+        "MABANEE": 0,
+        "SANAM": 146,
+        "TIJARA": 50,
+        "ZAIN": 0
+      },
+      "suppressed_sample_rows": [
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.847457627118644,
+          "prediction_date": "2023-11-16",
+          "prediction_id": "08c114b2a28e59cc3fbc1e27848e6b40",
+          "reference_price": 168.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.694915254237288,
+          "prediction_date": "2023-11-27",
+          "prediction_id": "1835d6beb5f42f9731e91198b7d326a3",
+          "reference_price": 159.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.7457627118644068,
+          "prediction_date": "2023-11-29",
+          "prediction_id": "c9f69efc651a0e2b1418cc05fd3d48ae",
+          "reference_price": 162.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.8305084745762712,
+          "prediction_date": "2023-11-30",
+          "prediction_id": "233418efcff7eeabb7d960bd8cefdd62",
+          "reference_price": 167.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.7627118644067796,
+          "prediction_date": "2023-12-03",
+          "prediction_id": "97470208fe937c96efe890ceb399772f",
+          "reference_price": 163.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.7796610169491525,
+          "prediction_date": "2023-12-04",
+          "prediction_id": "95d8546db379d6dfc42ec5ddae5752ef",
+          "reference_price": 164.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.7118644067796611,
+          "prediction_date": "2023-12-05",
+          "prediction_id": "cf57444191d85f010b8d35eaebeb28f8",
+          "reference_price": 160.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.7118644067796611,
+          "prediction_date": "2023-12-06",
+          "prediction_id": "b3ba473672bce852ed05e761799b0015",
+          "reference_price": 160.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.694915254237288,
+          "prediction_date": "2023-12-07",
+          "prediction_id": "d80813204105c411fe454b2cf047edff",
+          "reference_price": 159.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.6101694915254237,
+          "prediction_date": "2023-12-10",
+          "prediction_id": "70b94aab9c16d9be73d37920d8c7fa85",
+          "reference_price": 154.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.5423728813559323,
+          "prediction_date": "2023-12-11",
+          "prediction_id": "eac9514be2a857142a047985354e8d4e",
+          "reference_price": 150.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.8983050847457628,
+          "prediction_date": "2024-01-07",
+          "prediction_id": "3e9e6988624288737cb7fb999c0a0218",
+          "reference_price": 171.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 2.288135593220339,
+          "prediction_date": "2024-03-18",
+          "prediction_id": "b5753cbf08d42eec9f2cee1078a1cd06",
+          "reference_price": 194.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 2.3220338983050848,
+          "prediction_date": "2024-03-21",
+          "prediction_id": "0c01a19c750939425bec505d9e78c0eb",
+          "reference_price": 196.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 2.305084745762712,
+          "prediction_date": "2024-03-24",
+          "prediction_id": "1a66fcc043798124c3d728fe4472e45a",
+          "reference_price": 195.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 2.3220338983050848,
+          "prediction_date": "2024-03-28",
+          "prediction_id": "4dbf700cef48055582717f203b7c908a",
+          "reference_price": 196.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 2.2203389830508473,
+          "prediction_date": "2024-03-31",
+          "prediction_id": "2befdb7962fa28604e40f357f039f560",
+          "reference_price": 190.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.9830508474576272,
+          "prediction_date": "2024-07-22",
+          "prediction_id": "9b029b8db6440f2974ee01f619ceb119",
+          "reference_price": 176.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.9661016949152543,
+          "prediction_date": "2024-07-23",
+          "prediction_id": "c04c02792b7aa7c6f6e7142d7a60fc81",
+          "reference_price": 175.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.9830508474576272,
+          "prediction_date": "2024-07-24",
+          "prediction_id": "f99b8e360254725ed025c8b905e05d3a",
+          "reference_price": 176.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        }
+      ],
+      "unique_early_bases": 5,
+      "upward_retired_base_count": 2,
+      "would_suppress_count": 196,
+      "would_suppress_share": 0.6447368421052632
+    },
+    "0.2": {
+      "early_execution_rows": 304,
+      "extension_distribution_after": {
+        "count": 108,
+        "max": 0.08888888888888889,
+        "median": 0.0,
+        "p75": 0.017955801104972375
+      },
+      "extension_distribution_before": {
+        "count": 304,
+        "max": 3.0847457627118646,
+        "median": 0.2840501792114696,
+        "p75": 2.5084745762711864
+      },
+      "median_sessions_to_reformation": 62.0,
+      "reformation_sample_rows": [
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "materialization_date": "2021-06-30",
+          "materialized": true,
+          "max_mfe_120": 0.2966101694915255,
+          "new_base_high_ref": 77.0,
+          "new_base_low_ref": 65.1,
+          "reformation_date": "2021-09-08",
+          "reformed_strict": true,
+          "sessions_to_materialization": 5,
+          "sessions_to_reformation": 98,
+          "symbol": "SANAM"
+        },
+        {
+          "base_high_ref": 55.8,
+          "base_low_ref": 47.5,
+          "base_origin_date": "2021-10-11",
+          "base_reference_id": "TIJARA::2021-10-11::BASE01",
+          "materialization_date": "2021-10-28",
+          "materialized": true,
+          "max_mfe_120": 0.21863799283154117,
+          "new_base_high_ref": 73.0,
+          "new_base_low_ref": 60.2,
+          "reformation_date": "2021-11-22",
+          "reformed_strict": true,
+          "sessions_to_materialization": 12,
+          "sessions_to_reformation": 26,
+          "symbol": "TIJARA"
+        }
+      ],
+      "reformation_strict_definition": "new valid base candidate with base_low_ref > retired base_high_ref within 120 sessions after upward materialization",
+      "reformed_above_retired_high_count": 2,
+      "reformed_above_retired_high_share": 1.0,
+      "remaining_after_suppression_count": 108,
+      "suppressed_by_symbol": {
+        "BPCC": 0,
+        "MABANEE": 0,
+        "SANAM": 146,
+        "TIJARA": 50,
+        "ZAIN": 0
+      },
+      "suppressed_sample_rows": [
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.847457627118644,
+          "prediction_date": "2023-11-16",
+          "prediction_id": "08c114b2a28e59cc3fbc1e27848e6b40",
+          "reference_price": 168.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.694915254237288,
+          "prediction_date": "2023-11-27",
+          "prediction_id": "1835d6beb5f42f9731e91198b7d326a3",
+          "reference_price": 159.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.7457627118644068,
+          "prediction_date": "2023-11-29",
+          "prediction_id": "c9f69efc651a0e2b1418cc05fd3d48ae",
+          "reference_price": 162.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.8305084745762712,
+          "prediction_date": "2023-11-30",
+          "prediction_id": "233418efcff7eeabb7d960bd8cefdd62",
+          "reference_price": 167.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.7627118644067796,
+          "prediction_date": "2023-12-03",
+          "prediction_id": "97470208fe937c96efe890ceb399772f",
+          "reference_price": 163.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.7796610169491525,
+          "prediction_date": "2023-12-04",
+          "prediction_id": "95d8546db379d6dfc42ec5ddae5752ef",
+          "reference_price": 164.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.7118644067796611,
+          "prediction_date": "2023-12-05",
+          "prediction_id": "cf57444191d85f010b8d35eaebeb28f8",
+          "reference_price": 160.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.7118644067796611,
+          "prediction_date": "2023-12-06",
+          "prediction_id": "b3ba473672bce852ed05e761799b0015",
+          "reference_price": 160.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.694915254237288,
+          "prediction_date": "2023-12-07",
+          "prediction_id": "d80813204105c411fe454b2cf047edff",
+          "reference_price": 159.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.6101694915254237,
+          "prediction_date": "2023-12-10",
+          "prediction_id": "70b94aab9c16d9be73d37920d8c7fa85",
+          "reference_price": 154.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.5423728813559323,
+          "prediction_date": "2023-12-11",
+          "prediction_id": "eac9514be2a857142a047985354e8d4e",
+          "reference_price": 150.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.8983050847457628,
+          "prediction_date": "2024-01-07",
+          "prediction_id": "3e9e6988624288737cb7fb999c0a0218",
+          "reference_price": 171.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 2.288135593220339,
+          "prediction_date": "2024-03-18",
+          "prediction_id": "b5753cbf08d42eec9f2cee1078a1cd06",
+          "reference_price": 194.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 2.3220338983050848,
+          "prediction_date": "2024-03-21",
+          "prediction_id": "0c01a19c750939425bec505d9e78c0eb",
+          "reference_price": 196.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 2.305084745762712,
+          "prediction_date": "2024-03-24",
+          "prediction_id": "1a66fcc043798124c3d728fe4472e45a",
+          "reference_price": 195.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 2.3220338983050848,
+          "prediction_date": "2024-03-28",
+          "prediction_id": "4dbf700cef48055582717f203b7c908a",
+          "reference_price": 196.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 2.2203389830508473,
+          "prediction_date": "2024-03-31",
+          "prediction_id": "2befdb7962fa28604e40f357f039f560",
+          "reference_price": 190.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.9830508474576272,
+          "prediction_date": "2024-07-22",
+          "prediction_id": "9b029b8db6440f2974ee01f619ceb119",
+          "reference_price": 176.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.9661016949152543,
+          "prediction_date": "2024-07-23",
+          "prediction_id": "c04c02792b7aa7c6f6e7142d7a60fc81",
+          "reference_price": 175.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.9830508474576272,
+          "prediction_date": "2024-07-24",
+          "prediction_id": "f99b8e360254725ed025c8b905e05d3a",
+          "reference_price": 176.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        }
+      ],
+      "unique_early_bases": 5,
+      "upward_retired_base_count": 2,
+      "would_suppress_count": 196,
+      "would_suppress_share": 0.6447368421052632
+    },
+    "0.25": {
+      "early_execution_rows": 304,
+      "extension_distribution_after": {
+        "count": 108,
+        "max": 0.08888888888888889,
+        "median": 0.0,
+        "p75": 0.017955801104972375
+      },
+      "extension_distribution_before": {
+        "count": 304,
+        "max": 3.0847457627118646,
+        "median": 0.2840501792114696,
+        "p75": 2.5084745762711864
+      },
+      "median_sessions_to_reformation": 59.5,
+      "reformation_sample_rows": [
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "materialization_date": "2021-06-30",
+          "materialized": true,
+          "max_mfe_120": 0.2966101694915255,
+          "new_base_high_ref": 77.0,
+          "new_base_low_ref": 65.1,
+          "reformation_date": "2021-09-08",
+          "reformed_strict": true,
+          "sessions_to_materialization": 5,
+          "sessions_to_reformation": 98,
+          "symbol": "SANAM"
+        },
+        {
+          "base_high_ref": 55.8,
+          "base_low_ref": 47.5,
+          "base_origin_date": "2021-10-11",
+          "base_reference_id": "TIJARA::2021-10-11::BASE01",
+          "materialization_date": "2021-11-04",
+          "materialized": true,
+          "max_mfe_120": 0.29032258064516125,
+          "new_base_high_ref": 73.0,
+          "new_base_low_ref": 60.2,
+          "reformation_date": "2021-11-22",
+          "reformed_strict": true,
+          "sessions_to_materialization": 17,
+          "sessions_to_reformation": 21,
+          "symbol": "TIJARA"
+        }
+      ],
+      "reformation_strict_definition": "new valid base candidate with base_low_ref > retired base_high_ref within 120 sessions after upward materialization",
+      "reformed_above_retired_high_count": 2,
+      "reformed_above_retired_high_share": 1.0,
+      "remaining_after_suppression_count": 108,
+      "suppressed_by_symbol": {
+        "BPCC": 0,
+        "MABANEE": 0,
+        "SANAM": 146,
+        "TIJARA": 50,
+        "ZAIN": 0
+      },
+      "suppressed_sample_rows": [
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.847457627118644,
+          "prediction_date": "2023-11-16",
+          "prediction_id": "08c114b2a28e59cc3fbc1e27848e6b40",
+          "reference_price": 168.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.694915254237288,
+          "prediction_date": "2023-11-27",
+          "prediction_id": "1835d6beb5f42f9731e91198b7d326a3",
+          "reference_price": 159.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.7457627118644068,
+          "prediction_date": "2023-11-29",
+          "prediction_id": "c9f69efc651a0e2b1418cc05fd3d48ae",
+          "reference_price": 162.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.8305084745762712,
+          "prediction_date": "2023-11-30",
+          "prediction_id": "233418efcff7eeabb7d960bd8cefdd62",
+          "reference_price": 167.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.7627118644067796,
+          "prediction_date": "2023-12-03",
+          "prediction_id": "97470208fe937c96efe890ceb399772f",
+          "reference_price": 163.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.7796610169491525,
+          "prediction_date": "2023-12-04",
+          "prediction_id": "95d8546db379d6dfc42ec5ddae5752ef",
+          "reference_price": 164.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.7118644067796611,
+          "prediction_date": "2023-12-05",
+          "prediction_id": "cf57444191d85f010b8d35eaebeb28f8",
+          "reference_price": 160.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.7118644067796611,
+          "prediction_date": "2023-12-06",
+          "prediction_id": "b3ba473672bce852ed05e761799b0015",
+          "reference_price": 160.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.694915254237288,
+          "prediction_date": "2023-12-07",
+          "prediction_id": "d80813204105c411fe454b2cf047edff",
+          "reference_price": 159.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.6101694915254237,
+          "prediction_date": "2023-12-10",
+          "prediction_id": "70b94aab9c16d9be73d37920d8c7fa85",
+          "reference_price": 154.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.5423728813559323,
+          "prediction_date": "2023-12-11",
+          "prediction_id": "eac9514be2a857142a047985354e8d4e",
+          "reference_price": 150.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.8983050847457628,
+          "prediction_date": "2024-01-07",
+          "prediction_id": "3e9e6988624288737cb7fb999c0a0218",
+          "reference_price": 171.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 2.288135593220339,
+          "prediction_date": "2024-03-18",
+          "prediction_id": "b5753cbf08d42eec9f2cee1078a1cd06",
+          "reference_price": 194.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 2.3220338983050848,
+          "prediction_date": "2024-03-21",
+          "prediction_id": "0c01a19c750939425bec505d9e78c0eb",
+          "reference_price": 196.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 2.305084745762712,
+          "prediction_date": "2024-03-24",
+          "prediction_id": "1a66fcc043798124c3d728fe4472e45a",
+          "reference_price": 195.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 2.3220338983050848,
+          "prediction_date": "2024-03-28",
+          "prediction_id": "4dbf700cef48055582717f203b7c908a",
+          "reference_price": 196.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 2.2203389830508473,
+          "prediction_date": "2024-03-31",
+          "prediction_id": "2befdb7962fa28604e40f357f039f560",
+          "reference_price": 190.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.9830508474576272,
+          "prediction_date": "2024-07-22",
+          "prediction_id": "9b029b8db6440f2974ee01f619ceb119",
+          "reference_price": 176.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.9661016949152543,
+          "prediction_date": "2024-07-23",
+          "prediction_id": "c04c02792b7aa7c6f6e7142d7a60fc81",
+          "reference_price": 175.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        },
+        {
+          "base_high_ref": 59.0,
+          "base_low_ref": 47.6,
+          "base_origin_date": "2021-06-23",
+          "base_reference_id": "SANAM::2021-06-23::BASE01",
+          "execution_state": "EXECUTE_EARLY_PILOT",
+          "extension_pct_vs_current_valid_reference": 1.9830508474576272,
+          "prediction_date": "2024-07-24",
+          "prediction_id": "f99b8e360254725ed025c8b905e05d3a",
+          "reference_price": 176.0,
+          "symbol": "SANAM",
+          "upward_materialization": {
+            "materialization_date": "2021-06-30",
+            "materialized": true,
+            "max_mfe_120": 0.2966101694915255,
+            "sessions_to_materialization": 5
+          }
+        }
+      ],
+      "unique_early_bases": 5,
+      "upward_retired_base_count": 2,
+      "would_suppress_count": 196,
+      "would_suppress_share": 0.6447368421052632
+    }
+  },
+  "thresholds": [
+    0.15,
+    0.2,
+    0.25
+  ],
+  "version_id": "R15REM_UPWARD_RETIREMENT_EVIDENCE_V2"
+}
