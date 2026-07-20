@@ -16,6 +16,7 @@ Both layers share the same underlying connection.
 import json
 import math
 import sqlite3
+import contextvars
 from contextlib import contextmanager
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -31,6 +32,7 @@ from app.core.config import get_settings
 _settings = get_settings()
 _DB_PATH = _settings.database_abs_path
 _USE_PG = _settings.use_postgres
+_TRANSACTION_CONN: contextvars.ContextVar[Any] = contextvars.ContextVar("transaction_conn", default=None)
 
 
 def safe_json_dumps(obj: Any) -> str:
@@ -368,6 +370,26 @@ def get_conn():
     return conn
 
 
+@contextmanager
+def transaction():
+    """Run exec_sql helpers on one connection and commit or rollback atomically."""
+    current = _TRANSACTION_CONN.get()
+    if current is not None:
+        yield current
+        return
+
+    with get_connection() as conn:
+        token = _TRANSACTION_CONN.set(conn)
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            _TRANSACTION_CONN.reset(token)
+
+
 def query_df(sql: str, params: tuple = ()) -> pd.DataFrame:
     """Execute a SELECT and return a DataFrame."""
     if _USE_PG:
@@ -460,6 +482,17 @@ def _normalize_ddl_for_pg(sql: str) -> str:
 
 def exec_sql(sql: str, params: tuple = ()) -> None:
     """Execute a write statement (INSERT / UPDATE / DELETE)."""
+    tx_conn = _TRANSACTION_CONN.get()
+    if tx_conn is not None:
+        if _USE_PG and isinstance(tx_conn, _PgConnProxy):
+            sql = _normalize_ddl_for_pg(sql).replace("?", "%s")
+            cur = tx_conn._conn.cursor()
+            cur.execute(sql, params)
+        else:
+            cur = tx_conn.cursor()
+            cur.execute(sql, params)
+        return
+
     if _USE_PG:
         sql = _normalize_ddl_for_pg(sql)
         pg_sql, named = _pg_sql_named(sql, params)
@@ -474,6 +507,16 @@ def exec_sql(sql: str, params: tuple = ()) -> None:
 
 def exec_sql_fetchone(sql: str, params: tuple = ()):
     """Execute SQL and return first row (works for both SQLite and PostgreSQL)."""
+    tx_conn = _TRANSACTION_CONN.get()
+    if tx_conn is not None:
+        if _USE_PG and isinstance(tx_conn, _PgConnProxy):
+            cur = tx_conn._conn.cursor()
+            cur.execute(sql.replace("?", "%s"), params)
+        else:
+            cur = tx_conn.cursor()
+            cur.execute(sql, params)
+        return cur.fetchone()
+
     if _USE_PG:
         pg_sql, named = _pg_sql_named(sql, params)
         with engine.connect() as conn:

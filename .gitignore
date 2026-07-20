@@ -21,7 +21,6 @@ env/
 
 # Keep the example
 !.env.example
-!.env.production
 
 # Database files
 *.db

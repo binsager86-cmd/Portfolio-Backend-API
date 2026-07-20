@@ -17,6 +17,23 @@ logger = logging.getLogger(__name__)
 AI_GENERATION_TIMEOUT_SECONDS = 25.0
 
 
+def _get_gemini_api_key(user_id: int) -> str:
+    settings = get_settings()
+    api_key = settings.GEMINI_API_KEY
+    try:
+        from app.core.database import query_one, add_column_if_missing
+        from app.core.encryption import decrypt_field
+        add_column_if_missing("users", "gemini_api_key", "TEXT")
+        row = query_one("SELECT gemini_api_key FROM users WHERE id = ?", (user_id,))
+        if row and row[0]:
+            decrypted = decrypt_field(row[0])
+            if decrypted:
+                api_key = decrypted
+    except Exception:
+        pass
+    return api_key
+
+
 async def _run_with_timeout(func, *args, timeout: float = AI_GENERATION_TIMEOUT_SECONDS, **kwargs):
     """Run a blocking SDK call in a thread with a hard timeout."""
     return await asyncio.wait_for(
@@ -66,20 +83,7 @@ async def analyze_portfolio(
     Raises:
         ValueError if Gemini API key is not configured.
     """
-    settings = get_settings()
-
-    # Try per-user key first, then fall back to server-wide key
-    api_key = settings.GEMINI_API_KEY
-    try:
-        from app.core.database import query_one, add_column_if_missing
-        add_column_if_missing("users", "gemini_api_key", "TEXT")
-        row = query_one(
-            "SELECT gemini_api_key FROM users WHERE id = ?", (user_id,)
-        )
-        if row and row[0]:
-            api_key = row[0]
-    except Exception:
-        pass  # Fall back to server-wide key
+    api_key = _get_gemini_api_key(user_id)
 
     if not api_key:
         raise ValueError(
@@ -213,19 +217,7 @@ async def whale_chat(user_id: int, prompt: str) -> dict:
 
     Returns the same shape as ``analyze_portfolio``.
     """
-    settings = get_settings()
-
-    api_key = settings.GEMINI_API_KEY
-    try:
-        from app.core.database import query_one, add_column_if_missing
-        add_column_if_missing("users", "gemini_api_key", "TEXT")
-        row = query_one(
-            "SELECT gemini_api_key FROM users WHERE id = ?", (user_id,)
-        )
-        if row and row[0]:
-            api_key = row[0]
-    except Exception:
-        pass
+    api_key = _get_gemini_api_key(user_id)
 
     if not api_key:
         raise ValueError(
@@ -335,16 +327,7 @@ async def generate_cached_analysis(
     # ── 2. Cache miss → call Gemini ───────────────────────────────────
     record_ai_cache_miss(endpoint)
 
-    settings = get_settings()
-    api_key = settings.GEMINI_API_KEY
-    try:
-        from app.core.database import query_one, add_column_if_missing
-        add_column_if_missing("users", "gemini_api_key", "TEXT")
-        row = query_one("SELECT gemini_api_key FROM users WHERE id = ?", (user_id,))
-        if row and row[0]:
-            api_key = row[0]
-    except Exception:
-        pass
+    api_key = _get_gemini_api_key(user_id)
 
     if not api_key:
         return {

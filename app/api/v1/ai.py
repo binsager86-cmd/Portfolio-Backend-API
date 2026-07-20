@@ -64,13 +64,14 @@ async def ai_status(current_user: TokenData = Depends(get_current_user)):
     has_key = bool(settings.GEMINI_API_KEY)
     try:
         from app.core.database import query_one, add_column_if_missing
+        from app.core.encryption import decrypt_field
         # Ensure column exists (additive migration) before querying
         add_column_if_missing("users", "gemini_api_key", "TEXT")
         row = query_one(
             "SELECT gemini_api_key FROM users WHERE id = ?",
             (current_user.user_id,),
         )
-        if row and row[0]:
+        if row and row[0] and decrypt_field(row[0]):
             has_key = True
     except Exception as exc:
         logger.warning("AI status check error: %s", exc)

@@ -24,6 +24,7 @@ from app.core.security import (
 )
 from app.core.config import get_settings
 from app.core.exceptions import UnauthorizedError, ConflictError, BadRequestError
+from app.core.encryption import encrypt_field, decrypt_field
 from pydantic import BaseModel, Field, field_validator
 from app.core.database import query_one, query_val, exec_sql, column_exists
 from app.core.config import get_settings as _get_settings
@@ -138,6 +139,38 @@ def _is_token_blacklisted(jti: str) -> bool:
     return val is not None
 
 
+def _ensure_refresh_revocation_column() -> None:
+    """Additive migration for user-level refresh token revocation."""
+    try:
+        if not column_exists("users", "refresh_tokens_revoked_at"):
+            exec_sql("ALTER TABLE users ADD COLUMN refresh_tokens_revoked_at INTEGER DEFAULT 0")
+    except Exception:
+        pass
+
+
+def _revoke_user_refresh_tokens(user_id: int) -> None:
+    """Invalidate refresh tokens issued before this point for a user."""
+    _ensure_refresh_revocation_column()
+    exec_sql(
+        "UPDATE users SET refresh_tokens_revoked_at = ? WHERE id = ?",
+        (int(time.time()), user_id),
+    )
+
+
+def _is_refresh_token_revoked_for_user(user_id: int, issued_at: int | None) -> bool:
+    """Return True when a refresh token predates the user's revocation cutoff."""
+    _ensure_refresh_revocation_column()
+    revoked_at = query_val(
+        "SELECT COALESCE(refresh_tokens_revoked_at, 0) FROM users WHERE id = ?",
+        (user_id,),
+    ) or 0
+    if not revoked_at:
+        return False
+    if not issued_at:
+        return True
+    return int(issued_at) < int(revoked_at)
+
+
 # ── Helper: build token response ─────────────────────────────────────
 
 def _build_token_response(user: dict) -> TokenResponse:
@@ -227,6 +260,9 @@ async def refresh_token(request: Request, body: RefreshRequest):
             "Replay detected: blacklisted refresh token jti=%s user=%s",
             token_data.jti, token_data.user_id,
         )
+        raise UnauthorizedError("Refresh token has been revoked")
+
+    if _is_refresh_token_revoked_for_user(token_data.user_id, token_data.iat):
         raise UnauthorizedError("Refresh token has been revoked")
 
     # Verify user still exists
@@ -463,6 +499,7 @@ async def change_password(
         "UPDATE users SET password_hash = ? WHERE id = ?",
         (new_hash, current_user.user_id),
     )
+    _revoke_user_refresh_tokens(current_user.user_id)
 
     log_event(AUTH_PASSWORD_CHANGE, user_id=current_user.user_id, request=request)
 
@@ -506,7 +543,7 @@ async def save_api_key(
     _ensure_api_key_column()
     exec_sql(
         "UPDATE users SET gemini_api_key = ? WHERE id = ?",
-        (body.api_key.strip(), current_user.user_id),
+        (encrypt_field(body.api_key.strip()), current_user.user_id),
     )
     return {"status": "ok", "data": {"message": "API key saved"}}
 
@@ -519,7 +556,7 @@ async def get_api_key(current_user=Depends(get_current_user)):
         "SELECT gemini_api_key FROM users WHERE id = ?",
         (current_user.user_id,),
     )
-    key = row[0] if row and row[0] else ""
+    key = decrypt_field(row[0]) if row and row[0] else ""
     has_key = bool(key)
     masked = key[:4] + "..." + key[-4:] if len(key) > 8 else ("****" if key else None)
     return {"status": "ok", "data": {"has_key": has_key, "masked_key": masked}}
@@ -766,6 +803,7 @@ async def reset_password(request: Request, body: ResetPasswordRequest):
         "UPDATE users SET password_hash = ? WHERE id = ?",
         (new_hash, user_id),
     )
+    _revoke_user_refresh_tokens(user_id)
 
     # Mark OTP as used
     exec_sql("UPDATE password_resets SET used = 1 WHERE id = ?", (otp_id,))

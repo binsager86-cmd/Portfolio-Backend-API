@@ -3560,13 +3560,14 @@ async def upload_financial_statement(
 
     try:
         from app.core.database import add_column_if_missing
+        from app.core.encryption import decrypt_field
         add_column_if_missing("users", "gemini_api_key", "TEXT")
         row = query_one(
             "SELECT gemini_api_key FROM users WHERE id = ?",
             (current_user.user_id,),
         )
         if row and row[0]:
-            api_key = row[0]
+            api_key = decrypt_field(row[0]) or api_key
     except Exception:
         pass
 
@@ -3770,13 +3771,14 @@ async def validate_financial_statement(
 
     try:
         from app.core.database import add_column_if_missing
+        from app.core.encryption import decrypt_field
         add_column_if_missing("users", "gemini_api_key", "TEXT")
         row = query_one(
             "SELECT gemini_api_key FROM users WHERE id = ?",
             (current_user.user_id,),
         )
         if row and row[0]:
-            api_key = row[0]
+            api_key = decrypt_field(row[0]) or api_key
     except Exception:
         pass
 
@@ -3872,13 +3874,14 @@ async def verify_statement_placement(
 
     try:
         from app.core.database import add_column_if_missing
+        from app.core.encryption import decrypt_field
         add_column_if_missing("users", "gemini_api_key", "TEXT")
         row = query_one(
             "SELECT gemini_api_key FROM users WHERE id = ?",
             (current_user.user_id,),
         )
         if row and row[0]:
-            api_key = row[0]
+            api_key = decrypt_field(row[0]) or api_key
     except Exception:
         pass
 
@@ -3969,13 +3972,14 @@ async def ai_attribute_statement(
 
     try:
         from app.core.database import add_column_if_missing
+        from app.core.encryption import decrypt_field
         add_column_if_missing("users", "gemini_api_key", "TEXT")
         row = query_one(
             "SELECT gemini_api_key FROM users WHERE id = ?",
             (current_user.user_id,),
         )
         if row and row[0]:
-            api_key = row[0]
+            api_key = decrypt_field(row[0]) or api_key
     except Exception:
         pass
 
@@ -4102,13 +4106,14 @@ async def ai_rearrange(
 
     try:
         from app.core.database import add_column_if_missing
+        from app.core.encryption import decrypt_field
         add_column_if_missing("users", "gemini_api_key", "TEXT")
         row = query_one(
             "SELECT gemini_api_key FROM users WHERE id = ?",
             (current_user.user_id,),
         )
         if row and row[0]:
-            api_key = row[0]
+            api_key = decrypt_field(row[0]) or api_key
     except Exception:
         pass
 

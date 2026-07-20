@@ -10,7 +10,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi.responses import StreamingResponse
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_admin
 from app.core.security import TokenData
 from app.core.exceptions import BadRequestError
 from app.services.backup_service import (
@@ -79,19 +79,28 @@ async def import_backup(
         raise BadRequestError("File too large (max 10 MB)")
 
     try:
-        # Replace mode: hard-delete ALL user data in the restored tables
         if mode == "replace":
-            from app.core.database import exec_sql
-            # Order matters: snapshots → cash → transactions → stocks (FK-safe)
-            for table in ["portfolio_snapshots", "cash_deposits", "transactions", "stocks"]:
-                exec_sql(f"DELETE FROM {table} WHERE user_id = ?", (current_user.user_id,))
+            from app.core.database import exec_sql, transaction
+            # Order matters: snapshots -> cash -> transactions -> stocks (FK-safe)
+            with transaction():
+                for table in ["portfolio_snapshots", "cash_deposits", "transactions", "stocks"]:
+                    exec_sql(f"DELETE FROM {table} WHERE user_id = ?", (current_user.user_id,))
 
-        result = import_transactions_excel(
-            user_id=current_user.user_id,
-            file_bytes=contents,
-            portfolio=portfolio,
-            sheet_name=sheet_name,
-        )
+                result = import_transactions_excel(
+                    user_id=current_user.user_id,
+                    file_bytes=contents,
+                    portfolio=portfolio,
+                    sheet_name=sheet_name,
+                )
+                if result.get("errors"):
+                    raise BadRequestError("Replace import failed; existing data was preserved.")
+        else:
+            result = import_transactions_excel(
+                user_id=current_user.user_id,
+                file_bytes=contents,
+                portfolio=portfolio,
+                sheet_name=sheet_name,
+            )
         result["mode"] = mode
 
         return {
@@ -107,7 +116,7 @@ async def import_backup(
 
 @router.get("/data-check")
 async def data_ownership_check(
-    current_user: TokenData = Depends(get_current_user),
+    current_user: TokenData = Depends(require_admin),
 ):
     """
     Diagnose data ownership — show record counts per user_id for each table.
@@ -135,7 +144,7 @@ async def data_ownership_check(
 @router.post("/claim-data")
 async def claim_orphaned_data(
     source_user_id: int = Query(..., description="The user_id whose data to claim"),
-    current_user: TokenData = Depends(get_current_user),
+    current_user: TokenData = Depends(require_admin),
 ):
     """
     Reassign ALL data from *source_user_id* to the current authenticated user.

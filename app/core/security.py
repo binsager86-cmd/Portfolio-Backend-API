@@ -48,6 +48,7 @@ class TokenData(BaseModel):
     token_type: str = TOKEN_TYPE_ACCESS
     jti: Optional[str] = None
     exp: Optional[int] = None
+    iat: Optional[int] = None
     is_admin: bool = False
 
 
@@ -165,11 +166,13 @@ def create_refresh_token(
     expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     )
+    issued_at = datetime.now(timezone.utc)
     payload = {
         "sub": str(user_id),
         "username": username,
         "type": TOKEN_TYPE_REFRESH,
         "exp": expire,
+        "iat": issued_at,
         "jti": uuid.uuid4().hex,
     }
     return jwt.encode(payload, _settings.SECRET_KEY, algorithm=_settings.JWT_ALGORITHM)
@@ -193,6 +196,7 @@ def decode_access_token(token: str) -> TokenData:
     token_type = payload.get("type", TOKEN_TYPE_ACCESS)
     jti = payload.get("jti")
     exp = payload.get("exp")
+    iat = payload.get("iat")
     is_admin = bool(payload.get("is_admin", False))
 
     if not user_id:
@@ -227,6 +231,6 @@ def decode_refresh_token(token: str) -> TokenData:
     if token_type != TOKEN_TYPE_REFRESH:
         raise JWTError(f"Expected refresh token, got {token_type}")
 
-    return TokenData(user_id=user_id, username=username, token_type=token_type, jti=jti, exp=exp)
+    return TokenData(user_id=user_id, username=username, token_type=token_type, jti=jti, exp=exp, iat=iat)
 
     return TokenData(user_id=user_id, username=username, token_type=token_type)

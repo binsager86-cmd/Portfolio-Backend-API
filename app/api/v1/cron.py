@@ -8,7 +8,9 @@ import logging
 import time
 from typing import Optional
 
-from fastapi import APIRouter, Header, Query, HTTPException
+from fastapi import APIRouter, Depends, Header, Query, HTTPException
+
+from app.api.deps import require_admin
 
 from app.core.config import get_settings
 from app.core.database import query_all
@@ -40,34 +42,31 @@ def _resolve_user_ids(user_id: int) -> list[int]:
 
 def _verify_cron_key(
     x_cron_key: Optional[str] = Header(None, alias="X-Cron-Key"),
-    key: Optional[str] = Query(None),
 ) -> None:
-    """Accept the secret via Header ``X-Cron-Key`` or Query ``?key=``."""
+    """Accept the secret only via Header ``X-Cron-Key``."""
     secret = settings.CRON_SECRET_KEY
     if not secret:
         raise HTTPException(
             status_code=503,
             detail="CRON_SECRET_KEY is not configured on the server.",
         )
-    provided = x_cron_key or key
-    if provided != secret:
+    if x_cron_key != secret:
         raise HTTPException(status_code=403, detail="Invalid cron key.")
 
 
 @router.post("/update-prices")
 async def trigger_price_update(
     x_cron_key: Optional[str] = Header(None, alias="X-Cron-Key"),
-    key: Optional[str] = Query(None),
     user_id: int = Query(0, description="User whose stocks to update (0 = all users)"),
     only_holdings: bool = Query(True, description="Only update stocks with positive holdings"),
 ):
     """
     Trigger a full price refresh.
 
-    Pass CRON_SECRET_KEY as Header ``X-Cron-Key`` or query ``?key=``.
+    Pass CRON_SECRET_KEY as Header ``X-Cron-Key``.
     Use ``user_id=0`` (default) to update prices for **all** users.
     """
-    _verify_cron_key(x_cron_key, key)
+    _verify_cron_key(x_cron_key)
 
     user_ids = _resolve_user_ids(user_id)
     logger.info("🚀 Price update triggered for user_ids=%s", user_ids)
@@ -95,8 +94,8 @@ async def trigger_price_update(
 
 
 @router.get("/status")
-async def cron_status():
-    """Return the last price-update and snapshot run info (no auth required)."""
+async def cron_status(_admin=Depends(require_admin)):
+    """Return the last price-update and snapshot run info (admin only)."""
     last_fundamentals_run = None
     try:
         from app.cron.fundamentals_updater import get_last_run as get_fundamentals_last_run
@@ -119,16 +118,15 @@ async def cron_status():
 @router.post("/save-snapshot")
 async def trigger_snapshot_save(
     x_cron_key: Optional[str] = Header(None, alias="X-Cron-Key"),
-    key: Optional[str] = Query(None),
     user_id: int = Query(0, description="User whose snapshot to save (0 = all users)"),
 ):
     """
     Trigger a portfolio snapshot save (same as the Save Snapshot button).
 
-    Pass CRON_SECRET_KEY as Header ``X-Cron-Key`` or query ``?key=``.
+    Pass CRON_SECRET_KEY as Header ``X-Cron-Key``.
     Use ``user_id=0`` (default) to save snapshots for **all** users.
     """
-    _verify_cron_key(x_cron_key, key)
+    _verify_cron_key(x_cron_key)
 
     from app.cron.snapshot_saver import run_snapshot_save
 
@@ -162,7 +160,6 @@ async def trigger_snapshot_save(
 @router.post("/update-prices-and-snapshot")
 async def trigger_price_update_and_snapshot(
     x_cron_key: Optional[str] = Header(None, alias="X-Cron-Key"),
-    key: Optional[str] = Query(None),
     user_id: int = Query(0, description="User whose stocks to update and snapshot to save (0 = all users)"),
 ):
     """
@@ -172,7 +169,7 @@ async def trigger_price_update_and_snapshot(
     or external cron services.
     Use ``user_id=0`` (default) to process **all** users.
     """
-    _verify_cron_key(x_cron_key, key)
+    _verify_cron_key(x_cron_key)
 
     from app.cron.fundamentals_updater import run_tickerchart_fundamentals_update
     from app.cron.snapshot_saver import run_snapshot_save
