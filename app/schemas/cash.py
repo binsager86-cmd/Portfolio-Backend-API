@@ -2,6 +2,7 @@
 Cash deposit schemas — CRUD request/response models.
 """
 
+from datetime import date
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_validator
@@ -14,6 +15,13 @@ def _normalize_source(value: Optional[str]) -> Optional[str]:
     if normalized not in {"deposit", "withdrawal"}:
         raise ValueError("source must be deposit or withdrawal")
     return normalized
+
+
+def _validate_iso_date_string(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    date.fromisoformat(value)
+    return value
 
 
 class CashDepositCreate(BaseModel):
@@ -35,6 +43,11 @@ class CashDepositCreate(BaseModel):
     def normalize_source(cls, value: str) -> str:
         return _normalize_source(value) or "deposit"
 
+    @field_validator("deposit_date")
+    @classmethod
+    def valid_deposit_date(cls, value: str) -> str:
+        return _validate_iso_date_string(value) or value
+
 
 class CashDepositUpdate(BaseModel):
     """Update a cash deposit (partial)."""
@@ -54,6 +67,11 @@ class CashDepositUpdate(BaseModel):
     @classmethod
     def normalize_source(cls, value: Optional[str]) -> Optional[str]:
         return _normalize_source(value)
+
+    @field_validator("deposit_date")
+    @classmethod
+    def valid_deposit_date(cls, value: Optional[str]) -> Optional[str]:
+        return _validate_iso_date_string(value)
 
 
 class CashDepositResponse(BaseModel):

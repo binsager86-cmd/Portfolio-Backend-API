@@ -6,10 +6,11 @@ so the frontend never needs to do currency math.
 """
 
 import asyncio
+import hashlib
 import io
 import time
 import logging
-from typing import List, Optional
+from typing import Iterable, List, Optional
 from datetime import date
 
 import pandas as pd
@@ -17,9 +18,10 @@ from fastapi import APIRouter, Depends, Query, Request
 from starlette.responses import StreamingResponse
 
 from app.api.deps import get_current_user
+from app.core.config import get_settings
 from app.core.security import TokenData
 from app.core.exceptions import NotFoundError, BadRequestError
-from app.core.database import query_df, query_one, query_all, exec_sql, exec_sql_returning_id, column_exists, transaction
+from app.core.database import query_df, query_one, query_all, exec_sql, exec_sql_fetchone, exec_sql_returning_id, column_exists, table_exists, transaction
 from app.services.portfolio_service import (
     PortfolioService,
     get_complete_overview,
@@ -39,6 +41,7 @@ from app.services.audit_service import (
 from app.schemas.portfolio import TransactionCreate, TransactionUpdate
 
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 router = APIRouter(prefix="/portfolio", tags=["Portfolio"])
 
@@ -121,7 +124,39 @@ def validate_and_replay_position(
     proposed_transaction: dict,
     exclude_transaction_id: Optional[int] = None,
 ) -> None:
-    _validate_transaction_domain(proposed_transaction)
+    validate_position_mutation(
+        user_id,
+        additions=[proposed_transaction | {"portfolio": portfolio, "stock_symbol": symbol}],
+        exclude_transaction_ids=[exclude_transaction_id] if exclude_transaction_id else [],
+    )
+
+
+def _position_identity(portfolio: str, symbol: str) -> tuple[str, str]:
+    return (portfolio, symbol.strip().upper())
+
+
+def _position_lock_key(user_id: int, portfolio: str, symbol: str) -> int:
+    raw = f"{user_id}:{portfolio}:{symbol.strip().upper()}".encode("utf-8")
+    return int.from_bytes(hashlib.blake2b(raw, digest_size=8).digest(), "big", signed=True)
+
+
+def _lock_position_identities(user_id: int, identities: Iterable[tuple[str, str]]) -> None:
+    if not settings.use_postgres:
+        return
+    for portfolio, symbol in sorted(set(identities)):
+        exec_sql_fetchone(
+            "SELECT pg_advisory_xact_lock(?)",
+            (_position_lock_key(user_id, portfolio, symbol),),
+        )
+
+
+def _replay_position_timeline(
+    user_id: int,
+    portfolio: str,
+    symbol: str,
+    additions: list[dict],
+    exclude_transaction_ids: set[int],
+) -> None:
     rows = query_all(
         """SELECT id, portfolio, stock_symbol, txn_date, txn_type, shares,
                   bonus_shares, created_at
@@ -131,20 +166,13 @@ def validate_and_replay_position(
              AND COALESCE(NULLIF(TRIM(portfolio), ''), 'KFH') = COALESCE(NULLIF(TRIM(?), ''), 'KFH')
              AND COALESCE(category, 'portfolio') = 'portfolio'
              AND COALESCE(is_deleted, 0) = 0
-             AND (? IS NULL OR id != ?)""",
-        (user_id, symbol.strip().upper(), portfolio, exclude_transaction_id, exclude_transaction_id),
+             AND id NOT IN ({placeholders})""".format(
+                placeholders=",".join("?" for _ in exclude_transaction_ids) or "NULL"
+             ),
+        (user_id, symbol.strip().upper(), portfolio, *tuple(exclude_transaction_ids)),
     )
     timeline = [dict(row) for row in rows]
-    timeline.append({
-        "id": proposed_transaction.get("id") or exclude_transaction_id or 0,
-        "portfolio": portfolio,
-        "stock_symbol": symbol,
-        "txn_date": proposed_transaction.get("txn_date") or "",
-        "txn_type": proposed_transaction.get("txn_type"),
-        "shares": proposed_transaction.get("shares") or 0,
-        "bonus_shares": proposed_transaction.get("bonus_shares") or 0,
-        "created_at": proposed_transaction.get("created_at") or int(time.time()),
-    })
+    timeline.extend(additions)
     timeline.sort(key=lambda row: (str(row.get("txn_date") or ""), int(row.get("created_at") or 0), int(row.get("id") or 0)))
 
     shares_held = 0.0
@@ -162,6 +190,47 @@ def validate_and_replay_position(
             raise BadRequestError(
                 f"Transaction would oversell {symbol.strip().upper()} in {portfolio}"
             )
+
+
+def validate_position_mutation(
+    user_id: int,
+    additions: Optional[list[dict]] = None,
+    exclude_transaction_ids: Optional[Iterable[int]] = None,
+    affected_identities: Optional[Iterable[tuple[str, str]]] = None,
+) -> None:
+    additions = additions or []
+    exclude_ids = {int(txn_id) for txn_id in (exclude_transaction_ids or []) if txn_id}
+    additions_by_identity: dict[tuple[str, str], list[dict]] = {}
+    identities = set(affected_identities or [])
+
+    for addition in additions:
+        _validate_transaction_domain(addition)
+        identity = _position_identity(str(addition.get("portfolio") or ""), str(addition.get("stock_symbol") or ""))
+        identities.add(identity)
+        additions_by_identity.setdefault(identity, []).append({
+            "id": addition.get("id") or 0,
+            "portfolio": identity[0],
+            "stock_symbol": identity[1],
+            "txn_date": addition.get("txn_date") or "",
+            "txn_type": addition.get("txn_type"),
+            "shares": addition.get("shares") or 0,
+            "bonus_shares": addition.get("bonus_shares") or 0,
+            "created_at": addition.get("created_at") or int(time.time()),
+        })
+
+    if not identities:
+        return
+
+    normalized = {_position_identity(portfolio, symbol) for portfolio, symbol in identities}
+    _lock_position_identities(user_id, normalized)
+    for portfolio, symbol in sorted(normalized):
+        _replay_position_timeline(
+            user_id,
+            portfolio,
+            symbol,
+            additions_by_identity.get((portfolio, symbol), []),
+            exclude_ids,
+        )
 
 
 # ── Overview ─────────────────────────────────────────────────────────
@@ -492,12 +561,6 @@ async def create_transaction(
         raise BadRequestError("shares must be > 0 for Buy transactions")
     if txn.txn_type == "Sell" and txn.shares <= 0:
         raise BadRequestError("shares must be > 0 for Sell transactions")
-    if txn.txn_type == "Sell":
-        held_shares = _held_shares_before_txn(current_user.user_id, txn.portfolio, txn.stock_symbol)
-        if txn.shares > held_shares + 1e-9:
-            raise BadRequestError(
-                f"Cannot sell {txn.shares} shares; only {held_shares} shares are available"
-            )
     if txn.txn_type == "DIVIDEND_ONLY":
         has_any = (txn.cash_dividend or 0) > 0 or (txn.reinvested_dividend or 0) > 0 or (txn.bonus_shares or 0) > 0
         if not has_any:
@@ -516,12 +579,7 @@ async def create_transaction(
 
     svc = PortfolioService(current_user.user_id)
     with transaction() as conn:
-        validate_and_replay_position(
-            current_user.user_id,
-            txn.portfolio,
-            txn.stock_symbol,
-            proposed_txn,
-        )
+        validate_position_mutation(current_user.user_id, additions=[proposed_txn])
         new_id = exec_sql_returning_id(
             """INSERT INTO transactions
                (user_id, portfolio, stock_symbol, txn_date, txn_type, shares,
@@ -652,13 +710,14 @@ async def update_transaction(
     )
 
     svc = PortfolioService(current_user.user_id)
+    old_identity = _position_identity(old_portfolio, existing["stock_symbol"])
+    new_identity = _position_identity(new_portfolio, new_symbol)
     with transaction() as conn:
-        validate_and_replay_position(
+        validate_position_mutation(
             current_user.user_id,
-            new_portfolio,
-            new_symbol,
-            proposed_txn,
-            exclude_transaction_id=txn_id,
+            additions=[proposed_txn],
+            exclude_transaction_ids=[txn_id],
+            affected_identities=[old_identity, new_identity],
         )
         exec_sql(
             f"UPDATE transactions SET {set_clause} WHERE id = ? AND user_id = ?",
@@ -705,8 +764,8 @@ async def delete_transaction(
 ):
     """Soft-delete a transaction."""
     existing = query_one(
-        "SELECT id, portfolio, txn_type, purchase_cost, sell_value, "
-        "       cash_dividend, fees "
+        "SELECT id, portfolio, stock_symbol, txn_date, txn_type, shares, "
+        "       purchase_cost, sell_value, bonus_shares, cash_dividend, fees, created_at "
         "FROM transactions WHERE id = ? AND user_id = ? AND COALESCE(is_deleted, 0) = 0",
         (txn_id, current_user.user_id),
     )
@@ -723,25 +782,30 @@ async def delete_transaction(
     )
 
     now = int(time.time())
-    exec_sql(
-        "UPDATE transactions SET is_deleted = 1, deleted_at = ? WHERE id = ? AND user_id = ?",
-        (now, txn_id, current_user.user_id),
-    )
-
-    log_event(
-        TXN_DELETE,
-        user_id=current_user.user_id,
-        resource_type="transaction",
-        resource_id=txn_id,
-        request=request,
-    )
-
-    # ── Ledger: recalculate portfolio cash (respects manual_override — matches Streamlit)
-    # Reverse the cash effect of the deleted transaction
     svc = PortfolioService(current_user.user_id)
-    svc.recalc_portfolio_cash(
-        deposit_delta=-del_delta, delta_portfolio=existing["portfolio"],
-    )
+    with transaction() as conn:
+        validate_position_mutation(
+            current_user.user_id,
+            exclude_transaction_ids=[txn_id],
+            affected_identities=[_position_identity(existing["portfolio"], existing["stock_symbol"])],
+        )
+        exec_sql(
+            "UPDATE transactions SET is_deleted = 1, deleted_at = ? WHERE id = ? AND user_id = ?",
+            (now, txn_id, current_user.user_id),
+        )
+
+        log_event(
+            TXN_DELETE,
+            user_id=current_user.user_id,
+            resource_type="transaction",
+            resource_id=txn_id,
+            request=request,
+        )
+
+        # Reverse the cash effect of the deleted transaction
+        svc.recalc_portfolio_cash(
+            deposit_delta=-del_delta, delta_portfolio=existing["portfolio"], conn=conn,
+        )
 
     unified = svc.get_total_portfolio_value()
 
@@ -764,8 +828,8 @@ async def restore_transaction(
 ):
     """Restore a soft-deleted transaction."""
     existing = query_one(
-        "SELECT id, portfolio, txn_type, purchase_cost, sell_value, "
-        "       cash_dividend, fees "
+        "SELECT id, portfolio, stock_symbol, txn_date, txn_type, shares, "
+        "       purchase_cost, sell_value, bonus_shares, cash_dividend, fees, created_at "
         "FROM transactions WHERE id = ? AND user_id = ? AND is_deleted = 1",
         (txn_id, current_user.user_id),
     )
@@ -781,25 +845,30 @@ async def restore_transaction(
         float(existing["fees"] or 0),
     )
 
-    exec_sql(
-        "UPDATE transactions SET is_deleted = 0, deleted_at = NULL WHERE id = ? AND user_id = ?",
-        (txn_id, current_user.user_id),
-    )
-
-    log_event(
-        TXN_RESTORE,
-        user_id=current_user.user_id,
-        resource_type="transaction",
-        resource_id=txn_id,
-        request=request,
-    )
-
-    # ── Ledger: recalculate portfolio cash (respects manual_override — matches Streamlit)
-    # Re-apply the cash effect of the restored transaction
     svc = PortfolioService(current_user.user_id)
-    svc.recalc_portfolio_cash(
-        deposit_delta=restore_delta, delta_portfolio=existing["portfolio"],
-    )
+    with transaction() as conn:
+        validate_position_mutation(
+            current_user.user_id,
+            additions=[dict(existing)],
+            affected_identities=[_position_identity(existing["portfolio"], existing["stock_symbol"])],
+        )
+        exec_sql(
+            "UPDATE transactions SET is_deleted = 0, deleted_at = NULL WHERE id = ? AND user_id = ?",
+            (txn_id, current_user.user_id),
+        )
+
+        log_event(
+            TXN_RESTORE,
+            user_id=current_user.user_id,
+            resource_type="transaction",
+            resource_id=txn_id,
+            request=request,
+        )
+
+        # Re-apply the cash effect of the restored transaction
+        svc.recalc_portfolio_cash(
+            deposit_delta=restore_delta, delta_portfolio=existing["portfolio"], conn=conn,
+        )
 
     unified = svc.get_total_portfolio_value()
 
@@ -961,6 +1030,8 @@ async def reset_account(
         "portfolio_transactions",
         "ledger_entries",
         "external_accounts",
+        "push_tokens",
+        "portfolio_news_dispatches",
         "cash_deposits",
         "transactions",
         "stocks",
@@ -971,21 +1042,21 @@ async def reset_account(
     ]
 
     deleted = {}
-    for table in tables:
-        try:
+    with transaction():
+        for table in tables:
+            if not table_exists(table):
+                deleted[table] = "absent"
+                continue
             exec_sql(f"DELETE FROM {table} WHERE user_id = ?", (uid,))
             deleted[table] = "cleared"
-        except Exception as exc:
-            logger.warning("reset-account: could not clear %s: %s", table, exc)
-            deleted[table] = "skipped"
 
-    log_event(
-        ADMIN_ACTION,
-        user_id=uid,
-        resource_type="account",
-        details={"action": "reset_account", "deleted": deleted},
-        request=request,
-    )
+        log_event(
+            ADMIN_ACTION,
+            user_id=uid,
+            resource_type="account",
+            details={"action": "reset_account", "deleted": deleted},
+            request=request,
+        )
 
     logger.info("🗑️  Account reset for user %s — %s", uid, deleted)
 

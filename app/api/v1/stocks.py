@@ -9,6 +9,7 @@ single-ticker yfinance price fetch for use at stock-creation time.
 """
 
 import time
+import asyncio
 import logging
 from typing import Optional, List
 
@@ -24,6 +25,51 @@ from app.data.stock_lists import KUWAIT_STOCKS, US_STOCKS
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/stocks", tags=["Stocks"])
+
+
+def _augment_us_stock_search(stocks: list[dict], search: str) -> list[dict]:
+    """Run blocking yfinance lookups off the event loop."""
+    stocks = list(stocks)
+    existing_symbols = {s["symbol"].upper() for s in stocks}
+    try:
+        import yfinance as yf
+        yf.screen(
+            yf.EquityQuery("is", ["exchange", "NMS", "NYQ", "NGM", "PCX", "BTS", "ASE"]),
+            size=25,
+            sortField="intradaymarketcap",
+            sortAsc=False,
+        )
+    except Exception:
+        pass
+
+    try:
+        import yfinance as yf
+        sym_upper = search.strip().upper()
+        if sym_upper not in existing_symbols:
+            tk = yf.Ticker(sym_upper)
+            info = tk.info or {}
+            name = info.get("shortName") or info.get("longName")
+            if name and info.get("regularMarketPrice"):
+                stocks.append({"symbol": sym_upper, "name": name, "yf_ticker": sym_upper})
+                existing_symbols.add(sym_upper)
+    except Exception:
+        pass
+
+    try:
+        import yfinance as yf
+        results = yf.search(search.strip(), max_results=10)
+        if results and "quotes" in results:
+            for qt in results["quotes"]:
+                sym = qt.get("symbol", "")
+                name = qt.get("shortname") or qt.get("longname") or ""
+                qtype = qt.get("quoteType", "")
+                if sym and sym.upper() not in existing_symbols and qtype in ("EQUITY", "ETF") and not any(c in sym for c in ".:"):
+                    stocks.append({"symbol": sym.upper(), "name": name, "yf_ticker": sym.upper()})
+                    existing_symbols.add(sym.upper())
+    except Exception:
+        pass
+
+    return stocks
 
 
 # ── Schemas ──────────────────────────────────────────────────────────
@@ -114,64 +160,7 @@ async def get_stock_list(
 
     # For US market: augment with live yfinance search when few hardcoded matches
     if is_us and search and len(stocks) < 5:
-        try:
-            import yfinance as yf
-            existing_symbols = {s["symbol"].upper() for s in stocks}
-            resp = yf.screen(
-                yf.EquityQuery("is", ["exchange", "NMS", "NYQ", "NGM", "PCX", "BTS", "ASE"]),
-                size=25,
-                sortField="intradaymarketcap",
-                sortAsc=False,
-            )
-            # yfinance screener doesn't support name search, so try lookup
-            # Use yfinance.search for text-based search
-        except Exception:
-            pass
-
-        # Direct ticker lookup: try the search term as a symbol
-        try:
-            import yfinance as yf
-            sym_upper = search.strip().upper()
-            if sym_upper not in existing_symbols:
-                tk = yf.Ticker(sym_upper)
-                info = tk.info or {}
-                # Verify it's a real stock (has a name and market cap)
-                name = info.get("shortName") or info.get("longName")
-                if name and info.get("regularMarketPrice"):
-                    stocks.append({
-                        "symbol": sym_upper,
-                        "name": name,
-                        "yf_ticker": sym_upper,
-                    })
-                    existing_symbols.add(sym_upper)
-        except Exception:
-            pass
-
-        # Also try yfinance search API for broader matches
-        try:
-            import yfinance as yf
-            results = yf.search(search.strip(), max_results=10)
-            if results and "quotes" in results:
-                for qt in results["quotes"]:
-                    sym = qt.get("symbol", "")
-                    name = qt.get("shortname") or qt.get("longname") or ""
-                    exchange = qt.get("exchange", "")
-                    qtype = qt.get("quoteType", "")
-                    # Only include equities/ETFs on US exchanges
-                    if (
-                        sym
-                        and sym.upper() not in existing_symbols
-                        and qtype in ("EQUITY", "ETF")
-                        and not any(c in sym for c in ".:")  # Skip foreign tickers like ABC.L
-                    ):
-                        stocks.append({
-                            "symbol": sym.upper(),
-                            "name": name,
-                            "yf_ticker": sym.upper(),
-                        })
-                        existing_symbols.add(sym.upper())
-        except Exception:
-            pass
+        stocks = await asyncio.to_thread(_augment_us_stock_search, stocks, search)
 
     return {
         "status": "ok",

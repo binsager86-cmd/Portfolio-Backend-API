@@ -578,7 +578,15 @@ class PortfolioService:
                 FROM (
                     SELECT portfolio,
                            CASE WHEN LOWER(COALESCE(source,'deposit')) = 'withdrawal'
-                                THEN -1 * COALESCE(amount,0)
+                                THEN -1
+                                ELSE 1
+                           END * CASE
+                                WHEN UPPER(COALESCE(currency, 'KWD')) = CASE WHEN portfolio = 'USA' THEN 'USD' ELSE 'KWD' END
+                                    THEN COALESCE(amount,0)
+                                WHEN UPPER(COALESCE(currency, 'KWD')) = 'USD' AND portfolio != 'USA'
+                                    THEN COALESCE(amount,0) * COALESCE(fx_rate_at_deposit, ?)
+                                WHEN UPPER(COALESCE(currency, 'KWD')) = 'KWD' AND portfolio = 'USA'
+                                    THEN COALESCE(amount,0) / NULLIF(COALESCE(fx_rate_at_deposit, ?), 0)
                                 ELSE COALESCE(amount,0)
                            END AS net_change
                     FROM cash_deposits
@@ -620,7 +628,11 @@ class PortfolioService:
                 ) AS cash_movements
                 GROUP BY portfolio
             """
-            cur.execute(agg_sql, (self.user_id,) * 5)
+            try:
+                cash_fx = get_usd_kwd_rate()
+            except Exception:
+                cash_fx = DEFAULT_USD_TO_KWD
+            cur.execute(agg_sql, (cash_fx, cash_fx, self.user_id, self.user_id, self.user_id, self.user_id, self.user_id))
             results = cur.fetchall()
 
             balances: Dict[str, float] = {}

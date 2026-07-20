@@ -139,6 +139,15 @@ async def cash_balances(
     uid = current_user.user_id
     svc = PortfolioService(uid)
     balances = svc.recalc_portfolio_cash(force_override=force)
+    try:
+        from app.services.fx_service import get_usd_kwd_rate
+        fx_rate = get_usd_kwd_rate()
+        fx_source = "live"
+    except Exception:
+        from app.services.fx_service import DEFAULT_USD_TO_KWD
+        fx_rate = DEFAULT_USD_TO_KWD
+        fx_source = "default"
+    fx_as_of = int(time.time())
 
     # Enrich with currency and override flag from portfolio_cash table
     enriched = {}
@@ -155,7 +164,11 @@ async def cash_balances(
             pass
         enriched[pf] = {
             "balance": bal,
+            "balance_kwd": bal * fx_rate if ccy == "USD" else bal,
             "currency": ccy,
+            "fx_rate": fx_rate if ccy == "USD" else 1.0,
+            "fx_source": fx_source if ccy == "USD" else "native",
+            "fx_as_of": fx_as_of,
             "manual_override": override,
         }
 
@@ -173,7 +186,11 @@ async def cash_balances(
                 if pf not in enriched:
                     enriched[pf] = {
                         "balance": float(row["balance"]),
+                        "balance_kwd": float(row["balance"]) * fx_rate if row.get("currency", "KWD") == "USD" else float(row["balance"]),
                         "currency": row.get("currency", "KWD"),
+                        "fx_rate": fx_rate if row.get("currency", "KWD") == "USD" else 1.0,
+                        "fx_source": fx_source if row.get("currency", "KWD") == "USD" else "native",
+                        "fx_as_of": fx_as_of,
                         "manual_override": True,
                     }
     except Exception:

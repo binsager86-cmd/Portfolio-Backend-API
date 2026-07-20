@@ -54,7 +54,7 @@ from app.api.portfolio import router as portfolio_router_legacy
 from app.api.cron import router as cron_router_legacy
 
 # Cron scheduler
-from app.cron.scheduler import start_scheduler, stop_scheduler
+from app.cron.scheduler import get_scheduler, start_scheduler, stop_scheduler
 
 # ── Logging ──────────────────────────────────────────────────────────
 from app.core.logging_config import setup_logging
@@ -152,29 +152,34 @@ async def lifespan(app: FastAPI):
         except Exception as sim_err:
             logger.warning("⚠️  Simulator schema init failed: %s", sim_err)
 
+        start_scheduler()
+
         # ── Eagle Eye cache warmup: if ratings cache is cold (<50 rows),
         # trigger a full background recompute so the scanner shows all
         # ~141 Kuwait stocks instead of only the on-demand-fetched ones.
         try:
-            from app.services.eagle_eye.store import load_all_ratings as _ee_load_ratings
-            _ee_cached = _ee_load_ratings()
-            if len(_ee_cached) < 50:
-                import threading
-                from app.services.eagle_eye.ingest import run_nightly_recompute as _ee_recompute
-                _ee_warmup = threading.Thread(
-                    target=_ee_recompute,
-                    kwargs={"dna_refresh": False, "verbose": False},
-                    daemon=True,
-                    name="ee_startup_warmup",
-                )
-                _ee_warmup.start()
-                logger.info(
-                    "🔥  Eagle Eye ratings cache is cold (%d rows) — "
-                    "background warmup started for all Kuwait stocks",
-                    len(_ee_cached),
-                )
+            if get_scheduler() is None:
+                logger.info("Eagle Eye startup warmup skipped — scheduler lock owned by another worker")
             else:
-                logger.info("✅  Eagle Eye ratings cache warm (%d stocks)", len(_ee_cached))
+                from app.services.eagle_eye.store import load_all_ratings as _ee_load_ratings
+                _ee_cached = _ee_load_ratings()
+                if len(_ee_cached) < 50:
+                    import threading
+                    from app.services.eagle_eye.ingest import run_nightly_recompute as _ee_recompute
+                    _ee_warmup = threading.Thread(
+                        target=_ee_recompute,
+                        kwargs={"dna_refresh": False, "verbose": False},
+                        daemon=True,
+                        name="ee_startup_warmup",
+                    )
+                    _ee_warmup.start()
+                    logger.info(
+                        "🔥  Eagle Eye ratings cache is cold (%d rows) — "
+                        "background warmup started for all Kuwait stocks",
+                        len(_ee_cached),
+                    )
+                else:
+                    logger.info("✅  Eagle Eye ratings cache warm (%d stocks)", len(_ee_cached))
         except Exception as _ee_warmup_err:
             logger.warning("⚠️  Eagle Eye startup warmup skipped: %s", _ee_warmup_err)
 
@@ -264,8 +269,6 @@ async def lifespan(app: FastAPI):
         logger.info("✅  FX cache warmed at startup (USD/KWD=%s)", round(float(fx_rate), 6))
     except Exception as fx_err:
         logger.warning("⚠️  FX startup warmup skipped: %s", fx_err)
-
-    start_scheduler()
 
     # ── Production security audit ────────────────────────────────────
     if settings.is_production:

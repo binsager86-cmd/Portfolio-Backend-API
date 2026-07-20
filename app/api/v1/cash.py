@@ -13,16 +13,15 @@ from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from starlette.responses import StreamingResponse
 
 from app.api.deps import get_current_user
-from app.core.database import get_db, query_df, query_val, exec_sql, transaction
+from app.core.database import get_db, query_df, query_one, query_val, exec_sql, exec_sql_returning_id, transaction
 from app.core.exceptions import NotFoundError, BadRequestError
 from app.core.repositories.cash import CashDepositRepository
 from app.core.security import TokenData
-from app.models.cash import CashDeposit
 from app.schemas.cash import CashDepositCreate, CashDepositUpdate
 from app.services.audit_service import (
     log_event, CASH_CREATE, CASH_UPDATE, CASH_DELETE, CASH_RESTORE,
 )
-from app.services.fx_service import convert_to_kwd, PORTFOLIO_CCY
+from app.services.fx_service import DEFAULT_USD_TO_KWD, convert_to_kwd, PORTFOLIO_CCY
 from app.services.portfolio_service import PortfolioService
 from app.api.v1.tracker import recalculate_all_snapshots, sync_deposit_to_snapshot
 from sqlalchemy.orm import Session
@@ -30,6 +29,44 @@ from sqlalchemy.orm import Session
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/cash", tags=["Cash Deposits"])
+
+
+def _stored_fx(row_or_fx) -> float:
+    try:
+        fx = float(row_or_fx or 0)
+    except (TypeError, ValueError):
+        fx = 0.0
+    return fx if fx > 0 else DEFAULT_USD_TO_KWD
+
+
+def _cash_amount_in_portfolio_currency(
+    amount: float,
+    currency: str,
+    portfolio: str,
+    source: str,
+    fx_rate_at_deposit: Optional[float],
+) -> float:
+    sign = -1.0 if (source or "deposit").lower() == "withdrawal" else 1.0
+    src_ccy = (currency or "KWD").upper()
+    dst_ccy = PORTFOLIO_CCY.get(portfolio, "KWD").upper()
+    amount = float(amount or 0)
+    fx = _stored_fx(fx_rate_at_deposit)
+    if src_ccy == dst_ccy:
+        converted = amount
+    elif src_ccy == "USD" and dst_ccy == "KWD":
+        converted = amount * fx
+    elif src_ccy == "KWD" and dst_ccy == "USD":
+        converted = amount / fx
+    else:
+        converted = amount
+    return sign * converted
+
+
+def _cash_amount_kwd(amount: float, currency: str, source: str, fx_rate_at_deposit: Optional[float]) -> float:
+    sign = -1.0 if (source or "deposit").lower() == "withdrawal" else 1.0
+    if (currency or "KWD").upper() == "USD":
+        return sign * float(amount or 0) * _stored_fx(fx_rate_at_deposit)
+    return sign * convert_to_kwd(float(amount or 0), currency or "KWD")
 
 
 @router.get("/deposits")
@@ -66,11 +103,27 @@ async def list_deposits(
     df = query_df(sql, tuple(params))
     records = df.to_dict(orient="records") if not df.empty else []
 
-    # Calculate KWD total
-    total_kwd = sum(
-        convert_to_kwd(float(r.get("amount", 0)), r.get("currency", "KWD"))
-        for r in records
+    totals_df = query_df(
+        f"""SELECT amount, currency, source, fx_rate_at_deposit
+            FROM cash_deposits
+            WHERE {where}""",
+        tuple(params[:-2]),
     )
+    total_deposits_kwd = 0.0
+    total_withdrawals_kwd = 0.0
+    if not totals_df.empty:
+        for row in totals_df.to_dict(orient="records"):
+            signed_kwd = _cash_amount_kwd(
+                float(row.get("amount") or 0),
+                row.get("currency") or "KWD",
+                row.get("source") or "deposit",
+                row.get("fx_rate_at_deposit"),
+            )
+            if signed_kwd < 0:
+                total_withdrawals_kwd += signed_kwd
+            else:
+                total_deposits_kwd += signed_kwd
+    total_kwd = total_deposits_kwd + total_withdrawals_kwd
     total_pages = max(1, (total + page_size - 1) // page_size)
 
     return {
@@ -79,6 +132,8 @@ async def list_deposits(
             "deposits": records,
             "count": len(records),
             "total_kwd": round(total_kwd, 3),
+            "total_deposits_kwd": round(total_deposits_kwd, 3),
+            "total_withdrawals_kwd": round(total_withdrawals_kwd, 3),
             "pagination": {
                 "page": page,
                 "page_size": page_size,
@@ -115,7 +170,6 @@ async def create_deposit(
     request: Request,
     body: CashDepositCreate,
     current_user: TokenData = Depends(get_current_user),
-    db: Session = Depends(get_db),
 ):
     """Create a new cash deposit/withdrawal."""
     dep = body
@@ -134,45 +188,37 @@ async def create_deposit(
         except Exception:
             fx_rate = None
 
-    # [B-2] Use ORM instead of exec_sql + query_val race-condition pattern
-    repo = CashDepositRepository(db)
-    new_deposit = CashDeposit(
-        user_id=current_user.user_id,
-        portfolio=dep.portfolio,
-        deposit_date=dep.deposit_date,
-        amount=dep.amount,
-        currency=dep.currency,
-        bank_name=dep.bank_name,
-        source=dep.source,
-        notes=dep.notes,
-        description=dep.description,
-        comments=dep.comments,
-        include_in_analysis=dep.include_in_analysis,
-        fx_rate_at_deposit=fx_rate,
-        is_deleted=0,
-        created_at=now,
-    )
-    repo.add(new_deposit)
-    db.commit()
-    new_id = new_deposit.id
-
-    log_event(
-        CASH_CREATE,
-        user_id=current_user.user_id,
-        resource_type="cash_deposit",
-        resource_id=new_id,
-        details={"portfolio": dep.portfolio, "amount": dep.amount, "source": dep.source},
-        request=request,
-    )
-
     # Recalculate portfolio cash — deposit_delta ensures manual overrides
     # are incremented by the deposit amount instead of being skipped.
     # Withdrawals subtract from cash, deposits add.
-    effective_delta = -dep.amount if dep.source == "withdrawal" else dep.amount
-    svc = PortfolioService(current_user.user_id)
-    svc.recalc_portfolio_cash(
-        deposit_delta=effective_delta, delta_portfolio=dep.portfolio,
+    effective_delta = _cash_amount_in_portfolio_currency(
+        dep.amount, dep.currency, dep.portfolio, dep.source or "deposit", fx_rate,
     )
+    svc = PortfolioService(current_user.user_id)
+    with transaction() as conn:
+        new_id = exec_sql_returning_id(
+            """INSERT INTO cash_deposits
+               (user_id, portfolio, deposit_date, amount, currency, bank_name,
+                source, notes, description, comments, include_in_analysis,
+                fx_rate_at_deposit, is_deleted, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)""",
+            (current_user.user_id, dep.portfolio, dep.deposit_date, dep.amount,
+             dep.currency, dep.bank_name, dep.source, dep.notes, dep.description,
+             dep.comments, dep.include_in_analysis, fx_rate, now),
+        )
+
+        log_event(
+            CASH_CREATE,
+            user_id=current_user.user_id,
+            resource_type="cash_deposit",
+            resource_id=new_id,
+            details={"portfolio": dep.portfolio, "amount": dep.amount, "source": dep.source},
+            request=request,
+        )
+
+        svc.recalc_portfolio_cash(
+            deposit_delta=effective_delta, delta_portfolio=dep.portfolio, conn=conn,
+        )
 
     # Return fresh overview totals so frontend can update immediately
     unified = svc.get_total_portfolio_value()
@@ -200,18 +246,21 @@ async def update_deposit(
     request: Request,
     body: CashDepositUpdate,
     current_user: TokenData = Depends(get_current_user),
-    db: Session = Depends(get_db),
 ):
     """Update a cash deposit."""
-    # [B-2] Use ORM repository instead of raw query_one() + dynamic exec_sql()
-    repo = CashDepositRepository(db)
-    deposit = repo.get_active(deposit_id, current_user.user_id)
+    deposit = query_one(
+        "SELECT * FROM cash_deposits WHERE id = ? AND user_id = ? AND COALESCE(is_deleted, 0) = 0",
+        (deposit_id, current_user.user_id),
+    )
     if not deposit:
         raise NotFoundError("CashDeposit", deposit_id)
 
-    old_amount = float(deposit.amount or 0)
-    old_portfolio = deposit.portfolio
-    old_source = (deposit.source or "deposit").lower()
+    old_amount = float(deposit["amount"] or 0)
+    old_portfolio = deposit["portfolio"]
+    old_source = (deposit["source"] or "deposit").lower()
+    old_currency = deposit["currency"] or "KWD"
+    old_fx = deposit["fx_rate_at_deposit"]
+    old_date = deposit["deposit_date"]
 
     updates = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
     if not updates:
@@ -219,48 +268,53 @@ async def update_deposit(
     if "portfolio" in updates and updates["portfolio"] not in PORTFOLIO_CCY:
         raise BadRequestError(f"Unknown portfolio '{updates['portfolio']}'")
 
-    for field, value in updates.items():
-        if hasattr(deposit, field):
-            setattr(deposit, field, value)
-    db.commit()
-
     new_amount = float(updates.get("amount", old_amount))
     new_portfolio = updates.get("portfolio", old_portfolio)
     new_source = (updates.get("source", old_source) or "deposit").lower()
-
-    log_event(
-        CASH_UPDATE,
-        user_id=current_user.user_id,
-        resource_type="cash_deposit",
-        resource_id=deposit_id,
-        details={"updated_fields": list(updates.keys())},
-        request=request,
-    )
+    new_currency = updates.get("currency", old_currency)
+    new_fx = updates.get("fx_rate_at_deposit", old_fx)
+    new_date = updates.get("deposit_date", old_date)
 
     # Compute effective cash amounts (withdrawals are negative)
-    old_effective = -old_amount if old_source == "withdrawal" else old_amount
-    new_effective = -new_amount if new_source == "withdrawal" else new_amount
+    old_effective = _cash_amount_in_portfolio_currency(
+        old_amount, old_currency, old_portfolio, old_source, old_fx,
+    )
+    new_effective = _cash_amount_in_portfolio_currency(
+        new_amount, new_currency, new_portfolio, new_source, new_fx,
+    )
 
     # Recalculate portfolio cash — pass delta so manual overrides are updated
     svc = PortfolioService(current_user.user_id)
-    if old_portfolio != new_portfolio:
-        # Portfolio changed: reverse old effect, apply new effect
-        svc.recalc_portfolio_cash(deposit_delta=-old_effective, delta_portfolio=old_portfolio)
-        svc.recalc_portfolio_cash(deposit_delta=new_effective, delta_portfolio=new_portfolio)
-    else:
-        # Same portfolio: delta = new effective - old effective
-        svc.recalc_portfolio_cash(
-            deposit_delta=new_effective - old_effective, delta_portfolio=new_portfolio,
+    set_clause = ", ".join(f"{field} = ?" for field in updates)
+    with transaction() as conn:
+        exec_sql(
+            f"UPDATE cash_deposits SET {set_clause} WHERE id = ? AND user_id = ? AND COALESCE(is_deleted, 0) = 0",
+            tuple(updates.values()) + (deposit_id, current_user.user_id),
         )
-
+        log_event(
+            CASH_UPDATE,
+            user_id=current_user.user_id,
+            resource_type="cash_deposit",
+            resource_id=deposit_id,
+            details={"updated_fields": list(updates.keys())},
+            request=request,
+        )
+        if old_portfolio != new_portfolio:
+            # Portfolio changed: reverse old effect, apply new effect
+            svc.recalc_portfolio_cash(deposit_delta=-old_effective, delta_portfolio=old_portfolio, conn=conn)
+            svc.recalc_portfolio_cash(deposit_delta=new_effective, delta_portfolio=new_portfolio, conn=conn)
+        else:
+            # Same portfolio: delta = new effective - old effective
+            svc.recalc_portfolio_cash(
+                deposit_delta=new_effective - old_effective, delta_portfolio=new_portfolio, conn=conn,
+            )
     # Return fresh overview totals so frontend can update immediately
     unified = svc.get_total_portfolio_value()
 
     # Sync deposit to tracker snapshot using ORM-fetched date
     try:
-        dep_row = repo.get_any(deposit_id, current_user.user_id)
-        if dep_row:
-            sync_deposit_to_snapshot(current_user.user_id, dep_row.deposit_date)
+        for dep_date in sorted({old_date, new_date}):
+            sync_deposit_to_snapshot(current_user.user_id, dep_date)
     except Exception as exc:
         logger.warning("snapshot sync after deposit update failed: %s", exc)
 
@@ -280,48 +334,52 @@ async def delete_deposit(
     deposit_id: int,
     request: Request,
     current_user: TokenData = Depends(get_current_user),
-    db: Session = Depends(get_db),
 ):
     """Soft-delete a cash deposit."""
-    # [B-2] Use ORM repository instead of raw query_one() + exec_sql()
-    repo = CashDepositRepository(db)
-    existing = repo.get_active(deposit_id, current_user.user_id)
+    existing = query_one(
+        "SELECT * FROM cash_deposits WHERE id = ? AND user_id = ? AND COALESCE(is_deleted, 0) = 0",
+        (deposit_id, current_user.user_id),
+    )
     if not existing:
         raise NotFoundError("CashDeposit", deposit_id)
 
-    del_amount = float(existing.amount or 0)
-    del_portfolio = existing.portfolio
-    del_source = (existing.source or "deposit").lower()
+    del_amount = float(existing["amount"] or 0)
+    del_portfolio = existing["portfolio"]
+    del_source = (existing["source"] or "deposit").lower()
+    del_currency = existing["currency"] or "KWD"
+    del_fx = existing["fx_rate_at_deposit"]
+    del_date = existing["deposit_date"]
 
     now = int(time.time())
-    existing.is_deleted = 1
-    existing.deleted_at = now
-    db.commit()
-
-    log_event(
-        CASH_DELETE,
-        user_id=current_user.user_id,
-        resource_type="cash_deposit",
-        resource_id=deposit_id,
-        request=request,
+    del_delta = -_cash_amount_in_portfolio_currency(
+        del_amount, del_currency, del_portfolio, del_source, del_fx,
     )
-
-    # Recalculate portfolio cash — reverse the effect of the deleted record.
-    # Deleting a deposit subtracts; deleting a withdrawal adds back.
-    del_delta = del_amount if del_source == "withdrawal" else -del_amount
     svc = PortfolioService(current_user.user_id)
-    svc.recalc_portfolio_cash(
-        deposit_delta=del_delta, delta_portfolio=del_portfolio,
-    )
+    with transaction() as conn:
+        exec_sql(
+            "UPDATE cash_deposits SET is_deleted = 1, deleted_at = ? WHERE id = ? AND user_id = ?",
+            (now, deposit_id, current_user.user_id),
+        )
+
+        log_event(
+            CASH_DELETE,
+            user_id=current_user.user_id,
+            resource_type="cash_deposit",
+            resource_id=deposit_id,
+            request=request,
+        )
+
+        # Deleting a deposit subtracts; deleting a withdrawal adds back.
+        svc.recalc_portfolio_cash(
+            deposit_delta=del_delta, delta_portfolio=del_portfolio, conn=conn,
+        )
 
     # Return fresh overview totals so frontend can update immediately
     unified = svc.get_total_portfolio_value()
 
     # Sync deposit to tracker snapshot using ORM-fetched date
     try:
-        dep_row = repo.get_any(deposit_id, current_user.user_id)
-        if dep_row:
-            sync_deposit_to_snapshot(current_user.user_id, dep_row.deposit_date)
+        sync_deposit_to_snapshot(current_user.user_id, del_date)
     except Exception as exc:
         logger.warning("snapshot sync after deposit delete failed: %s", exc)
 
@@ -341,47 +399,51 @@ async def restore_deposit(
     deposit_id: int,
     request: Request,
     current_user: TokenData = Depends(get_current_user),
-    db: Session = Depends(get_db),
 ):
     """Restore a soft-deleted deposit."""
-    # [B-2] Use ORM repository instead of raw query_one() + exec_sql()
-    repo = CashDepositRepository(db)
-    existing = repo.get_deleted(deposit_id, current_user.user_id)
+    existing = query_one(
+        "SELECT * FROM cash_deposits WHERE id = ? AND user_id = ? AND is_deleted = 1",
+        (deposit_id, current_user.user_id),
+    )
     if not existing:
         raise NotFoundError("CashDeposit", deposit_id)
 
-    restore_amount = float(existing.amount or 0)
-    restore_portfolio = existing.portfolio
-    restore_source = (existing.source or "deposit").lower()
+    restore_amount = float(existing["amount"] or 0)
+    restore_portfolio = existing["portfolio"]
+    restore_source = (existing["source"] or "deposit").lower()
+    restore_currency = existing["currency"] or "KWD"
+    restore_fx = existing["fx_rate_at_deposit"]
+    restore_date = existing["deposit_date"]
 
-    existing.is_deleted = 0
-    existing.deleted_at = None
-    db.commit()
-
-    log_event(
-        CASH_RESTORE,
-        user_id=current_user.user_id,
-        resource_type="cash_deposit",
-        resource_id=deposit_id,
-        request=request,
+    restore_delta = _cash_amount_in_portfolio_currency(
+        restore_amount, restore_currency, restore_portfolio, restore_source, restore_fx,
     )
-
-    # Recalculate portfolio cash — restore the effect of the record.
-    # Restoring a deposit adds; restoring a withdrawal subtracts.
-    restore_delta = -restore_amount if restore_source == "withdrawal" else restore_amount
     svc = PortfolioService(current_user.user_id)
-    svc.recalc_portfolio_cash(
-        deposit_delta=restore_delta, delta_portfolio=restore_portfolio,
-    )
+    with transaction() as conn:
+        exec_sql(
+            "UPDATE cash_deposits SET is_deleted = 0, deleted_at = NULL WHERE id = ? AND user_id = ?",
+            (deposit_id, current_user.user_id),
+        )
+
+        log_event(
+            CASH_RESTORE,
+            user_id=current_user.user_id,
+            resource_type="cash_deposit",
+            resource_id=deposit_id,
+            request=request,
+        )
+
+        # Restoring a deposit adds; restoring a withdrawal subtracts.
+        svc.recalc_portfolio_cash(
+            deposit_delta=restore_delta, delta_portfolio=restore_portfolio, conn=conn,
+        )
 
     # Return fresh overview totals so frontend can update immediately
     unified = svc.get_total_portfolio_value()
 
     # Sync deposit to tracker snapshot using ORM-fetched date
     try:
-        dep_row = repo.get_any(deposit_id, current_user.user_id)
-        if dep_row:
-            sync_deposit_to_snapshot(current_user.user_id, dep_row.deposit_date)
+        sync_deposit_to_snapshot(current_user.user_id, restore_date)
     except Exception as exc:
         logger.warning("snapshot sync after deposit restore failed: %s", exc)
 

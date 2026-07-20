@@ -4,9 +4,17 @@ Portfolio schemas — holdings, overview, transactions.
 Matches the openapi.yaml contract for Portfolio + Transactions tags.
 """
 
+from datetime import date
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+def _validate_iso_date_string(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    date.fromisoformat(value)
+    return value
 
 
 # ── Holding Row ──────────────────────────────────────────────────────
@@ -111,6 +119,11 @@ class TransactionCreate(BaseModel):
     reference: Optional[str] = Field(None, max_length=100)
     notes: Optional[str] = None
 
+    @field_validator("txn_date")
+    @classmethod
+    def valid_txn_date(cls, value: str) -> str:
+        return _validate_iso_date_string(value) or value
+
 
 class TransactionUpdate(BaseModel):
     """Update an existing transaction (partial)."""
@@ -123,6 +136,11 @@ class TransactionUpdate(BaseModel):
     sell_value: Optional[float] = Field(None, ge=0)
     bonus_shares: Optional[float] = Field(None, ge=0)
     cash_dividend: Optional[float] = Field(None, ge=0)
+
+    @field_validator("txn_date")
+    @classmethod
+    def valid_txn_date(cls, value: Optional[str]) -> Optional[str]:
+        return _validate_iso_date_string(value)
     reinvested_dividend: Optional[float] = Field(None, ge=0)
     fees: Optional[float] = Field(None, ge=0)
     price_override: Optional[float] = None

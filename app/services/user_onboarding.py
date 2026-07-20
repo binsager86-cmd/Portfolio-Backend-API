@@ -61,16 +61,13 @@ def _create_default_portfolios(user_id: int) -> None:
         )
         if existing:
             continue
-        try:
-            exec_sql(
-                "INSERT INTO portfolios (user_id, name, currency, created_at) "
-                "VALUES (?, ?, ?, ?)",
-                (user_id, p["name"], p["currency"], now),
-            )
-            logger.info("  📁 Created portfolio '%s' (%s) for user %d",
-                         p["name"], p["currency"], user_id)
-        except Exception as e:
-            logger.warning("  ⚠️ Portfolio '%s' creation failed: %s", p["name"], e)
+        exec_sql(
+            "INSERT INTO portfolios (user_id, name, currency, created_at) "
+            "VALUES (?, ?, ?, ?)",
+            (user_id, p["name"], p["currency"], now),
+        )
+        logger.info("  📁 Created portfolio '%s' (%s) for user %d",
+                    p["name"], p["currency"], user_id)
 
 
 def _create_default_settings(user_id: int) -> None:
@@ -83,14 +80,11 @@ def _create_default_settings(user_id: int) -> None:
         )
         if existing:
             continue
-        try:
-            exec_sql(
-                "INSERT INTO user_settings (user_id, setting_key, setting_value, updated_at) "
-                "VALUES (?, ?, ?, ?)",
-                (user_id, key, value, now),
-            )
-        except Exception as e:
-            logger.warning("  ⚠️ Setting '%s' creation failed: %s", key, e)
+        exec_sql(
+            "INSERT INTO user_settings (user_id, setting_key, setting_value, updated_at) "
+            "VALUES (?, ?, ?, ?)",
+            (user_id, key, value, now),
+        )
 
 
 def _create_initial_cash_balances(user_id: int) -> None:
@@ -104,11 +98,8 @@ def _create_initial_cash_balances(user_id: int) -> None:
         )
         if existing:
             continue
-        try:
-            exec_sql(
-                "INSERT INTO portfolio_cash (user_id, portfolio, balance, currency, "
-                "last_updated, manual_override) VALUES (?, ?, 0, ?, ?, 0)",
-                (user_id, name, ccy, now),
-            )
-        except Exception as e:
-            logger.warning("  ⚠️ portfolio_cash '%s' creation failed: %s", name, e)
+        exec_sql(
+            "INSERT INTO portfolio_cash (user_id, portfolio, balance, currency, "
+            "last_updated, manual_override) VALUES (?, ?, 0, ?, ?, 0)",
+            (user_id, name, ccy, now),
+        )

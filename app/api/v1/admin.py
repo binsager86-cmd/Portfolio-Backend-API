@@ -8,12 +8,16 @@ import logging
 import time
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, HTTPException, status
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, Query, HTTPException, Request, status
+from pydantic import BaseModel, Field, field_validator
 
 from app.api.deps import require_admin
 from app.core.security import TokenData, hash_password
-from app.core.database import query_all, query_val, query_df, exec_sql
+from app.core.database import query_all, query_val, query_df, exec_sql, table_exists, transaction
+from app.schemas.user import _validate_strong_password
+from app.services.audit_service import ADMIN_ACTION
+from app.services.password_service import change_user_password
+from app.services.portfolio_service import PortfolioService
 from app.services.user_onboarding import setup_new_user
 
 logger = logging.getLogger(__name__)
@@ -90,48 +94,11 @@ async def list_users(current_user: TokenData = Depends(require_admin)):
             (uid,),
         ) or 0
 
-        # Portfolio value & cost — try daily_snapshots first, then stocks+txns
-        market_val = 0.0
-        cost_val = 0.0
-        try:
-            snapshot = query_all(
-                "SELECT SUM(mkt_value_base), SUM(cost_value_base) "
-                "FROM daily_snapshots WHERE snapshot_date = ("
-                "  SELECT MAX(snapshot_date) FROM daily_snapshots"
-                ") AND asset_id IN ("
-                "  SELECT id FROM stocks WHERE user_id = ?"
-                ")",
-                (uid,),
-            )
-            if snapshot and snapshot[0] and snapshot[0][0] is not None:
-                market_val = float(snapshot[0][0] or 0)
-                cost_val = float(snapshot[0][1] or 0)
-        except Exception:
-            pass
-
-        # If no snapshot, try computing from transactions (LEFT JOIN stocks for price)
-        if market_val == 0:
-            try:
-                df = query_df(
-                    "SELECT t.stock_symbol, "
-                    "  COALESCE(s.current_price, 0) * "
-                    "    SUM(CASE WHEN LOWER(t.txn_type) IN ('buy','bonus shares','bonus') THEN t.shares "
-                    "              WHEN LOWER(t.txn_type) = 'sell' THEN -t.shares ELSE 0 END) "
-                    "  as market_value, "
-                    "  SUM(CASE WHEN LOWER(t.txn_type) = 'buy' THEN COALESCE(t.purchase_cost, 0) "
-                    "           WHEN LOWER(t.txn_type) = 'sell' THEN -COALESCE(t.sell_value, 0) ELSE 0 END) "
-                    "  as cost_basis "
-                    "FROM transactions t "
-                    "LEFT JOIN stocks s ON s.user_id = t.user_id AND s.symbol = t.stock_symbol "
-                    "WHERE t.user_id = ? AND COALESCE(t.is_deleted, 0) = 0 "
-                    "GROUP BY t.stock_symbol",
-                    (uid,),
-                )
-                if not df.empty:
-                    market_val = float(df["market_value"].sum())
-                    cost_val = float(df["cost_basis"].sum())
-            except Exception:
-                pass  # graceful fallback
+        summary = PortfolioService(uid).get_total_portfolio_value()
+        market_val = float(summary.get("stocks_value_kwd") or summary.get("portfolio_value_kwd") or 0.0)
+        cash_bal = float(summary.get("cash_kwd") or 0.0)
+        total_val = float(summary.get("total_value_kwd") or (market_val + cash_bal))
+        cost_val = float(summary.get("total_cost_kwd") or 0.0)
 
         # Last login: most recent audit log entry for login
         last_login = query_val(
@@ -139,39 +106,7 @@ async def list_users(current_user: TokenData = Depends(require_admin)):
             (uid,),
         )
 
-        # Cash balance: Deposits - Buys + Sells + Dividends - Fees
-        cash_bal = 0.0
-        try:
-            cash_row = query_val(
-                "SELECT COALESCE(SUM(net_change), 0) FROM ("
-                "  SELECT COALESCE(amount, 0) AS net_change FROM cash_deposits"
-                "    WHERE user_id = ? AND COALESCE(include_in_analysis,1) = 1"
-                "    AND COALESCE(is_deleted,0) = 0"
-                "  UNION ALL"
-                "  SELECT -1 * COALESCE(purchase_cost, 0) FROM transactions"
-                "    WHERE user_id = ? AND txn_type = 'Buy'"
-                "    AND COALESCE(is_deleted,0) = 0"
-                "  UNION ALL"
-                "  SELECT COALESCE(sell_value, 0) FROM transactions"
-                "    WHERE user_id = ? AND txn_type = 'Sell'"
-                "    AND COALESCE(is_deleted,0) = 0"
-                "  UNION ALL"
-                "  SELECT COALESCE(cash_dividend, 0) FROM transactions"
-                "    WHERE user_id = ? AND COALESCE(cash_dividend,0) > 0"
-                "    AND COALESCE(is_deleted,0) = 0"
-                "  UNION ALL"
-                "  SELECT -1 * COALESCE(fees, 0) FROM transactions"
-                "    WHERE user_id = ? AND COALESCE(fees,0) > 0"
-                "    AND COALESCE(is_deleted,0) = 0"
-                ") AS cash_movements",
-                (uid, uid, uid, uid, uid),
-            )
-            cash_bal = float(cash_row or 0)
-        except Exception:
-            pass
-
         stocks_val = round(market_val, 2)
-        total_val = round(market_val + cash_bal, 2)
 
         result.append(AdminUserRow(
             id=uid,
@@ -181,7 +116,7 @@ async def list_users(current_user: TokenData = Depends(require_admin)):
             last_login=last_login,
             stocks_value=stocks_val,
             cash_balance=round(cash_bal, 2),
-            total_value=total_val,
+            total_value=round(total_val, 2),
             portfolio_value=stocks_val,
             growth_value=round(market_val - cost_val, 2),
             transaction_count=txn_count,
@@ -296,6 +231,11 @@ class UpdateUsernameRequest(BaseModel):
 class UpdatePasswordRequest(BaseModel):
     password: str = Field(..., min_length=8)
 
+    @field_validator("password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        return _validate_strong_password(v)
+
 
 class AdminMessageResponse(BaseModel):
     status: str = "ok"
@@ -350,7 +290,9 @@ async def update_username(
 
 @router.put("/users/{user_id}/password", response_model=AdminMessageResponse)
 async def update_password(
-    user_id: int, body: UpdatePasswordRequest,
+    user_id: int,
+    body: UpdatePasswordRequest,
+    request: Request,
     current_user: TokenData = Depends(require_admin),
 ):
     """Reset a user's password (admin only — no current password required)."""
@@ -358,8 +300,14 @@ async def update_password(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    hashed = hash_password(body.password)
-    exec_sql("UPDATE users SET password_hash = ? WHERE id = ?", (hashed, user_id))
+    change_user_password(
+        user_id,
+        body.password,
+        request=request,
+        actor_user_id=current_user.user_id,
+        audit_action=ADMIN_ACTION,
+        audit_details={"action": "admin.password_reset"},
+    )
     return AdminMessageResponse(message="Password updated successfully")
 
 
@@ -376,20 +324,32 @@ async def delete_user(
     if user_id == current_user.user_id:
         raise HTTPException(status_code=400, detail="Cannot delete your own account")
 
-    # Delete related data in correct order
-    for table in [
+    # Delete related data in correct order. Preserve audit_log for retention/compliance history.
+    tables = [
         "daily_snapshots", "portfolio_snapshots", "position_snapshots",
         "pfm_assets", "pfm_liabilities", "pfm_income_expenses", "pfm_snapshots",
         "portfolio_transactions", "external_accounts",
         "securities_master", "security_aliases",
+        "ledger_entries", "push_tokens", "portfolio_news_dispatches",
         "stocks", "transactions", "cash_deposits",
         "portfolio_cash", "portfolios", "user_settings",
-        "token_blacklist", "audit_log",
-    ]:
-        try:
+        "token_blacklist",
+    ]
+    deleted = {}
+    with transaction():
+        log_event(
+            ADMIN_ACTION,
+            user_id=current_user.user_id,
+            resource_type="user",
+            resource_id=user_id,
+            details={"action": "admin.delete_user", "target_username": user},
+        )
+        for table in tables:
+            if not table_exists(table):
+                deleted[table] = "absent"
+                continue
             exec_sql(f"DELETE FROM {table} WHERE user_id = ?", (user_id,))
-        except Exception:
-            pass  # table may not exist
+            deleted[table] = "cleared"
 
-    exec_sql("DELETE FROM users WHERE id = ?", (user_id,))
+        exec_sql("DELETE FROM users WHERE id = ?", (user_id,))
     return AdminMessageResponse(message=f"User '{user}' deleted successfully")

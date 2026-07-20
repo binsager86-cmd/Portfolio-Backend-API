@@ -573,9 +573,6 @@ def ensure_all_tables() -> None:
         add_column_if_missing("users", "is_admin", "INTEGER DEFAULT 0")
         add_column_if_missing("users", "gemini_api_key", "TEXT DEFAULT ''")
 
-        # -- ensure "Admin" user has admin privileges --
-        exec_sql("UPDATE users SET is_admin = 1 WHERE username = 'Admin' AND COALESCE(is_admin, 0) = 0")
-
         # -- stocks --
         add_column_if_missing("stocks", "yf_ticker", "TEXT")
 

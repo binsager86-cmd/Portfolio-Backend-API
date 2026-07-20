@@ -26,7 +26,7 @@ from app.core.config import get_settings
 from app.core.exceptions import UnauthorizedError, ConflictError, BadRequestError
 from app.core.encryption import encrypt_field, decrypt_field
 from pydantic import BaseModel, Field, field_validator
-from app.core.database import query_one, query_val, exec_sql, column_exists, add_column_if_missing, transaction
+from app.core.database import query_one, query_val, exec_sql, exec_sql_returning_id, column_exists, add_column_if_missing, transaction
 from app.core.config import get_settings as _get_settings
 from app.api.deps import get_current_user
 from app.schemas.user import (
@@ -49,6 +49,7 @@ from app.services.audit_service import (
     AUTH_TOKEN_REFRESH,
     AUTH_LOCKOUT,
 )
+from app.services.password_service import apply_user_password_change, change_user_password
 from app.services.user_onboarding import setup_new_user
 
 logger = logging.getLogger(__name__)
@@ -328,8 +329,10 @@ async def me(current_user=Depends(get_current_user)):
 async def register(request: Request, body: RegisterRequest):
     """Create a new user account and return JWT + refresh token."""
     # Check if username or email already exists
+    normalized_username = body.username.strip().casefold()
     existing = query_val(
-        "SELECT id FROM users WHERE username = ? OR email = ?", (body.username, body.username)
+        "SELECT id FROM users WHERE LOWER(username) = ? OR LOWER(email) = ?",
+        (normalized_username, normalized_username),
     )
     if existing:
         raise ConflictError(f"An account with '{body.username}' already exists")
@@ -337,21 +340,14 @@ async def register(request: Request, body: RegisterRequest):
     hashed = hash_password(body.password)
     now = int(time.time())
 
-    exec_sql(
-        "INSERT INTO users (username, email, password_hash, name, created_at, failed_login_attempts) "
-        "VALUES (?, ?, ?, ?, ?, 0)",
-        (body.username, body.username, hashed, body.name, now),
-    )
-
-    # Fetch the new user's ID
-    user_id = query_val(
-        "SELECT id FROM users WHERE username = ?", (body.username,)
-    )
-
-    # Set up default portfolios, settings, and cash balances for the new user
-    setup_new_user(user_id, body.username)
-
-    log_event(AUTH_REGISTER, user_id=user_id, request=request)
+    with transaction():
+        user_id = exec_sql_returning_id(
+            "INSERT INTO users (username, email, password_hash, name, created_at, failed_login_attempts) "
+            "VALUES (?, ?, ?, ?, ?, 0)",
+            (body.username, body.username, hashed, body.name, now),
+        )
+        setup_new_user(user_id, body.username)
+        log_event(AUTH_REGISTER, user_id=user_id, request=request)
 
     return _build_token_response({
         "id": user_id,
@@ -451,8 +447,8 @@ async def google_sign_in(request: Request, body: GoogleSignInRequest):
         )
     if not existing:
         existing = query_one(
-            "SELECT id, username, name, COALESCE(is_admin, 0) FROM users WHERE username = ? OR email = ?",
-            (email, email),
+            "SELECT id, username, name, COALESCE(is_admin, 0) FROM users WHERE LOWER(username) = ? OR LOWER(email) = ?",
+            (email.casefold(), email.casefold()),
         )
 
     if existing:
@@ -475,17 +471,14 @@ async def google_sign_in(request: Request, body: GoogleSignInRequest):
     random_pw_hash = hash_password(secrets.token_urlsafe(32))
     now = int(time.time())
 
-    exec_sql(
-        "INSERT INTO users (username, email, google_sub, password_hash, name, created_at, failed_login_attempts) "
-        "VALUES (?, ?, ?, ?, ?, ?, 0)",
-        (email, email, google_sub or None, random_pw_hash, google_name or email.split("@")[0], now),
-    )
-
-    user_id = query_val("SELECT id FROM users WHERE username = ?", (email,))
-    user = {"id": user_id, "username": email, "name": google_name or email.split("@")[0]}
-
-    # Set up default portfolios, settings, and cash balances for the new user
-    setup_new_user(user_id, email)
+    with transaction():
+        user_id = exec_sql_returning_id(
+            "INSERT INTO users (username, email, google_sub, password_hash, name, created_at, failed_login_attempts) "
+            "VALUES (?, ?, ?, ?, ?, ?, 0)",
+            (email, email, google_sub or None, random_pw_hash, google_name or email.split("@")[0], now),
+        )
+        user = {"id": user_id, "username": email, "name": google_name or email.split("@")[0]}
+        setup_new_user(user_id, email)
 
     log_event(AUTH_GOOGLE_LOGIN, user_id=user_id, details={"google_sub": google_sub, "new_account": True}, request=request)
     return _build_token_response(user)
@@ -511,14 +504,12 @@ async def change_password(
     if not verify_password(body.current_password, row[0]):
         raise BadRequestError("Current password is incorrect")
 
-    new_hash = hash_password(body.new_password)
-    exec_sql(
-        "UPDATE users SET password_hash = ? WHERE id = ?",
-        (new_hash, current_user.user_id),
+    change_user_password(
+        current_user.user_id,
+        body.new_password,
+        request=request,
+        audit_action=AUTH_PASSWORD_CHANGE,
     )
-    _revoke_user_refresh_tokens(current_user.user_id)
-
-    log_event(AUTH_PASSWORD_CHANGE, user_id=current_user.user_id, request=request)
 
     return {"status": "ok", "message": "Password changed successfully"}
 
@@ -822,16 +813,11 @@ async def reset_password(request: Request, body: ResetPasswordRequest):
         )
         if not consumed_id:
             raise BadRequestError("Invalid or expired reset code")
-        exec_sql(
-            "UPDATE users SET password_hash = ? WHERE id = ?",
-            (new_hash, user_id),
-        )
-        _revoke_user_refresh_tokens(user_id)
-        _reset_lockout(user_id)
-        log_event(
-            "auth.password_reset",
-            user_id=user_id,
+        apply_user_password_change(
+            user_id,
+            body.new_password,
             request=request,
+            audit_action="auth.password_reset",
         )
 
     return {"status": "ok", "message": "Password has been reset successfully"}

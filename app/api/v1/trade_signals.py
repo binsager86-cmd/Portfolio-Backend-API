@@ -11,6 +11,7 @@ be resolved.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from datetime import date
@@ -402,7 +403,7 @@ async def _resolve_current_pe(
             f"stockanalysis.com history + tickerchart close / {eps_source} EPS",
         )
 
-    return _scrape_current_pe(stats_url), "stockanalysis.com"
+    return await asyncio.to_thread(_scrape_current_pe, stats_url), "stockanalysis.com"
 
 
 # ── Endpoint ─────────────────────────────────────────────────────────
@@ -505,7 +506,7 @@ async def pe_quarterly(
     stats_url = _statistics_url(symbol, yf_ticker, exchange, currency)
 
     try:
-        headers, pe_values = _scrape_ratios_page(ratios_url)
+        headers, pe_values = await asyncio.to_thread(_scrape_ratios_page, ratios_url)
     except Exception as exc:
         logger.warning("P/E scrape failed for %s (all retries exhausted): %s", symbol, exc)
         # Graceful degradation: return last cached state if available, else 502
@@ -522,7 +523,7 @@ async def pe_quarterly(
         fallback_ratios = f"https://stockanalysis.com/quote/kwse/{kw_base}/financials/ratios/?p=quarterly"
         fallback_stats = f"https://stockanalysis.com/quote/kwse/{kw_base}/statistics/"
         try:
-            f_headers, f_values = _scrape_ratios_page(fallback_ratios)
+            f_headers, f_values = await asyncio.to_thread(_scrape_ratios_page, fallback_ratios)
             if f_values:
                 headers, pe_values = f_headers, f_values
         except Exception:

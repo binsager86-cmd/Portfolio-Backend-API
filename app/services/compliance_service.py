@@ -3,10 +3,8 @@ Compliance & Audit Service — SOC2-ready audit exports and data retention.
 
 Provides:
   - PII redaction (fields in PII_FIELDS are replaced with "[REDACTED]")
-  - Streaming CSV export of audit_events (max 90-day window)
+    - Streaming CSV export of audit_log (max 90-day window)
   - Automated data retention enforcement (hard-delete old events)
-
-The audit_events table is created on first use if absent.
 """
 
 import csv
@@ -27,26 +25,9 @@ MASK = "[REDACTED]"
 MAX_EXPORT_DAYS = 90
 
 
-def _ensure_audit_table() -> None:
-    """Create audit_events table if it does not exist."""
-    exec_sql(
-        """
-        CREATE TABLE IF NOT EXISTS audit_events (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id     INTEGER,
-            category    TEXT    NOT NULL DEFAULT 'general',
-            action      TEXT    NOT NULL,
-            details     TEXT,
-            ip_address  TEXT,
-            created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
-        )
-        """
-    )
-    # Index for fast range queries (needed for export + retention)
-    exec_sql(
-        "CREATE INDEX IF NOT EXISTS ix_audit_events_created_at "
-        "ON audit_events(created_at)"
-    )
+def _ensure_audit_log_indexes() -> None:
+    """Ensure indexes used by audit export and retention exist on audit_log."""
+    exec_sql("CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at)")
 
 
 def redact_pii(row: dict) -> dict:
@@ -68,7 +49,7 @@ async def stream_audit_csv(
     Raises:
         ValueError: If the requested window exceeds MAX_EXPORT_DAYS.
     """
-    # Normalise to naive UTC strings for SQLite comparison
+    # Normalise to epoch seconds; audit_log.created_at is written as int(time.time()).
     if start.tzinfo is not None:
         start = start.astimezone(timezone.utc).replace(tzinfo=None)
     if end.tzinfo is not None:
@@ -77,14 +58,16 @@ async def stream_audit_csv(
     if (end - start) > timedelta(days=MAX_EXPORT_DAYS):
         raise ValueError(f"Max export range is {MAX_EXPORT_DAYS} days")
 
-    _ensure_audit_table()
+    _ensure_audit_log_indexes()
+    start_ts = int(start.replace(tzinfo=timezone.utc).timestamp())
+    end_ts = int(end.replace(tzinfo=timezone.utc).timestamp())
 
     rows = query_all(
-        "SELECT id, user_id, category, action, details, ip_address, created_at "
-        "FROM audit_events "
+        "SELECT id, user_id, action, resource_type, details, ip_address, created_at "
+        "FROM audit_log "
         "WHERE created_at BETWEEN ? AND ? "
         "ORDER BY created_at",
-        (start.isoformat(sep=" "), end.isoformat(sep=" ")),
+        (start_ts, end_ts),
     )
 
     # Yield CSV header
@@ -97,11 +80,22 @@ async def stream_audit_csv(
     for raw_row in rows:
         if isinstance(raw_row, (list, tuple)):
             row_dict = dict(zip(
-                ["id", "user_id", "category", "action", "details", "ip_address", "created_at"],
+                ["id", "user_id", "action", "resource_type", "details", "ip_address", "created_at"],
                 raw_row,
             ))
         else:
             row_dict = dict(raw_row)
+        action = str(row_dict.get("action") or "")
+        category = action.split(".", 1)[0] if "." in action else (row_dict.get("resource_type") or "general")
+        row_dict = {
+            "id": row_dict.get("id"),
+            "user_id": row_dict.get("user_id"),
+            "category": category,
+            "action": row_dict.get("action"),
+            "details": row_dict.get("details"),
+            "ip_address": row_dict.get("ip_address"),
+            "created_at": row_dict.get("created_at"),
+        }
 
         output.seek(0)
         output.truncate(0)
@@ -111,26 +105,26 @@ async def stream_audit_csv(
 
 def enforce_data_retention(retention_days: int = 365) -> int:
     """
-    Hard-delete audit_events older than *retention_days*.
+    Hard-delete audit_log rows older than *retention_days*.
 
     Called nightly by the APScheduler job (03:00 Asia/Kuwait).
 
     Returns:
         Number of rows deleted.
     """
-    _ensure_audit_table()
-    cutoff = (datetime.utcnow() - timedelta(days=retention_days)).isoformat(sep=" ")
+    _ensure_audit_log_indexes()
+    cutoff = int((datetime.utcnow() - timedelta(days=retention_days)).replace(tzinfo=timezone.utc).timestamp())
 
     # Count first (SQLite does not support RETURNING on older versions)
     old_rows = query_all(
-        "SELECT id FROM audit_events WHERE created_at < ?",
+        "SELECT id FROM audit_log WHERE created_at < ?",
         (cutoff,),
     )
     count = len(old_rows)
 
     if count:
         exec_sql(
-            "DELETE FROM audit_events WHERE created_at < ?",
+            "DELETE FROM audit_log WHERE created_at < ?",
             (cutoff,),
         )
         logger.info(

@@ -485,7 +485,7 @@ def _safe_num(row, col: str, default: float = 0.0) -> float:
             return default
         return float(val)
     except (ValueError, TypeError):
-        return default
+        raise ValueError(f"Invalid numeric value for {col}: {val!r}")
 
 
 def _safe_date(row, col: str) -> str:
@@ -505,4 +505,4 @@ def _safe_date(row, col: str) -> str:
     try:
         return pd.to_datetime(s).strftime("%Y-%m-%d")
     except Exception:
-        return s  # return as-is; DB will store the raw string
+        raise ValueError(f"Invalid date value for {col}: {s!r}")

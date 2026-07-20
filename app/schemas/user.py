@@ -33,6 +33,13 @@ class RegisterRequest(BaseModel):
     password: str = Field(..., min_length=8, max_length=200)
     name: Optional[str] = Field(None, max_length=200)
 
+    @field_validator("username")
+    @classmethod
+    def username_not_reserved(cls, v: str) -> str:
+        if v.strip().casefold() == "admin":
+            raise ValueError("This username is reserved")
+        return v
+
     @field_validator("password")
     @classmethod
     def password_strength(cls, v: str) -> str:

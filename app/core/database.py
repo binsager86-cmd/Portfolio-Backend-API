@@ -680,6 +680,21 @@ def column_exists(table: str, column: str) -> bool:
         return column in cols
 
 
+def table_exists(table: str) -> bool:
+    """Check if a table exists."""
+    if _USE_PG:
+        with engine.connect() as conn:
+            result = conn.execute(
+                text("SELECT 1 FROM information_schema.tables WHERE table_name = :table"),
+                {"table": table},
+            ).fetchone()
+            return result is not None
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (table,))
+        return cur.fetchone() is not None
+
+
 def add_column_if_missing(table: str, column: str, col_type: str = "REAL") -> None:
     """Additive migration — add a column to a table if it does not already exist.
 
