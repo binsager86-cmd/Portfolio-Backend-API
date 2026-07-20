@@ -251,6 +251,7 @@ async def notify_portfolio_news_alerts() -> None:
     from app.models.news import NewsArticle
     from app.models.portfolio import PortfolioTransaction
     from app.models.push_token import PushToken
+    from app.services.notification_prefs import get_prefs
     from app.services.push_service import send_push_notification
 
     settings = get_settings()
@@ -263,6 +264,10 @@ async def notify_portfolio_news_alerts() -> None:
     async with get_db_session() as db:
         users = db.query(PortfolioTransaction.user_id).distinct().all()
         for (user_id,) in users:
+            prefs = get_prefs(db, user_id)
+            if not prefs.get("newsNotifications", True):
+                continue
+
             holdings = (
                 db.query(
                     PortfolioTransaction.stock_symbol,
@@ -307,18 +312,16 @@ async def notify_portfolio_news_alerts() -> None:
             ]
 
             cutoff = datetime.utcnow() - timedelta(hours=24)
-            latest_news = (
+            recent_news = (
                 db.query(NewsArticle)
                 .filter(NewsArticle.published_at >= cutoff)
                 .filter(or_(*symbol_match_filters))
                 .order_by(NewsArticle.published_at.desc())
-                .first()
+                .limit(10)
+                .all()
             )
 
-            if not latest_news:
-                continue
-
-            if _already_dispatched(user_id, str(latest_news.news_id)):
+            if not recent_news:
                 continue
 
             tokens = (
@@ -326,38 +329,45 @@ async def notify_portfolio_news_alerts() -> None:
                 .filter(PushToken.user_id == user_id)
                 .all()
             )
-            sent_any = False
-            for (token,) in tokens:
-                # Build a rich title: "📰 NBK • National Bank of Kuwait"
-                article_title = (latest_news.title or "New announcement")[:180]
-                # Show up to 2 matched symbols in the title
-                matched = [s for s in symbols if s in article_title.upper()][:2]
-                if matched:
-                    notif_title = f"📰 {', '.join(matched)}"
-                    notif_body = article_title
-                else:
-                    notif_title = "📰 Portfolio News"
-                    notif_body = article_title
+            if not tokens:
+                continue
 
-                sent = await send_push_notification(
-                    token=token,
-                    title=notif_title,
-                    body=notif_body,
-                    data={
-                        "type": "portfolio_news",
-                        "news_id": latest_news.id,
-                        "newsId": latest_news.id,
-                        "news_external_id": latest_news.news_id,
-                        "category": latest_news.category,
-                        "deepLink": f"/(tabs)/news/{latest_news.id}",
-                    },
-                    sound="default",
-                    priority="high",
-                    android={"channelId": "portfolio-news"},
-                )
-                sent_any = sent_any or sent
+            for latest_news in recent_news:
+                if _already_dispatched(user_id, str(latest_news.news_id)):
+                    continue
 
-            if sent_any:
-                _mark_dispatched(user_id, str(latest_news.news_id))
+                sent_any = False
+                for (token,) in tokens:
+                    # Build a rich title: "📰 NBK • National Bank of Kuwait"
+                    article_title = (latest_news.title or "New announcement")[:180]
+                    # Show up to 2 matched symbols in the title
+                    matched = [s for s in symbols if s in article_title.upper()][:2]
+                    if matched:
+                        notif_title = f"📰 {', '.join(matched)}"
+                        notif_body = article_title
+                    else:
+                        notif_title = "📰 Portfolio News"
+                        notif_body = article_title
+
+                    sent = await send_push_notification(
+                        token=token,
+                        title=notif_title,
+                        body=notif_body,
+                        data={
+                            "type": "portfolio_news",
+                            "news_id": latest_news.id,
+                            "newsId": latest_news.id,
+                            "news_external_id": latest_news.news_id,
+                            "category": latest_news.category,
+                            "deepLink": f"/(tabs)/news/{latest_news.id}",
+                        },
+                        sound="default",
+                        priority="high",
+                        android={"channelId": "portfolio-news"},
+                    )
+                    sent_any = sent_any or sent
+
+                if sent_any:
+                    _mark_dispatched(user_id, str(latest_news.news_id))
 
             logger.info("Dispatched portfolio news alert to user %s", user_id)

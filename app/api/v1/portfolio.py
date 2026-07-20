@@ -19,7 +19,7 @@ from starlette.responses import StreamingResponse
 from app.api.deps import get_current_user
 from app.core.security import TokenData
 from app.core.exceptions import NotFoundError, BadRequestError
-from app.core.database import query_df, query_one, exec_sql, exec_sql_returning_id, column_exists
+from app.core.database import query_df, query_one, exec_sql, exec_sql_returning_id, column_exists, transaction
 from app.services.portfolio_service import (
     PortfolioService,
     get_complete_overview,
@@ -67,6 +67,24 @@ def _txn_cash_delta(txn_type: str, purchase_cost: float, sell_value: float,
     delta += cash_dividend
     delta -= fees
     return delta
+
+
+def _held_shares_before_txn(user_id: int, portfolio: str, symbol: str) -> float:
+    row = query_one(
+        """SELECT
+               SUM(CASE
+                   WHEN UPPER(TRIM(txn_type)) = 'BUY' THEN COALESCE(shares, 0) + COALESCE(bonus_shares, 0)
+                   WHEN UPPER(TRIM(txn_type)) = 'SELL' THEN -COALESCE(shares, 0)
+                   ELSE COALESCE(bonus_shares, 0)
+               END) AS shares_held
+           FROM transactions
+           WHERE user_id = ?
+             AND UPPER(TRIM(stock_symbol)) = ?
+             AND COALESCE(NULLIF(TRIM(portfolio), ''), 'KFH') = COALESCE(NULLIF(TRIM(?), ''), 'KFH')
+             AND COALESCE(is_deleted, 0) = 0""",
+        (user_id, symbol.strip().upper(), portfolio),
+    )
+    return float((row or {}).get("shares_held") or 0.0)
 
 
 # ── Overview ─────────────────────────────────────────────────────────
@@ -397,6 +415,12 @@ async def create_transaction(
         raise BadRequestError("shares must be > 0 for Buy transactions")
     if txn.txn_type == "Sell" and txn.shares <= 0:
         raise BadRequestError("shares must be > 0 for Sell transactions")
+    if txn.txn_type == "Sell":
+        held_shares = _held_shares_before_txn(current_user.user_id, txn.portfolio, txn.stock_symbol)
+        if txn.shares > held_shares + 1e-9:
+            raise BadRequestError(
+                f"Cannot sell {txn.shares} shares; only {held_shares} shares are available"
+            )
     if txn.txn_type == "DIVIDEND_ONLY":
         has_any = (txn.cash_dividend or 0) > 0 or (txn.reinvested_dividend or 0) > 0 or (txn.bonus_shares or 0) > 0
         if not has_any:
@@ -410,70 +434,71 @@ async def create_transaction(
     except Exception:
         current_fx = None
 
-    new_id = exec_sql_returning_id(
-        """INSERT INTO transactions
-           (user_id, portfolio, stock_symbol, txn_date, txn_type, shares,
-            purchase_cost, sell_value, bonus_shares, cash_dividend,
-            reinvested_dividend, fees, price_override, planned_cum_shares,
-            broker, reference, notes, category, fx_rate_at_txn,
-            source, is_deleted, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'portfolio', ?,
-                   'MANUAL', 0, ?)""",
-        (
-            current_user.user_id, txn.portfolio, txn.stock_symbol,
-            txn.txn_date, txn.txn_type, txn.shares,
-            txn.purchase_cost or 0.0, txn.sell_value or 0.0, txn.bonus_shares or 0,
-            txn.cash_dividend or 0.0, txn.reinvested_dividend or 0.0, txn.fees or 0.0,
-            txn.price_override, txn.planned_cum_shares,
-            txn.broker, txn.reference, txn.notes, current_fx, now,
-        ),
-    )
-
-    # ── Auto-create stock record if missing (so price updater can find it)
-    from app.core.database import query_val as _qv
-    sym_upper = txn.stock_symbol.strip().upper()
-    existing_stock = _qv(
-        "SELECT id FROM stocks WHERE UPPER(TRIM(symbol)) = ? AND user_id = ? AND COALESCE(NULLIF(TRIM(portfolio), ''), '') = ?",
-        (sym_upper, current_user.user_id, txn.portfolio),
-    )
-    if not existing_stock and txn.txn_type in ("Buy", "Sell"):
-        ccy = "USD" if txn.portfolio == "USA" else "KWD"
-        # Resolve yf_ticker from reference lists
-        from app.services.price_service import _yahoo_symbol
-        yf_ticker = _yahoo_symbol(sym_upper, ccy)
-        exec_sql(
-            """INSERT INTO stocks
-               (user_id, symbol, name, portfolio, currency, current_price,
-                yf_ticker, price_source, created_at)
-               VALUES (?, ?, ?, ?, ?, 0.0, ?, 'AUTO', ?)""",
-            (current_user.user_id, sym_upper, sym_upper, txn.portfolio,
-             ccy, yf_ticker, int(time.time())),
-        )
-        logger.info("Auto-created stock record for %s (yf: %s)", sym_upper, yf_ticker)
-
-    log_event(
-        TXN_CREATE,
-        user_id=current_user.user_id,
-        resource_type="transaction",
-        resource_id=new_id,
-        details={"symbol": txn.stock_symbol, "type": txn.txn_type, "shares": txn.shares},
-        request=request,
-    )
-
-    # ── Ledger: recalculate portfolio cash (respects manual_override — matches Streamlit)
-    # Streamlit: Buy → cash -= (cost+fees), Sell → cash += (proceeds-fees),
-    #            Dividend → cash += cash_dividend
-    delta = _txn_cash_delta(
-        txn.txn_type,
-        txn.purchase_cost or 0.0,
-        txn.sell_value or 0.0,
-        txn.cash_dividend or 0.0,
-        txn.fees or 0.0,
-    )
     svc = PortfolioService(current_user.user_id)
-    svc.recalc_portfolio_cash(
-        deposit_delta=delta, delta_portfolio=txn.portfolio,
-    )
+    with transaction():
+        new_id = exec_sql_returning_id(
+            """INSERT INTO transactions
+               (user_id, portfolio, stock_symbol, txn_date, txn_type, shares,
+                purchase_cost, sell_value, bonus_shares, cash_dividend,
+                reinvested_dividend, fees, price_override, planned_cum_shares,
+                broker, reference, notes, category, fx_rate_at_txn,
+                source, is_deleted, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'portfolio', ?,
+                       'MANUAL', 0, ?)""",
+            (
+                current_user.user_id, txn.portfolio, txn.stock_symbol,
+                txn.txn_date, txn.txn_type, txn.shares,
+                txn.purchase_cost or 0.0, txn.sell_value or 0.0, txn.bonus_shares or 0,
+                txn.cash_dividend or 0.0, txn.reinvested_dividend or 0.0, txn.fees or 0.0,
+                txn.price_override, txn.planned_cum_shares,
+                txn.broker, txn.reference, txn.notes, current_fx, now,
+            ),
+        )
+
+        # ── Auto-create stock record if missing (so price updater can find it)
+        from app.core.database import query_val as _qv
+        sym_upper = txn.stock_symbol.strip().upper()
+        existing_stock = _qv(
+            "SELECT id FROM stocks WHERE UPPER(TRIM(symbol)) = ? AND user_id = ? AND COALESCE(NULLIF(TRIM(portfolio), ''), '') = ?",
+            (sym_upper, current_user.user_id, txn.portfolio),
+        )
+        if not existing_stock and txn.txn_type in ("Buy", "Sell"):
+            ccy = "USD" if txn.portfolio == "USA" else "KWD"
+            # Resolve yf_ticker from reference lists
+            from app.services.price_service import _yahoo_symbol
+            yf_ticker = _yahoo_symbol(sym_upper, ccy)
+            exec_sql(
+                """INSERT INTO stocks
+                   (user_id, symbol, name, portfolio, currency, current_price,
+                    yf_ticker, price_source, created_at)
+                   VALUES (?, ?, ?, ?, ?, 0.0, ?, 'AUTO', ?)""",
+                (current_user.user_id, sym_upper, sym_upper, txn.portfolio,
+                 ccy, yf_ticker, int(time.time())),
+            )
+            logger.info("Auto-created stock record for %s (yf: %s)", sym_upper, yf_ticker)
+
+        log_event(
+            TXN_CREATE,
+            user_id=current_user.user_id,
+            resource_type="transaction",
+            resource_id=new_id,
+            details={"symbol": txn.stock_symbol, "type": txn.txn_type, "shares": txn.shares},
+            request=request,
+        )
+
+        # ── Ledger: recalculate portfolio cash (respects manual_override — matches Streamlit)
+        # Streamlit: Buy → cash -= (cost+fees), Sell → cash += (proceeds-fees),
+        #            Dividend → cash += cash_dividend
+        delta = _txn_cash_delta(
+            txn.txn_type,
+            txn.purchase_cost or 0.0,
+            txn.sell_value or 0.0,
+            txn.cash_dividend or 0.0,
+            txn.fees or 0.0,
+        )
+        svc.recalc_portfolio_cash(
+            deposit_delta=delta, delta_portfolio=txn.portfolio,
+        )
 
     # Return fresh cash balance so frontend can update immediately
     unified = svc.get_total_portfolio_value()

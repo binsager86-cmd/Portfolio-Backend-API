@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field
 from app.api.deps import get_current_user
 from app.core.security import TokenData
 from app.core.exceptions import NotFoundError, BadRequestError, ConflictError
-from app.core.database import query_all, query_one, query_val, query_df, exec_sql, get_connection
+from app.core.database import query_all, query_one, query_val, query_df, exec_sql, exec_sql_returning_id, get_connection
 
 logger = logging.getLogger(__name__)
 
@@ -219,6 +219,9 @@ def _ensure_schema() -> None:
             )""",
         "CREATE INDEX IF NOT EXISTS idx_extraction_jobs_stock ON extraction_jobs(stock_id)",
         "CREATE INDEX IF NOT EXISTS idx_extraction_jobs_hash ON extraction_jobs(stock_id, pdf_hash)",
+          """CREATE UNIQUE INDEX IF NOT EXISTS uq_extraction_jobs_active_pdf
+              ON extraction_jobs(stock_id, pdf_hash)
+              WHERE status IN ('queued', 'running')""",
         "CREATE INDEX IF NOT EXISTS idx_cf_runs_stock ON cashflow_extraction_runs(stock_id)",
         "CREATE INDEX IF NOT EXISTS idx_cf_rows_run ON cashflow_staged_rows(run_id)",
         "CREATE INDEX IF NOT EXISTS idx_analysis_stocks_user ON analysis_stocks(user_id)",
@@ -3640,20 +3643,25 @@ async def upload_financial_statement(
 
     # ── 6. Create extraction job record ──────────────────────────────
     now = int(time.time())
-    exec_sql(
-        """INSERT INTO extraction_jobs
-           (stock_id, user_id, pdf_upload_id, pdf_hash, source_file, status,
-            stage, model, attempt_count, created_at, updated_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-        (stock_id, current_user.user_id, pdf_upload_id, pdf_hash,
-         file.filename, "queued", "uploading", model, 1, now, now),
-    )
-    job_id = query_val(
-        """SELECT id FROM extraction_jobs
-           WHERE stock_id = ? AND user_id = ? AND created_at = ?
-           ORDER BY id DESC LIMIT 1""",
-        (stock_id, current_user.user_id, now),
-    )
+    try:
+        job_id = exec_sql_returning_id(
+            """INSERT INTO extraction_jobs
+               (stock_id, user_id, pdf_upload_id, pdf_hash, source_file, status,
+                stage, model, attempt_count, created_at, updated_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (stock_id, current_user.user_id, pdf_upload_id, pdf_hash,
+             file.filename, "queued", "uploading", model, 1, now, now),
+        )
+    except Exception:
+        active = query_one(
+            """SELECT id FROM extraction_jobs
+               WHERE stock_id = ? AND pdf_hash = ? AND status IN ('queued', 'running')
+               ORDER BY created_at DESC LIMIT 1""",
+            (stock_id, pdf_hash),
+        )
+        if not active:
+            raise
+        job_id = active["id"] if isinstance(active, dict) else active[0]
 
     # ── 7. Launch background extraction via asyncio.create_task ──────
     # [P2-4/B-6] asyncio.create_task runs on the existing event loop and can
@@ -4155,6 +4163,12 @@ async def list_cashflow_runs(
 ):
     """List all cash flow extraction runs for a stock."""
     _ensure_schema()
+    stock = query_one(
+        "SELECT id FROM analysis_stocks WHERE id = ? AND user_id = ?",
+        (stock_id, current_user.user_id),
+    )
+    if not stock:
+        raise NotFoundError("Stock", stock_id)
     runs = query_all(
         """SELECT id, stock_id, pdf_upload_id, source_file, status,
                   periods_json, reconciliation_summary, created_at, updated_at
@@ -4183,8 +4197,11 @@ async def get_cashflow_staged_rows(
     _ensure_schema()
     # Verify ownership
     run = query_one(
-        "SELECT id FROM cashflow_extraction_runs WHERE id = ? AND stock_id = ?",
-        (run_id, stock_id),
+        """SELECT cr.id
+           FROM cashflow_extraction_runs cr
+           JOIN analysis_stocks s ON s.id = cr.stock_id
+           WHERE cr.id = ? AND cr.stock_id = ? AND s.user_id = ?""",
+        (run_id, stock_id, current_user.user_id),
     )
     if not run:
         raise NotFoundError(f"Cash flow run {run_id} not found for stock {stock_id}")
@@ -4225,8 +4242,9 @@ async def patch_cashflow_staged_row(
         """SELECT sr.id, sr.run_id
            FROM cashflow_staged_rows sr
            JOIN cashflow_extraction_runs cr ON sr.run_id = cr.id
-           WHERE sr.id = ? AND cr.stock_id = ?""",
-        (row_id, stock_id),
+           JOIN analysis_stocks s ON s.id = cr.stock_id
+           WHERE sr.id = ? AND cr.stock_id = ? AND s.user_id = ?""",
+        (row_id, stock_id, current_user.user_id),
     )
     if not row:
         raise NotFoundError(
@@ -4265,10 +4283,11 @@ async def commit_cashflow_run(
     """
     _ensure_schema()
     run = query_one(
-        """SELECT id, stock_id, source_file, periods_json, status
-           FROM cashflow_extraction_runs
-           WHERE id = ? AND stock_id = ?""",
-        (run_id, stock_id),
+          """SELECT cr.id, cr.stock_id, cr.source_file, cr.periods_json, cr.status
+              FROM cashflow_extraction_runs cr
+              JOIN analysis_stocks s ON s.id = cr.stock_id
+              WHERE cr.id = ? AND cr.stock_id = ? AND s.user_id = ?""",
+          (run_id, stock_id, current_user.user_id),
     )
     if not run:
         raise NotFoundError(f"Cash flow run {run_id} not found for stock {stock_id}")
@@ -4282,7 +4301,7 @@ async def commit_cashflow_run(
     # Get accepted rows
     accepted = query_all(
         """SELECT row_order, label_raw, normalized_code, values_json,
-                  is_total, confidence
+                  row_kind, is_total, confidence
            FROM cashflow_staged_rows
            WHERE run_id = ? AND is_accepted = 1
            ORDER BY row_order""",
@@ -4292,8 +4311,8 @@ async def commit_cashflow_run(
         raise BadRequestError("No accepted rows to commit")
 
     # Find stock currency
-    stock = query_one("SELECT currency FROM stocks WHERE id = ?", (stock_id,))
-    stock_currency = stock["currency"] if stock else "SAR"
+    stock = query_one("SELECT currency FROM analysis_stocks WHERE id = ?", (stock_id,))
+    stock_currency = stock["currency"] if stock and stock["currency"] else "KWD"
 
     now = int(time.time())
 

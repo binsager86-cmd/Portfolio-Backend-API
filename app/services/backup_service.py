@@ -146,31 +146,39 @@ def import_transactions_excel(
                     continue
 
                 stock_name = _safe_str(row, "name") or _safe_str(row, "company_name") or symbol
-                port = portfolio or _safe_str(row, "portfolio") or "KFH"
-                ccy = _safe_str(row, "currency") or "KWD"
+                port = _normalize_portfolio(portfolio or _safe_str(row, "portfolio") or "KFH")
+                ccy = (_safe_str(row, "currency") or PORTFOLIO_CCY.get(port, "KWD")).upper()
+                tv_symbol = _safe_str(row, "tradingview_symbol")
+                tv_exchange = _safe_str(row, "tradingview_exchange")
                 price = _safe_num(row, "current_price")
 
                 # Upsert: check if exists
                 existing = exec_sql_fetchone(
-                    "SELECT id FROM stocks WHERE symbol = ? AND user_id = ?",
-                    (symbol, user_id),
+                    """SELECT id FROM stocks
+                       WHERE UPPER(TRIM(symbol)) = UPPER(TRIM(?)) AND user_id = ?
+                         AND COALESCE(NULLIF(TRIM(portfolio), ''), 'KFH') = ?
+                         AND COALESCE(NULLIF(TRIM(currency), ''), ?) = ?
+                         AND COALESCE(NULLIF(TRIM(tradingview_exchange), ''), '') = ?""",
+                    (symbol, user_id, port, ccy, ccy, tv_exchange),
                 )
 
                 if not existing:
                     exec_sql(
                         """INSERT INTO stocks
                            (user_id, symbol, name, portfolio, currency,
-                            current_price, last_updated)
-                           VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                        (user_id, symbol, stock_name, port, ccy, price, now),
+                            current_price, last_updated, tradingview_symbol,
+                            tradingview_exchange)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (user_id, symbol, stock_name, port, ccy, price, now, tv_symbol, tv_exchange),
                     )
                     s_imp += 1
                 else:
+                    existing_id = existing["id"] if hasattr(existing, "keys") and "id" in existing.keys() else existing[0]
                     exec_sql(
                         """UPDATE stocks
-                           SET name=?, portfolio=?, currency=?, current_price=?, last_updated=?
-                           WHERE symbol=? AND user_id=?""",
-                        (stock_name, port, ccy, price, now, symbol, user_id),
+                           SET name=?, current_price=?, last_updated=?, tradingview_symbol=?
+                           WHERE id=? AND user_id=?""",
+                        (stock_name, price, now, tv_symbol, existing_id, user_id),
                     )
                     s_upd += 1
             except Exception as exc:
@@ -199,9 +207,22 @@ def import_transactions_excel(
                     t_skip += 1
                     continue
 
-                row_port = portfolio or _safe_str(row, "portfolio") or "KFH"
-                txn_date = _safe_date(row, "txn_date") or _safe_date(row, "date") or _safe_date(row, "trade_date")
-                txn_type = _safe_str(row, "txn_type") or _safe_str(row, "type") or "Buy"
+                row_port = _normalize_portfolio(portfolio or _safe_str(row, "portfolio") or "KFH")
+                txn_date = _normalize_date(
+                    _safe_date(row, "txn_date") or _safe_date(row, "date") or _safe_date(row, "trade_date")
+                )
+                txn_type = _normalize_txn_type(_safe_str(row, "txn_type") or _safe_str(row, "type") or "Buy")
+                shares = _safe_num(row, "shares")
+                purchase_cost = _safe_num(row, "purchase_cost")
+                sell_value = _safe_num(row, "sell_value")
+                bonus_shares = _safe_num(row, "bonus_shares")
+                cash_dividend = _safe_num(row, "cash_dividend")
+                reinvested_dividend = _safe_num(row, "reinvested_dividend")
+                fees = _safe_num(row, "fees")
+                _validate_transaction_import(
+                    txn_type, shares, purchase_cost, sell_value,
+                    bonus_shares, cash_dividend, reinvested_dividend, fees,
+                )
 
                 exec_sql(
                     """INSERT INTO transactions
@@ -217,13 +238,13 @@ def import_transactions_excel(
                         symbol,
                         txn_date,
                         txn_type,
-                        _safe_num(row, "shares"),
-                        _safe_num(row, "purchase_cost"),
-                        _safe_num(row, "sell_value"),
-                        _safe_num(row, "bonus_shares"),
-                        _safe_num(row, "cash_dividend"),
-                        _safe_num(row, "reinvested_dividend"),
-                        _safe_num(row, "fees"),
+                        shares,
+                        purchase_cost,
+                        sell_value,
+                        bonus_shares,
+                        cash_dividend,
+                        reinvested_dividend,
+                        fees,
                         _safe_str(row, "broker"),
                         _safe_str(row, "reference"),
                         _safe_str(row, "notes"),
@@ -389,6 +410,58 @@ def _find_sheet(available: List[str], candidates: List[str]) -> Optional[str]:
         if c and c.lower() in lower_map:
             return lower_map[c.lower()]
     return None
+
+
+def _normalize_portfolio(value: str) -> str:
+    portfolio = (value or "KFH").strip().upper()
+    if portfolio not in PORTFOLIO_CCY:
+        raise ValueError(f"Unknown portfolio '{portfolio}'")
+    return portfolio
+
+
+def _normalize_txn_type(value: str) -> str:
+    normalized = (value or "").strip().upper().replace(" ", "_")
+    mapping = {
+        "BUY": "Buy",
+        "SELL": "Sell",
+        "DIVIDEND": "DIVIDEND_ONLY",
+        "DIVIDEND_ONLY": "DIVIDEND_ONLY",
+    }
+    if normalized not in mapping:
+        raise ValueError(f"Invalid txn_type '{value}'")
+    return mapping[normalized]
+
+
+def _normalize_date(value: str) -> str:
+    if not value:
+        raise ValueError("txn_date is required")
+    try:
+        return pd.to_datetime(value).strftime("%Y-%m-%d")
+    except Exception as exc:
+        raise ValueError(f"Invalid txn_date '{value}'") from exc
+
+
+def _validate_transaction_import(
+    txn_type: str,
+    shares: float,
+    purchase_cost: float,
+    sell_value: float,
+    bonus_shares: float,
+    cash_dividend: float,
+    reinvested_dividend: float,
+    fees: float,
+) -> None:
+    values = [shares, purchase_cost, sell_value, bonus_shares, cash_dividend, reinvested_dividend, fees]
+    if any(value < 0 for value in values):
+        raise ValueError("Transaction numeric values cannot be negative")
+    if txn_type == "Buy" and shares <= 0:
+        raise ValueError("Buy transactions require positive shares")
+    if txn_type == "Sell" and shares <= 0:
+        raise ValueError("Sell transactions require positive shares")
+    if txn_type == "DIVIDEND_ONLY" and not any(
+        value > 0 for value in (cash_dividend, reinvested_dividend, bonus_shares)
+    ):
+        raise ValueError("DIVIDEND_ONLY requires a dividend or bonus value")
 
 
 def _safe_str(row, col: str, default: str = "") -> str:

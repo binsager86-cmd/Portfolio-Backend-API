@@ -74,7 +74,7 @@ def _normalize_txn_type(value: Any) -> str:
 def _resolve_position_metric_key(mapping: Dict[Tuple[str, str], float], sym: str, pf: str) -> Optional[Tuple[str, str]]:
     """Prefer exact symbol/portfolio match, else allow a unique symbol-only fallback."""
     exact = (sym, pf)
-    if exact in mapping:
+    if exact in mapping and safe_float(mapping.get(exact), 0.0) > 0.0:
         return exact
     symbol_matches = [key for key, value in mapping.items() if key[0] == sym and safe_float(value, 0.0) > 0.0]
     if len(symbol_matches) == 1:
@@ -214,11 +214,12 @@ def compute_holdings_avg_cost(tx: pd.DataFrame) -> dict:
         elif typ == "Sell":
             if shares > 0 and sh > 0:
                 avg = cost / shares
-                proceeds = sell_value - fees
-                cost_of_sold = avg * sh
+                effective_shares = min(sh, shares)
+                proceeds = (sell_value - fees) * (effective_shares / sh)
+                cost_of_sold = avg * effective_shares
                 realized_pnl += proceeds - cost_of_sold
                 cost -= cost_of_sold
-                shares -= sh
+                shares -= effective_shares
 
         if bonus > 0:
             shares += bonus
@@ -708,7 +709,7 @@ class PortfolioService:
             SELECT
                 t.id, t.stock_symbol, t.txn_date, t.txn_type, t.shares,
                 t.purchase_cost, t.sell_value, t.realized_pnl_at_txn,
-                t.avg_cost_at_txn,
+                t.avg_cost_at_txn, t.fx_rate_at_txn,
                 COALESCE(NULLIF(TRIM(t.portfolio), ''), s.portfolio, 'KFH') AS portfolio,
                 COALESCE(s.currency, 'KWD') AS currency,
                 COALESCE(t.category, 'portfolio') AS category
@@ -756,21 +757,21 @@ class PortfolioService:
                 if r["_txn_type_key"] == "BUY":
                     shares_bought_per_pos[key] += safe_float(r.get("shares"), 0.0)
 
-            soft_del2 = _soft_delete_filter()
+            soft_del2 = _soft_delete_filter("t")
             div_sql = f"""
                 SELECT
                     t.stock_symbol,
-                    COALESCE(NULLIF(TRIM(t.portfolio), ''), s.portfolio, 'KFH') AS portfolio,
+                    COALESCE(NULLIF(TRIM(t.portfolio), ''), 'KFH') AS portfolio,
                     SUM(COALESCE(t.cash_dividend, 0)) AS total_div,
                     COALESCE(s.currency, 'KWD') AS currency
                 FROM transactions t
                 LEFT JOIN stocks s
                     ON UPPER(TRIM(s.symbol)) = UPPER(TRIM(t.stock_symbol)) AND s.user_id = t.user_id
-                   AND COALESCE(NULLIF(TRIM(t.portfolio), ''), 'KFH') = COALESCE(NULLIF(TRIM(s.portfolio), ''), 'KFH')
+                   AND UPPER(COALESCE(NULLIF(TRIM(t.portfolio), ''), NULLIF(TRIM(s.portfolio), ''), 'KFH')) = UPPER(COALESCE(NULLIF(TRIM(s.portfolio), ''), 'KFH'))
                 WHERE t.user_id = ? {soft_del2}
                 GROUP BY
                     t.stock_symbol,
-                    COALESCE(NULLIF(TRIM(t.portfolio), ''), s.portfolio, 'KFH'),
+                    COALESCE(NULLIF(TRIM(t.portfolio), ''), 'KFH'),
                     COALESCE(s.currency, 'KWD')
             """
             div_df = query_df(div_sql, (self.user_id,))
@@ -786,11 +787,6 @@ class PortfolioService:
         except Exception:
             dividends_kwd_per_pos = {}
             shares_bought_per_pos = {}
-
-        has_stored = (
-            "realized_pnl_at_txn" in df.columns
-            and df["realized_pnl_at_txn"].notna().any()
-        )
 
         total_realized_kwd = 0.0
         total_profit_kwd = 0.0
@@ -809,94 +805,76 @@ class PortfolioService:
             ratio = min(sold_shares / total_bought, 1.0)
             return total_div * ratio
 
-        if has_stored:
-            sells = df[df["_txn_type_key"] == "SELL"].copy()
-            for _, row in sells.iterrows():
-                stored_pnl = row.get("realized_pnl_at_txn")
-                if pd.isna(stored_pnl):
+        position_basis: Dict[Tuple[str, str], dict] = {}
+        for _, row in df.iterrows():
+            sym = row["_sym_key"]
+            pf = row["_pf_key"]
+            typ = row["_txn_type_key"]
+            qty = safe_float(row.get("shares"), 0.0)
+            ccy = row.get("currency", "KWD")
+            key = (sym, pf)
+
+            if key not in position_basis:
+                position_basis[key] = {"qty": 0.0, "total_cost": 0.0, "currency": ccy}
+
+            if typ == "BUY":
+                cost = safe_float(row.get("purchase_cost"), 0.0)
+                position_basis[key]["qty"] += qty
+                position_basis[key]["total_cost"] += cost
+
+            elif typ == "SELL" and qty > 0:
+                cur_qty = position_basis[key]["qty"]
+                cur_cost = position_basis[key]["total_cost"]
+                if cur_qty <= 0:
                     continue
-                profit = float(stored_pnl)
-                ccy = row.get("currency", "KWD")
-                profit_kwd = convert_to_kwd(profit, ccy)
-                sym = row["_sym_key"]
-                pf = row["_pf_key"]
-                div_alloc = _alloc_div(sym, pf, safe_float(row.get("shares"), 0.0))
+
+                effective_qty = min(qty, cur_qty)
+                avg_cost_ps = cur_cost / cur_qty
+                cost_of_sold = avg_cost_ps * effective_qty
+                proceeds = safe_float(row.get("sell_value"), 0.0)
+                effective_proceeds = proceeds * (effective_qty / qty)
+                stored_pnl = row.get("realized_pnl_at_txn")
+                if stored_pnl is not None and not pd.isna(stored_pnl):
+                    profit = float(stored_pnl)
+                    source = "stored"
+                else:
+                    profit = effective_proceeds - cost_of_sold
+                    source = "calculated"
+
+                if str(ccy or "KWD").strip().upper() == "USD":
+                    profit_kwd = _convert_to_kwd_with_rate(
+                        profit, ccy, safe_float(row.get("fx_rate_at_txn"), DEFAULT_USD_TO_KWD),
+                    )
+                else:
+                    profit_kwd = convert_to_kwd(profit, ccy)
+
                 total_realized_kwd += profit_kwd
-                total_div_alloc_kwd += div_alloc
                 if profit_kwd >= 0:
                     total_profit_kwd += profit_kwd
                 else:
                     total_loss_kwd += profit_kwd
+
+                position_basis[key]["qty"] -= effective_qty
+                position_basis[key]["total_cost"] -= cost_of_sold
+
+                div_alloc = _alloc_div(sym, pf, effective_qty)
+                total_div_alloc_kwd += div_alloc
+
                 details.append({
                     "id": int(row["id"]),
                     "symbol": sym,
                     "portfolio": pf,
                     "txn_date": row["txn_date"],
-                    "shares": safe_float(row["shares"]),
-                    "sell_value": safe_float(row["sell_value"]),
-                    "avg_cost_at_txn": safe_float(row.get("avg_cost_at_txn")),
+                    "shares": effective_qty,
+                    "sell_value": effective_proceeds,
+                    "avg_cost_at_txn": safe_float(row.get("avg_cost_at_txn")) or avg_cost_ps,
                     "realized_pnl": profit,
                     "realized_pnl_kwd": profit_kwd,
                     "dividends_allocated_kwd": round(div_alloc, 3),
                     "net_pnl_kwd": round(profit_kwd + div_alloc, 3),
                     "currency": ccy,
-                    "source": "stored",
+                    "source": source,
                 })
-        else:
-            position_basis: Dict[Tuple[str, str], dict] = {}
-            for _, row in df.iterrows():
-                sym = row["_sym_key"]
-                pf = row["_pf_key"]
-                typ = row["_txn_type_key"]
-                qty = safe_float(row.get("shares"), 0.0)
-                ccy = row.get("currency", "KWD")
-                key = (sym, pf)
-
-                if key not in position_basis:
-                    position_basis[key] = {"qty": 0.0, "total_cost": 0.0, "currency": ccy}
-
-                if typ == "BUY":
-                    cost = safe_float(row.get("purchase_cost"), 0.0)
-                    position_basis[key]["qty"] += qty
-                    position_basis[key]["total_cost"] += cost
-
-                elif typ == "SELL" and qty > 0:
-                    cur_qty = position_basis[key]["qty"]
-                    cur_cost = position_basis[key]["total_cost"]
-                    if cur_qty > 0:
-                        avg_cost_ps = cur_cost / cur_qty
-                        cost_of_sold = avg_cost_ps * qty
-                        proceeds = safe_float(row.get("sell_value"), 0.0)
-                        profit = proceeds - cost_of_sold
-                        profit_kwd = convert_to_kwd(profit, ccy)
-
-                        total_realized_kwd += profit_kwd
-                        if profit_kwd >= 0:
-                            total_profit_kwd += profit_kwd
-                        else:
-                            total_loss_kwd += profit_kwd
-
-                        position_basis[key]["qty"] -= qty
-                        position_basis[key]["total_cost"] -= cost_of_sold
-
-                        div_alloc = _alloc_div(sym, pf, qty)
-                        total_div_alloc_kwd += div_alloc
-
-                        details.append({
-                            "id": int(row["id"]),
-                            "symbol": sym,
-                            "portfolio": pf,
-                            "txn_date": row["txn_date"],
-                            "shares": qty,
-                            "sell_value": proceeds,
-                            "avg_cost_at_txn": avg_cost_ps,
-                            "realized_pnl": profit,
-                            "realized_pnl_kwd": profit_kwd,
-                            "dividends_allocated_kwd": round(div_alloc, 3),
-                            "net_pnl_kwd": round(profit_kwd + div_alloc, 3),
-                            "currency": ccy,
-                            "source": "calculated",
-                        })
 
         return {
             "total_realized_kwd": round(total_realized_kwd, 3),

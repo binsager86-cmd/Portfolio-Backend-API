@@ -286,7 +286,9 @@ async def trading_summary(
             {cost_basis_col},
             {shares_held_col}
         FROM transactions t
-        LEFT JOIN stocks s ON UPPER(t.stock_symbol) = UPPER(s.symbol) AND t.user_id = s.user_id
+        LEFT JOIN stocks s
+            ON UPPER(TRIM(t.stock_symbol)) = UPPER(TRIM(s.symbol)) AND t.user_id = s.user_id
+           AND COALESCE(NULLIF(TRIM(t.portfolio), ''), 'KFH') = COALESCE(NULLIF(TRIM(s.portfolio), ''), 'KFH')
         WHERE t.user_id = ? {soft_del}
         ORDER BY t.txn_date DESC, t.id DESC
     """
@@ -378,8 +380,8 @@ async def trading_summary(
             # realized_pnl_at_txn (Sell transactions)
             if has_realized:
                 stored_rpnl = row.get("realized_pnl_at_txn")
-                snap_rpnl = snap.get("realized_pnl", 0)
-                if (stored_rpnl is None or pd.isna(stored_rpnl)) and snap_rpnl != 0:
+                snap_rpnl = snap.get("realized_pnl")
+                if (stored_rpnl is None or pd.isna(stored_rpnl)) and snap_rpnl is not None:
                     updates["realized_pnl_at_txn"] = round(float(snap_rpnl), 4)
 
             # cost_basis_at_txn

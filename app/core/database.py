@@ -543,6 +543,20 @@ def exec_sql_fetch(sql: str, params: tuple = ()):
 
 def exec_sql_returning_id(sql: str, params: tuple = ()) -> int:
     """Execute an INSERT and return the new row's id."""
+    tx_conn = _TRANSACTION_CONN.get()
+    if tx_conn is not None:
+        clean = sql.rstrip().rstrip(";")
+        if _USE_PG and isinstance(tx_conn, _PgConnProxy):
+            cur = tx_conn._conn.cursor()
+            cur.execute(clean.replace("?", "%s") + " RETURNING id", params)
+        else:
+            cur = tx_conn.cursor()
+            cur.execute(clean, params)
+        if _USE_PG:
+            row = cur.fetchone()
+            return row[0] if row else 0
+        return cur.lastrowid or 0
+
     if _USE_PG:
         clean = sql.rstrip().rstrip(";")
         pg_sql, named = _pg_sql_named(clean + " RETURNING id", params)

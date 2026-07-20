@@ -216,6 +216,8 @@ async def update_deposit(
     updates = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
     if not updates:
         raise BadRequestError("No valid fields to update")
+    if "portfolio" in updates and updates["portfolio"] not in PORTFOLIO_CCY:
+        raise BadRequestError(f"Unknown portfolio '{updates['portfolio']}'")
 
     for field, value in updates.items():
         if hasattr(deposit, field):

@@ -4,7 +4,16 @@ Cash deposit schemas — CRUD request/response models.
 
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+def _normalize_source(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    normalized = value.strip().lower()
+    if normalized not in {"deposit", "withdrawal"}:
+        raise ValueError("source must be deposit or withdrawal")
+    return normalized
 
 
 class CashDepositCreate(BaseModel):
@@ -21,6 +30,11 @@ class CashDepositCreate(BaseModel):
     include_in_analysis: int = Field(1, ge=0, le=1, description="1=include, 0=exclude")
     fx_rate_at_deposit: Optional[float] = None
 
+    @field_validator("source")
+    @classmethod
+    def normalize_source(cls, value: str) -> str:
+        return _normalize_source(value) or "deposit"
+
 
 class CashDepositUpdate(BaseModel):
     """Update a cash deposit (partial)."""
@@ -35,6 +49,11 @@ class CashDepositUpdate(BaseModel):
     comments: Optional[str] = None
     include_in_analysis: Optional[int] = Field(None, ge=0, le=1)
     fx_rate_at_deposit: Optional[float] = None
+
+    @field_validator("source")
+    @classmethod
+    def normalize_source(cls, value: Optional[str]) -> Optional[str]:
+        return _normalize_source(value)
 
 
 class CashDepositResponse(BaseModel):
