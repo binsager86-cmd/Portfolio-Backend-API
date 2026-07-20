@@ -813,7 +813,7 @@ class MetricsCalculateRequest(BaseModel):
 
 class GrahamRequest(BaseModel):
     eps: float
-    book_value_per_share: float
+    book_value_per_share: Optional[float] = None
     growth_rate: float = 0.0
     corporate_yield: float = 4.4
     margin_of_safety: float = 25.0
@@ -5941,12 +5941,21 @@ async def run_graham(
     body: GrahamRequest,
     current_user: TokenData = Depends(get_current_user),
 ):
-    """Run Graham Number valuation."""
+    """Run Graham Growth valuation, with Graham Number compatibility."""
     _ensure_schema()
     _verify_stock_owner(stock_id, current_user.user_id)
 
-    result = _graham_number(body.eps, body.book_value_per_share,
-                             body.margin_of_safety, body.current_price)
+    if body.book_value_per_share is not None:
+        result = _graham_number(body.eps, body.book_value_per_share,
+                                body.margin_of_safety, body.current_price)
+    else:
+        result = _graham_growth(
+            body.eps,
+            body.growth_rate,
+            body.corporate_yield,
+            body.margin_of_safety,
+            body.current_price,
+        )
     _save_valuation(stock_id, result, current_user.user_id)
     return {"status": "ok", "data": result}
 
@@ -8642,6 +8651,57 @@ def _score_risk_detailed(m: Dict[str, float]):
 
 
 # ── Valuation model helpers ──────────────────────────────────────────
+
+def _graham_growth(
+    eps: float,
+    growth_rate: float = 0.0,
+    corporate_yield: float = 4.4,
+    margin_of_safety: float = 25.0,
+    current_price: float | None = None,
+) -> Dict[str, Any]:
+    """Benjamin Graham growth valuation: V = EPS * (8.5 + 2g)."""
+    if eps <= 0:
+        return {
+            "model": "graham",
+            "intrinsic_value": None,
+            "error": "N/A - Unprofitable (EPS <= 0)",
+            "verdict": "N/A - Unprofitable",
+            "parameters": {"eps": eps, "growth_rate": growth_rate},
+        }
+
+    implied_pe = 8.5 + 2 * growth_rate
+    intrinsic_value = eps * implied_pe
+    buy_price_target = intrinsic_value * (1 - margin_of_safety / 100)
+
+    verdict = "N/A - No Current Price"
+    if current_price is not None and intrinsic_value > 0:
+        if current_price <= buy_price_target:
+            verdict = "Undervalued (Buy)"
+        elif current_price <= intrinsic_value:
+            verdict = "Fair Value (Hold)"
+        else:
+            verdict = "Overvalued (Sell/Avoid)"
+
+    return {
+        "model": "graham",
+        "intrinsic_value": round(intrinsic_value, 4),
+        "buy_price_target": round(buy_price_target, 4),
+        "current_price": round(current_price, 4) if current_price is not None else None,
+        "verdict": verdict,
+        "acceptable_buy_price": round(buy_price_target, 4),
+        "parameters": {
+            "eps": eps,
+            "growth_rate": growth_rate,
+            "implied_pe": round(implied_pe, 4),
+            "margin_of_safety": margin_of_safety,
+            "price": round(current_price, 4) if current_price is not None else None,
+        },
+        "assumptions": {
+            "formula": "V = EPS * (8.5 + 2g)",
+            "base_pe": 8.5,
+            "growth_multiplier": 2,
+        },
+    }
 
 def _graham_number(eps: float, book_value_per_share: float,
                    margin_of_safety: float = 25.0,
