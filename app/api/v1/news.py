@@ -23,15 +23,17 @@ import logging
 from datetime import datetime, timedelta, timezone
 from email.utils import format_datetime, parsedate_to_datetime
 from hashlib import md5
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from kombu.exceptions import OperationalError
 
 from app.api.deps import require_admin
 
 from app.core.cache import cache_key, news_cache, get_cached, set_cached
+from app.core.config import get_settings
 from app.core.http_client import fetch_with_retry
 import httpx  # kept for httpx.Client used in _bg_fetch_live (sync background thread)
 
@@ -41,8 +43,13 @@ from app.core.security import TokenData
 from app.models.news import NewsArticle
 
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 router = APIRouter(prefix="/news", tags=["News"])
+
+
+class NewsImportRequest(BaseModel):
+    articles: list[dict[str, Any]] = Field(default_factory=list, max_length=10_000)
 
 BOURSA_API = "https://www.boursakuwait.com.kw/data-api/client-services"
 
@@ -1183,13 +1190,13 @@ async def _async_fetch_all_history(lang: str = "en", job_id: str | None = None) 
 
 @router.post("/import")
 async def import_articles(
-    request: Request,
-    current_user: TokenData = Depends(get_current_user),
+    body: NewsImportRequest,
+    current_user: TokenData = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """Bulk-import articles from JSON. Expects {"articles": [...]}."""
-    body = await request.json()
-    articles = body.get("articles", [])
+    del current_user
+    articles = body.articles
     if not articles:
         return {"inserted": 0, "total": db.query(NewsArticle).count()}
     count = _persist_articles(db, articles)
@@ -1198,11 +1205,13 @@ async def import_articles(
 
 @router.post("/fetch-test")
 async def fetch_test(
-    current_user: TokenData = Depends(get_current_user),
+    current_user: TokenData = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """Quick synchronous test: fetch RT=3507 (small) and report result."""
-    import traceback
+    del current_user
+    if settings.ENVIRONMENT.lower() == "production":
+        raise HTTPException(status_code=404, detail="Not found")
 
     results: dict = {"totalBefore": db.query(NewsArticle).count()}
     try:
@@ -1219,14 +1228,14 @@ async def fetch_test(
                 results["new_inserted"] = count
             results["totalAfter"] = db.query(NewsArticle).count()
     except Exception as e:
+        logger.warning("News fetch-test failed: %s", e, exc_info=True)
         results["error"] = str(e)
-        results["traceback"] = traceback.format_exc()
     return results
 
 
 @router.post("/reclassify")
 async def reclassify_articles(
-    current_user: TokenData = Depends(get_current_user),
+    current_user: TokenData = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """
@@ -1234,6 +1243,7 @@ async def reclassify_articles(
     Use after updating category keywords to fix historical data.
     """
     from collections import Counter
+    del current_user
 
     # Get category distribution before
     before = Counter(

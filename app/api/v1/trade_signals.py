@@ -56,6 +56,43 @@ _QUARTER_OF_MONTH = {
 settings = get_settings()
 
 
+def _derived_financial_data_version(stock_id: int) -> str:
+    """Version marker for user-owned inputs that feed derived signal caches."""
+    row = query_one(
+        """
+        SELECT
+            COALESCE(MAX(ast.updated_at), 0) AS stock_updated_at,
+            COALESCE(MAX(fs.created_at), 0) AS statement_created_at,
+            COALESCE(MAX(fli.edited_at), 0) AS line_item_edited_at,
+            COALESCE(MAX(sm.created_at), 0) AS metric_created_at,
+            COUNT(DISTINCT fs.id) AS statement_count,
+            COUNT(DISTINCT fli.id) AS line_item_count,
+            COUNT(DISTINCT sm.id) AS metric_count
+        FROM analysis_stocks ast
+        LEFT JOIN financial_statements fs ON fs.stock_id = ast.id
+        LEFT JOIN financial_line_items fli ON fli.statement_id = fs.id
+        LEFT JOIN stock_metrics sm ON sm.stock_id = ast.id
+        WHERE ast.id = ?
+        """,
+        (stock_id,),
+    ) or {}
+    parts = [
+        row.get("stock_updated_at") or 0,
+        row.get("statement_created_at") or 0,
+        row.get("line_item_edited_at") or 0,
+        row.get("metric_created_at") or 0,
+        row.get("statement_count") or 0,
+        row.get("line_item_count") or 0,
+        row.get("metric_count") or 0,
+    ]
+    return ":".join(str(part) for part in parts)
+
+
+def _derived_cache_key(prefix: str, user_id: int, stock_id: int, symbol: str) -> str:
+    version = _derived_financial_data_version(stock_id)
+    return f"{prefix}:v4:user:{user_id}:stock:{stock_id}:symbol:{symbol}:fdv:{version}"
+
+
 # ── Scraping helpers ──────────────────────────────────────────────────
 
 
@@ -494,7 +531,7 @@ async def pe_quarterly(
     yf_ticker: Optional[str] = symbol  # symbol already carries the .KW suffix for KWSE
 
     # [P2-4/B-6] Check TTL cache before scraping
-    cache_key = f"pe:v3:{symbol}"
+    cache_key = _derived_cache_key("pe", current_user.user_id, stock_id, symbol)
     cached = _pe_cache.get(cache_key)
     if cached is not None:
         response.headers["X-Cache-Status"] = "HIT"
@@ -958,7 +995,7 @@ async def quarter_movement(
     currency: Optional[str] = stock["currency"]
     exchange: Optional[str] = stock["exchange"]
 
-    cache_key = f"qm:v3:{symbol}"
+    cache_key = _derived_cache_key("qm", current_user.user_id, stock_id, symbol)
     cached = _quarter_movement_cache.get(cache_key)
     if cached is not None:
         response.headers["X-Cache-Status"] = "HIT"

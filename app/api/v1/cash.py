@@ -3,6 +3,7 @@ Cash Deposits API v1 — CRUD for cash deposits/withdrawals.
 """
 
 import io
+import math
 import time
 import logging
 from datetime import date
@@ -10,6 +11,7 @@ from typing import Optional
 
 import pandas as pd
 from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
+from pydantic import ValidationError
 from starlette.responses import StreamingResponse
 
 from app.api.deps import get_current_user
@@ -530,8 +532,8 @@ async def deposits_import(
     if mode not in ("merge", "replace"):
         raise BadRequestError("mode must be 'merge' or 'replace'")
 
-    if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
-        raise BadRequestError("File must be an Excel file (.xlsx or .xls)")
+    if not file.filename or not file.filename.lower().endswith(".xlsx"):
+        raise BadRequestError("File must be an Excel file (.xlsx)")
 
     contents = await file.read()
     if len(contents) > 10 * 1024 * 1024:
@@ -607,6 +609,10 @@ async def deposits_import(
                     errors.append({"row": int(idx) + 2, "error": "Empty amount"})
                     continue
                 amount = float(raw_amount)
+                if not math.isfinite(amount):
+                    skipped += 1
+                    errors.append({"row": int(idx) + 2, "error": "Amount must be finite"})
+                    continue
                 if amount == 0:
                     skipped += 1
                     continue
@@ -621,11 +627,19 @@ async def deposits_import(
 
                 portfolio = _cell_str(row, "portfolio", "KFH")
                 if portfolio not in PORTFOLIO_CCY:
-                    portfolio = "KFH"
+                    skipped += 1
+                    errors.append({"row": int(idx) + 2, "error": f"Unsupported portfolio: {portfolio}"})
+                    continue
                 currency = _cell_str(row, "currency", "KWD").upper()
+                if currency not in set(PORTFOLIO_CCY.values()):
+                    skipped += 1
+                    errors.append({"row": int(idx) + 2, "error": f"Unsupported currency: {currency}"})
+                    continue
                 source = _cell_str(row, "source", "deposit").lower()
                 if source not in ("deposit", "withdrawal"):
-                    source = "deposit"
+                    skipped += 1
+                    errors.append({"row": int(idx) + 2, "error": f"Unsupported source: {source}"})
+                    continue
                 bank_name = _cell_str(row, "bank_name")
                 description = _cell_str(row, "description")
                 comments = _cell_str(row, "comments")
@@ -633,6 +647,32 @@ async def deposits_import(
 
                 include_raw = _cell_str(row, "include_in_analysis", "1")
                 include_in_analysis = 0 if include_raw.lower() in ("0", "no", "false", "record") else 1
+
+                row_fx = row.get("fx_rate_at_deposit") if "fx_rate_at_deposit" in df.columns else fx_rate
+                fx_for_row = None if row_fx is None or (isinstance(row_fx, float) and pd.isna(row_fx)) else float(row_fx)
+                if fx_for_row is not None and (not math.isfinite(fx_for_row) or fx_for_row <= 0):
+                    skipped += 1
+                    errors.append({"row": int(idx) + 2, "error": "FX rate must be positive and finite"})
+                    continue
+
+                try:
+                    CashDepositCreate(
+                        portfolio=portfolio,
+                        deposit_date=dep_date,
+                        amount=amount,
+                        currency=currency,
+                        bank_name=bank_name or None,
+                        source=source,
+                        notes=notes or None,
+                        description=description or None,
+                        comments=comments or None,
+                        include_in_analysis=include_in_analysis,
+                        fx_rate_at_deposit=fx_for_row,
+                    )
+                except (ValidationError, ValueError) as exc:
+                    skipped += 1
+                    errors.append({"row": int(idx) + 2, "error": str(exc).splitlines()[0][:120]})
+                    continue
 
                 exec_sql(
                     """INSERT INTO cash_deposits
@@ -645,7 +685,7 @@ async def deposits_import(
                         user_id, portfolio, dep_date, amount, currency,
                         bank_name, source, source, notes,
                         description, comments, include_in_analysis,
-                        fx_rate, now,
+                        fx_for_row, now,
                     ),
                 )
                 imported += 1

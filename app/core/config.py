@@ -41,9 +41,13 @@ class Settings(BaseSettings):
 
     # Request limits
     MAX_REQUEST_BODY_BYTES: int = 52_428_800    # 50 MB (for PDF uploads)
+    TRUSTED_PROXY_IPS: str = ""                 # Comma-separated proxy IPs allowed to supply X-Forwarded-For
 
     # CORS
     CORS_ORIGINS: str = "http://localhost:19006,http://localhost:8081,http://localhost:3000"
+
+    # Redis / shared infrastructure
+    REDIS_URL: str = ""                         # Used by Celery and shared rate limiting when configured
 
     # FX
     FX_CACHE_TTL: int = 3600  # 1 hour cache for USD/KWD rate

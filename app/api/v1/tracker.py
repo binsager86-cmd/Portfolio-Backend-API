@@ -199,12 +199,7 @@ def _calculate_accumulated_cash(uid: int) -> float:
 
 
 def _create_snapshot_for_deposit(uid: int, deposit_date: str, deposit_kwd: float) -> None:
-    """Create a new snapshot on a date triggered by a deposit.
-
-    Mirrors Streamlit's behaviour: when a deposit is added for a date
-    without a snapshot, a full snapshot is created with the LIVE
-    portfolio value so that TWR calculations remain accurate.
-    """
+    """Create a same-day snapshot triggered by a deposit using live value."""
     import time as _time
 
     # 1. Live portfolio value — single source of truth
@@ -261,11 +256,13 @@ def sync_deposit_to_snapshot(uid: int, deposit_date: str) -> None:
     then recalculate all snapshots so accumulated_cash / net_gain /
     roi_percent cascade.
 
-    Mirrors Streamlit's deposit-triggered snapshot sync:
+        Deposit-triggered snapshot sync:
       - If a snapshot exists for the date → update its deposit_cash
         and recalculate all snapshots.
-      - If no snapshot exists → **create one** with the live portfolio
-        value (matching Streamlit's behaviour for TWR accuracy).
+            - If no snapshot exists and the deposit is dated today → create one
+                with live value.
+            - If no snapshot exists for a historical date → keep the cash flow
+                independent instead of manufacturing a look-ahead valuation.
     """
     # Total deposits for this specific date (KWD-converted)
     day_total_kwd = _sum_deposits_kwd(uid, deposit_date)
@@ -288,7 +285,15 @@ def sync_deposit_to_snapshot(uid: int, deposit_date: str) -> None:
         recalculate_all_snapshots(uid)
         logger.info("Synced deposit_cash=%s KWD for snapshot %s (user %s)", day_total_kwd, deposit_date, uid)
     else:
-        # Create a new snapshot for this deposit date (matches Streamlit)
+        if deposit_date != date.today().isoformat():
+            logger.info(
+                "Skipped synthetic historical snapshot for deposit date %s (user %s); cash flow will sync when a genuine snapshot exists",
+                deposit_date, uid,
+            )
+            recalculate_all_snapshots(uid)
+            return
+
+        # Create a new snapshot only for today's deposit, where live value is valid.
         try:
             _create_snapshot_for_deposit(uid, deposit_date, day_total_kwd)
             # Recalculate all snapshots so the new one integrates properly

@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from starlette.responses import StreamingResponse
 
 from app.api.deps import require_admin
-from app.services.compliance_service import enforce_data_retention, stream_audit_csv
+from app.services.compliance_service import enforce_data_retention, stream_audit_csv, validate_export_window
 
 logger = logging.getLogger(__name__)
 
@@ -35,13 +35,12 @@ async def export_audit_log(
     - PII fields (email, ip_address, token, …) are replaced with ``[REDACTED]``.
     - Yields rows lazily — safe for large datasets.
     """
-    if end <= start:
-        raise HTTPException(status_code=400, detail="end must be after start")
-
     try:
-        generator = stream_audit_csv(start, end)
+        validate_export_window(start, end)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+    generator = stream_audit_csv(start, end)
 
     filename = f"audit_{start.strftime('%Y%m%d')}_{end.strftime('%Y%m%d')}.csv"
     return StreamingResponse(

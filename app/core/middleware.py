@@ -23,6 +23,10 @@ from app.core.logging_config import correlation_id_var
 logger = logging.getLogger(__name__)
 
 
+class RequestBodyTooLarge(Exception):
+    pass
+
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """
     Adds OWASP-recommended security headers to every response.
@@ -98,29 +102,32 @@ class PrivateNetworkAccessMiddleware(BaseHTTPMiddleware):
         return response
 
 
-class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
+class RequestSizeLimitMiddleware:
     """
-    Rejects requests with Content-Length exceeding the configured maximum.
-
-    Catches oversized payloads early before they consume memory.
-    Does NOT read the body — just checks Content-Length header.
+    Reject requests exceeding the configured maximum, including chunked bodies.
     """
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
         settings = get_settings()
         max_bytes = settings.MAX_REQUEST_BODY_BYTES
 
-        content_length = request.headers.get("content-length")
+        headers = {key.lower(): value for key, value in scope.get("headers", [])}
+        content_length = headers.get(b"content-length")
         if content_length and int(content_length) > max_bytes:
             logger.warning(
                 "Request too large: %s bytes from %s %s",
-                content_length,
-                request.method,
-                request.url.path,
+                content_length.decode("ascii", errors="ignore"),
+                scope.get("method"),
+                scope.get("path"),
             )
-            return JSONResponse(
+            response = JSONResponse(
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                 content={
                     "status": "error",
@@ -128,8 +135,37 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
                     "error_code": "PAYLOAD_TOO_LARGE",
                 },
             )
+            await response(scope, receive, send)
+            return
 
-        return await call_next(request)
+        seen = 0
+
+        async def limited_receive():
+            nonlocal seen
+            message = await receive()
+            if message["type"] == "http.request":
+                seen += len(message.get("body") or b"")
+                if seen > max_bytes:
+                    raise RequestBodyTooLarge()
+            return message
+
+        try:
+            await self.app(scope, limited_receive, send)
+        except RequestBodyTooLarge:
+            logger.warning(
+                "Streaming request too large from %s %s",
+                scope.get("method"),
+                scope.get("path"),
+            )
+            response = JSONResponse(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                content={
+                    "status": "error",
+                    "detail": f"Request body too large (max {max_bytes} bytes)",
+                    "error_code": "PAYLOAD_TOO_LARGE",
+                },
+            )
+            await response(scope, receive, send)
 
 
 class CorrelationIDMiddleware(BaseHTTPMiddleware):

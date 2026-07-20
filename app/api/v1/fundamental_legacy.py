@@ -275,6 +275,21 @@ def _ensure_schema() -> None:
 _PDF_UPLOAD_DIR = Path(__file__).resolve().parents[2] / "uploads" / "pdfs"
 
 
+async def _read_validated_pdf(file: UploadFile) -> bytes:
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        raise BadRequestError("Only PDF files are supported.")
+
+    settings = get_settings()
+    pdf_bytes = await file.read()
+    if len(pdf_bytes) < 100:
+        raise BadRequestError("File is too small to be a valid PDF.")
+    if len(pdf_bytes) > settings.MAX_REQUEST_BODY_BYTES:
+        raise BadRequestError(f"File exceeds {settings.MAX_REQUEST_BODY_BYTES} byte limit.")
+    if not pdf_bytes.startswith(b"%PDF-"):
+        raise BadRequestError("Uploaded file is not a valid PDF.")
+    return pdf_bytes
+
+
 def _get_pdf_dir(stock_id: int) -> Path:
     """Return (and create) the per-stock PDF directory."""
     d = _PDF_UPLOAD_DIR / str(stock_id)
@@ -3548,14 +3563,7 @@ async def upload_financial_statement(
     _verify_stock_owner(stock_id, current_user.user_id)
 
     # ── 1. Validate file ─────────────────────────────────────────────
-    if not file.filename or not file.filename.lower().endswith(".pdf"):
-        raise BadRequestError("Only PDF files are supported.")
-
-    pdf_bytes = await file.read()
-    if len(pdf_bytes) < 100:
-        raise BadRequestError("File is too small to be a valid PDF.")
-    if len(pdf_bytes) > 50_000_000:
-        raise BadRequestError("File exceeds 50 MB limit.")
+    pdf_bytes = await _read_validated_pdf(file)
 
     # ── 2. Get Gemini API key ────────────────────────────────────────
     from app.core.config import get_settings
@@ -3615,7 +3623,7 @@ async def upload_financial_statement(
         )
     except Exception as e:
         logger.warning("PDF save failed: %s", e)
-        pdf_upload_id = None
+        raise BadRequestError("Could not persist uploaded PDF for extraction.") from e
 
     # ── 5. Fetch existing codes for AI reuse ─────────────────────────
     existing_codes: List[Dict[str, str]] = []
@@ -3663,20 +3671,26 @@ async def upload_financial_statement(
             raise
         job_id = active["id"] if isinstance(active, dict) else active[0]
 
-    # ── 7. Launch background extraction via asyncio.create_task ──────
-    # [P2-4/B-6] asyncio.create_task runs on the existing event loop and can
-    # call extract_financials (async) directly — no new event loop needed.
-    asyncio.create_task(_run_extraction_job_async(
-        job_id=job_id,
-        stock_id=stock_id,
-        user_id=current_user.user_id,
-        pdf_bytes=pdf_bytes,
-        filename=file.filename or "upload.pdf",
-        model=model,
-        force=force,
-        api_key=api_key,
-        existing_codes=existing_codes,
-    ))
+    # ── 7. Queue durable background extraction in Celery ─────────────
+    try:
+        from app.tasks.fundamental import extract_pdf_task
+        extract_pdf_task.apply_async(
+            kwargs={
+                "job_id": job_id,
+                "stock_id": stock_id,
+                "user_id": current_user.user_id,
+                "pdf_upload_id": pdf_upload_id,
+                "model": model,
+                "force": force,
+                "api_key": api_key,
+                "existing_codes": existing_codes,
+            },
+            queue="heavy_ai",
+        )
+    except Exception as exc:
+        _update_job(job_id, status="failed", error_message="Could not enqueue extraction job", completed_at=int(time.time()))
+        logger.error("Failed to enqueue extraction job %s: %s", job_id, exc)
+        raise HTTPException(status_code=503, detail="Extraction queue is temporarily unavailable") from exc
 
     _log_job(job_id, stock_id, "created", filename=file.filename,
              model=model, pdf_hash=pdf_hash[:12])
@@ -3766,12 +3780,7 @@ async def validate_financial_statement(
     _ensure_schema()
     _verify_stock_owner(stock_id, current_user.user_id)
 
-    if not file.filename or not file.filename.lower().endswith(".pdf"):
-        raise BadRequestError("Only PDF files are supported.")
-
-    pdf_bytes = await file.read()
-    if len(pdf_bytes) < 100:
-        raise BadRequestError("File is too small to be a valid PDF.")
+    pdf_bytes = await _read_validated_pdf(file)
 
     # Get Gemini API key
     from app.core.config import get_settings
@@ -3869,12 +3878,7 @@ async def verify_statement_placement(
     _ensure_schema()
     _verify_stock_owner(stock_id, current_user.user_id)
 
-    if not file.filename or not file.filename.lower().endswith(".pdf"):
-        raise BadRequestError("Only PDF files are supported.")
-
-    pdf_bytes = await file.read()
-    if len(pdf_bytes) < 100:
-        raise BadRequestError("File is too small to be a valid PDF.")
+    pdf_bytes = await _read_validated_pdf(file)
 
     # Get Gemini API key
     from app.core.config import get_settings

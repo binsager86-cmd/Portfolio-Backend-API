@@ -656,6 +656,17 @@ async def forgot_password(request: Request, body: ForgotPasswordRequest):
     user_name = user[2] or username
     user_email = user[3] or email
 
+    recent_reset_count = query_one(
+        "SELECT COUNT(*) FROM password_resets WHERE user_id = ? AND created_at >= ?",
+        (user_id, now - 3600),
+    )
+    if recent_reset_count and int(recent_reset_count[0]) >= 3:
+        logger.warning("Forgot-password account throttle hit for user %s", user_id)
+        return {
+            "status": "ok",
+            "message": "If an account with that email exists, a reset code has been sent.",
+        }
+
     # Invalidate any existing unused OTPs for this user
     exec_sql(
         "UPDATE password_resets SET used = 1 WHERE user_id = ? AND used = 0",

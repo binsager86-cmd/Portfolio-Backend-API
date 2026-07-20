@@ -15,6 +15,7 @@ from typing import Any, Optional
 
 from fastapi import Request
 
+from app.core.client_ip import get_client_ip
 from app.core.database import exec_sql
 
 logger = logging.getLogger(__name__)
@@ -48,15 +49,7 @@ ADMIN_ACTION = "admin.action"
 
 
 def _get_ip(request: Optional[Request] = None) -> Optional[str]:
-    if request is None:
-        return None
-    # Respect X-Forwarded-For behind reverse proxy
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    if request.client:
-        return request.client.host
-    return None
+    return get_client_ip(request)
 
 
 def _get_ua(request: Optional[Request] = None) -> Optional[str]:

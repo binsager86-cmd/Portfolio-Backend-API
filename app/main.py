@@ -382,9 +382,6 @@ _dev_origins = [
     "http://127.0.0.1:8082",
 ]
 
-# In production, match any *.ondigitalocean.app subdomain + explicit CORS_ORIGINS
-_prod_origin_regex = r"https://.*\.ondigitalocean\.app"
-
 # In development, allow localhost/127.0.0.1 on any port so Expo can
 # run on alternate ports (8083, 8084, etc.) without CORS failures.
 _dev_origin_regex = r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$"
@@ -392,7 +389,7 @@ _dev_origin_regex = r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$"
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list if settings.is_production else _dev_origins,
-    allow_origin_regex=_prod_origin_regex if settings.is_production else _dev_origin_regex,
+    allow_origin_regex=None if settings.is_production else _dev_origin_regex,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
