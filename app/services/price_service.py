@@ -329,19 +329,33 @@ def update_all_prices(
                 """
                 SELECT s.id, s.symbol, s.currency, s.yf_ticker, s.pe_ratio,
                     COALESCE(
-                        SUM(CASE WHEN t.txn_type = 'Buy'  THEN t.shares ELSE 0 END) -
-                        SUM(CASE WHEN t.txn_type = 'Sell' THEN t.shares ELSE 0 END),
+                        SUM(CASE
+                            WHEN UPPER(TRIM(t.txn_type)) = 'BUY'
+                                THEN COALESCE(t.shares, 0) + COALESCE(t.bonus_shares, 0)
+                            WHEN UPPER(TRIM(t.txn_type)) = 'SELL'
+                                THEN -COALESCE(t.shares, 0)
+                            ELSE COALESCE(t.bonus_shares, 0)
+                        END),
                     0) AS net_shares
                 FROM stocks s
                 LEFT JOIN transactions t
-                    ON s.symbol = t.stock_symbol AND s.user_id = t.user_id
+                    ON UPPER(TRIM(s.symbol)) = UPPER(TRIM(t.stock_symbol))
+                   AND s.user_id = t.user_id
+                   AND COALESCE(NULLIF(TRIM(s.portfolio), ''), 'KFH') = COALESCE(NULLIF(TRIM(t.portfolio), ''), 'KFH')
+                   AND COALESCE(t.category, 'portfolio') = 'portfolio'
+                   AND COALESCE(t.is_deleted, 0) = 0
                 WHERE s.user_id = ?
                   AND s.symbol IS NOT NULL AND s.symbol != ''
-                                GROUP BY s.id, s.symbol, s.currency, s.yf_ticker, s.pe_ratio
+                GROUP BY s.id, s.symbol, s.currency, s.yf_ticker, s.pe_ratio
                 HAVING COALESCE(
-                        SUM(CASE WHEN t.txn_type = 'Buy'  THEN t.shares ELSE 0 END) -
-                        SUM(CASE WHEN t.txn_type = 'Sell' THEN t.shares ELSE 0 END),
-                       0) > 0.001
+                    SUM(CASE
+                        WHEN UPPER(TRIM(t.txn_type)) = 'BUY'
+                            THEN COALESCE(t.shares, 0) + COALESCE(t.bonus_shares, 0)
+                        WHEN UPPER(TRIM(t.txn_type)) = 'SELL'
+                            THEN -COALESCE(t.shares, 0)
+                        ELSE COALESCE(t.bonus_shares, 0)
+                    END),
+                0) > 0.001
                 """,
                 (user_id,),
             )

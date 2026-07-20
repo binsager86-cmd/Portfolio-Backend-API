@@ -16,6 +16,7 @@ so existing route imports continue to work unmodified.
 
 import logging
 import re
+import threading
 import time
 from datetime import date, timedelta
 from typing import Any, Dict, List, Optional, Tuple
@@ -38,6 +39,25 @@ logger = logging.getLogger(__name__)
 _PE_CACHE_TTL_SEC = 30 * 60
 _PE_CACHE_NEGATIVE_TTL_SEC = 5 * 60
 _pe_lookup_cache: Dict[Tuple[str, str], Tuple[Optional[float], float]] = {}
+_ACCOUNT_BALANCE_CACHE_TTL_SEC = 15.0
+_account_balance_cache: Dict[Tuple[int, Optional[int]], Tuple[float, dict]] = {}
+_account_balance_locks: Dict[Tuple[int, Optional[int]], threading.Lock] = {}
+_account_balance_locks_guard = threading.Lock()
+
+
+def _account_balance_lock(key: Tuple[int, Optional[int]]) -> threading.Lock:
+    with _account_balance_locks_guard:
+        lock = _account_balance_locks.get(key)
+        if lock is None:
+            lock = threading.Lock()
+            _account_balance_locks[key] = lock
+        return lock
+
+
+def _invalidate_account_balance_cache(user_id: int) -> None:
+    for key in list(_account_balance_cache.keys()):
+        if key[0] == user_id:
+            _account_balance_cache.pop(key, None)
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
@@ -532,6 +552,9 @@ class PortfolioService:
 
         Returns dict { portfolio_name: balance }.
         """
+        if force_override or deposit_delta is not None:
+            _invalidate_account_balance_cache(self.user_id)
+
         conn = get_conn()
         try:
             cur = conn.cursor()
@@ -1102,7 +1125,7 @@ class PortfolioService:
     #  Account balances (external_accounts)
     # ------------------------------------------------------------------
 
-    def get_account_balances(self, portfolio_id: Optional[int] = None) -> dict:
+    def get_account_balances(self, portfolio_id: Optional[int] = None, use_cache: bool = True) -> dict:
         """
         Cash balances — always computed LIVE from the canonical formula:
 
@@ -1115,6 +1138,23 @@ class PortfolioService:
         Manual-override balances stored in ``portfolio_cash`` are respected
         (recalc_portfolio_cash skips those portfolios).
         """
+        cache_key = (self.user_id, portfolio_id)
+        if use_cache:
+            cached = _account_balance_cache.get(cache_key)
+            now_ts = time.time()
+            if cached and now_ts - cached[0] <= _ACCOUNT_BALANCE_CACHE_TTL_SEC:
+                return dict(cached[1])
+
+            lock = _account_balance_lock(cache_key)
+            with lock:
+                cached = _account_balance_cache.get(cache_key)
+                now_ts = time.time()
+                if cached and now_ts - cached[0] <= _ACCOUNT_BALANCE_CACHE_TTL_SEC:
+                    return dict(cached[1])
+                result = self.get_account_balances(portfolio_id=portfolio_id, use_cache=False)
+                _account_balance_cache[cache_key] = (time.time(), dict(result))
+                return result
+
         result: dict = {"total_cash_kwd": 0.0, "accounts": []}
 
         try:
