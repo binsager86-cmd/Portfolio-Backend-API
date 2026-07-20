@@ -331,6 +331,28 @@ class _PgConnProxy:
         return cur
 
 
+class _BorrowedTransactionConn:
+    """Connection wrapper for code that calls get_conn() inside transaction()."""
+
+    def __init__(self, conn):
+        self._conn = conn
+
+    def cursor(self):
+        return self._conn.cursor()
+
+    def execute(self, sql, params=None):
+        return self._conn.execute(sql, params)
+
+    def commit(self):
+        return None
+
+    def rollback(self):
+        return None
+
+    def close(self):
+        return None
+
+
 @contextmanager
 def get_connection():
     """
@@ -362,6 +384,10 @@ def get_conn():
     For PostgreSQL: wraps the raw DBAPI connection in _PgConnProxy
     so that ?-style placeholders are translated to %s automatically.
     """
+    tx_conn = _TRANSACTION_CONN.get()
+    if tx_conn is not None:
+        return _BorrowedTransactionConn(tx_conn)
+
     if _USE_PG:
         raw = engine.raw_connection()
         return _PgConnProxy(raw)
@@ -381,6 +407,8 @@ def transaction():
     with get_connection() as conn:
         token = _TRANSACTION_CONN.set(conn)
         try:
+            if not _USE_PG:
+                conn.execute("BEGIN IMMEDIATE")
             yield conn
             conn.commit()
         except Exception:
@@ -392,6 +420,12 @@ def transaction():
 
 def query_df(sql: str, params: tuple = ()) -> pd.DataFrame:
     """Execute a SELECT and return a DataFrame."""
+    tx_conn = _TRANSACTION_CONN.get()
+    if tx_conn is not None:
+        if _USE_PG and isinstance(tx_conn, _PgConnProxy):
+            return pd.read_sql_query(sql.replace("?", "%s"), tx_conn._conn, params=params)
+        return pd.read_sql_query(sql, tx_conn, params=params)
+
     if _USE_PG:
         pg_sql, named = _pg_sql_named(sql, params)
         with engine.connect() as conn:
@@ -402,6 +436,13 @@ def query_df(sql: str, params: tuple = ()) -> pd.DataFrame:
 
 def query_val(sql: str, params: tuple = ()) -> Any:
     """Execute a query and return a single scalar value."""
+    tx_conn = _TRANSACTION_CONN.get()
+    if tx_conn is not None:
+        cur = tx_conn.cursor()
+        cur.execute(sql, params)
+        row = cur.fetchone()
+        return row[0] if row else None
+
     if _USE_PG:
         pg_sql, named = _pg_sql_named(sql, params)
         with engine.connect() as conn:
@@ -421,6 +462,19 @@ def query_one(sql: str, params: tuple = ()):
     Returns a _DualRow for PG (supports both row[0] and row["col"]),
     or a sqlite3.Row for SQLite.
     """
+    tx_conn = _TRANSACTION_CONN.get()
+    if tx_conn is not None:
+        cur = tx_conn.cursor()
+        cur.execute(sql, params)
+        row = cur.fetchone()
+        if row is None:
+            return None
+        if hasattr(row, "keys"):
+            return _DualRow(row.keys(), tuple(row))
+        if getattr(cur, "description", None):
+            return _DualRow([c[0] for c in cur.description], row)
+        return row
+
     if _USE_PG:
         pg_sql, named = _pg_sql_named(sql, params)
         with engine.connect() as conn:
@@ -439,6 +493,21 @@ def query_one(sql: str, params: tuple = ()):
 
 def query_all(sql: str, params: tuple = ()) -> list:
     """Execute a query and return all rows."""
+    tx_conn = _TRANSACTION_CONN.get()
+    if tx_conn is not None:
+        cur = tx_conn.cursor()
+        cur.execute(sql, params)
+        rows = cur.fetchall()
+        if not rows:
+            return []
+        if hasattr(rows[0], "keys"):
+            keys = rows[0].keys()
+        elif getattr(cur, "description", None):
+            keys = [c[0] for c in cur.description]
+        else:
+            return rows
+        return [_DualRow(keys, tuple(r)) for r in rows]
+
     if _USE_PG:
         pg_sql, named = _pg_sql_named(sql, params)
         with engine.connect() as conn:
@@ -530,6 +599,12 @@ def exec_sql_fetchone(sql: str, params: tuple = ()):
 
 def exec_sql_fetch(sql: str, params: tuple = ()):
     """Execute SQL and return all result rows (works for both SQLite and PostgreSQL)."""
+    tx_conn = _TRANSACTION_CONN.get()
+    if tx_conn is not None:
+        cur = tx_conn.cursor()
+        cur.execute(sql, params)
+        return cur.fetchall()
+
     if _USE_PG:
         pg_sql, named = _pg_sql_named(sql, params)
         with engine.connect() as conn:

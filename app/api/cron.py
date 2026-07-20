@@ -8,6 +8,7 @@ Provides:
 """
 
 import logging
+import secrets
 import time
 from typing import Optional
 
@@ -27,21 +28,16 @@ _last_run: dict = {}
 
 def _verify_cron_key(
     x_cron_key: Optional[str] = Header(None, alias="X-Cron-Key"),
-    key: Optional[str] = Query(None),
 ) -> None:
-    """
-    Accept the secret via either:
-      • Header  ``X-Cron-Key: <secret>``
-      • Query   ``?key=<secret>``
-    """
+    """Accept the cron secret only via the X-Cron-Key header."""
     secret = settings.CRON_SECRET_KEY
     if not secret:
         raise HTTPException(
             status_code=503,
             detail="CRON_SECRET_KEY is not configured on the server.",
         )
-    provided = x_cron_key or key
-    if provided != secret:
+    provided = x_cron_key or ""
+    if not secrets.compare_digest(provided, secret):
         raise HTTPException(status_code=403, detail="Invalid cron key.")
 
 
@@ -50,22 +46,19 @@ def _verify_cron_key(
 @router.post("/update-prices")
 async def trigger_price_update(
     x_cron_key: Optional[str] = Header(None, alias="X-Cron-Key"),
-    key: Optional[str] = Query(None),
     user_id: int = Query(1, description="User whose stocks to update"),
     only_holdings: bool = Query(True, description="Only update stocks with positive holdings"),
 ):
     """
     Trigger a full price refresh.
 
-    **Authentication:** pass ``CRON_SECRET_KEY`` as either:
-    - Header ``X-Cron-Key``
-    - Query parameter ``?key=``
+    **Authentication:** pass ``CRON_SECRET_KEY`` as header ``X-Cron-Key``.
 
     Designed to be called by:
     - The built-in APScheduler daily job
     - An external service (GitHub Actions, cron-job.org, etc.)
     """
-    _verify_cron_key(x_cron_key, key)
+    _verify_cron_key(x_cron_key)
 
     logger.info("🚀 Price update triggered (user_id=%d)", user_id)
     result = update_all_prices(user_id=user_id, only_with_holdings=only_holdings)

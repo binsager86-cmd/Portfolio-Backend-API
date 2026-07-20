@@ -11,7 +11,7 @@ import time
 import logging
 import secrets
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.limiter import limiter
@@ -26,7 +26,7 @@ from app.core.config import get_settings
 from app.core.exceptions import UnauthorizedError, ConflictError, BadRequestError
 from app.core.encryption import encrypt_field, decrypt_field
 from pydantic import BaseModel, Field, field_validator
-from app.core.database import query_one, query_val, exec_sql, column_exists, add_column_if_missing
+from app.core.database import query_one, query_val, exec_sql, column_exists, add_column_if_missing, transaction
 from app.core.config import get_settings as _get_settings
 from app.api.deps import get_current_user
 from app.schemas.user import (
@@ -114,10 +114,10 @@ def _reset_lockout(user_id: int) -> None:
 
 # ── Token blacklist helpers ──────────────────────────────────────────
 
-def _blacklist_token(jti: str, user_id: int, expires_at: int) -> None:
+def _blacklist_token(jti: str, user_id: int, expires_at: int) -> bool:
     """Add a refresh token's JTI to the blacklist."""
     if not jti:
-        return
+        return True
     try:
         exec_sql(
             "INSERT INTO token_blacklist (jti, user_id, blacklisted_at, expires_at) "
@@ -125,8 +125,10 @@ def _blacklist_token(jti: str, user_id: int, expires_at: int) -> None:
             "ON CONFLICT DO NOTHING",
             (jti, user_id, int(time.time()), expires_at),
         )
+        return True
     except Exception as exc:
         logger.error("Token blacklist write failed: %s", exc)
+        return False
 
 
 def _is_token_blacklisted(jti: str) -> bool:
@@ -168,7 +170,7 @@ def _is_refresh_token_revoked_for_user(user_id: int, issued_at: int | None) -> b
         return False
     if not issued_at:
         return True
-    return int(issued_at) < int(revoked_at)
+    return int(issued_at) <= int(revoked_at)
 
 
 # ── Helper: build token response ─────────────────────────────────────
@@ -277,11 +279,16 @@ async def refresh_token(request: Request, body: RefreshRequest):
     is_admin = bool(is_admin_val) if is_admin_val else False
 
     # Blacklist the old refresh token
-    _blacklist_token(
+    blacklisted = _blacklist_token(
         jti=token_data.jti or "",
         user_id=token_data.user_id,
         expires_at=token_data.exp or 0,
     )
+    if not blacklisted:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Could not rotate refresh token safely",
+        )
 
     # Issue rotated tokens
     new_access = create_access_token(token_data.user_id, token_data.username, is_admin=is_admin)
@@ -807,24 +814,24 @@ async def reset_password(request: Request, body: ResetPasswordRequest):
         )
         raise BadRequestError("Invalid reset code")
 
-    # All verified — update password
     new_hash = hash_password(body.new_password)
-    exec_sql(
-        "UPDATE users SET password_hash = ? WHERE id = ?",
-        (new_hash, user_id),
-    )
-    _revoke_user_refresh_tokens(user_id)
-
-    # Mark OTP as used
-    exec_sql("UPDATE password_resets SET used = 1 WHERE id = ?", (otp_id,))
-
-    # Clear any lockout
-    _reset_lockout(user_id)
-
-    log_event(
-        "auth.password_reset",
-        user_id=user_id,
-        request=request,
-    )
+    with transaction():
+        consumed_id = query_val(
+            "UPDATE password_resets SET used = 1 WHERE id = ? AND used = 0 RETURNING id",
+            (otp_id,),
+        )
+        if not consumed_id:
+            raise BadRequestError("Invalid or expired reset code")
+        exec_sql(
+            "UPDATE users SET password_hash = ? WHERE id = ?",
+            (new_hash, user_id),
+        )
+        _revoke_user_refresh_tokens(user_id)
+        _reset_lockout(user_id)
+        log_event(
+            "auth.password_reset",
+            user_id=user_id,
+            request=request,
+        )
 
     return {"status": "ok", "message": "Password has been reset successfully"}

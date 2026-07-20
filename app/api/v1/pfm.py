@@ -4,18 +4,54 @@ PFM (Personal Finance Management) API v1 — net-worth snapshots.
 
 import time
 import logging
-from typing import Optional
+from datetime import date
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel, Field
 
 from app.api.deps import get_current_user
 from app.core.security import TokenData
 from app.core.exceptions import NotFoundError, BadRequestError
-from app.core.database import query_df, query_one, query_val, exec_sql, get_connection
+from app.core.database import query_df, query_one, query_val, exec_sql, exec_sql_returning_id, get_connection, transaction
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/pfm", tags=["PFM"])
+
+
+class PFMAssetCreate(BaseModel):
+    asset_type: str = Field(..., min_length=1, max_length=80)
+    category: str = Field(..., min_length=1, max_length=80)
+    name: str = Field(..., min_length=1, max_length=160)
+    quantity: Optional[float] = Field(None, ge=0, allow_inf_nan=False)
+    price: Optional[float] = Field(None, ge=0, allow_inf_nan=False)
+    currency: str = Field("KWD", max_length=10)
+    value_kwd: float = Field(ge=0, allow_inf_nan=False)
+
+
+class PFMLiabilityCreate(BaseModel):
+    category: str = Field(..., min_length=1, max_length=100)
+    amount_kwd: float = Field(ge=0, allow_inf_nan=False)
+    is_current: bool = False
+    is_long_term: bool = False
+
+
+class PFMIncomeExpenseCreate(BaseModel):
+    kind: Literal["income", "expense"]
+    category: str = Field(..., min_length=1, max_length=100)
+    monthly_amount: float = Field(ge=0, allow_inf_nan=False)
+    is_finance_cost: bool = False
+    is_gna: bool = False
+    sort_order: int = Field(0, ge=0, le=10_000)
+
+
+class PFMSnapshotCreate(BaseModel):
+    snapshot_date: date
+    notes: Optional[str] = Field(None, max_length=2000)
+    assets: list[PFMAssetCreate] = Field(default_factory=list, max_length=500)
+    liabilities: list[PFMLiabilityCreate] = Field(default_factory=list, max_length=500)
+    income_expenses: list[PFMIncomeExpenseCreate] = Field(default_factory=list, max_length=500)
 
 
 @router.get("/snapshots")
@@ -99,82 +135,73 @@ async def get_pfm_snapshot(
 
 @router.post("/snapshots", status_code=201)
 async def create_pfm_snapshot(
-    body: dict,
+    body: PFMSnapshotCreate,
     current_user: TokenData = Depends(get_current_user),
 ):
     """
     Create a new PFM net-worth snapshot with assets, liabilities, and income/expenses.
     """
-    snapshot_date = body.get("snapshot_date")
-    if not snapshot_date:
-        raise BadRequestError("snapshot_date is required")
+    snapshot_date = body.snapshot_date.isoformat()
+    assets = body.assets
+    liabilities = body.liabilities
+    income_expenses = body.income_expenses
 
-    notes = body.get("notes")
-    assets = body.get("assets", [])
-    liabilities = body.get("liabilities", [])
-    income_expenses = body.get("income_expenses", [])
-
-    total_assets = sum(float(a.get("value_kwd", 0)) for a in assets)
-    total_liabilities = sum(float(l.get("amount_kwd", 0)) for l in liabilities)
+    total_assets = sum(float(a.value_kwd) for a in assets)
+    total_liabilities = sum(float(l.amount_kwd) for l in liabilities)
     net_worth = total_assets - total_liabilities
 
     now = int(time.time())
 
-    with get_connection() as conn:
-        cur = conn.cursor()
-
+    with transaction():
         # Insert snapshot
-        cur.execute(
+        snapshot_id = exec_sql_returning_id(
             """INSERT INTO pfm_snapshots
                (user_id, snapshot_date, notes, total_assets, total_liabilities, net_worth, created_at)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (current_user.user_id, snapshot_date, notes,
+            (current_user.user_id, snapshot_date, body.notes,
              total_assets, total_liabilities, net_worth, now),
         )
-        snapshot_id = cur.lastrowid
 
         # Insert assets
         for a in assets:
-            cur.execute(
+            exec_sql(
                 """INSERT INTO pfm_assets
                    (snapshot_id, user_id, asset_type, category, name,
                     quantity, price, currency, value_kwd, created_at)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (snapshot_id, current_user.user_id,
-                 a.get("asset_type"), a.get("category"), a.get("name"),
-                 a.get("quantity"), a.get("price"), a.get("currency", "KWD"),
-                 a.get("value_kwd", 0), now),
+                 a.asset_type, a.category, a.name,
+                 a.quantity, a.price, a.currency,
+                 a.value_kwd, now),
             )
 
         # Insert liabilities
         for l in liabilities:
-            cur.execute(
+            exec_sql(
                 """INSERT INTO pfm_liabilities
                    (snapshot_id, user_id, category, amount_kwd,
                     is_current, is_long_term, created_at)
                    VALUES (?, ?, ?, ?, ?, ?, ?)""",
                 (snapshot_id, current_user.user_id,
-                 l.get("category"), l.get("amount_kwd", 0),
-                 int(l.get("is_current", False)),
-                 int(l.get("is_long_term", False)), now),
+                 l.category, l.amount_kwd,
+                 int(l.is_current),
+                 int(l.is_long_term), now),
             )
 
         # Insert income/expenses
         for ie in income_expenses:
-            cur.execute(
+            exec_sql(
                 """INSERT INTO pfm_income_expenses
                    (snapshot_id, user_id, kind, category, monthly_amount,
                     is_finance_cost, is_gna, sort_order, created_at)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (snapshot_id, current_user.user_id,
-                 ie.get("kind"), ie.get("category"),
-                 ie.get("monthly_amount", 0),
-                 int(ie.get("is_finance_cost", False)),
-                 int(ie.get("is_gna", False)),
-                 ie.get("sort_order", 0), now),
+                 ie.kind, ie.category,
+                 ie.monthly_amount,
+                 int(ie.is_finance_cost),
+                 int(ie.is_gna),
+                 ie.sort_order, now),
             )
-
-        conn.commit()
 
     return {
         "status": "ok",

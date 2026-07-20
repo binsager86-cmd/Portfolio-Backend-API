@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field
 from app.api.deps import get_current_user
 from app.core.security import TokenData
 from app.core.exceptions import BadRequestError
-from app.core.database import query_df, query_val, exec_sql, add_column_if_missing
+from app.core.database import query_df, query_val, exec_sql, exec_sql_fetchone, add_column_if_missing, transaction
 from app.services.portfolio_service import build_portfolio_table, get_total_portfolio_value
 from app.services.fx_service import convert_to_kwd
 
@@ -39,6 +39,18 @@ def _ensure_deposit_adjustment_col() -> None:
         add_column_if_missing("portfolio_snapshots", "deposit_adjustment", "REAL DEFAULT 0")
     except Exception as exc:
         logger.warning("Could not ensure deposit_adjustment column: %s", exc)
+
+
+def _cash_flow_kwd(row) -> float:
+    amount = float(row["amount"] or 0.0)
+    source = str(row.get("source", "deposit") or "deposit").strip().lower()
+    currency = str(row.get("currency", "KWD") or "KWD").strip().upper()
+    fx_rate = row.get("fx_rate_at_deposit")
+    if source == "withdrawal":
+        amount = -amount
+    if currency == "USD" and fx_rate:
+        return amount * float(fx_rate)
+    return convert_to_kwd(amount, currency)
 
 
 def recalculate_all_snapshots(uid: int) -> int:
@@ -64,83 +76,81 @@ def recalculate_all_snapshots(uid: int) -> int:
     Returns the number of snapshots updated.
     """
     _ensure_deposit_adjustment_col()
-
-    # ── Phase 0: Undo deposit_adjustment corruption ──────────────────
-    # Previous logic wrongly inflated portfolio_value by deposit amounts.
-    # Reverse it: subtract stored adjustment, then zero the column.
-    exec_sql(
-        """UPDATE portfolio_snapshots
-           SET portfolio_value = portfolio_value - COALESCE(deposit_adjustment, 0),
-               deposit_adjustment = 0
-           WHERE user_id = ? AND COALESCE(deposit_adjustment, 0) != 0""",
-        (uid,),
-    )
-
-    # ── Phase 1: Re-sync deposit_cash for every snapshot ─────────────
-    # Reset all deposit_cash to 0
-    exec_sql(
-        "UPDATE portfolio_snapshots SET deposit_cash = 0 WHERE user_id = ?",
-        (uid,),
-    )
-    # Re-set deposit_cash for dates that have active deposits
-    dep_dates = query_df(
-        """SELECT DISTINCT deposit_date
-           FROM cash_deposits
-           WHERE user_id = ? AND COALESCE(is_deleted, 0) = 0""",
-        (uid,),
-    )
-    for _, dd in dep_dates.iterrows():
-        day_kwd = _sum_deposits_kwd(uid, dd["deposit_date"])
-        exec_sql(
-            """UPDATE portfolio_snapshots SET deposit_cash = ?
-               WHERE user_id = ? AND snapshot_date = ?""",
-            (day_kwd, uid, dd["deposit_date"]),
-        )
-
-    # ── Phase 2: Derived metrics ─────────────────────────────────────
-    df = query_df(
-        """SELECT id, snapshot_date, portfolio_value, deposit_cash
-           FROM portfolio_snapshots
-           WHERE user_id = ?
-           ORDER BY snapshot_date ASC""",
-        (uid,),
-    )
-    if df.empty:
-        return 0
-
-    first_value = float(df.iloc[0]["portfolio_value"])
-    prev_value = 0.0
-    running_accumulated = 0.0
-    updated = 0
-
-    for _, row in df.iterrows():
-        snap_id = int(row["id"])
-        pv = float(row["portfolio_value"])
-        deposit_cash = float(row["deposit_cash"]) if row["deposit_cash"] else 0.0
-
-        daily_movement = round(pv - prev_value, 3) if prev_value > 0 else 0.0
-        beginning_difference = round(pv - first_value, 3)
-        running_accumulated += deposit_cash
-        accumulated_cash = round(running_accumulated, 3)
-        net_gain = round(beginning_difference - accumulated_cash, 3)
-        change_percent = round((pv - prev_value) / prev_value * 100, 2) if prev_value > 0 else 0.0
-        roi_percent = round(net_gain / accumulated_cash * 100, 2) if accumulated_cash > 0 else 0.0
-
+    with transaction():
+        # ── Phase 0: Undo deposit_adjustment corruption ──────────────────
         exec_sql(
             """UPDATE portfolio_snapshots
-               SET daily_movement = ?, beginning_difference = ?,
-                   accumulated_cash = ?, net_gain = ?,
-                   change_percent = ?, roi_percent = ?
-               WHERE id = ? AND user_id = ?""",
-            (daily_movement, beginning_difference,
-             accumulated_cash, net_gain,
-             change_percent, roi_percent,
-             snap_id, uid),
+               SET portfolio_value = portfolio_value - COALESCE(deposit_adjustment, 0),
+                   deposit_adjustment = 0
+               WHERE user_id = ? AND COALESCE(deposit_adjustment, 0) != 0""",
+            (uid,),
         )
-        prev_value = pv
-        updated += 1
 
-    return updated
+        dep_dates = query_df(
+            """SELECT DISTINCT deposit_date
+               FROM cash_deposits
+               WHERE user_id = ?
+                 AND COALESCE(include_in_analysis, 1) = 1
+                 AND COALESCE(is_deleted, 0) = 0""",
+            (uid,),
+        )
+        deposit_by_date = {
+            dd["deposit_date"]: _sum_deposits_kwd(uid, dd["deposit_date"])
+            for _, dd in dep_dates.iterrows()
+        }
+
+        df = query_df(
+            """SELECT id, snapshot_date, portfolio_value
+               FROM portfolio_snapshots
+               WHERE user_id = ?
+               ORDER BY snapshot_date ASC, id ASC""",
+            (uid,),
+        )
+        if df.empty:
+            return 0
+
+        first_value = float(df.iloc[0]["portfolio_value"])
+        first_flow = round(float(deposit_by_date.get(df.iloc[0]["snapshot_date"], 0.0)), 3)
+        prev_value = 0.0
+        running_accumulated = 0.0
+        updated = 0
+
+        for idx, row in df.iterrows():
+            snap_id = int(row["id"])
+            snap_date = row["snapshot_date"]
+            pv = float(row["portfolio_value"])
+            deposit_cash = round(float(deposit_by_date.get(snap_date, 0.0)), 3)
+
+            if idx == 0:
+                daily_movement = 0.0
+                change_percent = 0.0
+            else:
+                daily_movement = round(pv - prev_value - deposit_cash, 3)
+                change_percent = round(daily_movement / prev_value * 100, 2) if prev_value > 0 else 0.0
+
+            beginning_difference = round(pv - first_value, 3)
+            running_accumulated += deposit_cash
+            accumulated_cash = round(running_accumulated, 3)
+            net_external_after_baseline = running_accumulated - first_flow
+            net_gain = round(beginning_difference - net_external_after_baseline, 3)
+            roi_base = first_value + max(net_external_after_baseline, 0.0)
+            roi_percent = round(net_gain / roi_base * 100, 2) if roi_base > 0 and idx != 0 else 0.0
+
+            exec_sql(
+                """UPDATE portfolio_snapshots
+                   SET deposit_cash = ?, daily_movement = ?, beginning_difference = ?,
+                       accumulated_cash = ?, net_gain = ?,
+                       change_percent = ?, roi_percent = ?
+                   WHERE id = ? AND user_id = ?""",
+                (deposit_cash, daily_movement, beginning_difference,
+                 accumulated_cash, net_gain,
+                 change_percent, roi_percent,
+                 snap_id, uid),
+            )
+            prev_value = pv
+            updated += 1
+
+        return updated
 
 
 def _sum_deposits_kwd(uid: int, deposit_date: str) -> float:
@@ -150,9 +160,12 @@ def _sum_deposits_kwd(uid: int, deposit_date: str) -> float:
     (``convert_to_kwd(amount, currency)``).
     """
     rows = query_df(
-        """SELECT amount, COALESCE(currency, 'KWD') AS currency
+        """SELECT amount, COALESCE(currency, 'KWD') AS currency,
+                  COALESCE(source, 'deposit') AS source,
+                  fx_rate_at_deposit
            FROM cash_deposits
            WHERE user_id = ? AND deposit_date = ?
+             AND COALESCE(include_in_analysis, 1) = 1
              AND COALESCE(is_deleted, 0) = 0""",
         (uid, deposit_date),
     )
@@ -160,7 +173,7 @@ def _sum_deposits_kwd(uid: int, deposit_date: str) -> float:
         return 0.0
     total = 0.0
     for _, r in rows.iterrows():
-        total += convert_to_kwd(float(r["amount"]), str(r["currency"]))
+        total += _cash_flow_kwd(r)
     return round(total, 3)
 
 
@@ -360,45 +373,35 @@ async def save_snapshot(
 
     now = int(time.time())
 
-    # ── 7. Upsert (replace if same date) ─────────────────────────────
+    # ── 7. Atomic upsert (replace if same date) ──────────────────────
     existing_id = query_val(
         "SELECT id FROM portfolio_snapshots WHERE user_id = ? AND snapshot_date = ?",
         (uid, today),
     )
-
-    if existing_id:
-        exec_sql(
-            """UPDATE portfolio_snapshots SET
-                portfolio_value = ?, daily_movement = ?,
-                beginning_difference = ?, deposit_cash = ?,
-                accumulated_cash = ?, net_gain = ?,
-                roi_percent = ?, change_percent = ?,
-                created_at = ?
-               WHERE id = ? AND user_id = ?""",
-            (portfolio_value, daily_movement,
-             beginning_difference, deposit_cash,
-             accumulated_cash, net_gain,
-             roi_percent, change_percent, now,
-             existing_id, uid),
-        )
-        snapshot_id = existing_id
-        action = "updated"
-    else:
-        exec_sql(
+    with transaction():
+        upserted = exec_sql_fetchone(
             """INSERT INTO portfolio_snapshots
                (user_id, snapshot_date, portfolio_value, daily_movement,
                 beginning_difference, deposit_cash, accumulated_cash,
                 net_gain, roi_percent, change_percent, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(user_id, snapshot_date) DO UPDATE SET
+                    portfolio_value = excluded.portfolio_value,
+                    daily_movement = excluded.daily_movement,
+                    beginning_difference = excluded.beginning_difference,
+                    deposit_cash = excluded.deposit_cash,
+                    accumulated_cash = excluded.accumulated_cash,
+                    net_gain = excluded.net_gain,
+                    roi_percent = excluded.roi_percent,
+                    change_percent = excluded.change_percent,
+                    created_at = excluded.created_at
+               RETURNING id""",
             (uid, today, portfolio_value, daily_movement,
              beginning_difference, deposit_cash, accumulated_cash,
              net_gain, roi_percent, change_percent, now),
         )
-        snapshot_id = query_val(
-            "SELECT id FROM portfolio_snapshots WHERE user_id = ? ORDER BY id DESC LIMIT 1",
-            (uid,),
-        )
-        action = "created"
+    snapshot_id = upserted[0]
+    action = "updated" if existing_id else "created"
 
     # ── 8. Auto-recalculate ALL snapshots (Streamlit parity) ─────────
     # Mirrors the Streamlit recalculate button: rebuilds deposit_cash

@@ -21,7 +21,7 @@ from cachetools import TTLCache
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_admin
 from app.core.config import get_settings
 from app.core.database import query_all, query_one
 from app.core.security import TokenData
@@ -722,7 +722,7 @@ async def technical_batch_run(
     segment: str = Query(default="PREMIER", description="Segment label used by signal model"),
     max_concurrency: int = Query(default=4, ge=1, le=8),
     limit: Optional[int] = Query(default=None, ge=1, le=500),
-    current_user: TokenData = Depends(get_current_user),
+    current_user: TokenData = Depends(require_admin),
 ):
     """Trigger technical universe scoring for all configured Kuwait symbols."""
     from app.services.technical_batch_service import kickoff_batch_background, run_batch_once

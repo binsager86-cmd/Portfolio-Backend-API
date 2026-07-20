@@ -245,6 +245,20 @@ def ensure_all_tables() -> None:
                 created_at          INTEGER
             )
         """)
+        exec_sql("""
+            DELETE FROM portfolio_snapshots
+            WHERE id NOT IN (
+                SELECT keep_id FROM (
+                    SELECT MAX(id) AS keep_id
+                    FROM portfolio_snapshots
+                    GROUP BY user_id, snapshot_date
+                ) AS keepers
+            )
+        """)
+        exec_sql("""
+            CREATE UNIQUE INDEX IF NOT EXISTS ux_portfolio_snapshots_user_date
+            ON portfolio_snapshots(user_id, snapshot_date)
+        """)
         logger.info("✅  portfolio_snapshots table ensured")
     except Exception as e:
         logger.warning("⚠️  portfolio_snapshots table creation skipped: %s", e)

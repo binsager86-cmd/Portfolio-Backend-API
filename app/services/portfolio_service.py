@@ -536,6 +536,7 @@ class PortfolioService:
         force_override: bool = False,
         deposit_delta: Optional[float] = None,
         delta_portfolio: Optional[str] = None,
+        conn=None,
     ) -> Dict[str, float]:
         """
         Recalculate absolute cash balance for each portfolio.
@@ -555,7 +556,8 @@ class PortfolioService:
         if force_override or deposit_delta is not None:
             _invalidate_account_balance_cache(self.user_id)
 
-        conn = get_conn()
+        owns_connection = conn is None
+        conn = conn or get_conn()
         try:
             cur = conn.cursor()
 
@@ -703,14 +705,16 @@ class PortfolioService:
             except Exception as exc:
                 logger.debug("stale portfolio_cash cleanup skipped: %s", exc)
 
-            conn.commit()
+            if owns_connection:
+                conn.commit()
             return balances
 
         except Exception as exc:
             logger.error("recalc_portfolio_cash failed: %s", exc)
             raise
         finally:
-            conn.close()
+            if owns_connection:
+                conn.close()
 
     # ------------------------------------------------------------------
     #  Realized profit details (ui.py L20204-20398)

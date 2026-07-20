@@ -19,7 +19,7 @@ from starlette.responses import StreamingResponse
 from app.api.deps import get_current_user
 from app.core.security import TokenData
 from app.core.exceptions import NotFoundError, BadRequestError
-from app.core.database import query_df, query_one, exec_sql, exec_sql_returning_id, column_exists, transaction
+from app.core.database import query_df, query_one, query_all, exec_sql, exec_sql_returning_id, column_exists, transaction
 from app.services.portfolio_service import (
     PortfolioService,
     get_complete_overview,
@@ -85,6 +85,83 @@ def _held_shares_before_txn(user_id: int, portfolio: str, symbol: str) -> float:
         (user_id, symbol.strip().upper(), portfolio),
     )
     return float((row or {}).get("shares_held") or 0.0)
+
+
+def _validate_transaction_domain(txn: dict) -> None:
+    allowed_types = ("Buy", "Sell", "DIVIDEND_ONLY")
+    portfolio = txn.get("portfolio")
+    txn_type = txn.get("txn_type")
+    shares = float(txn.get("shares") or 0)
+    if portfolio not in PORTFOLIO_CCY:
+        raise BadRequestError(f"Unknown portfolio '{portfolio}'")
+    if txn_type not in allowed_types:
+        raise BadRequestError(f"txn_type must be one of {allowed_types}")
+    if txn_type == "Buy" and not txn.get("purchase_cost"):
+        raise BadRequestError("purchase_cost required for Buy transactions")
+    if txn_type == "Sell" and not txn.get("sell_value"):
+        raise BadRequestError("sell_value required for Sell transactions")
+    if txn_type in ("Buy", "Sell") and shares <= 0:
+        raise BadRequestError(f"shares must be > 0 for {txn_type} transactions")
+    if txn_type == "DIVIDEND_ONLY":
+        has_any = (
+            float(txn.get("cash_dividend") or 0) > 0
+            or float(txn.get("reinvested_dividend") or 0) > 0
+            or float(txn.get("bonus_shares") or 0) > 0
+        )
+        if not has_any:
+            raise BadRequestError(
+                "DIVIDEND_ONLY requires at least one of: cash_dividend, reinvested_dividend, bonus_shares"
+            )
+
+
+def validate_and_replay_position(
+    user_id: int,
+    portfolio: str,
+    symbol: str,
+    proposed_transaction: dict,
+    exclude_transaction_id: Optional[int] = None,
+) -> None:
+    _validate_transaction_domain(proposed_transaction)
+    rows = query_all(
+        """SELECT id, portfolio, stock_symbol, txn_date, txn_type, shares,
+                  bonus_shares, created_at
+           FROM transactions
+           WHERE user_id = ?
+             AND UPPER(TRIM(stock_symbol)) = ?
+             AND COALESCE(NULLIF(TRIM(portfolio), ''), 'KFH') = COALESCE(NULLIF(TRIM(?), ''), 'KFH')
+             AND COALESCE(category, 'portfolio') = 'portfolio'
+             AND COALESCE(is_deleted, 0) = 0
+             AND (? IS NULL OR id != ?)""",
+        (user_id, symbol.strip().upper(), portfolio, exclude_transaction_id, exclude_transaction_id),
+    )
+    timeline = [dict(row) for row in rows]
+    timeline.append({
+        "id": proposed_transaction.get("id") or exclude_transaction_id or 0,
+        "portfolio": portfolio,
+        "stock_symbol": symbol,
+        "txn_date": proposed_transaction.get("txn_date") or "",
+        "txn_type": proposed_transaction.get("txn_type"),
+        "shares": proposed_transaction.get("shares") or 0,
+        "bonus_shares": proposed_transaction.get("bonus_shares") or 0,
+        "created_at": proposed_transaction.get("created_at") or int(time.time()),
+    })
+    timeline.sort(key=lambda row: (str(row.get("txn_date") or ""), int(row.get("created_at") or 0), int(row.get("id") or 0)))
+
+    shares_held = 0.0
+    for row in timeline:
+        txn_type = str(row.get("txn_type") or "").strip()
+        shares = float(row.get("shares") or 0)
+        bonus = float(row.get("bonus_shares") or 0)
+        if txn_type == "Buy":
+            shares_held += shares + bonus
+        elif txn_type == "Sell":
+            shares_held -= shares
+        else:
+            shares_held += bonus
+        if shares_held < -1e-9:
+            raise BadRequestError(
+                f"Transaction would oversell {symbol.strip().upper()} in {portfolio}"
+            )
 
 
 # ── Overview ─────────────────────────────────────────────────────────
@@ -426,6 +503,9 @@ async def create_transaction(
         if not has_any:
             raise BadRequestError("DIVIDEND_ONLY requires at least one of: cash_dividend, reinvested_dividend, bonus_shares")
 
+    proposed_txn = txn.model_dump()
+    proposed_txn["created_at"] = int(time.time())
+
     now = int(time.time())
 
     # Capture FX rate at transaction time (matches Streamlit's get_current_fx_rate())
@@ -435,7 +515,13 @@ async def create_transaction(
         current_fx = None
 
     svc = PortfolioService(current_user.user_id)
-    with transaction():
+    with transaction() as conn:
+        validate_and_replay_position(
+            current_user.user_id,
+            txn.portfolio,
+            txn.stock_symbol,
+            proposed_txn,
+        )
         new_id = exec_sql_returning_id(
             """INSERT INTO transactions
                (user_id, portfolio, stock_symbol, txn_date, txn_type, shares,
@@ -497,7 +583,7 @@ async def create_transaction(
             txn.fees or 0.0,
         )
         svc.recalc_portfolio_cash(
-            deposit_delta=delta, delta_portfolio=txn.portfolio,
+            deposit_delta=delta, delta_portfolio=txn.portfolio, conn=conn,
         )
 
     # Return fresh cash balance so frontend can update immediately
@@ -524,8 +610,9 @@ async def update_transaction(
     """Update an existing transaction."""
     # Read old values so we can compute the delta (old → new) for manual-override cash
     existing = query_one(
-        "SELECT id, portfolio, txn_type, purchase_cost, sell_value, "
-        "       cash_dividend, fees "
+        "SELECT id, portfolio, stock_symbol, txn_date, txn_type, shares, "
+        "       purchase_cost, sell_value, bonus_shares, cash_dividend, "
+        "       reinvested_dividend, fees, created_at "
         "FROM transactions WHERE id = ? AND user_id = ? AND COALESCE(is_deleted, 0) = 0",
         (txn_id, current_user.user_id),
     )
@@ -549,24 +636,13 @@ async def update_transaction(
     set_clause = ", ".join(f"{k} = ?" for k in updates)
     params = list(updates.values()) + [txn_id, current_user.user_id]
 
-    exec_sql(
-        f"UPDATE transactions SET {set_clause} WHERE id = ? AND user_id = ?",
-        tuple(params),
-    )
-
-    log_event(
-        TXN_UPDATE,
-        user_id=current_user.user_id,
-        resource_type="transaction",
-        resource_id=txn_id,
-        details={"updated_fields": list(updates.keys())},
-        request=request,
-    )
-
     # ── Ledger: recalculate portfolio cash (respects manual_override — matches Streamlit)
     # Compute new delta from the updated fields (fall back to old values)
     new_txn_type = updates.get("txn_type", existing["txn_type"])
     new_portfolio = updates.get("portfolio", old_portfolio)
+    new_symbol = updates.get("stock_symbol", existing["stock_symbol"])
+    proposed_txn = dict(existing)
+    proposed_txn.update(updates)
     new_delta = _txn_cash_delta(
         new_txn_type,
         float(updates.get("purchase_cost", existing["purchase_cost"] or 0)),
@@ -576,15 +652,37 @@ async def update_transaction(
     )
 
     svc = PortfolioService(current_user.user_id)
-    if old_portfolio != new_portfolio:
-        # Portfolio changed: reverse old delta on old portfolio, apply new delta on new portfolio
-        svc.recalc_portfolio_cash(deposit_delta=-old_delta, delta_portfolio=old_portfolio)
-        svc.recalc_portfolio_cash(deposit_delta=new_delta, delta_portfolio=new_portfolio)
-    else:
-        # Same portfolio: apply the difference
-        svc.recalc_portfolio_cash(
-            deposit_delta=new_delta - old_delta, delta_portfolio=new_portfolio,
+    with transaction() as conn:
+        validate_and_replay_position(
+            current_user.user_id,
+            new_portfolio,
+            new_symbol,
+            proposed_txn,
+            exclude_transaction_id=txn_id,
         )
+        exec_sql(
+            f"UPDATE transactions SET {set_clause} WHERE id = ? AND user_id = ?",
+            tuple(params),
+        )
+
+        log_event(
+            TXN_UPDATE,
+            user_id=current_user.user_id,
+            resource_type="transaction",
+            resource_id=txn_id,
+            details={"updated_fields": list(updates.keys())},
+            request=request,
+        )
+
+        if old_portfolio != new_portfolio:
+            # Portfolio changed: reverse old delta on old portfolio, apply new delta on new portfolio
+            svc.recalc_portfolio_cash(deposit_delta=-old_delta, delta_portfolio=old_portfolio, conn=conn)
+            svc.recalc_portfolio_cash(deposit_delta=new_delta, delta_portfolio=new_portfolio, conn=conn)
+        else:
+            # Same portfolio: apply the difference
+            svc.recalc_portfolio_cash(
+                deposit_delta=new_delta - old_delta, delta_portfolio=new_portfolio, conn=conn,
+            )
 
     unified = svc.get_total_portfolio_value()
 

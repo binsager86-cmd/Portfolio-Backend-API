@@ -24,7 +24,7 @@ from app.services.audit_service import (
 )
 from app.services.fx_service import convert_to_kwd, PORTFOLIO_CCY
 from app.services.portfolio_service import PortfolioService
-from app.api.v1.tracker import sync_deposit_to_snapshot
+from app.api.v1.tracker import recalculate_all_snapshots, sync_deposit_to_snapshot
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -504,6 +504,8 @@ async def deposits_import(
     imported = 0
     skipped = 0
     errors: list = []
+    affected_dates: set[str] = set()
+    snapshot_warning: Optional[str] = None
 
     # Auto FX rate
     fx_rate = None
@@ -514,7 +516,7 @@ async def deposits_import(
         pass
 
     def _process_rows() -> None:
-        nonlocal imported, skipped, errors
+        nonlocal imported, skipped, errors, affected_dates
         for idx, row in df.iterrows():
             try:
                 # Parse date
@@ -586,17 +588,8 @@ async def deposits_import(
                 )
                 imported += 1
 
-                # Sync deposit to snapshot if included in analysis
                 if include_in_analysis:
-                    try:
-                        amount_kwd = convert_to_kwd(amount, currency)
-                        sync_deposit_to_snapshot(
-                            user_id=user_id,
-                            deposit_date=dep_date,
-                            amount_kwd=amount_kwd,
-                        )
-                    except Exception:
-                        pass  # non-critical
+                    affected_dates.add(dep_date)
 
             except Exception as exc:
                 skipped += 1
@@ -621,6 +614,16 @@ async def deposits_import(
         except Exception as exc:
             logger.warning("recalc_portfolio_cash after deposit import: %s", exc)
 
+        try:
+            if mode == "replace":
+                recalculate_all_snapshots(user_id)
+            else:
+                for dep_date in sorted(affected_dates):
+                    sync_deposit_to_snapshot(user_id, dep_date)
+        except Exception as exc:
+            snapshot_warning = "Deposits imported, but tracker recalculation must be retried"
+            logger.warning("snapshot sync after deposit import failed: %s", exc)
+
     log_event(
         CASH_CREATE,
         user_id=user_id,
@@ -638,6 +641,8 @@ async def deposits_import(
             "total_rows": len(df),
             "errors": errors[:50],
             "mode": mode,
+            "snapshot_sync": "failed" if snapshot_warning else "ok",
+            "warning": snapshot_warning,
         },
     }
 

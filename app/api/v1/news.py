@@ -29,6 +29,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy.orm import Session
 from kombu.exceptions import OperationalError
 
+from app.api.deps import require_admin
+
 from app.core.cache import cache_key, news_cache, get_cached, set_cached
 from app.core.http_client import fetch_with_retry
 import httpx  # kept for httpx.Client used in _bg_fetch_live (sync background thread)
@@ -1058,7 +1060,7 @@ async def news_sources(
 @router.post("/fetch-all")
 async def fetch_all_history(
     lang: str = Query("en", description="Language: 'en' or 'ar'"),
-    current_user: TokenData = Depends(get_current_user),
+    current_user: TokenData = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """
