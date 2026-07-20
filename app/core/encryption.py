@@ -25,12 +25,16 @@ def _get_fernet():
     """Lazy-load Fernet to avoid import cost when encryption is disabled."""
     settings = get_settings()
     if not settings.FIELD_ENCRYPTION_KEY:
+        if settings.is_production:
+            raise RuntimeError("FIELD_ENCRYPTION_KEY is required in production")
         return None
     try:
         from cryptography.fernet import Fernet
         return Fernet(settings.FIELD_ENCRYPTION_KEY.encode())
     except Exception as exc:
         logger.error("Failed to initialise Fernet cipher: %s", exc)
+        if settings.is_production:
+            raise RuntimeError("FIELD_ENCRYPTION_KEY is invalid") from exc
         return None
 
 
@@ -49,7 +53,9 @@ def encrypt_field(value: Optional[str]) -> Optional[str]:
         return f"{_PREFIX}{token}"
     except Exception as exc:
         logger.error("Encryption failed: %s", exc)
-        return value  # fallback: store plaintext
+        if get_settings().is_production:
+            raise RuntimeError("Encryption failed") from exc
+        return value  # fallback: store plaintext in development only
 
 
 def decrypt_field(value: Optional[str]) -> Optional[str]:
@@ -58,6 +64,9 @@ def decrypt_field(value: Optional[str]) -> Optional[str]:
         return None
     if not value.startswith(_PREFIX):
         # Not encrypted (legacy or dev value) — return as-is
+        if get_settings().is_production:
+            logger.warning("Refusing to use unencrypted sensitive field in production")
+            return None
         return value
 
     fernet = _get_fernet()

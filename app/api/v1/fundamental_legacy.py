@@ -795,6 +795,7 @@ class MetricsCalculateRequest(BaseModel):
 
 class GrahamRequest(BaseModel):
     eps: float
+    book_value_per_share: float
     growth_rate: float = 0.0
     corporate_yield: float = 4.4
     margin_of_safety: float = 25.0
@@ -5921,9 +5922,8 @@ async def run_graham(
     _ensure_schema()
     _verify_stock_owner(stock_id, current_user.user_id)
 
-    result = _graham_number(body.eps, body.growth_rate,
-                             body.corporate_yield, body.margin_of_safety,
-                             body.current_price)
+    result = _graham_number(body.eps, body.book_value_per_share,
+                             body.margin_of_safety, body.current_price)
     _save_valuation(stock_id, result, current_user.user_id)
     return {"status": "ok", "data": result}
 
@@ -8620,38 +8620,25 @@ def _score_risk_detailed(m: Dict[str, float]):
 
 # ── Valuation model helpers ──────────────────────────────────────────
 
-def _graham_number(eps: float, growth_rate: float = 0.0,
-                   corporate_yield: float = 4.4, margin_of_safety: float = 25.0,
+def _graham_number(eps: float, book_value_per_share: float,
+                   margin_of_safety: float = 25.0,
                    current_price: float | None = None) -> Dict[str, Any]:
-    """Graham valuation — computes both Original (8.5+2g) and Revised (7+1g)."""
+    """Graham Number valuation: V = sqrt(22.5 * EPS * BVPS)."""
     # ── Edge case: EPS ≤ 0 → model not applicable
     if eps <= 0:
         return {"model": "graham", "intrinsic_value": None,
                 "error": "N/A – Unprofitable (EPS ≤ 0)",
                 "verdict": "N/A - Unprofitable",
-                "parameters": {"eps": eps, "growth_rate": growth_rate,
-                               "corporate_yield": corporate_yield}}
+                "parameters": {"eps": eps, "book_value_per_share": book_value_per_share}}
+    if book_value_per_share <= 0:
+        return {"model": "graham", "intrinsic_value": None,
+                "error": "N/A – Book value per share must be positive",
+                "verdict": "N/A - Invalid BVPS",
+                "parameters": {"eps": eps, "book_value_per_share": book_value_per_share}}
 
-    # ── Growth rate: already whole-number (e.g. 5 for 5%)
-    # Apply Graham conservatism: cap at 15%, floor at 0%
-    g = min(max(growth_rate, 0), 15)
+    import math
 
-    # ── Corporate bond yield (Y)
-    # If user passed decimal < 1 interpret as percentage (e.g. 0.042 → 4.2)
-    y_val = corporate_yield if corporate_yield > 1 else corporate_yield * 100
-    if y_val <= 0:
-        y_val = 4.4  # fallback to 1962 baseline
-
-    # ── Original formula: V = EPS × (8.5 + 2g) × 4.4 / Y
-    implied_pe_original = 8.5 + 2 * g
-    iv_original = eps * implied_pe_original * 4.4 / y_val
-
-    # ── Revised formula: V* = EPS × (7 + 1g) × 4.4 / Y
-    implied_pe_revised = 7 + 1 * g
-    iv_revised = eps * implied_pe_revised * 4.4 / y_val
-
-    # Primary intrinsic value = revised (more conservative)
-    intrinsic_value = iv_revised
+    intrinsic_value = math.sqrt(22.5 * eps * book_value_per_share)
 
     # ── Margin of safety (as percentage, e.g. 25 for 25%)
     mos_decimal = margin_of_safety / 100
@@ -8670,30 +8657,19 @@ def _graham_number(eps: float, growth_rate: float = 0.0,
     return {
         "model": "graham",
         "intrinsic_value": round(intrinsic_value, 4),
-        "iv_original": round(iv_original, 4),
-        "iv_revised": round(iv_revised, 4),
-        "implied_pe_original": round(implied_pe_original, 2),
-        "implied_pe_revised": round(implied_pe_revised, 2),
         "buy_price_target": round(buy_price_target, 4),
         "current_price": round(current_price, 4) if current_price is not None else None,
         "verdict": verdict,
         "acceptable_buy_price": round(buy_price_target, 4),
         "parameters": {
             "eps": eps,
-            "growth_rate": g,
-            "aaa_yield": round(y_val, 4),
+            "book_value_per_share": book_value_per_share,
             "margin_of_safety": margin_of_safety,
-            "iv_original": round(iv_original, 4),
-            "iv_revised": round(iv_revised, 4),
             "price": round(current_price, 4) if current_price is not None else None,
         },
         "assumptions": {
-            "formula_original": "V = EPS × (8.5 + 2g) × 4.4 / Y",
-            "formula_revised": "V* = EPS × (7 + 1g) × 4.4 / Y",
-            "base_pe_original": 8.5,
-            "base_pe_revised": 7,
-            "no_growth_yield": 4.4,
-            "growth_cap": 15,
+            "formula": "V = sqrt(22.5 * EPS * BVPS)",
+            "multiplier": 22.5,
         },
     }
 

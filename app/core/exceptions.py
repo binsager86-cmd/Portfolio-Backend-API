@@ -163,9 +163,10 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     from app.core.config import get_settings
     settings = get_settings()
 
-    # Include exception class + message (but not full traceback) so the
-    # frontend / curl shows enough detail to diagnose 500s.
-    detail = f"{type(exc).__name__}: {exc}"
+    if settings.is_production:
+        detail = "Internal server error"
+    else:
+        detail = f"{type(exc).__name__}: {exc}"
     return JSONResponse(
         status_code=500,
         content={

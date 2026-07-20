@@ -67,6 +67,7 @@ class Settings(BaseSettings):
 
     # AI / Gemini (optional)
     GEMINI_API_KEY: str = ""            # Google Gemini API key for AI analysis
+    GOOGLE_CLIENT_IDS: str = ""         # Comma-separated OAuth client IDs allowed for Google Sign-In
 
     # Market data (Whale Tracker)
     EODHD_API_TOKEN: str = ""           # EODHD token for /api/v1/trade-signals/whale-candles (legacy)
@@ -118,6 +119,10 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+
+    @property
+    def google_client_ids_list(self) -> list[str]:
+        return [client_id.strip() for client_id in self.GOOGLE_CLIENT_IDS.split(",") if client_id.strip()]
 
     @property
     def database_abs_path(self) -> str:

@@ -49,7 +49,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> TokenData:
 
 async def require_admin(current_user: TokenData = Depends(get_current_user)) -> TokenData:
     """Dependency that ensures the current user is an admin."""
-    if not current_user.is_admin:
+    is_admin = query_val(
+        "SELECT COALESCE(is_admin, 0) FROM users WHERE id = ?",
+        (current_user.user_id,),
+    )
+    if not bool(is_admin):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required",

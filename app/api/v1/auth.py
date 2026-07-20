@@ -26,7 +26,7 @@ from app.core.config import get_settings
 from app.core.exceptions import UnauthorizedError, ConflictError, BadRequestError
 from app.core.encryption import encrypt_field, decrypt_field
 from pydantic import BaseModel, Field, field_validator
-from app.core.database import query_one, query_val, exec_sql, column_exists
+from app.core.database import query_one, query_val, exec_sql, column_exists, add_column_if_missing
 from app.core.config import get_settings as _get_settings
 from app.api.deps import get_current_user
 from app.schemas.user import (
@@ -415,6 +415,16 @@ async def google_sign_in(request: Request, body: GoogleSignInRequest):
     if not google_data:
         raise UnauthorizedError("Invalid Google token — could not verify with Google.")
 
+    allowed_audiences = set(_settings.google_client_ids_list)
+    token_audience = google_data.get("aud") or google_data.get("audience")
+    if allowed_audiences:
+        if not token_audience or token_audience not in allowed_audiences:
+            raise UnauthorizedError("Google token audience is not allowed.")
+
+    email_verified = google_data.get("email_verified")
+    if email_verified is not None and str(email_verified).lower() not in ("true", "1", "yes"):
+        raise UnauthorizedError("Google account email is not verified.")
+
     email = google_data.get("email")
     if not email:
         raise BadRequestError("Google account does not have an email address")
@@ -565,13 +575,7 @@ async def get_api_key(current_user=Depends(get_current_user)):
 # ── Password Reset (OTP) ────────────────────────────────────────────
 
 def _ensure_password_resets_table():
-    """Create password_resets table if it doesn't exist, or recreate if schema is wrong."""
-    # If table exists but has wrong schema, drop and recreate
-    if not column_exists("password_resets", "user_id"):
-        try:
-            exec_sql("DROP TABLE IF EXISTS password_resets")
-        except Exception:
-            pass
+    """Create or additively migrate password_resets without dropping live data."""
 
     _s = _get_settings()
     pk = "SERIAL PRIMARY KEY" if _s.use_postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"
@@ -587,6 +591,12 @@ def _ensure_password_resets_table():
             expires_at INTEGER NOT NULL
         )
     """)
+    add_column_if_missing("password_resets", "user_id", "INTEGER")
+    add_column_if_missing("password_resets", "otp_code", "TEXT")
+    add_column_if_missing("password_resets", "attempts", "INTEGER DEFAULT 0")
+    add_column_if_missing("password_resets", "used", "INTEGER DEFAULT 0")
+    add_column_if_missing("password_resets", "created_at", "INTEGER")
+    add_column_if_missing("password_resets", "expires_at", "INTEGER")
 
 
 def _generate_otp() -> str:

@@ -94,6 +94,8 @@ async def import_backup(
                 )
                 if result.get("errors"):
                     raise BadRequestError("Replace import failed; existing data was preserved.")
+                if int(result.get("imported") or 0) <= 0:
+                    raise BadRequestError("Replace import contained no importable records; existing data was preserved.")
         else:
             result = import_transactions_excel(
                 user_id=current_user.user_id,

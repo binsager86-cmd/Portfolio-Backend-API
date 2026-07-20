@@ -114,6 +114,7 @@ class TransactionCreate(BaseModel):
 
 class TransactionUpdate(BaseModel):
     """Update an existing transaction (partial)."""
+    portfolio: Optional[str] = Field(None, description="Portfolio name: KFH, BBYN, or USA")
     stock_symbol: Optional[str] = Field(None, min_length=1, max_length=50)
     txn_date: Optional[str] = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$")
     txn_type: Optional[str] = None

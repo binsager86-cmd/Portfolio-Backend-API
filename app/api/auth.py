@@ -46,6 +46,8 @@ from app.core.limiter import limiter
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit("5/minute")
 async def login(request: Request, form: OAuth2PasswordRequestForm = Depends()):
+    if _settings.is_production:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Legacy login endpoint is retired. Use /api/v1/auth/login.")
     user = authenticate_user(form.username, form.password)
     if user is None:
         raise HTTPException(
@@ -69,6 +71,8 @@ async def login(request: Request, form: OAuth2PasswordRequestForm = Depends()):
 @router.post("/login/json", response_model=TokenResponse)
 @limiter.limit("5/minute")
 async def login_json(request: Request, body: LoginRequest):
+    if _settings.is_production:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Legacy login endpoint is retired. Use /api/v1/auth/login.")
     user = authenticate_user(body.username, body.password)
     if user is None:
         raise HTTPException(

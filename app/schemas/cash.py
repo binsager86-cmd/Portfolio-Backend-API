@@ -24,6 +24,7 @@ class CashDepositCreate(BaseModel):
 
 class CashDepositUpdate(BaseModel):
     """Update a cash deposit (partial)."""
+    portfolio: Optional[str] = Field(None, description="Portfolio name: KFH, BBYN, or USA")
     deposit_date: Optional[str] = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$")
     amount: Optional[float] = Field(None, gt=0)
     currency: Optional[str] = Field(None, max_length=10)

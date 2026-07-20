@@ -166,7 +166,7 @@ def create_refresh_token(
     expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     )
-    issued_at = datetime.now(timezone.utc)
+    issued_at = int(datetime.now(timezone.utc).timestamp())
     payload = {
         "sub": str(user_id),
         "username": username,
@@ -225,6 +225,7 @@ def decode_refresh_token(token: str) -> TokenData:
     token_type = payload.get("type", "")
     jti = payload.get("jti")
     exp = payload.get("exp")
+    iat = payload.get("iat")
 
     if not user_id:
         raise JWTError("Missing subject")
@@ -232,5 +233,3 @@ def decode_refresh_token(token: str) -> TokenData:
         raise JWTError(f"Expected refresh token, got {token_type}")
 
     return TokenData(user_id=user_id, username=username, token_type=token_type, jti=jti, exp=exp, iat=iat)
-
-    return TokenData(user_id=user_id, username=username, token_type=token_type)

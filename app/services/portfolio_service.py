@@ -715,6 +715,7 @@ class PortfolioService:
             FROM transactions t
             LEFT JOIN stocks s
                 ON UPPER(TRIM(t.stock_symbol)) = UPPER(TRIM(s.symbol)) AND s.user_id = t.user_id
+               AND COALESCE(NULLIF(TRIM(t.portfolio), ''), 'KFH') = COALESCE(NULLIF(TRIM(s.portfolio), ''), 'KFH')
             WHERE t.user_id = ? {soft_del}
             ORDER BY t.stock_symbol, t.portfolio, t.txn_date ASC, t.id ASC
         """
@@ -765,6 +766,7 @@ class PortfolioService:
                 FROM transactions t
                 LEFT JOIN stocks s
                     ON UPPER(TRIM(s.symbol)) = UPPER(TRIM(t.stock_symbol)) AND s.user_id = t.user_id
+                   AND COALESCE(NULLIF(TRIM(t.portfolio), ''), 'KFH') = COALESCE(NULLIF(TRIM(s.portfolio), ''), 'KFH')
                 WHERE t.user_id = ? {soft_del2}
                 GROUP BY
                     t.stock_symbol,

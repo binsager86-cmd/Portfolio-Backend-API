@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from starlette.responses import StreamingResponse
 
 from app.api.deps import get_current_user
-from app.core.database import get_db, query_df, query_val, exec_sql
+from app.core.database import get_db, query_df, query_val, exec_sql, transaction
 from app.core.exceptions import NotFoundError, BadRequestError
 from app.core.repositories.cash import CashDepositRepository
 from app.core.security import TokenData
@@ -498,10 +498,6 @@ async def deposits_import(
             f"Found columns: {list(df.columns)}"
         )
 
-    # Replace mode: delete all existing deposits
-    if mode == "replace":
-        exec_sql("DELETE FROM cash_deposits WHERE user_id = ?", (user_id,))
-
     now = int(time.time())
     imported = 0
     skipped = 0
@@ -515,92 +511,105 @@ async def deposits_import(
     except Exception:
         pass
 
-    for idx, row in df.iterrows():
-        try:
-            # Parse date
-            raw_date = row.get(date_col)
-            if raw_date is None or (isinstance(raw_date, float) and pd.isna(raw_date)):
-                skipped += 1
-                errors.append({"row": int(idx) + 2, "error": "Empty date"})
-                continue
+    def _process_rows() -> None:
+        nonlocal imported, skipped, errors
+        for idx, row in df.iterrows():
+            try:
+                # Parse date
+                raw_date = row.get(date_col)
+                if raw_date is None or (isinstance(raw_date, float) and pd.isna(raw_date)):
+                    skipped += 1
+                    errors.append({"row": int(idx) + 2, "error": "Empty date"})
+                    continue
 
-            if hasattr(raw_date, "strftime"):
-                dep_date = raw_date.strftime("%Y-%m-%d")
-            else:
-                s = str(raw_date).strip()
-                if not s or s.lower() in ("nan", "nat"):
+                if hasattr(raw_date, "strftime"):
+                    dep_date = raw_date.strftime("%Y-%m-%d")
+                else:
+                    s = str(raw_date).strip()
+                    if not s or s.lower() in ("nan", "nat"):
+                        skipped += 1
+                        continue
+                    try:
+                        dep_date = pd.to_datetime(s).strftime("%Y-%m-%d")
+                    except Exception:
+                        dep_date = s
+
+                # Parse amount
+                raw_amount = row.get(amount_col)
+                if raw_amount is None or (isinstance(raw_amount, float) and pd.isna(raw_amount)):
+                    skipped += 1
+                    errors.append({"row": int(idx) + 2, "error": "Empty amount"})
+                    continue
+                amount = float(raw_amount)
+                if amount == 0:
                     skipped += 1
                     continue
-                try:
-                    dep_date = pd.to_datetime(s).strftime("%Y-%m-%d")
-                except Exception:
-                    dep_date = s
 
-            # Parse amount
-            raw_amount = row.get(amount_col)
-            if raw_amount is None or (isinstance(raw_amount, float) and pd.isna(raw_amount)):
+                # Optional fields with sensible defaults
+                def _cell_str(row_data: pd.Series, col: str, default: str = "") -> str:
+                    val = row_data.get(col)
+                    if val is None or (isinstance(val, float) and pd.isna(val)):
+                        return default
+                    s = str(val).strip()
+                    return default if s.lower() in ("nan", "nat") else s
+
+                portfolio = _cell_str(row, "portfolio", "KFH")
+                if portfolio not in PORTFOLIO_CCY:
+                    portfolio = "KFH"
+                currency = _cell_str(row, "currency", "KWD").upper()
+                source = _cell_str(row, "source", "deposit").lower()
+                if source not in ("deposit", "withdrawal"):
+                    source = "deposit"
+                bank_name = _cell_str(row, "bank_name")
+                description = _cell_str(row, "description")
+                comments = _cell_str(row, "comments")
+                notes = _cell_str(row, "notes")
+
+                include_raw = _cell_str(row, "include_in_analysis", "1")
+                include_in_analysis = 0 if include_raw.lower() in ("0", "no", "false", "record") else 1
+
+                exec_sql(
+                    """INSERT INTO cash_deposits
+                       (user_id, portfolio, deposit_date, amount, currency,
+                        bank_name, source, deposit_type, notes,
+                        description, comments, include_in_analysis,
+                        fx_rate_at_deposit, is_deleted, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)""",
+                    (
+                        user_id, portfolio, dep_date, amount, currency,
+                        bank_name, source, source, notes,
+                        description, comments, include_in_analysis,
+                        fx_rate, now,
+                    ),
+                )
+                imported += 1
+
+                # Sync deposit to snapshot if included in analysis
+                if include_in_analysis:
+                    try:
+                        amount_kwd = convert_to_kwd(amount, currency)
+                        sync_deposit_to_snapshot(
+                            user_id=user_id,
+                            deposit_date=dep_date,
+                            amount_kwd=amount_kwd,
+                        )
+                    except Exception:
+                        pass  # non-critical
+
+            except Exception as exc:
                 skipped += 1
-                errors.append({"row": int(idx) + 2, "error": "Empty amount"})
-                continue
-            amount = float(raw_amount)
-            if amount == 0:
-                skipped += 1
-                continue
+                errors.append({"row": int(idx) + 2, "error": str(exc)[:120]})
 
-            # Optional fields with sensible defaults
-            def _cell_str(row_data: pd.Series, col: str, default: str = "") -> str:
-                val = row_data.get(col)
-                if val is None or (isinstance(val, float) and pd.isna(val)):
-                    return default
-                s = str(val).strip()
-                return default if s.lower() in ("nan", "nat") else s
-
-            portfolio = _cell_str(row, "portfolio", "KFH")
-            if portfolio not in PORTFOLIO_CCY:
-                portfolio = "KFH"
-            currency = _cell_str(row, "currency", "KWD").upper()
-            source = _cell_str(row, "source", "deposit").lower()
-            if source not in ("deposit", "withdrawal"):
-                source = "deposit"
-            bank_name = _cell_str(row, "bank_name")
-            description = _cell_str(row, "description")
-            comments = _cell_str(row, "comments")
-            notes = _cell_str(row, "notes")
-
-            include_raw = _cell_str(row, "include_in_analysis", "1")
-            include_in_analysis = 0 if include_raw.lower() in ("0", "no", "false", "record") else 1
-
-            exec_sql(
-                """INSERT INTO cash_deposits
-                   (user_id, portfolio, deposit_date, amount, currency,
-                    bank_name, source, deposit_type, notes,
-                    description, comments, include_in_analysis,
-                    fx_rate_at_deposit, is_deleted, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)""",
-                (
-                    user_id, portfolio, dep_date, amount, currency,
-                    bank_name, source, source, notes,
-                    description, comments, include_in_analysis,
-                    fx_rate, now,
-                ),
-            )
-            imported += 1
-
-            # Sync deposit to snapshot if included in analysis
-            if include_in_analysis:
-                try:
-                    amount_kwd = convert_to_kwd(amount, currency)
-                    sync_deposit_to_snapshot(
-                        user_id=user_id,
-                        deposit_date=dep_date,
-                        amount_kwd=amount_kwd,
-                    )
-                except Exception:
-                    pass  # non-critical
-
-        except Exception as exc:
-            skipped += 1
-            errors.append({"row": int(idx) + 2, "error": str(exc)[:120]})
+    if mode == "replace":
+        with transaction():
+            exec_sql("DELETE FROM cash_deposits WHERE user_id = ?", (user_id,))
+            _process_rows()
+            if errors:
+                raise BadRequestError("Replace import failed; existing deposits were preserved.")
+            if imported <= 0:
+                raise BadRequestError("Replace import contained no importable deposits; existing deposits were preserved.")
+    else:
+        _process_rows()
 
     # Recalculate portfolio cash
     if imported > 0:

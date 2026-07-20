@@ -22,7 +22,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from slowapi import _rate_limit_exceeded_handler
@@ -46,6 +46,7 @@ from app.core.feature_flags import get_flags
 
 # Versioned API router (all /api/v1/* routes)
 from app.api.v1 import v1_router
+from app.api.deps import require_admin
 
 # Legacy flat routers kept for backward-compat on old prefixes
 from app.api.auth import router as auth_router_legacy
@@ -278,6 +279,8 @@ async def lifespan(app: FastAPI):
         if _issues:
             for issue in _issues:
                 logger.warning("🔒 SECURITY: %s", issue)
+            if any("SECRET_KEY" in issue for issue in _issues):
+                raise RuntimeError("Refusing to start production with an unsafe SECRET_KEY")
     else:
         logger.info("🔧 Running in DEVELOPMENT mode (CORS=*, verbose errors)")
 
@@ -441,7 +444,7 @@ async def health():
 
 @app.get("/health/tables", tags=["System"])
 @app.get("/api/health/tables", tags=["System"])
-async def health_tables():
+async def health_tables(_admin=Depends(require_admin)):
     """Diagnostic: list all tables that exist in the database."""
     from app.core.database import query_df
     try:

@@ -1,7 +1,7 @@
 """
 Cron / Scheduler API v1 — price update + snapshot save triggers + status.
 
-Protected by CRON_SECRET_KEY (header or query param).
+Protected by CRON_SECRET_KEY in the X-Cron-Key header.
 """
 
 import logging
@@ -221,7 +221,6 @@ async def trigger_price_update_and_snapshot(
 @router.post("/notify-portfolio-updates")
 async def trigger_portfolio_alerts(
     x_cron_key: Optional[str] = Header(None, alias="X-Cron-Key"),
-    key: Optional[str] = Query(None),
     user_id: int = Query(0, description="User to notify (0 = all users with stocks)"),
 ):
     """
@@ -232,7 +231,7 @@ async def trigger_portfolio_alerts(
     Honors per-user notification preferences (``dailyPriceUpdates`` and
     ``portfolioUpdates``).
     """
-    _verify_cron_key(x_cron_key, key)
+    _verify_cron_key(x_cron_key)
 
     from app.services.portfolio_alerts import notify_portfolio_updates_for_users
 
@@ -249,7 +248,6 @@ async def trigger_portfolio_alerts(
 @router.post("/update-fundamentals")
 async def trigger_fundamentals_update(
     x_cron_key: Optional[str] = Header(None, alias="X-Cron-Key"),
-    key: Optional[str] = Query(None),
 ):
     """
     Refresh Eagle Eye fundamentals (PE, EPS, BVPS) for the entire universe.
@@ -258,7 +256,7 @@ async def trigger_fundamentals_update(
     ``ml_fundamentals``. Call this once on a fresh deployment to ensure
     B/V and P/E columns are populated before the nightly scheduler fires.
     """
-    _verify_cron_key(x_cron_key, key)
+    _verify_cron_key(x_cron_key)
 
     from app.cron.fundamentals_updater import run_tickerchart_fundamentals_update
 
@@ -278,7 +276,6 @@ async def trigger_fundamentals_update(
 @router.post("/eagle-eye-recompute")
 async def trigger_eagle_eye_recompute(
     x_cron_key: Optional[str] = Header(None, alias="X-Cron-Key"),
-    key: Optional[str] = Query(None),
     dna_refresh: bool = Query(False, description="Also rebuild DNA profiles (slow)"),
 ):
     """
@@ -288,7 +285,7 @@ async def trigger_eagle_eye_recompute(
     immediately after deploying a code change or after populating the
     fundamentals table for the first time.
     """
-    _verify_cron_key(x_cron_key, key)
+    _verify_cron_key(x_cron_key)
 
     import threading
     from app.services.eagle_eye.ingest import run_nightly_recompute

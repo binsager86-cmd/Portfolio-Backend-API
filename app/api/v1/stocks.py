@@ -287,13 +287,13 @@ async def create_stock(
     # Ensure yf_ticker column exists (additive migration)
     add_column_if_missing("stocks", "yf_ticker", "TEXT")
 
-    # Check for duplicate symbol per user
+    # Check for duplicate symbol per user and portfolio. The same symbol can exist in multiple markets.
     existing = query_val(
-        "SELECT id FROM stocks WHERE TRIM(symbol) = ? AND user_id = ?",
-        (symbol, uid),
+        "SELECT id FROM stocks WHERE UPPER(TRIM(symbol)) = ? AND user_id = ? AND COALESCE(NULLIF(TRIM(portfolio), ''), '') = ?",
+        (symbol, uid, body.portfolio),
     )
     if existing:
-        raise ConflictError(f"Stock '{symbol}' already exists")
+        raise ConflictError(f"Stock '{symbol}' already exists in portfolio '{body.portfolio}'")
 
     now = int(time.time())
     exec_sql(
@@ -310,8 +310,8 @@ async def create_stock(
     )
 
     new_id = query_val(
-        "SELECT id FROM stocks WHERE symbol = ? AND user_id = ? ORDER BY id DESC LIMIT 1",
-        (symbol, uid),
+        "SELECT id FROM stocks WHERE UPPER(TRIM(symbol)) = ? AND user_id = ? AND COALESCE(NULLIF(TRIM(portfolio), ''), '') = ? ORDER BY id DESC LIMIT 1",
+        (symbol, uid, body.portfolio),
     )
 
     return {

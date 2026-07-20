@@ -19,7 +19,7 @@ from starlette.responses import StreamingResponse
 from app.api.deps import get_current_user
 from app.core.security import TokenData
 from app.core.exceptions import NotFoundError, BadRequestError
-from app.core.database import query_df, query_one, exec_sql, column_exists
+from app.core.database import query_df, query_one, exec_sql, exec_sql_returning_id, column_exists
 from app.services.portfolio_service import (
     PortfolioService,
     get_complete_overview,
@@ -410,7 +410,7 @@ async def create_transaction(
     except Exception:
         current_fx = None
 
-    exec_sql(
+    new_id = exec_sql_returning_id(
         """INSERT INTO transactions
            (user_id, portfolio, stock_symbol, txn_date, txn_type, shares,
             purchase_cost, sell_value, bonus_shares, cash_dividend,
@@ -433,8 +433,8 @@ async def create_transaction(
     from app.core.database import query_val as _qv
     sym_upper = txn.stock_symbol.strip().upper()
     existing_stock = _qv(
-        "SELECT id FROM stocks WHERE TRIM(symbol) = ? AND user_id = ?",
-        (sym_upper, current_user.user_id),
+        "SELECT id FROM stocks WHERE UPPER(TRIM(symbol)) = ? AND user_id = ? AND COALESCE(NULLIF(TRIM(portfolio), ''), '') = ?",
+        (sym_upper, current_user.user_id, txn.portfolio),
     )
     if not existing_stock and txn.txn_type in ("Buy", "Sell"):
         ccy = "USD" if txn.portfolio == "USA" else "KWD"
@@ -450,12 +450,6 @@ async def create_transaction(
              ccy, yf_ticker, int(time.time())),
         )
         logger.info("Auto-created stock record for %s (yf: %s)", sym_upper, yf_ticker)
-
-    # Return the created transaction
-    new_id = _qv(
-        "SELECT id FROM transactions WHERE user_id = ? ORDER BY id DESC LIMIT 1",
-        (current_user.user_id,),
-    )
 
     log_event(
         TXN_CREATE,
