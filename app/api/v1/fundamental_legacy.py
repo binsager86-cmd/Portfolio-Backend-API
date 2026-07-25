@@ -2030,6 +2030,7 @@ _SA_FIELD_MAP_INCOME = {
     # Revenue
     "revenue": ("revenue", "Revenue"),
     "revenueRE": ("revenue", "Revenue"),
+    "revenueTotal": ("revenue", "Revenue"),
     "rentalRevenue": ("rental_revenue", "Rental Revenue"),
     # Cost of revenue
     "costrev": ("cost_of_revenue", "Cost of Revenue"),
@@ -2062,7 +2063,9 @@ _SA_FIELD_MAP_INCOME = {
     "netinc": ("net_income", "Net Income"),
     "netIncome": ("net_income", "Net Income"),
     "netinccmn": ("net_income_common", "Net Income to Common"),
+    "netIncomeCommon": ("net_income_common", "Net Income to Common"),
     # EPS
+    "eps": ("eps_diluted", "EPS (Diluted)"),
     "epsBasic": ("eps_basic", "EPS (Basic)"),
     "epsdil": ("eps_diluted", "EPS (Diluted)"),
     "epsDiluted": ("eps_diluted", "EPS (Diluted)"),
@@ -2257,42 +2260,55 @@ def _sa_parse_financial_data(html: str) -> Optional[Dict]:
     """Extract the financialData object from stockanalysis.com SvelteKit page."""
     import re as _re
 
+    def _parse_array_object(raw: str) -> Dict[str, Any]:
+        result: Dict[str, Any] = {}
+
+        dk = _re.search(r'datekey:\[([^\]]+)\]', raw)
+        if dk:
+            result["datekey"] = [s.strip().strip('"') for s in dk.group(1).split(",")]
+
+        fy = _re.search(r'fiscalYear:\[([^\]]+)\]', raw)
+        if fy:
+            result["fiscalYear"] = [s.strip().strip('"') for s in fy.group(1).split(",")]
+
+        fq = _re.search(r'fiscalQuarter:\[([^\]]+)\]', raw)
+        if fq:
+            result["fiscalQuarter"] = [s.strip().strip('"') for s in fq.group(1).split(",")]
+
+        for fm in _re.finditer(r'(\w+):\[([^\]]*)\]', raw):
+            name = fm.group(1)
+            if name in ("datekey", "fiscalYear", "fiscalQuarter"):
+                continue
+            vals = []
+            for v in fm.group(2).split(","):
+                v = v.strip().strip('"')
+                if v in ("null", "void 0", ""):
+                    vals.append(None)
+                else:
+                    try:
+                        vals.append(float(v))
+                    except ValueError:
+                        vals.append(None)
+            result[name] = vals
+
+        return result
+
     m = _re.search(r'financialData:\{(.*?)\},(?:mapData|columns)', html, _re.DOTALL)
     if not m:
         m = _re.search(r'financialData:\{(.+)', html, _re.DOTALL)
         if not m:
-            return None
+            # Newer StockAnalysis pages may render financialData as void 0 and
+            # store statement arrays under section data blocks instead.
+            if "sections:[" not in html:
+                return None
+            section_data = _re.search(r'data:\{(datekey:\[.*?\])\},ttm:', html, _re.DOTALL)
+            if not section_data:
+                return None
+            result = _parse_array_object(section_data.group(1))
+            return result if result.get("datekey") else None
 
     raw = m.group(1)
-    result: Dict[str, Any] = {}
-
-    dk = _re.search(r'datekey:\[([^\]]+)\]', raw)
-    if dk:
-        result["datekey"] = [s.strip().strip('"') for s in dk.group(1).split(",")]
-
-    fy = _re.search(r'fiscalYear:\[([^\]]+)\]', raw)
-    if fy:
-        result["fiscalYear"] = [s.strip().strip('"') for s in fy.group(1).split(",")]
-
-    fq = _re.search(r'fiscalQuarter:\[([^\]]+)\]', raw)
-    if fq:
-        result["fiscalQuarter"] = [s.strip().strip('"') for s in fq.group(1).split(",")]
-
-    for fm in _re.finditer(r'(\w+):\[([^\]]*)\]', raw):
-        name = fm.group(1)
-        if name in ("datekey", "fiscalYear", "fiscalQuarter"):
-            continue
-        vals = []
-        for v in fm.group(2).split(","):
-            v = v.strip()
-            if v in ("null", "void 0", ""):
-                vals.append(None)
-            else:
-                try:
-                    vals.append(float(v))
-                except ValueError:
-                    vals.append(None)
-        result[name] = vals
+    result = _parse_array_object(raw)
 
     return result if result.get("datekey") else None
 
