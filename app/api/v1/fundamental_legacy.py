@@ -868,31 +868,40 @@ class ScoreCategoryPreferencesBulkUpdate(BaseModel):
 # STOCK PROFILES
 # ════════════════════════════════════════════════════════════════════
 
-@router.get("/stocks")
-async def list_stocks(
-    search: Optional[str] = Query(None),
-    current_user: TokenData = Depends(get_current_user),
-):
-    """List analysis stocks for the current user."""
+def _list_analysis_stocks_sync(uid: int, search: Optional[str]) -> List[dict]:
     _ensure_schema()
-    uid = current_user.user_id
+
+    select_cols = """
+        id, user_id, symbol, company_name, exchange, currency, sector,
+        industry, country, isin, cik, description, website,
+        outstanding_shares, summary_margin_of_safety, created_at, updated_at
+    """
 
     if search:
         df = query_df(
-            """SELECT * FROM analysis_stocks
+            f"""SELECT {select_cols}
+               FROM analysis_stocks
                WHERE user_id = ? AND (symbol LIKE ? OR company_name LIKE ?)
                ORDER BY symbol""",
             (uid, f"%{search}%", f"%{search}%"),
         )
     else:
         df = query_df(
-            "SELECT * FROM analysis_stocks WHERE user_id = ? ORDER BY symbol",
+            f"SELECT {select_cols} FROM analysis_stocks WHERE user_id = ? ORDER BY symbol",
             (uid,),
         )
 
-    stocks = df.to_dict(orient="records") if not df.empty else []
-    return {"status": "ok", "data": {"stocks": stocks, "count": len(stocks)}}
+    return df.to_dict(orient="records") if not df.empty else []
 
+@router.get("/stocks")
+async def list_stocks(
+    search: Optional[str] = Query(None),
+    current_user: TokenData = Depends(get_current_user),
+):
+    """List analysis stocks for the current user."""
+    uid = current_user.user_id
+    stocks = await asyncio.to_thread(_list_analysis_stocks_sync, uid, search)
+    return {"status": "ok", "data": {"stocks": stocks, "count": len(stocks)}}
 
 @router.get("/stocks/{stock_id}")
 async def get_stock(
