@@ -571,42 +571,57 @@ def _get_volume_stats_map() -> Dict[str, Dict[str, float]]:
 
     stats_map: Dict[str, Dict[str, float]] = {}
     try:
-        from app.core.database import query_all
+        from app.core.database import column_exists, query_all
 
-        rows = query_all(
-            """
-            WITH ranked AS (
+        source_queries: list[tuple[str, str, str]] = []
+        if (
+            column_exists("ee_ohlcv_cache", "ticker")
+            and column_exists("ee_ohlcv_cache", "bar_date")
+            and column_exists("ee_ohlcv_cache", "volume")
+        ):
+            source_queries.append(("ee_ohlcv_cache", "ticker", "bar_date"))
+        if (
+            column_exists("ee_ohlcv", "symbol")
+            and column_exists("ee_ohlcv", "trade_date")
+            and column_exists("ee_ohlcv", "volume")
+        ):
+            source_queries.append(("ee_ohlcv", "symbol", "trade_date"))
+
+        for table_name, symbol_col, date_col in source_queries:
+            rows = query_all(
+                f"""
+                WITH ranked AS (
+                    SELECT
+                        {symbol_col} AS ticker,
+                        volume,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY {symbol_col}
+                            ORDER BY {date_col} DESC
+                        ) AS rn
+                    FROM {table_name}
+                    WHERE volume IS NOT NULL
+                )
                 SELECT
                     ticker,
-                    volume,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY ticker
-                        ORDER BY bar_date DESC
-                    ) AS rn
-                FROM ee_ohlcv_cache
-                WHERE volume IS NOT NULL
+                    MAX(CASE WHEN rn = 1 THEN volume END) AS latest_volume,
+                    AVG(CASE WHEN rn <= 20 THEN volume END) AS average_volume_20d
+                FROM ranked
+                GROUP BY ticker
+                """,
+                (),
             )
-            SELECT
-                ticker,
-                MAX(CASE WHEN rn = 1 THEN volume END) AS latest_volume,
-                AVG(CASE WHEN rn <= 20 THEN volume END) AS average_volume_20d
-            FROM ranked
-            GROUP BY ticker
-            """,
-            (),
-        )
 
-        for row in rows or []:
-            ticker = _normalize_symbol(row.get("ticker"))
-            latest_volume = _safe_float(row.get("latest_volume"))
-            average_volume = _safe_float(row.get("average_volume_20d"))
-            if not ticker:
-                continue
-            stats_map[ticker] = {}
-            if latest_volume is not None:
-                stats_map[ticker]["latest_volume"] = latest_volume
-            if average_volume is not None:
-                stats_map[ticker]["average_volume"] = average_volume
+            for row in rows or []:
+                ticker = _normalize_symbol(row.get("ticker"))
+                latest_volume = _safe_float(row.get("latest_volume"))
+                average_volume = _safe_float(row.get("average_volume_20d"))
+                if not ticker:
+                    continue
+                stats_map.setdefault(ticker, {})
+                if latest_volume is not None:
+                    stats_map[ticker].setdefault("latest_volume", latest_volume)
+                if average_volume is not None:
+                    stats_map[ticker].setdefault("average_volume", average_volume)
 
         _VOLUME_STATS_MAP_CACHE = stats_map
         _VOLUME_STATS_MAP_CACHE_AT = now
@@ -653,6 +668,7 @@ def _volume_from_indicators(indicators: object) -> tuple[Optional[float], Option
         indicators.get("volume_ma20"),
     )
     latest_candidates = (
+        indicators.get("today_volume"),
         indicators.get("latest_volume"),
         indicators.get("volume"),
         indicators.get("last_volume"),
@@ -1208,11 +1224,12 @@ async def get_scanner(
             average_volume = _safe_float(vol_stats.get("average_volume"))
 
             if latest_volume is None or average_volume is None:
+                vc_avg, vc_latest = _volume_from_indicators(vc_raw)
                 ind_avg, ind_latest = _volume_from_indicators(row.get("indicators"))
                 if average_volume is None:
-                    average_volume = ind_avg
+                    average_volume = vc_avg if vc_avg is not None else ind_avg
                 if latest_volume is None:
-                    latest_volume = ind_latest
+                    latest_volume = vc_latest if vc_latest is not None else ind_latest
 
             fmeta = fundamentals_map.get(t, {})
             bvps = _safe_float(fmeta.get("book_value_per_share"))
