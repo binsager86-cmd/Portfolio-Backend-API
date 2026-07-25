@@ -13,6 +13,7 @@ Handles:
 import asyncio
 import time
 import logging
+import threading
 from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from typing import Optional, Dict
@@ -155,6 +156,7 @@ def _fetch_price_snapshot_sync(symbol: str, currency: str) -> dict:
         "pe_ratio": pe_ratio,
         "currency": currency,
         "fetched_at": datetime.now(timezone.utc).isoformat(),
+        "source": "yahoo",
     }
 
 
@@ -261,6 +263,29 @@ async def get_price_snapshot(symbol: str, currency: str = "KWD") -> dict:
         }
 
 
+def _get_price_snapshot_sync_for_update(symbol: str, currency: str) -> dict:
+    """Run the async TickerChart-first snapshot fetch from sync updater code."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(get_price_snapshot(symbol, currency))
+
+    box: dict[str, object] = {}
+
+    def _runner() -> None:
+        try:
+            box["result"] = asyncio.run(get_price_snapshot(symbol, currency))
+        except Exception as exc:
+            box["error"] = exc
+
+    worker = threading.Thread(target=_runner, daemon=True)
+    worker.start()
+    worker.join()
+    if "error" in box:
+        raise box["error"]
+    return box["result"]  # type: ignore[return-value]
+
+
 # ── Result container ─────────────────────────────────────────────────
 
 @dataclass
@@ -304,15 +329,6 @@ def update_all_prices(
         If True, only update stocks that have a positive share balance
         (i.e. net buys − sells > 0.001).  Saves API calls on dead positions.
     """
-    # Lazy-import so the module loads even if yfinance is missing in test envs
-    try:
-        import yfinance as yf
-    except ImportError:
-        logger.error("yfinance is not installed – cannot update prices.")
-        res = PriceUpdateResult()
-        res.errors.append("yfinance not installed")
-        return res
-
     t0 = time.time()
     result = PriceUpdateResult()
 
@@ -364,91 +380,30 @@ def update_all_prices(
         # ── Fetch & write prices ─────────────────────────────────────
         for stock_id, symbol, currency, stored_yf_ticker, _ in stocks:
             try:
-                # Prefer stored yf_ticker if available, else derive from symbol+currency
-                yahoo_sym = stored_yf_ticker if stored_yf_ticker else _yahoo_symbol(symbol, currency)
+                snapshot = _get_price_snapshot_sync_for_update(symbol, currency)
+                if snapshot.get("price") is None:
+                    logger.warning("No price data for %s: %s", symbol, snapshot.get("error") or "unknown error")
+                    result.skipped += 1
+                    result.details.append({"symbol": symbol, "status": "no_data", "error": snapshot.get("error")})
+                    continue
 
-                # Check price cache before hitting yfinance network
-                cached_data = get_cached(price_cache, yahoo_sym)
-                if cached_data is not None:
-                    price = cached_data["price"]
-                    previous_close = cached_data["previous_close"]
-                    pe_ratio = cached_data["pe_ratio"]
-                else:
-                    ticker = yf.Ticker(yahoo_sym)
-
-                    # Use 5d window so weekends / holidays still return data
-                    hist = ticker.history(period="5d", interval="1d")
-
-                    # yfinance ≥ 1.0 may return MultiIndex columns
-                    if hist is not None and hist.columns.nlevels > 1:
-                        hist.columns = hist.columns.get_level_values(0)
-
-                    if hist is None or hist.empty or "Close" not in hist.columns:
-                        # If stored yf_ticker is stale/mismapped, retry once with
-                        # alias-aware derived symbol and auto-correct the DB field.
-                        derived_sym = _yahoo_symbol(symbol, currency)
-                        if stored_yf_ticker and derived_sym != stored_yf_ticker:
-                            logger.warning(
-                                "No data for %s (stored yahoo: %s). Retrying with derived ticker %s",
-                                symbol,
-                                yahoo_sym,
-                                derived_sym,
-                            )
-                            ticker = yf.Ticker(derived_sym)
-                            hist = ticker.history(period="5d", interval="1d")
-                            if hist is not None and hist.columns.nlevels > 1:
-                                hist.columns = hist.columns.get_level_values(0)
-                            if hist is not None and not hist.empty and "Close" in hist.columns:
-                                yahoo_sym = derived_sym
-                                try:
-                                    cur.execute(
-                                        "UPDATE stocks SET yf_ticker = ?, updated_at = ? WHERE id = ?",
-                                        (derived_sym, int(time.time()), stock_id),
-                                    )
-                                except Exception as _upd_exc:
-                                    logger.debug("Failed to auto-correct yf_ticker for %s: %s", symbol, _upd_exc)
-
-                        if hist is None or hist.empty or "Close" not in hist.columns:
-                            logger.warning("No data for %s (yahoo: %s)", symbol, yahoo_sym)
-                            result.skipped += 1
-                            result.details.append({"symbol": symbol, "status": "no_data"})
-                            continue
-
-                    closes = hist["Close"].dropna()
-                    raw_price = float(closes.iloc[-1])
-                    price = _normalise_kwd_price(raw_price, currency)
-                    previous_close = None
-                    if len(closes) >= 2:
-                        previous_close = _normalise_kwd_price(float(closes.iloc[-2]), currency)
-
-                    # Fetch P/E ratio from ticker info
-                    pe_ratio = None
-                    try:
-                        info = ticker.info
-                        pe_val = info.get("trailingPE") or info.get("forwardPE")
-                        if pe_val is not None:
-                            pe_ratio = round(float(pe_val), 2)
-                    except Exception as pe_exc:
-                        logger.debug("P/E fetch failed for %s: %s", yahoo_sym, pe_exc)
-
-                    # Cache result for 5 minutes (TTL set on price_cache instance)
-                    set_cached(price_cache, yahoo_sym, {
-                        "price": price,
-                        "previous_close": previous_close,
-                        "pe_ratio": pe_ratio,
-                    })
+                price = float(snapshot["price"])
+                previous_close = snapshot.get("previous_close")
+                pe_ratio = snapshot.get("pe_ratio")
+                source = str(snapshot.get("source") or "unknown").upper()
+                yahoo_sym = snapshot.get("yahoo_symbol") or stored_yf_ticker or _yahoo_symbol(symbol, currency)
 
                 cur.execute(
                     """
                     UPDATE stocks
                     SET current_price = ?,
                         last_updated  = ?,
-                        price_source  = 'YAHOO',
+                        price_source  = ?,
                         pe_ratio      = ?,
                         previous_close = ?
                     WHERE id = ? AND user_id = ?
                     """,
-                    (round(price, 6), int(time.time()), pe_ratio, previous_close, stock_id, user_id),
+                    (round(price, 6), int(time.time()), source, pe_ratio, previous_close, stock_id, user_id),
                 )
                 conn.commit()
 
@@ -458,9 +413,10 @@ def update_all_prices(
                     "yahoo": yahoo_sym,
                     "price": round(price, 6),
                     "currency": currency,
+                    "source": source.lower(),
                     "status": "ok",
                 })
-                logger.info("✅ %s → %s %.6f %s", symbol, yahoo_sym, price, currency)
+                logger.info("✅ %s → %s %.6f %s (%s)", symbol, yahoo_sym, price, currency, source)
 
             except Exception as exc:
                 result.failed += 1

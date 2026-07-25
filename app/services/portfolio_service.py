@@ -291,7 +291,7 @@ class PortfolioService:
     #  Build portfolio table (per-portfolio)
     # ------------------------------------------------------------------
 
-    def build_portfolio_table(self, portfolio_name: str) -> pd.DataFrame:
+    def build_portfolio_table(self, portfolio_name: str, fetch_missing_pe: bool = True) -> pd.DataFrame:
         """
         Build the full holdings table for *portfolio_name*.
 
@@ -412,7 +412,7 @@ class PortfolioService:
 
             # P/E ratio from stocks table. If missing, fetch from StockAnalysis and persist.
             pe_ratio = meta.get("pe_ratio")
-            if pe_ratio is None:
+            if fetch_missing_pe and pe_ratio is None:
                 fetched_pe = _fetch_pe_from_stockanalysis(sym, currency)
                 if fetched_pe is not None:
                     pe_ratio = fetched_pe
@@ -1007,12 +1007,15 @@ class PortfolioService:
     #  Portfolio market value
     # ------------------------------------------------------------------
 
-    def get_portfolio_value(self) -> dict:
+    def get_portfolio_value(self, portfolio_tables: Optional[Dict[str, pd.DataFrame]] = None) -> dict:
         """Current market value of all portfolios, with KWD totals."""
         result: dict = {"total_value_kwd": 0.0, "by_portfolio": {}}
 
         for pname in PORTFOLIO_CCY:
-            df = self.build_portfolio_table(pname)
+            if portfolio_tables is not None and pname in portfolio_tables:
+                df = portfolio_tables[pname]
+            else:
+                df = self.build_portfolio_table(pname, fetch_missing_pe=False)
             if df.empty:
                 continue
             ccy = PORTFOLIO_CCY.get(pname, "KWD")
@@ -1034,7 +1037,11 @@ class PortfolioService:
     #  Total portfolio value — SINGLE SOURCE OF TRUTH
     # ------------------------------------------------------------------
 
-    def get_total_portfolio_value(self) -> dict:
+    def get_total_portfolio_value(
+        self,
+        portfolio_tables: Optional[Dict[str, pd.DataFrame]] = None,
+        accounts: Optional[dict] = None,
+    ) -> dict:
         """Calculate the total portfolio value (stocks + cash) in KWD.
 
         This is the **canonical** function used by Overview, Holdings,
@@ -1050,8 +1057,8 @@ class PortfolioService:
         ``cash_kwd``, ``by_portfolio`` (stock breakdown), and
         ``accounts`` (cash breakdown).
         """
-        values = self.get_portfolio_value()   # stocks only
-        accounts = self.get_account_balances()  # cash only
+        values = self.get_portfolio_value(portfolio_tables=portfolio_tables)   # stocks only
+        accounts = accounts if accounts is not None else self.get_account_balances()  # cash only
 
         stocks_kwd = values["total_value_kwd"]
         cash_kwd = accounts["total_cash_kwd"]
@@ -1155,7 +1162,12 @@ class PortfolioService:
         so that Overview, Holdings, and Snapshot always agree.
         """
         overview = self.get_portfolio_overview()
-        unified = self.get_total_portfolio_value()
+        portfolio_tables = {
+            pname: self.build_portfolio_table(pname, fetch_missing_pe=False)
+            for pname in PORTFOLIO_CCY
+        }
+        accounts = self.get_account_balances()
+        unified = self.get_total_portfolio_value(portfolio_tables=portfolio_tables, accounts=accounts)
 
         net_deposits = overview["net_deposits"]
         portfolio_value = unified["stocks_kwd"]
@@ -1170,7 +1182,7 @@ class PortfolioService:
         # Enrich by_portfolio with P&L from build_portfolio_table
         for pname in list(overview["by_portfolio"].keys()):
             ccy = PORTFOLIO_CCY.get(pname, "KWD")
-            df = self.build_portfolio_table(pname)
+            df = portfolio_tables.get(pname, pd.DataFrame())
             if not df.empty:
                 unrealized = float(df["unrealized_pnl"].sum())
                 realized = float(df["realized_pnl"].sum()) if "realized_pnl" in df.columns else 0.0
@@ -1261,7 +1273,7 @@ class PortfolioService:
             # CAGR inputs: first deposit amount and date
             **self._calc_cagr_inputs(total_value),
             # MWRR (IRR) — calculated inline so the overview always has it
-            "mwrr_percent": self._safe_mwrr(),
+            "mwrr_percent": self._safe_mwrr(total_value),
         }
 
     # ------------------------------------------------------------------
@@ -1355,10 +1367,10 @@ class PortfolioService:
     #  Safe MWRR wrapper for overview (never raises)
     # ------------------------------------------------------------------
 
-    def _safe_mwrr(self) -> Optional[float]:
+    def _safe_mwrr(self, terminal_value_kwd: Optional[float] = None) -> Optional[float]:
         """Compute MWRR for the overview response; returns None on any error."""
         try:
-            return self.calculate_mwrr()
+            return self.calculate_mwrr(terminal_value_kwd=terminal_value_kwd)
         except Exception as exc:
             logger.warning("_safe_mwrr: %s", exc)
             return None
@@ -1620,6 +1632,7 @@ class PortfolioService:
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,
         portfolio: Optional[str] = None,
+        terminal_value_kwd: Optional[float] = None,
     ) -> Optional[float]:
         """
         Money-Weighted Rate of Return (XIRR) — CFA Level III compliant.
@@ -1649,12 +1662,13 @@ class PortfolioService:
         # ── 1. Terminal value ────────────────────────────────────────
         # CFA-compliant: use LIVE portfolio value (mark-to-market).
         # Fall back to the latest snapshot if live is unavailable.
-        current_value = 0.0
-        try:
-            live = self.get_total_portfolio_value()
-            current_value = live.get("total_value_kwd", 0.0)
-        except Exception as exc:
-            logger.warning("MWRR: live portfolio value failed: %s", exc)
+        current_value = float(terminal_value_kwd or 0.0)
+        if current_value <= 0:
+            try:
+                live = self.get_total_portfolio_value()
+                current_value = live.get("total_value_kwd", 0.0)
+            except Exception as exc:
+                logger.warning("MWRR: live portfolio value failed: %s", exc)
 
         if current_value <= 0:
             # Fallback: latest snapshot portfolio_value

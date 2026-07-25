@@ -10,6 +10,8 @@ single-ticker yfinance price fetch for use at stock-creation time.
 
 import time
 import logging
+import asyncio
+import threading
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -31,6 +33,7 @@ _US_STOCKS_CACHE: dict = {
     "expires_at": 0.0,
     "stocks": [],
 }
+_US_STOCKS_CACHE_LOCK = threading.Lock()
 
 
 def _normalize_us_symbol(raw_symbol: str) -> str:
@@ -130,11 +133,16 @@ def _get_cached_us_universe() -> list:
     if _US_STOCKS_CACHE["stocks"] and now < float(_US_STOCKS_CACHE["expires_at"]):
         return _US_STOCKS_CACHE["stocks"]
 
-    expanded = _build_cached_us_universe()
-    _US_STOCKS_CACHE["stocks"] = expanded
-    _US_STOCKS_CACHE["expires_at"] = now + _US_STOCKS_CACHE_TTL_SEC
-    logger.info("US stock-list cache refreshed: %d symbols", len(expanded))
-    return expanded
+    with _US_STOCKS_CACHE_LOCK:
+        now = time.time()
+        if _US_STOCKS_CACHE["stocks"] and now < float(_US_STOCKS_CACHE["expires_at"]):
+            return _US_STOCKS_CACHE["stocks"]
+
+        expanded = _build_cached_us_universe()
+        _US_STOCKS_CACHE["stocks"] = expanded
+        _US_STOCKS_CACHE["expires_at"] = now + _US_STOCKS_CACHE_TTL_SEC
+        logger.info("US stock-list cache refreshed: %d symbols", len(expanded))
+        return expanded
 
 
 # ── Schemas ──────────────────────────────────────────────────────────
@@ -214,7 +222,7 @@ async def get_stock_list(
     results, augment with live yfinance search results.
     """
     is_us = not market.lower().startswith("k")
-    base_stocks = KUWAIT_STOCKS if not is_us else _get_cached_us_universe()
+    base_stocks = KUWAIT_STOCKS if not is_us else await asyncio.to_thread(_get_cached_us_universe)
     # Work on a local copy so search augmentation never mutates the cache.
     stocks = [dict(s) for s in base_stocks]
 
