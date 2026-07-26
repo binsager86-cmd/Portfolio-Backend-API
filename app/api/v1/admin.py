@@ -15,7 +15,7 @@ from app.api.deps import require_admin
 from app.core.security import TokenData, hash_password
 from app.core.database import query_all, query_val, query_df, exec_sql, table_exists, transaction
 from app.schemas.user import _validate_strong_password
-from app.services.audit_service import ADMIN_ACTION
+from app.services.audit_service import ADMIN_ACTION, log_event
 from app.services.password_service import change_user_password
 from app.services.portfolio_service import PortfolioService
 from app.services.user_onboarding import setup_new_user

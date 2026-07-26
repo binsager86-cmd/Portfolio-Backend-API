@@ -150,6 +150,16 @@ def _lock_position_identities(user_id: int, identities: Iterable[tuple[str, str]
         )
 
 
+def _transaction_select_for_update(where_clause: str) -> str:
+    suffix = " FOR UPDATE" if settings.use_postgres else ""
+    return (
+        "SELECT id, portfolio, stock_symbol, txn_date, txn_type, shares, "
+        "       purchase_cost, sell_value, bonus_shares, cash_dividend, "
+        "       reinvested_dividend, fees, created_at "
+        f"FROM transactions WHERE {where_clause}{suffix}"
+    )
+
+
 def _replay_position_timeline(
     user_id: int,
     portfolio: str,
@@ -666,63 +676,57 @@ async def update_transaction(
     current_user: TokenData = Depends(get_current_user),
 ):
     """Update an existing transaction."""
-    # Read old values so we can compute the delta (old → new) for manual-override cash
-    existing = query_one(
-        "SELECT id, portfolio, stock_symbol, txn_date, txn_type, shares, "
-        "       purchase_cost, sell_value, bonus_shares, cash_dividend, "
-        "       reinvested_dividend, fees, created_at "
-        "FROM transactions WHERE id = ? AND user_id = ? AND COALESCE(is_deleted, 0) = 0",
-        (txn_id, current_user.user_id),
-    )
-    if not existing:
-        raise NotFoundError("Transaction", txn_id)
-
-    old_portfolio = existing["portfolio"]
-    old_delta = _txn_cash_delta(
-        existing["txn_type"],
-        float(existing["purchase_cost"] or 0),
-        float(existing["sell_value"] or 0),
-        float(existing["cash_dividend"] or 0),
-        float(existing["fees"] or 0),
-    )
-
     # Build SET clause from provided fields (only non-None)
     updates = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
     if not updates:
         raise BadRequestError("No valid fields to update")
 
     set_clause = ", ".join(f"{k} = ?" for k in updates)
-    params = list(updates.values()) + [txn_id, current_user.user_id]
-
-    # ── Ledger: recalculate portfolio cash (respects manual_override — matches Streamlit)
-    # Compute new delta from the updated fields (fall back to old values)
-    new_txn_type = updates.get("txn_type", existing["txn_type"])
-    new_portfolio = updates.get("portfolio", old_portfolio)
-    new_symbol = updates.get("stock_symbol", existing["stock_symbol"])
-    proposed_txn = dict(existing)
-    proposed_txn.update(updates)
-    new_delta = _txn_cash_delta(
-        new_txn_type,
-        float(updates.get("purchase_cost", existing["purchase_cost"] or 0)),
-        float(updates.get("sell_value", existing["sell_value"] or 0)),
-        float(updates.get("cash_dividend", existing["cash_dividend"] or 0)),
-        float(updates.get("fees", existing["fees"] or 0)),
-    )
 
     svc = PortfolioService(current_user.user_id)
-    old_identity = _position_identity(old_portfolio, existing["stock_symbol"])
-    new_identity = _position_identity(new_portfolio, new_symbol)
     with transaction() as conn:
+        existing = query_one(
+            _transaction_select_for_update("id = ? AND user_id = ? AND COALESCE(is_deleted, 0) = 0"),
+            (txn_id, current_user.user_id),
+        )
+        if not existing:
+            raise NotFoundError("Transaction", txn_id)
+
+        old_portfolio = existing["portfolio"]
+        old_delta = _txn_cash_delta(
+            existing["txn_type"],
+            float(existing["purchase_cost"] or 0),
+            float(existing["sell_value"] or 0),
+            float(existing["cash_dividend"] or 0),
+            float(existing["fees"] or 0),
+        )
+        new_txn_type = updates.get("txn_type", existing["txn_type"])
+        new_portfolio = updates.get("portfolio", old_portfolio)
+        new_symbol = updates.get("stock_symbol", existing["stock_symbol"])
+        proposed_txn = dict(existing)
+        proposed_txn.update(updates)
+        new_delta = _txn_cash_delta(
+            new_txn_type,
+            float(updates.get("purchase_cost", existing["purchase_cost"] or 0)),
+            float(updates.get("sell_value", existing["sell_value"] or 0)),
+            float(updates.get("cash_dividend", existing["cash_dividend"] or 0)),
+            float(updates.get("fees", existing["fees"] or 0)),
+        )
+        old_identity = _position_identity(old_portfolio, existing["stock_symbol"])
+        new_identity = _position_identity(new_portfolio, new_symbol)
         validate_position_mutation(
             current_user.user_id,
             additions=[proposed_txn],
             exclude_transaction_ids=[txn_id],
             affected_identities=[old_identity, new_identity],
         )
-        exec_sql(
-            f"UPDATE transactions SET {set_clause} WHERE id = ? AND user_id = ?",
-            tuple(params),
+        cur = conn.cursor()
+        cur.execute(
+            f"UPDATE transactions SET {set_clause} WHERE id = ? AND user_id = ? AND COALESCE(is_deleted, 0) = 0",
+            tuple(list(updates.values()) + [txn_id, current_user.user_id]),
         )
+        if cur.rowcount != 1:
+            raise NotFoundError("Transaction", txn_id)
 
         log_event(
             TXN_UPDATE,
@@ -763,36 +767,36 @@ async def delete_transaction(
     current_user: TokenData = Depends(get_current_user),
 ):
     """Soft-delete a transaction."""
-    existing = query_one(
-        "SELECT id, portfolio, stock_symbol, txn_date, txn_type, shares, "
-        "       purchase_cost, sell_value, bonus_shares, cash_dividend, fees, created_at "
-        "FROM transactions WHERE id = ? AND user_id = ? AND COALESCE(is_deleted, 0) = 0",
-        (txn_id, current_user.user_id),
-    )
-    if not existing:
-        raise NotFoundError("Transaction", txn_id)
-
-    # Compute the delta this transaction was contributing, then reverse it
-    del_delta = _txn_cash_delta(
-        existing["txn_type"],
-        float(existing["purchase_cost"] or 0),
-        float(existing["sell_value"] or 0),
-        float(existing["cash_dividend"] or 0),
-        float(existing["fees"] or 0),
-    )
-
     now = int(time.time())
     svc = PortfolioService(current_user.user_id)
     with transaction() as conn:
+        existing = query_one(
+            _transaction_select_for_update("id = ? AND user_id = ? AND COALESCE(is_deleted, 0) = 0"),
+            (txn_id, current_user.user_id),
+        )
+        if not existing:
+            raise NotFoundError("Transaction", txn_id)
+
+        # Compute the delta this transaction was contributing, then reverse it
+        del_delta = _txn_cash_delta(
+            existing["txn_type"],
+            float(existing["purchase_cost"] or 0),
+            float(existing["sell_value"] or 0),
+            float(existing["cash_dividend"] or 0),
+            float(existing["fees"] or 0),
+        )
         validate_position_mutation(
             current_user.user_id,
             exclude_transaction_ids=[txn_id],
             affected_identities=[_position_identity(existing["portfolio"], existing["stock_symbol"])],
         )
-        exec_sql(
-            "UPDATE transactions SET is_deleted = 1, deleted_at = ? WHERE id = ? AND user_id = ?",
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE transactions SET is_deleted = 1, deleted_at = ? WHERE id = ? AND user_id = ? AND COALESCE(is_deleted, 0) = 0",
             (now, txn_id, current_user.user_id),
         )
+        if cur.rowcount != 1:
+            raise NotFoundError("Transaction", txn_id)
 
         log_event(
             TXN_DELETE,
@@ -827,35 +831,35 @@ async def restore_transaction(
     current_user: TokenData = Depends(get_current_user),
 ):
     """Restore a soft-deleted transaction."""
-    existing = query_one(
-        "SELECT id, portfolio, stock_symbol, txn_date, txn_type, shares, "
-        "       purchase_cost, sell_value, bonus_shares, cash_dividend, fees, created_at "
-        "FROM transactions WHERE id = ? AND user_id = ? AND is_deleted = 1",
-        (txn_id, current_user.user_id),
-    )
-    if not existing:
-        raise NotFoundError("Transaction", txn_id)
-
-    # Compute the cash effect to re-apply
-    restore_delta = _txn_cash_delta(
-        existing["txn_type"],
-        float(existing["purchase_cost"] or 0),
-        float(existing["sell_value"] or 0),
-        float(existing["cash_dividend"] or 0),
-        float(existing["fees"] or 0),
-    )
-
     svc = PortfolioService(current_user.user_id)
     with transaction() as conn:
+        existing = query_one(
+            _transaction_select_for_update("id = ? AND user_id = ? AND COALESCE(is_deleted, 0) = 1"),
+            (txn_id, current_user.user_id),
+        )
+        if not existing:
+            raise NotFoundError("Transaction", txn_id)
+
+        # Compute the cash effect to re-apply
+        restore_delta = _txn_cash_delta(
+            existing["txn_type"],
+            float(existing["purchase_cost"] or 0),
+            float(existing["sell_value"] or 0),
+            float(existing["cash_dividend"] or 0),
+            float(existing["fees"] or 0),
+        )
         validate_position_mutation(
             current_user.user_id,
             additions=[dict(existing)],
             affected_identities=[_position_identity(existing["portfolio"], existing["stock_symbol"])],
         )
-        exec_sql(
-            "UPDATE transactions SET is_deleted = 0, deleted_at = NULL WHERE id = ? AND user_id = ?",
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE transactions SET is_deleted = 0, deleted_at = NULL WHERE id = ? AND user_id = ? AND COALESCE(is_deleted, 0) = 1",
             (txn_id, current_user.user_id),
         )
+        if cur.rowcount != 1:
+            raise NotFoundError("Transaction", txn_id)
 
         log_event(
             TXN_RESTORE,

@@ -23,6 +23,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from app.api.deps import get_current_user
+from app.core.config import get_settings
 from app.core.security import TokenData
 from app.core.exceptions import NotFoundError, BadRequestError, ConflictError
 from app.core.database import query_all, query_one, query_val, query_df, exec_sql, exec_sql_returning_id, get_connection
