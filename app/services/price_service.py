@@ -3,8 +3,8 @@ Price Service — stock price update logic.
 
 Migrated from the legacy cron handler in ui.py (lines 1-125).
 Handles:
-  - Kuwait stocks via Yahoo Finance ({SYMBOL}.KW suffix)
-  - US stocks via Yahoo Finance (raw symbol)
+    - TickerChart-first live price fetches
+    - Yahoo Finance fallback when TickerChart is unavailable
   - KWD price normalisation (÷1000 when value >50)
   - Reference list lookup (matches Streamlit's resolve_yf_ticker)
   - Tracks update results for caller logging / API response
@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from typing import Optional, Dict
 
-from app.core.cache import cache_key, price_cache, get_cached, set_cached
+from app.core.cache import cache_key, price_cache
 from app.core.database import get_conn, add_column_if_missing
 
 logger = logging.getLogger(__name__)
@@ -154,6 +154,7 @@ def _fetch_price_snapshot_sync(symbol: str, currency: str) -> dict:
         "pe_ratio": pe_ratio,
         "currency": currency,
         "fetched_at": datetime.now(timezone.utc).isoformat(),
+        "source": "yahoo",
     }
 
 
@@ -303,15 +304,6 @@ def update_all_prices(
         If True, only update stocks that have a positive share balance
         (i.e. net buys − sells > 0.001).  Saves API calls on dead positions.
     """
-    # Lazy-import so the module loads even if yfinance is missing in test envs
-    try:
-        import yfinance as yf
-    except ImportError:
-        logger.error("yfinance is not installed – cannot update prices.")
-        res = PriceUpdateResult()
-        res.errors.append("yfinance not installed")
-        return res
-
     t0 = time.time()
     result = PriceUpdateResult()
 
@@ -377,82 +369,40 @@ def update_all_prices(
         # ── Fetch & write prices ─────────────────────────────────────
         for stock_id, symbol, currency, stored_yf_ticker, existing_pe_ratio, _ in stocks:
             try:
-                # Prefer stored yf_ticker if available, else derive from symbol+currency
-                yahoo_sym = stored_yf_ticker if stored_yf_ticker else _yahoo_symbol(symbol, currency)
+                snapshot = asyncio.run(get_price_snapshot(symbol, currency or "KWD"))
+                price = snapshot.get("price")
+                if price is None:
+                    logger.warning("No price data for %s: %s", symbol, snapshot.get("error") or "no_data")
+                    result.skipped += 1
+                    result.details.append({"symbol": symbol, "status": "no_data", "error": snapshot.get("error")})
+                    continue
 
-                # Check price cache before hitting yfinance network
-                cached_data = get_cached(price_cache, yahoo_sym)
-                if cached_data is not None:
-                    price = cached_data["price"]
-                    previous_close = cached_data["previous_close"]
-                    pe_ratio = (
-                        cached_data.get("pe_ratio")
-                        if cached_data.get("pe_ratio") is not None
-                        else existing_pe_ratio
-                    )
-                else:
-                    ticker = yf.Ticker(yahoo_sym)
-
-                    # Use 5d window so weekends / holidays still return data
-                    hist = ticker.history(period="5d", interval="1d")
-
-                    # yfinance ≥ 1.0 may return MultiIndex columns
-                    if hist is not None and hist.columns.nlevels > 1:
-                        hist.columns = hist.columns.get_level_values(0)
-
-                    if hist is None or hist.empty or "Close" not in hist.columns:
-                        logger.warning("No data for %s (yahoo: %s)", symbol, yahoo_sym)
-                        result.skipped += 1
-                        result.details.append({"symbol": symbol, "status": "no_data"})
-                        continue
-
-                    closes = hist["Close"].dropna()
-                    raw_price = float(closes.iloc[-1])
-                    price = _normalise_kwd_price(raw_price, currency)
-                    previous_close = None
-                    if len(closes) >= 2:
-                        previous_close = _normalise_kwd_price(float(closes.iloc[-2]), currency)
-
-                    # Keep stored P/E when available; fetch only when missing.
-                    pe_ratio = existing_pe_ratio
-                    if pe_ratio is None:
-                        try:
-                            info = ticker.info
-                            pe_val = info.get("trailingPE") or info.get("forwardPE")
-                            if pe_val is not None:
-                                pe_ratio = round(float(pe_val), 2)
-                        except Exception as pe_exc:
-                            logger.debug("P/E fetch failed for %s: %s", yahoo_sym, pe_exc)
-
-                    # Cache result for 5 minutes (TTL set on price_cache instance)
-                    set_cached(price_cache, yahoo_sym, {
-                        "price": price,
-                        "previous_close": previous_close,
-                        "pe_ratio": pe_ratio,
-                    })
+                previous_close = snapshot.get("previous_close")
+                pe_ratio = snapshot.get("pe_ratio") if snapshot.get("pe_ratio") is not None else existing_pe_ratio
+                price_source = str(snapshot.get("source") or "yahoo").upper()
 
                 cur.execute(
                     """
                     UPDATE stocks
                     SET current_price = ?,
                         last_updated  = ?,
-                        price_source  = 'YAHOO',
+                        price_source  = ?,
                         pe_ratio      = ?,
                         previous_close = ?
                     WHERE id = ? AND user_id = ?
                     """,
-                    (round(price, 6), int(time.time()), pe_ratio, previous_close, stock_id, user_id),
+                    (round(float(price), 6), int(time.time()), price_source, pe_ratio, previous_close, stock_id, user_id),
                 )
 
                 result.updated += 1
                 result.details.append({
                     "symbol": symbol,
-                    "yahoo": yahoo_sym,
-                    "price": round(price, 6),
+                    "source": price_source,
+                    "price": round(float(price), 6),
                     "currency": currency,
                     "status": "ok",
                 })
-                logger.info("✅ %s → %s %.6f %s", symbol, yahoo_sym, price, currency)
+                logger.info("✅ %s → %s %.6f %s", symbol, price_source, float(price), currency)
 
             except Exception as exc:
                 result.failed += 1
