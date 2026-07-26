@@ -20,10 +20,14 @@ Endpoints:
 import json
 import asyncio
 import logging
+import re
+import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from email.utils import format_datetime, parsedate_to_datetime
+from html import unescape
 from hashlib import md5
 from typing import Any, Optional
+from urllib.parse import quote, urldefrag, urljoin, urlsplit, urlunsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
@@ -52,6 +56,7 @@ class NewsImportRequest(BaseModel):
     articles: list[dict[str, Any]] = Field(default_factory=list, max_length=10_000)
 
 BOURSA_API = "https://www.boursakuwait.com.kw/data-api/client-services"
+BOURSA_RSS_BASE = "https://rss.boursakuwait.com.kw"
 
 # In-memory TTL cache for raw Boursa API responses.
 # Delegates to app.core.cache.news_cache (15-min TTL, max 1000 entries).
@@ -72,6 +77,10 @@ _BOURSA_RT_CODES = [
 # covering 173+ tickers.  Fields: NewsTypeDesc, TitleTypeDesc, Title,
 # DisplayTicker, PostedDate, NewsId, RepeatedDate.
 _BOURSA_HISTORY_RT = "3516"
+
+_RSS_LIVE_FEEDS = ("FeedAllDetail.aspx",)
+_PDF_HREF_RE = re.compile(r'''(?:href|src)=["']([^"']+\.pdf(?:\?[^"']*)?)["']''', re.IGNORECASE)
+_resolved_document_cache: dict[str, str] = {}
 
 # ── Arabic display name → English ticker mapping ─────────────────
 # Boursa Kuwait returns Arabic company names as DisplayTicker for AR articles.
@@ -179,6 +188,17 @@ _NEWS_TYPE_MAP: dict[str, str] = {
     "99":  "regulatory",             # Committee Recommendation for Voluntary Delisting
     "132": "regulatory",             # CMA approval to deal in treasury shares
     "133": "regulatory",             # Sustainability Report
+    "134": "regulatory",             # Interested person disclosure form
+    "135": "regulatory",             # Change in interested person disclosure form
+    "136": "regulatory",             # Group disclosure form
+    "137": "regulatory",             # 5% ownership disclosure form
+    "139": "regulatory",             # Corporate insiders disclosure form
+    "140": "regulatory",             # Lawsuits and court judgments disclosure form
+    "141": "financial",              # Credit rating disclosure form
+    "143": "financial",              # Board meeting and financial results
+    "144": "company_announcement",   # General Assembly meeting
+    "145": "regulatory",             # Material information disclosure form
+    "146": "financial",              # Public investment fund monthly information
     # Market
     "32":  "market_news",            # Ticker Name Change
     "39":  "market_news",            # Company Delisting Date
@@ -190,6 +210,8 @@ _NEWS_TYPE_MAP: dict[str, str] = {
     "77":  "market_news",            # Trading after Capital Decrease
     "78":  "market_news",            # Official Holidays
     "79":  "market_news",            # Listing in Regular Market
+    "200": "market_news",            # Off Market Trades
+    "300": "market_news",            # Market Maker Announcement
 }
 
 # ── Keyword-based category detection ─────────────────────────────
@@ -434,6 +456,123 @@ def _parse_date(raw: str) -> str:
         return datetime.now(timezone.utc).isoformat()
 
 
+def _parse_rss_date(raw: str) -> str:
+    try:
+        return parsedate_to_datetime(raw).isoformat()
+    except Exception:
+        return datetime.now(timezone.utc).isoformat()
+
+
+def _rss_urls(lang_code: str) -> list[str]:
+    prefix = "/A/rss" if lang_code in ("A", "ar") else "/rss"
+    return [f"{BOURSA_RSS_BASE}{prefix}/{feed}" for feed in _RSS_LIVE_FEEDS]
+
+
+def _xml_text(element: ET.Element, name: str) -> str:
+    found = element.find(name)
+    return (found.text or "").strip() if found is not None else ""
+
+
+def _extract_news_id(link: str, document_url: str, title: str, published_at: str) -> str:
+    for candidate in (link, document_url):
+        if not candidate:
+            continue
+        _, fragment = urldefrag(candidate)
+        if fragment:
+            return fragment.strip()
+    return md5("|".join([title, document_url, published_at]).encode("utf-8")).hexdigest()
+
+
+def _extract_symbol_from_title(title: str) -> str:
+    prefix = title.split(" - ", 1)[0].strip().upper()
+    if not prefix or any(ch.isspace() for ch in prefix):
+        return ""
+    return prefix if re.fullmatch(r"[A-Z0-9]{2,16}", prefix) else ""
+
+
+def _resolve_boursa_document_url(document_url: str) -> str:
+    """Return the direct PDF URL for Boursa disclosure HTML pages when available."""
+    if not document_url:
+        return ""
+    if document_url.lower().split("?", 1)[0].endswith(".pdf"):
+        return document_url
+    cached = _resolved_document_cache.get(document_url)
+    if cached:
+        return cached
+    if "ifsahdocs.boursakuwait.com.kw" not in document_url.lower():
+        return document_url
+    try:
+        with httpx.Client(timeout=8.0, follow_redirects=True) as client:
+            resp = client.get(document_url)
+            resp.raise_for_status()
+        match = _PDF_HREF_RE.search(resp.text)
+        if match:
+            resolved = _quote_url_path(urljoin(document_url, unescape(match.group(1))))
+            _resolved_document_cache[document_url] = resolved
+            return resolved
+    except Exception as exc:
+        logger.debug("Boursa PDF resolution failed for %s: %s", document_url, exc)
+    _resolved_document_cache[document_url] = document_url
+    return document_url
+
+
+def _quote_url_path(url: str) -> str:
+    parts = urlsplit(url)
+    return urlunsplit((
+        parts.scheme,
+        parts.netloc,
+        quote(parts.path, safe="/%"),
+        parts.query,
+        parts.fragment,
+    ))
+
+
+def _map_rss_item(raw: dict[str, str], lang: str = "en") -> dict:
+    title = raw.get("title", "").strip()
+    news_type = raw.get("type", "").strip()
+    document_url = raw.get("url", "").strip()
+    source_link = raw.get("link", "").strip()
+    published_at = _parse_rss_date(raw.get("pubDate", ""))
+    news_id = _extract_news_id(source_link, document_url, title, published_at)
+    direct_url = _resolve_boursa_document_url(document_url) if document_url else source_link
+    ticker = _extract_symbol_from_title(title)
+    category = _classify_category(news_type, title)
+    attachment_type = "pdf" if direct_url.lower().split("?", 1)[0].endswith(".pdf") else "link"
+
+    return {
+        "id": news_id,
+        "title": title,
+        "summary": raw.get("description", "").strip() or title,
+        "source": "boursa_kuwait",
+        "category": category,
+        "publishedAt": published_at,
+        "url": direct_url or source_link,
+        "relatedSymbols": [ticker] if ticker else [],
+        "sentiment": "neutral",
+        "impact": _assess_impact(news_type, category),
+        "language": "ar" if lang in ("A", "ar") else "en",
+        "isVerified": True,
+        "attachments": [{"type": attachment_type, "url": direct_url}] if direct_url else None,
+    }
+
+
+def _parse_rss_xml(xml_text: str) -> list[dict[str, str]]:
+    root = ET.fromstring(xml_text)
+    items: list[dict[str, str]] = []
+    for item in root.findall("./channel/item"):
+        items.append({
+            "__source": "rss",
+            "title": _xml_text(item, "title"),
+            "type": _xml_text(item, "type"),
+            "description": _xml_text(item, "description"),
+            "link": _xml_text(item, "link"),
+            "url": _xml_text(item, "url"),
+            "pubDate": _xml_text(item, "pubDate"),
+            "security": _xml_text(item, "security"),
+        })
+    return items
+
+
 def _classify_category(news_type: str, title: str) -> str:
     """Determine the best category from NewsType code + title keywords."""
     # If we have a NewsType code, prefer the official mapping
@@ -524,6 +663,9 @@ def _map_item(raw: dict, lang: str = "en") -> dict:
     Works for both RT=3507/3508 (has NewsType, Url) and RT=3516 (has
     TitleTypeDesc, NewsTypeDesc).
     """
+    if raw.get("__source") == "rss":
+        return _map_rss_item(raw, lang)
+
     news_type = str(raw.get("NewsType", "")).strip()
     title = (raw.get("Title") or "").strip()
 
@@ -542,14 +684,16 @@ def _map_item(raw: dict, lang: str = "en") -> dict:
         ticker = _AR_DISPLAY_TO_EN_TICKER.get(ticker, ticker)
 
     pdf_url = (raw.get("Url") or "").strip()
+    direct_url = _resolve_boursa_document_url(pdf_url) if pdf_url else ""
     attachments = []
-    if pdf_url:
-        attachments.append({"type": "pdf", "url": pdf_url})
+    if direct_url:
+        attachment_type = "pdf" if direct_url.lower().split("?", 1)[0].endswith(".pdf") else "link"
+        attachments.append({"type": attachment_type, "url": direct_url})
 
     news_id = str(raw.get("NewsId", ""))
     # Always provide an openable source URL: prefer the direct PDF, fall back
     # to Boursa Kuwait's public news-viewer page (works for every NewsId).
-    source_url = pdf_url or _boursa_news_view_url(news_id, lang)
+    source_url = direct_url or pdf_url or _boursa_news_view_url(news_id, lang)
 
     return {
         "id": news_id,
@@ -626,6 +770,29 @@ def _content_hash(item: dict) -> str:
     return md5(payload.encode("utf-8")).hexdigest()
 
 
+def _update_existing_article(row: NewsArticle, item: dict) -> bool:
+    """Refresh stored article metadata when an upstream RSS item improves it."""
+    symbols_str = ",".join(item.get("relatedSymbols", [])) or None
+    attachments_str = json.dumps(item["attachments"]) if item.get("attachments") else None
+    changed = False
+    for attr, value in (
+        ("title", item.get("title", "")),
+        ("summary", item.get("summary")),
+        ("category", item.get("category", "company_announcement")),
+        ("url", item.get("url")),
+        ("related_symbols", symbols_str),
+        ("impact", item.get("impact", "informational")),
+        ("language", item.get("language", "en")),
+        ("attachments_json", attachments_str),
+    ):
+        if value is not None and getattr(row, attr) != value:
+            setattr(row, attr, value)
+            changed = True
+    if changed:
+        row.fetched_at = datetime.now(timezone.utc)
+    return changed
+
+
 def _persist_articles(db: Session, items: list[dict]) -> int:
     """Upsert news items into the DB. Returns count of new articles inserted.
 
@@ -636,14 +803,14 @@ def _persist_articles(db: Session, items: list[dict]) -> int:
 
     # Batch the existence check in chunks of 500 to avoid SQL limits
     news_ids = [it["id"] for it in items if it.get("id")]
-    existing: set[str] = set()
+    existing_by_id: dict[str, NewsArticle] = {}
     chunk_size = 500
     for i in range(0, len(news_ids), chunk_size):
         chunk = news_ids[i: i + chunk_size]
-        rows = db.query(NewsArticle.news_id).filter(
+        rows = db.query(NewsArticle).filter(
             NewsArticle.news_id.in_(chunk)
         ).all()
-        existing.update(r[0] for r in rows)
+        existing_by_id.update({row.news_id: row for row in rows})
 
     # Secondary dedupe: collect existing content hashes to catch the same
     # article re-published with a different NewsId.
@@ -658,9 +825,15 @@ def _persist_articles(db: Session, items: list[dict]) -> int:
         existing_hashes.update(r[0] for r in rows if r[0])
 
     inserted = 0
+    updated = 0
     for it in items:
         nid = it.get("id", "")
-        if not nid or nid in existing:
+        if not nid:
+            continue
+        existing_row = existing_by_id.get(nid)
+        if existing_row:
+            if _update_existing_article(existing_row, it):
+                updated += 1
             continue
         chash = item_hashes.get(nid) or _content_hash(it)
         if chash in existing_hashes:
@@ -699,7 +872,7 @@ def _persist_articles(db: Session, items: list[dict]) -> int:
         if inserted % 500 == 0:
             db.commit()
 
-    if inserted:
+    if inserted or updated:
         db.commit()
 
     return inserted
@@ -725,19 +898,20 @@ async def _fetch_boursa(params: dict) -> list[dict]:
 
 
 async def _fetch_live_boursa(lang_code: str) -> list[dict]:
-    """Fetch current-day items from RT=3507/3508 (fast, small payload)."""
+    """Fetch current-day items from official Boursa RSS (fast, small payload)."""
     seen_ids: set[str] = set()
     merged: list[dict] = []
-    for rt in _BOURSA_RT_CODES:
+    for url in _rss_urls(lang_code):
         try:
-            items = await _fetch_boursa({"RT": rt, "L": lang_code})
+            resp = await fetch_with_retry(url)
+            items = _parse_rss_xml(resp.text)
             for item in items:
-                nid = str(item.get("NewsId", ""))
+                nid = _extract_news_id(item.get("link", ""), item.get("url", ""), item.get("title", ""), item.get("pubDate", ""))
                 if nid and nid not in seen_ids:
                     seen_ids.add(nid)
                     merged.append(item)
         except Exception as e:
-            logger.warning("Boursa RT=%s fetch failed: %s", rt, e)
+            logger.warning("Boursa RSS fetch failed url=%s: %s", url, e)
     return merged
 
 
@@ -747,22 +921,20 @@ def _bg_fetch_live(lang: str) -> None:
     try:
         raw: list[dict] = []
         with httpx.Client(timeout=15.0) as client:
-            for rt in _BOURSA_RT_CODES:
+            for url in _rss_urls(boursa_lang):
                 try:
-                    resp = client.get(BOURSA_API, params={"RT": rt, "L": boursa_lang})
+                    resp = client.get(url)
                     resp.raise_for_status()
-                    data = resp.json()
-                    if isinstance(data, list):
-                        raw.extend(data)
+                    raw.extend(_parse_rss_xml(resp.text))
                 except Exception as e:
-                    logger.warning("BG RT=%s fetch failed: %s", rt, e)
+                    logger.warning("BG RSS fetch failed url=%s: %s", url, e)
         if not raw:
             return
         # Deduplicate
         seen: set[str] = set()
         unique = []
         for item in raw:
-            nid = str(item.get("NewsId", ""))
+            nid = _extract_news_id(item.get("link", ""), item.get("url", ""), item.get("title", ""), item.get("pubDate", ""))
             if nid and nid not in seen:
                 seen.add(nid)
                 unique.append(item)
@@ -801,17 +973,18 @@ async def _fetch_all_boursa_sources(lang_code: str) -> list[dict]:
     except Exception as e:
         logger.warning("Boursa RT=%s fetch failed: %s", _BOURSA_HISTORY_RT, e)
 
-    # Also fetch current-day sources (RT=3507/3508)
-    for rt in _BOURSA_RT_CODES:
+    # Also fetch current-day sources from the official RSS feed.
+    for url in _rss_urls(lang_code):
         try:
-            items = await _fetch_boursa({"RT": rt, "L": lang_code})
+            resp = await fetch_with_retry(url)
+            items = _parse_rss_xml(resp.text)
             for item in items:
-                nid = str(item.get("NewsId", ""))
+                nid = _extract_news_id(item.get("link", ""), item.get("url", ""), item.get("title", ""), item.get("pubDate", ""))
                 if nid and nid not in seen_ids:
                     seen_ids.add(nid)
                     merged.append(item)
         except Exception as e:
-            logger.warning("Boursa RT=%s fetch failed: %s", rt, e)
+            logger.warning("Boursa RSS fetch failed url=%s: %s", url, e)
 
     return merged
 
@@ -1143,17 +1316,18 @@ async def _async_fetch_all_history(lang: str = "en", job_id: str | None = None) 
             except Exception as exc:
                 logger.warning("Async fetch RT=%s lang=%s failed (all retries): %s", _BOURSA_HISTORY_RT, lang_code, exc)
 
-            # Current-day sources
-            for rt in _BOURSA_RT_CODES:
+            # Current-day sources from the official RSS feed.
+            for url in _rss_urls(lang_code):
                 try:
-                    items = await _fetch_boursa({"RT": rt, "L": lang_code})
+                    resp = await fetch_with_retry(url)
+                    items = _parse_rss_xml(resp.text)
                     for item in items:
-                        nid = str(item.get("NewsId", ""))
+                        nid = _extract_news_id(item.get("link", ""), item.get("url", ""), item.get("title", ""), item.get("pubDate", ""))
                         if nid and nid not in seen_ids:
                             seen_ids.add(nid)
                             merged.append(item)
                 except Exception as exc:
-                    logger.warning("Async fetch RT=%s lang=%s failed: %s", rt, lang_code, exc)
+                    logger.warning("Async RSS fetch url=%s lang=%s failed: %s", url, lang_code, exc)
 
             if not merged:
                 continue

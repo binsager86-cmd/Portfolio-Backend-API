@@ -21,13 +21,11 @@ import threading
 import time
 from collections import deque
 from datetime import datetime, timezone
+from hashlib import md5
 
 import httpx
 
 logger = logging.getLogger(__name__)
-
-BOURSA_API = "https://www.boursakuwait.com.kw/data-api/client-services"
-_BOURSA_RT_CODES = ["3507", "3508"]
 
 # Polling intervals (seconds)
 _MARKET_HOURS_INTERVAL = 15      # 15 s during trading
@@ -44,8 +42,8 @@ _MARKET_DAYS = {6, 0, 1, 2, 3}  # Mon=0 … Sun=6 → Sun–Thu
 _poller_thread: threading.Thread | None = None
 _poller_stop = threading.Event()
 
-# ── HTTP caching (ETag / Last-Modified) per RT+lang combo ────────────
-_http_cache: dict[str, dict] = {}  # {f"{rt}_{lang}": {"etag": str|None, "last_modified": str|None}}
+# ── HTTP caching (ETag / Last-Modified/body hash) per RSS URL ─────────
+_http_cache: dict[str, dict] = {}
 
 # ── Exponential backoff on failures ──────────────────────────────────
 _failure_counts: dict[str, int] = {}  # {f"{rt}_{lang}": consecutive_failure_count}
@@ -142,7 +140,7 @@ def poll_boursa_news() -> dict:
     """
     Poll Boursa Kuwait for new announcements (both EN + AR).
 
-    Fetches RT=3507/3508, persists new articles to DB,
+    Fetches the official Boursa RSS feed, persists new articles to DB,
     and sends push notifications for holdings-related news.
     """
     total_new = 0
@@ -176,9 +174,11 @@ def _poll_single_language(boursa_lang: str) -> dict:
     raw: list[dict] = []
     cache_hits = 0
 
+    from app.api.v1.news import _extract_news_id, _parse_rss_xml, _rss_urls
+
     with httpx.Client(timeout=15.0) as client:
-        for rt in _BOURSA_RT_CODES:
-            cache_key = f"{rt}_{boursa_lang}"
+        for url in _rss_urls(boursa_lang):
+            cache_key = f"rss_{boursa_lang}_{url}"
 
             # Check if this source is in backoff from prior failures
             fail_count = _failure_counts.get(cache_key, 0)
@@ -188,7 +188,7 @@ def _poll_single_language(boursa_lang: str) -> dict:
                 # (the backoff is enforced by the poller loop interval;
                 #  here we just reduce frequency of retries for flapping sources)
                 if fail_count >= 3:
-                    logger.debug("Skipping RT=%s L=%s (backoff, %d consecutive failures)", rt, boursa_lang, fail_count)
+                    logger.debug("Skipping RSS url=%s L=%s (backoff, %d consecutive failures)", url, boursa_lang, fail_count)
                     continue
 
             try:
@@ -202,8 +202,7 @@ def _poll_single_language(boursa_lang: str) -> dict:
                         req_headers["If-Modified-Since"] = cached["last_modified"]
 
                 resp = client.get(
-                    BOURSA_API,
-                    params={"RT": rt, "L": boursa_lang},
+                    url,
                     headers=req_headers,
                 )
 
@@ -216,15 +215,21 @@ def _poll_single_language(boursa_lang: str) -> dict:
 
                 resp.raise_for_status()
 
+                body_hash = md5(resp.content).hexdigest()
+                if cached and cached.get("body_hash") == body_hash:
+                    cache_hits += 1
+                    _poll_metrics["cache_hits"] += 1
+                    _failure_counts[cache_key] = 0
+                    continue
+
                 # Update cache with response headers
                 _http_cache[cache_key] = {
                     "etag": resp.headers.get("ETag"),
                     "last_modified": resp.headers.get("Last-Modified"),
+                    "body_hash": body_hash,
                 }
 
-                data = resp.json()
-                if isinstance(data, list):
-                    raw.extend(data)
+                raw.extend(_parse_rss_xml(resp.text))
 
                 _failure_counts[cache_key] = 0  # reset on success
 
@@ -233,14 +238,14 @@ def _poll_single_language(boursa_lang: str) -> dict:
                 if e.response.status_code == 429:
                     backoff_s = min(300, 15 * (2 ** _failure_counts[cache_key]))
                     logger.warning(
-                        "Rate limited RT=%s L=%s, backoff %ds (fail #%d)",
-                        rt, boursa_lang, backoff_s, _failure_counts[cache_key],
+                        "Rate limited RSS url=%s L=%s, backoff %ds (fail #%d)",
+                        url, boursa_lang, backoff_s, _failure_counts[cache_key],
                     )
                 else:
-                    logger.warning("HTTP %d RT=%s L=%s: %s", e.response.status_code, rt, boursa_lang, e)
+                    logger.warning("HTTP %d RSS url=%s L=%s: %s", e.response.status_code, url, boursa_lang, e)
             except Exception as e:
                 _failure_counts[cache_key] = _failure_counts.get(cache_key, 0) + 1
-                logger.warning("Poll RT=%s L=%s failed (fail #%d): %s", rt, boursa_lang, _failure_counts[cache_key], e)
+                logger.warning("Poll RSS url=%s L=%s failed (fail #%d): %s", url, boursa_lang, _failure_counts[cache_key], e)
 
     if not raw:
         return {"new_articles": 0, "notifications_sent": 0, "cache_hits": cache_hits}
@@ -249,7 +254,7 @@ def _poll_single_language(boursa_lang: str) -> dict:
     seen: set[str] = set()
     unique = []
     for item in raw:
-        nid = str(item.get("NewsId", ""))
+        nid = _extract_news_id(item.get("link", ""), item.get("url", ""), item.get("title", ""), item.get("pubDate", ""))
         if nid and nid not in seen:
             seen.add(nid)
             unique.append(item)
@@ -305,18 +310,18 @@ def _persist_and_collect_new(db, items: list[dict]) -> list[dict]:
         return []
 
     from app.models.news import NewsArticle
-    from app.api.v1.news import _content_hash
+    from app.api.v1.news import _content_hash, _update_existing_article
 
     # Check which IDs already exist
     news_ids = [it["id"] for it in items if it.get("id")]
-    existing: set[str] = set()
+    existing_by_id: dict[str, NewsArticle] = {}
     chunk_size = 500
     for i in range(0, len(news_ids), chunk_size):
         chunk = news_ids[i: i + chunk_size]
-        rows = db.query(NewsArticle.news_id).filter(
+        rows = db.query(NewsArticle).filter(
             NewsArticle.news_id.in_(chunk)
         ).all()
-        existing.update(r[0] for r in rows)
+        existing_by_id.update({row.news_id: row for row in rows})
 
     # Secondary dedupe by content_hash to catch the same article re-published
     # under a new NewsId.
@@ -331,9 +336,15 @@ def _persist_and_collect_new(db, items: list[dict]) -> list[dict]:
         existing_hashes.update(r[0] for r in rows if r[0])
 
     new_articles = []
+    updated_existing = 0
     for it in items:
         nid = it.get("id", "")
-        if not nid or nid in existing:
+        if not nid:
+            continue
+        existing_row = existing_by_id.get(nid)
+        if existing_row:
+            if _update_existing_article(existing_row, it):
+                updated_existing += 1
             continue
         chash = item_hashes.get(nid) or _content_hash(it)
         if chash in existing_hashes:
@@ -368,7 +379,7 @@ def _persist_and_collect_new(db, items: list[dict]) -> list[dict]:
         existing_hashes.add(chash)
         new_articles.append(it)
 
-    if new_articles:
+    if new_articles or updated_existing:
         db.commit()
 
     return new_articles
