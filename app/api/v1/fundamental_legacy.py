@@ -1470,7 +1470,10 @@ async def delete_all_statements(
 
 # ── Helper: convert camelCase SA keys to readable display names ──────
 
-_SA_METADATA_KEYS = {"datekey", "fiscalYear", "fiscalQuarter"}
+_SA_METADATA_KEYS = {
+    "datekey", "fiscalYear", "fiscalQuarter",
+    "map", "availableSources", "sources", "search_params", "params",
+}
 
 # SA keys that represent ratios/growth metrics — exclude from statement line items
 _SA_RATIO_KEYS = {
@@ -1478,6 +1481,7 @@ _SA_RATIO_KEYS = {
     "dividendGrowth", "grossMargin", "operatingMargin", "profitMargin",
     "fcfMargin", "ebitdaMargin", "ebitMargin", "effectiveTaxRate",
     "sharesYoY", "ocfGrowth", "netCashGrowth", "totalcashGrowth",
+    "taxrate", "payoutratio", "dividendyield", "pe", "pfcf", "ps",
 }
 
 
@@ -2036,6 +2040,7 @@ _SA_FIELD_MAP_INCOME = {
     "costrev": ("cost_of_revenue", "Cost of Revenue"),
     "cor": ("cost_of_revenue", "Cost of Revenue"),
     # Gross profit
+    "gp": ("gross_profit", "Gross Profit"),
     "grossProfit": ("gross_profit", "Gross Profit"),
     # SG&A / R&D
     "sgna": ("sga", "SG&A"),
@@ -2044,7 +2049,9 @@ _SA_FIELD_MAP_INCOME = {
     "propertyExpenses": ("property_expenses", "Property Expenses"),
     # Operating expenses
     "otherOpex": ("other_operating_expenses", "Other Operating Expenses"),
+    "otheropex": ("other_operating_expenses", "Other Operating Expenses"),
     "otherOperatingExpensesRE": ("other_operating_expenses", "Other Operating Expenses"),
+    "opex": ("total_operating_expenses", "Operating Expenses"),
     "totalOpex": ("total_operating_expenses", "Total Operating Expenses"),
     "totalOperatingExpensesRE": ("total_operating_expenses", "Total Operating Expenses"),
     "totalOperatingExpenses": ("total_operating_expenses", "Total Operating Expenses"),
@@ -2055,12 +2062,21 @@ _SA_FIELD_MAP_INCOME = {
     # Non-operating income
     "totalNonOperatingIncome": ("non_operating_income", "Non-Operating Income"),
     "intexp": ("interest_expense", "Interest Expense"),
+    "interestExpense": ("interest_expense", "Interest Expense"),
+    "interestIncome": ("interest_income", "Interest Income"),
+    "incomeEquity": ("earnings_equity_investments", "Earnings From Equity Investments"),
+    "otherNonOperating": ("other_non_operating_income", "Other Non-Operating Income"),
+    "ebtExcl": ("ebt_excluding_unusual_items", "EBT Excluding Unusual Items"),
+    "gainAssets": ("gain_loss_sale_assets", "Gain (Loss) on Sale of Assets"),
+    "gainInvestments": ("gain_loss_sale_investments", "Gain (Loss) on Sale of Investments"),
+    "otherUnusualItems": ("other_unusual_items", "Other Unusual Items"),
     # Pretax / tax
     "pretax": ("income_before_tax", "Pretax Income"),
     "taxexp": ("income_tax", "Income Tax"),
     "income_statement_provision_for_income_taxes": ("income_tax", "Income Tax"),
     # Net income
     "netinc": ("net_income", "Net Income"),
+    "netincCompany": ("net_income_company", "Net Income to Company"),
     "netIncome": ("net_income", "Net Income"),
     "netinccmn": ("net_income_common", "Net Income to Common"),
     "netIncomeCommon": ("net_income_common", "Net Income to Common"),
@@ -2226,13 +2242,13 @@ _SA_FIELD_MAP_CASHFLOW = {
 }
 
 _SA_STMT_MAP = {
-    "income":   ("https://stockanalysis.com/quote/kwse/{sym}/financials/", _SA_FIELD_MAP_INCOME),
+    "income":   ("https://stockanalysis.com/quote/kwse/{sym}/financials/income-statement/", _SA_FIELD_MAP_INCOME),
     "balance":  ("https://stockanalysis.com/quote/kwse/{sym}/financials/balance-sheet/", _SA_FIELD_MAP_BALANCE),
     "cashflow": ("https://stockanalysis.com/quote/kwse/{sym}/financials/cash-flow-statement/", _SA_FIELD_MAP_CASHFLOW),
 }
 
 _SA_STATEMENT_PATHS = {
-    "income": "financials/",
+    "income": "financials/income-statement/",
     "balance": "financials/balance-sheet/",
     "cashflow": "financials/cash-flow-statement/",
 }
@@ -2293,18 +2309,60 @@ def _sa_parse_financial_data(html: str) -> Optional[Dict]:
 
         return result
 
-    m = _re.search(r'financialData:\{(.*?)\},(?:mapData|columns)', html, _re.DOTALL)
+    def _merge_section_data(section_blocks: List[Dict[str, Any]]) -> Dict[str, Any]:
+        date_order: List[str] = []
+        fiscal_year_by_date: Dict[str, Any] = {}
+        fiscal_quarter_by_date: Dict[str, Any] = {}
+
+        for section in section_blocks:
+            for idx, date_key in enumerate(section.get("datekey", [])):
+                if date_key not in date_order:
+                    date_order.append(date_key)
+                if idx < len(section.get("fiscalYear", [])):
+                    fiscal_year_by_date.setdefault(date_key, section["fiscalYear"][idx])
+                if idx < len(section.get("fiscalQuarter", [])):
+                    fiscal_quarter_by_date.setdefault(date_key, section["fiscalQuarter"][idx])
+
+        result: Dict[str, Any] = {
+            "datekey": date_order,
+            "fiscalYear": [fiscal_year_by_date.get(date_key) for date_key in date_order],
+            "fiscalQuarter": [fiscal_quarter_by_date.get(date_key) for date_key in date_order],
+        }
+        date_index = {date_key: idx for idx, date_key in enumerate(date_order)}
+
+        for section in section_blocks:
+            section_dates = section.get("datekey", [])
+            for key, values in section.items():
+                if key in ("datekey", "fiscalYear", "fiscalQuarter"):
+                    continue
+                if not isinstance(values, list):
+                    continue
+                aligned = result.setdefault(key, [None] * len(date_order))
+                for section_idx, date_key in enumerate(section_dates):
+                    if section_idx >= len(values) or date_key not in date_index:
+                        continue
+                    target_idx = date_index[date_key]
+                    if aligned[target_idx] is None:
+                        aligned[target_idx] = values[section_idx]
+
+        return result
+
+    m = _re.search(r'financialData:\{(.*?),rows:\[', html, _re.DOTALL)
     if not m:
-        m = _re.search(r'financialData:\{(.+)', html, _re.DOTALL)
+        m = _re.search(r'financialData:\{(.*?)\},(?:map:|mapData|columns)', html, _re.DOTALL)
         if not m:
             # Newer StockAnalysis pages may render financialData as void 0 and
             # store statement arrays under section data blocks instead.
             if "sections:[" not in html:
                 return None
-            section_data = _re.search(r'data:\{(datekey:\[.*?\])\},ttm:', html, _re.DOTALL)
-            if not section_data:
+            section_blocks = [
+                _parse_array_object(section_match.group(1))
+                for section_match in _re.finditer(r'data:\{(datekey:\[.*?\])\},ttm:', html, _re.DOTALL)
+            ]
+            section_blocks = [section for section in section_blocks if section.get("datekey")]
+            if not section_blocks:
                 return None
-            result = _parse_array_object(section_data.group(1))
+            result = _merge_section_data(section_blocks)
             return result if result.get("datekey") else None
 
     raw = m.group(1)
