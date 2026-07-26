@@ -49,6 +49,7 @@ class TokenData(BaseModel):
     jti: Optional[str] = None
     exp: Optional[int] = None
     iat: Optional[int] = None
+    auth_iat_ms: Optional[int] = None
     is_admin: bool = False
 
 
@@ -138,7 +139,8 @@ def create_access_token(
     is_admin: bool = False,
 ) -> str:
     """Create a signed JWT access token (short-lived)."""
-    issued_at = int(datetime.now(timezone.utc).timestamp())
+    issued_at_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+    issued_at = issued_at_ms // 1000
     expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(minutes=_settings.JWT_EXPIRE_MINUTES)
     )
@@ -148,6 +150,7 @@ def create_access_token(
         "type": TOKEN_TYPE_ACCESS,
         "exp": expire,
         "iat": issued_at,
+        "auth_iat_ms": issued_at_ms,
         "jti": uuid.uuid4().hex,
         "is_admin": is_admin,
     }
@@ -199,6 +202,7 @@ def decode_access_token(token: str) -> TokenData:
     jti = payload.get("jti")
     exp = payload.get("exp")
     iat = payload.get("iat")
+    auth_iat_ms = payload.get("auth_iat_ms")
     is_admin = bool(payload.get("is_admin", False))
 
     if not user_id:
@@ -206,7 +210,7 @@ def decode_access_token(token: str) -> TokenData:
     if token_type != TOKEN_TYPE_ACCESS:
         raise JWTError(f"Expected access token, got {token_type}")
 
-    return TokenData(user_id=user_id, username=username, token_type=token_type, jti=jti, exp=exp, iat=iat, is_admin=is_admin)
+    return TokenData(user_id=user_id, username=username, token_type=token_type, jti=jti, exp=exp, iat=iat, auth_iat_ms=auth_iat_ms, is_admin=is_admin)
 
 
 def decode_refresh_token(token: str) -> TokenData:

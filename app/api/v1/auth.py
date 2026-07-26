@@ -150,6 +150,8 @@ def _ensure_refresh_revocation_column() -> None:
             exec_sql("ALTER TABLE users ADD COLUMN refresh_tokens_revoked_at INTEGER DEFAULT 0")
         if not column_exists("users", "access_tokens_revoked_at"):
             exec_sql("ALTER TABLE users ADD COLUMN access_tokens_revoked_at INTEGER DEFAULT 0")
+        if not column_exists("users", "access_tokens_revoked_at_ms"):
+            exec_sql("ALTER TABLE users ADD COLUMN access_tokens_revoked_at_ms BIGINT DEFAULT 0")
     except Exception:
         pass
 
@@ -163,13 +165,16 @@ def _revoke_user_refresh_tokens(user_id: int) -> None:
     )
 
 
-def _revoke_user_tokens(user_id: int) -> None:
+def _revoke_user_tokens(user_id: int, issued_at: int | None = None, issued_at_ms: int | None = None) -> None:
     """Invalidate access and refresh tokens issued before this point for a user."""
     _ensure_refresh_revocation_column()
     now = int(time.time())
+    now_ms = int(time.time() * 1000)
+    access_cutoff = max(now, int(issued_at) if issued_at is not None else now)
+    access_cutoff_ms = max(now_ms, int(issued_at_ms) if issued_at_ms is not None else now_ms)
     exec_sql(
-        "UPDATE users SET refresh_tokens_revoked_at = ?, access_tokens_revoked_at = ? WHERE id = ?",
-        (now, now, user_id),
+        "UPDATE users SET refresh_tokens_revoked_at = ?, access_tokens_revoked_at = ?, access_tokens_revoked_at_ms = ? WHERE id = ?",
+        (now, access_cutoff, access_cutoff_ms, user_id),
     )
 
 
@@ -320,7 +325,7 @@ async def refresh_token(request: Request, body: RefreshRequest):
 @router.post("/logout")
 async def logout(request: Request, current_user=Depends(get_current_user)):
     """Server-side logout: revoke this user's active access and refresh tokens."""
-    _revoke_user_tokens(current_user.user_id)
+    _revoke_user_tokens(current_user.user_id, current_user.iat, current_user.auth_iat_ms)
     log_event(AUTH_LOGOUT, user_id=current_user.user_id, request=request)
     return {"status": "ok", "message": "Logged out"}
 
@@ -530,6 +535,7 @@ async def change_password(
         body.new_password,
         request=request,
         audit_action=AUTH_PASSWORD_CHANGE,
+        access_issued_at_ms=current_user.auth_iat_ms,
     )
 
     return {"status": "ok", "message": "Password changed successfully"}

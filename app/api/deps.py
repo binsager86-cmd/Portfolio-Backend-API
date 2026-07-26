@@ -14,18 +14,22 @@ from app.core.security import (
     decode_access_token,
     TokenData,
 )
-from app.core.database import query_val, get_db as _get_db  # noqa: F401
+from app.core.database import query_one, query_val, get_db as _get_db  # noqa: F401
 
 
 # Re-export get_db so routes can import from deps
 get_db = _get_db
 
 
-def _is_access_token_revoked_for_user(user_id: int, issued_at: int | None) -> bool:
-    revoked_at = query_val(
-        "SELECT COALESCE(access_tokens_revoked_at, 0) FROM users WHERE id = ?",
+def _is_access_token_revoked_for_user(user_id: int, issued_at: int | None, issued_at_ms: int | None = None) -> bool:
+    row = query_one(
+        "SELECT COALESCE(access_tokens_revoked_at_ms, 0), COALESCE(access_tokens_revoked_at, 0) FROM users WHERE id = ?",
         (user_id,),
-    ) or 0
+    )
+    revoked_at_ms = row[0] if row else 0
+    revoked_at = row[1] if row else 0
+    if revoked_at_ms and issued_at_ms:
+        return int(issued_at_ms) <= int(revoked_at_ms)
     if not revoked_at:
         return False
     if not issued_at:
@@ -56,7 +60,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> TokenData:
     if not exists:
         raise credentials_exception
 
-    if _is_access_token_revoked_for_user(token_data.user_id, token_data.iat):
+    if _is_access_token_revoked_for_user(token_data.user_id, token_data.iat, token_data.auth_iat_ms):
         raise credentials_exception
 
     return token_data

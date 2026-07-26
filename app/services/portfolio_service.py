@@ -702,13 +702,17 @@ class PortfolioService:
             computed_portfolios = set(balances.keys())
             try:
                 cur.execute(
-                    "SELECT portfolio FROM portfolio_cash "
+                    "SELECT portfolio, COALESCE(balance, 0) FROM portfolio_cash "
                     "WHERE user_id = ? AND COALESCE(manual_override, 0) = 0",
                     (self.user_id,),
                 )
                 for row in cur.fetchall():
                     pf = row[0]
                     if pf and pf not in computed_portfolios:
+                        current_balance = float(row[1] or 0)
+                        if abs(current_balance) < 0.000001:
+                            balances[pf] = 0.0
+                            continue
                         cur.execute(
                             "UPDATE portfolio_cash SET balance = 0, last_updated = ? "
                             "WHERE user_id = ? AND portfolio = ?",
