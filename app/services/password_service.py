@@ -30,11 +30,12 @@ def apply_user_password_change(
         """UPDATE users
            SET password_hash = ?,
                refresh_tokens_revoked_at = ?,
+               access_tokens_revoked_at = ?,
                failed_login_attempts = 0,
                locked_until = NULL,
                last_failed_login = NULL
            WHERE id = ?""",
-        (hash_password(new_password), int(time.time()), user_id),
+        (hash_password(new_password), int(time.time()), int(time.time()), user_id),
     )
     log_event(
         audit_action,

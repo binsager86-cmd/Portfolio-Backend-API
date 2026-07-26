@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 from dataclasses import dataclass
 from datetime import date
@@ -70,7 +71,7 @@ def get_models_root(root: Optional[Path | str] = None) -> Path:
     if root is not None:
         p = Path(root)
     else:
-        p = Path(__file__).resolve().parents[4] / "ml_models"
+        p = Path(os.getenv("EAGLE_EYE_ML_MODELS_DIR") or Path(__file__).resolve().parents[4] / "ml_models")
     p.mkdir(parents=True, exist_ok=True)
     return p
 

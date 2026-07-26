@@ -9,11 +9,13 @@ import time
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, Query, HTTPException
+from starlette.concurrency import run_in_threadpool
 
 from app.api.deps import require_admin
 
 from app.core.config import get_settings
 from app.core.database import query_all
+from app.cron.job_locks import run_with_job_lock
 from app.services.price_service import update_all_prices
 
 logger = logging.getLogger(__name__)
@@ -68,29 +70,35 @@ async def trigger_price_update(
     """
     _verify_cron_key(x_cron_key)
 
-    user_ids = _resolve_user_ids(user_id)
-    logger.info("🚀 Price update triggered for user_ids=%s", user_ids)
+    def _run():
+        user_ids = _resolve_user_ids(user_id)
+        logger.info("🚀 Price update triggered for user_ids=%s", user_ids)
 
-    all_results = {}
-    total_updated = 0
-    total_found = 0
-    for uid in user_ids:
-        result = update_all_prices(user_id=uid, only_with_holdings=only_holdings)
-        all_results[uid] = result.to_dict()
-        total_updated += result.updated
-        total_found += result.stocks_found
+        all_results = {}
+        total_updated = 0
+        total_found = 0
+        for uid in user_ids:
+            result = update_all_prices(user_id=uid, only_with_holdings=only_holdings)
+            all_results[uid] = result.to_dict()
+            total_updated += result.updated
+            total_found += result.stocks_found
 
-    _last_run.update({
-        "timestamp": int(time.time()),
-        "user_ids": user_ids,
-        "result": all_results,
-    })
+        _last_run.update({
+            "timestamp": int(time.time()),
+            "user_ids": user_ids,
+            "result": all_results,
+        })
 
-    return {
-        "status": "ok",
-        "message": f"Updated {total_updated}/{total_found} prices across {len(user_ids)} user(s)",
-        "data": all_results,
-    }
+        return {
+            "status": "ok",
+            "message": f"Updated {total_updated}/{total_found} prices across {len(user_ids)} user(s)",
+            "data": all_results,
+        }
+
+    try:
+        return await run_in_threadpool(lambda: run_with_job_lock("daily_price_and_snapshot", _run))
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("/status")
@@ -130,31 +138,37 @@ async def trigger_snapshot_save(
 
     from app.cron.snapshot_saver import run_snapshot_save
 
-    user_ids = _resolve_user_ids(user_id)
-    logger.info("📸 Snapshot save triggered via API for user_ids=%s", user_ids)
+    def _run():
+        user_ids = _resolve_user_ids(user_id)
+        logger.info("📸 Snapshot save triggered via API for user_ids=%s", user_ids)
 
-    all_results = {}
-    for uid in user_ids:
-        all_results[uid] = run_snapshot_save(user_id=uid)
+        all_results = {}
+        for uid in user_ids:
+            all_results[uid] = run_snapshot_save(user_id=uid)
 
-    _last_snapshot_run.update({
-        "timestamp": int(time.time()),
-        "user_ids": user_ids,
-        "result": all_results,
-    })
+        _last_snapshot_run.update({
+            "timestamp": int(time.time()),
+            "user_ids": user_ids,
+            "result": all_results,
+        })
 
-    failures = [uid for uid, r in all_results.items() if not r.get("success")]
-    if failures:
+        failures = [uid for uid, r in all_results.items() if not r.get("success")]
+        if failures:
+            return {
+                "status": "partial" if len(failures) < len(user_ids) else "error",
+                "message": f"Snapshot save failed for user(s): {failures}",
+                "data": all_results,
+            }
         return {
-            "status": "partial" if len(failures) < len(user_ids) else "error",
-            "message": f"Snapshot save failed for user(s): {failures}",
+            "status": "ok",
+            "message": f"Snapshots saved for {len(user_ids)} user(s)",
             "data": all_results,
         }
-    return {
-        "status": "ok",
-        "message": f"Snapshots saved for {len(user_ids)} user(s)",
-        "data": all_results,
-    }
+
+    try:
+        return await run_in_threadpool(lambda: run_with_job_lock("daily_price_and_snapshot", _run))
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.post("/update-prices-and-snapshot")
@@ -174,48 +188,54 @@ async def trigger_price_update_and_snapshot(
     from app.cron.fundamentals_updater import run_tickerchart_fundamentals_update
     from app.cron.snapshot_saver import run_snapshot_save
 
-    fundamentals_result = run_tickerchart_fundamentals_update()
+    def _run():
+        fundamentals_result = run_tickerchart_fundamentals_update()
 
-    user_ids = _resolve_user_ids(user_id)
-    logger.info("🚀 Price update + snapshot triggered via API for user_ids=%s", user_ids)
+        user_ids = _resolve_user_ids(user_id)
+        logger.info("🚀 Price update + snapshot triggered via API for user_ids=%s", user_ids)
 
-    all_price_results = {}
-    all_snapshot_results = {}
-    total_updated = 0
-    total_found = 0
+        all_price_results = {}
+        all_snapshot_results = {}
+        total_updated = 0
+        total_found = 0
 
-    for uid in user_ids:
-        price_result = update_all_prices(user_id=uid)
-        all_price_results[uid] = price_result.to_dict()
-        total_updated += price_result.updated
-        total_found += price_result.stocks_found
+        for uid in user_ids:
+            price_result = update_all_prices(user_id=uid)
+            all_price_results[uid] = price_result.to_dict()
+            total_updated += price_result.updated
+            total_found += price_result.stocks_found
 
-        snapshot_result = run_snapshot_save(user_id=uid)
-        all_snapshot_results[uid] = snapshot_result
+            snapshot_result = run_snapshot_save(user_id=uid)
+            all_snapshot_results[uid] = snapshot_result
 
-    _last_run.update({
-        "timestamp": int(time.time()),
-        "user_ids": user_ids,
-        "result": all_price_results,
-    })
-    _last_snapshot_run.update({
-        "timestamp": int(time.time()),
-        "user_ids": user_ids,
-        "result": all_snapshot_results,
-    })
+        _last_run.update({
+            "timestamp": int(time.time()),
+            "user_ids": user_ids,
+            "result": all_price_results,
+        })
+        _last_snapshot_run.update({
+            "timestamp": int(time.time()),
+            "user_ids": user_ids,
+            "result": all_snapshot_results,
+        })
 
-    return {
-        "status": "ok",
-        "message": (
-            f"Fundamentals refreshed, prices updated ({total_updated}/{total_found}), "
-            f"snapshots saved for {len(user_ids)} user(s)"
-        ),
-        "data": {
-            "fundamentals": fundamentals_result,
-            "prices": all_price_results,
-            "snapshots": all_snapshot_results,
-        },
-    }
+        return {
+            "status": "ok",
+            "message": (
+                f"Fundamentals refreshed, prices updated ({total_updated}/{total_found}), "
+                f"snapshots saved for {len(user_ids)} user(s)"
+            ),
+            "data": {
+                "fundamentals": fundamentals_result,
+                "prices": all_price_results,
+                "snapshots": all_snapshot_results,
+            },
+        }
+
+    try:
+        return await run_in_threadpool(lambda: run_with_job_lock("daily_price_and_snapshot", _run))
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.post("/notify-portfolio-updates")

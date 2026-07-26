@@ -892,45 +892,46 @@ async def delete_all_transactions(
     """Soft-delete all transactions for the user (optionally filtered by portfolio)."""
     now = int(time.time())
 
-    if portfolio:
-        if portfolio not in PORTFOLIO_CCY:
-            raise BadRequestError(
-                f"Unknown portfolio '{portfolio}'. Valid: {list(PORTFOLIO_CCY.keys())}"
+    with transaction() as conn:
+        if portfolio:
+            if portfolio not in PORTFOLIO_CCY:
+                raise BadRequestError(
+                    f"Unknown portfolio '{portfolio}'. Valid: {list(PORTFOLIO_CCY.keys())}"
+                )
+            count_val = query_one(
+                "SELECT COUNT(*) FROM transactions WHERE user_id = ? AND portfolio = ? AND COALESCE(is_deleted, 0) = 0",
+                (current_user.user_id, portfolio),
             )
-        count_val = query_one(
-            "SELECT COUNT(*) FROM transactions WHERE user_id = ? AND portfolio = ? AND COALESCE(is_deleted, 0) = 0",
-            (current_user.user_id, portfolio),
-        )
-        exec_sql(
-            "UPDATE transactions SET is_deleted = 1, deleted_at = ? "
-            "WHERE user_id = ? AND portfolio = ? AND COALESCE(is_deleted, 0) = 0",
-            (now, current_user.user_id, portfolio),
-        )
-    else:
-        count_val = query_one(
-            "SELECT COUNT(*) FROM transactions WHERE user_id = ? AND COALESCE(is_deleted, 0) = 0",
-            (current_user.user_id,),
-        )
-        exec_sql(
-            "UPDATE transactions SET is_deleted = 1, deleted_at = ? "
-            "WHERE user_id = ? AND COALESCE(is_deleted, 0) = 0",
-            (now, current_user.user_id),
+            exec_sql(
+                "UPDATE transactions SET is_deleted = 1, deleted_at = ? "
+                "WHERE user_id = ? AND portfolio = ? AND COALESCE(is_deleted, 0) = 0",
+                (now, current_user.user_id, portfolio),
+            )
+        else:
+            count_val = query_one(
+                "SELECT COUNT(*) FROM transactions WHERE user_id = ? AND COALESCE(is_deleted, 0) = 0",
+                (current_user.user_id,),
+            )
+            exec_sql(
+                "UPDATE transactions SET is_deleted = 1, deleted_at = ? "
+                "WHERE user_id = ? AND COALESCE(is_deleted, 0) = 0",
+                (now, current_user.user_id),
+            )
+
+        deleted_count = count_val[0] if count_val else 0
+
+        log_event(
+            TXN_DELETE,
+            user_id=current_user.user_id,
+            resource_type="transaction",
+            resource_id=0,
+            details={"bulk_delete": True, "portfolio": portfolio, "count": deleted_count},
+            request=request,
         )
 
-    deleted_count = count_val[0] if count_val else 0
-
-    log_event(
-        TXN_DELETE,
-        user_id=current_user.user_id,
-        resource_type="transaction",
-        resource_id=0,
-        details={"bulk_delete": True, "portfolio": portfolio, "count": deleted_count},
-        request=request,
-    )
-
-    # ── Ledger: recalculate portfolio cash (respects manual_override — matches Streamlit)
-    svc = PortfolioService(current_user.user_id)
-    svc.recalc_portfolio_cash()  # force_override=False
+        # ── Ledger: recalculate portfolio cash (respects manual_override — matches Streamlit)
+        svc = PortfolioService(current_user.user_id)
+        svc.recalc_portfolio_cash(conn=conn)  # force_override=False
 
     return {
         "status": "ok",

@@ -60,79 +60,83 @@ def _run_daily_price_then_snapshot(user_id: int | None = None) -> dict:
     """
     import time
     from app.core.database import query_all
+    from app.cron.job_locks import run_with_job_lock
     from app.cron.fundamentals_updater import run_tickerchart_fundamentals_update
     from app.cron.price_updater import run_price_update
     from app.cron.snapshot_saver import run_snapshot_save
 
-    fundamentals_result = run_tickerchart_fundamentals_update()
+    def _run() -> dict:
+        fundamentals_result = run_tickerchart_fundamentals_update()
 
-    # Determine which users to process
-    if user_id is not None:
-        user_ids = [user_id]
-    else:
-        rows = query_all(
-            "SELECT DISTINCT user_id FROM stocks WHERE symbol IS NOT NULL AND symbol != ''"
-        )
-        user_ids = [int(r[0]) for r in rows] if rows else [1]
-        logger.info("🔄 Scheduler: updating prices for %d user(s): %s", len(user_ids), user_ids)
+        # Determine which users to process
+        if user_id is not None:
+            user_ids = [user_id]
+        else:
+            rows = query_all(
+                "SELECT DISTINCT user_id FROM stocks WHERE symbol IS NOT NULL AND symbol != ''"
+            )
+            user_ids = [int(r[0]) for r in rows] if rows else [1]
+            logger.info("🔄 Scheduler: updating prices for %d user(s): %s", len(user_ids), user_ids)
 
-    all_price_results = {}
-    all_snapshot_results = {}
+        all_price_results = {}
+        all_snapshot_results = {}
 
-    for uid in user_ids:
-        price_result = run_price_update(user_id=uid)
-        snapshot_result = run_snapshot_save(user_id=uid)
-        all_price_results[uid] = price_result
-        all_snapshot_results[uid] = snapshot_result
+        for uid in user_ids:
+            price_result = run_price_update(user_id=uid)
+            snapshot_result = run_snapshot_save(user_id=uid)
+            all_price_results[uid] = price_result
+            all_snapshot_results[uid] = snapshot_result
 
-    # Fire portfolio-update push notifications (best-effort; never blocks
-    # the daily job). Honors per-user notification preferences.
-    try:
-        from app.services.portfolio_alerts import notify_portfolio_updates_for_users
-        alerts_result = notify_portfolio_updates_for_users(user_ids)
-        logger.info(
-            "📲 Portfolio alerts dispatched: %d push(es) sent across %d user(s)",
-            alerts_result.get("total_sent", 0),
-            len(user_ids),
-        )
-    except Exception as exc:
-        logger.warning("Portfolio alert dispatch failed: %s", exc)
+        # Fire portfolio-update push notifications (best-effort; never blocks
+        # the daily job). Honors per-user notification preferences.
+        try:
+            from app.services.portfolio_alerts import notify_portfolio_updates_for_users
+            alerts_result = notify_portfolio_updates_for_users(user_ids)
+            logger.info(
+                "📲 Portfolio alerts dispatched: %d push(es) sent across %d user(s)",
+                alerts_result.get("total_sent", 0),
+                len(user_ids),
+            )
+        except Exception as exc:
+            logger.warning("Portfolio alert dispatch failed: %s", exc)
 
-    try:
-        _queue_portfolio_news_alerts()
-        logger.info("📰 Queued portfolio news alert dispatcher")
-    except Exception as exc:
-        logger.warning("Portfolio news alert queue failed: %s", exc)
+        try:
+            _queue_portfolio_news_alerts()
+            logger.info("📰 Queued portfolio news alert dispatcher")
+        except Exception as exc:
+            logger.warning("Portfolio news alert queue failed: %s", exc)
 
-    # Update the cron API status tracking so /status shows scheduler runs
-    try:
-        from app.api.v1.cron import _last_run, _last_snapshot_run
-        _last_run.update({
-            "timestamp": int(time.time()),
-            "source": "scheduler",
-            "user_ids": user_ids,
-            "result": {
-                "fundamentals": fundamentals_result,
-                "prices": {
-                    uid: r.to_dict() if hasattr(r, "to_dict") else r
-                    for uid, r in all_price_results.items()
+        # Update the cron API status tracking so /status shows scheduler runs
+        try:
+            from app.api.v1.cron import _last_run, _last_snapshot_run
+            _last_run.update({
+                "timestamp": int(time.time()),
+                "source": "scheduler",
+                "user_ids": user_ids,
+                "result": {
+                    "fundamentals": fundamentals_result,
+                    "prices": {
+                        uid: r.to_dict() if hasattr(r, "to_dict") else r
+                        for uid, r in all_price_results.items()
+                    },
                 },
-            },
-        })
-        _last_snapshot_run.update({
-            "timestamp": int(time.time()),
-            "source": "scheduler",
-            "user_ids": user_ids,
-            "result": all_snapshot_results,
-        })
-    except Exception:
-        pass  # non-critical — don't let tracking break the job
+            })
+            _last_snapshot_run.update({
+                "timestamp": int(time.time()),
+                "source": "scheduler",
+                "user_ids": user_ids,
+                "result": all_snapshot_results,
+            })
+        except Exception:
+            pass  # non-critical — don't let tracking break the job
 
-    return {
-        "fundamentals": fundamentals_result,
-        "price": all_price_results,
-        "snapshot": all_snapshot_results,
-    }
+        return {
+            "fundamentals": fundamentals_result,
+            "price": all_price_results,
+            "snapshot": all_snapshot_results,
+        }
+
+    return run_with_job_lock("daily_price_and_snapshot", _run)
 
 
 def _run_daily_technical_batch() -> dict:
@@ -253,6 +257,8 @@ def start_scheduler() -> None:
             id="daily_price_and_snapshot",
             name="Daily price update + snapshot save",
             replace_existing=True,
+            coalesce=True,
+            max_instances=1,
         )
         logger.info(
             "🕐 Daily price update + snapshot scheduled — daily at %02d:%02d Asia/Kuwait",

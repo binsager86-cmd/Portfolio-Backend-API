@@ -9,6 +9,7 @@ import json
 import logging
 import os
 from typing import Any, Optional
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import redis.asyncio as redis
 
@@ -16,8 +17,17 @@ logger = logging.getLogger(__name__)
 
 # DB 1 keeps AI results separate from Celery broker/results on DB 0
 _REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-# Force DB 1 regardless of what REDIS_URL points to
-_AI_REDIS_URL = _REDIS_URL.rsplit("/", 1)[0] + "/1"
+
+
+def _redis_url_for_db(url: str, db: int) -> str:
+    parsed = urlsplit(url)
+    query_items = [(k, v) for k, v in parse_qsl(parsed.query, keep_blank_values=True) if k != "db"]
+    query = urlencode(query_items)
+    return urlunsplit((parsed.scheme, parsed.netloc, f"/{db}", query, parsed.fragment))
+
+
+# Force DB 1 regardless of what REDIS_URL points to, preserving scheme/auth/query params.
+_AI_REDIS_URL = _redis_url_for_db(_REDIS_URL, 1)
 
 ai_cache: redis.Redis = redis.Redis.from_url(
     _AI_REDIS_URL,

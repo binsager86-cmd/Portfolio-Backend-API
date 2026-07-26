@@ -4,7 +4,9 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PORT=8004 \
-    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+  PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+  EAGLE_EYE_ML_MODELS_DIR=/data/ml_models \
+  EAGLE_EYE_ML_FEATURE_STORE_DIR=/data/ml_feature_store
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip \
@@ -13,7 +15,11 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 # Copy app code & set permissions
 COPY . .
-RUN chown -R pwuser:pwuser /app && chmod -R 555 /app
+RUN mkdir -p /data/ml_models /data/ml_feature_store \
+    && chown -R pwuser:pwuser /data \
+    && chown -R pwuser:pwuser /app \
+    && chmod -R 555 /app \
+    && chmod -R 755 /data
 
 USER pwuser
 EXPOSE 8004

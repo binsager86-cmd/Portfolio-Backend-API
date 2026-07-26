@@ -13,8 +13,10 @@ import time
 from typing import Optional
 
 from fastapi import APIRouter, Header, Query, HTTPException
+from starlette.concurrency import run_in_threadpool
 
 from app.core.config import get_settings
+from app.cron.job_locks import run_with_job_lock
 from app.services.price_service import update_all_prices
 
 logger = logging.getLogger(__name__)
@@ -60,19 +62,25 @@ async def trigger_price_update(
     """
     _verify_cron_key(x_cron_key)
 
-    logger.info("🚀 Price update triggered (user_id=%d)", user_id)
-    result = update_all_prices(user_id=user_id, only_with_holdings=only_holdings)
+    def _run():
+        logger.info("🚀 Price update triggered (user_id=%d)", user_id)
+        result = update_all_prices(user_id=user_id, only_with_holdings=only_holdings)
 
-    _last_run.update({
-        "timestamp": int(time.time()),
-        "result": result.to_dict(),
-    })
+        _last_run.update({
+            "timestamp": int(time.time()),
+            "result": result.to_dict(),
+        })
 
-    return {
-        "status": "ok",
-        "message": f"Updated {result.updated}/{result.stocks_found} prices in {result.elapsed_sec:.1f}s",
-        "data": result.to_dict(),
-    }
+        return {
+            "status": "ok",
+            "message": f"Updated {result.updated}/{result.stocks_found} prices in {result.elapsed_sec:.1f}s",
+            "data": result.to_dict(),
+        }
+
+    try:
+        return await run_in_threadpool(lambda: run_with_job_lock("daily_price_and_snapshot", _run))
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("/status")

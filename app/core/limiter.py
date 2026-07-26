@@ -15,6 +15,9 @@ _enabled = os.environ.get("RATE_LIMIT_ENABLED", "true").lower() != "false"
 _settings = get_settings()
 _redis_url = (_settings.REDIS_URL or os.environ.get("REDIS_URL") or "").strip()
 
+if _enabled and _settings.ENVIRONMENT.lower() == "production" and not _redis_url:
+    raise RuntimeError("RATE_LIMIT_ENABLED requires REDIS_URL in production")
+
 limiter = Limiter(
     key_func=lambda request: get_client_ip(request) or "unknown",
     default_limits=["120/minute"],          # global default

@@ -330,6 +330,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Portfolio Mobile API",
     version="1.0.0",
+    docs_url=None if settings.ENVIRONMENT.lower() == "production" and not settings.ENABLE_PUBLIC_DOCS else "/docs",
+    redoc_url=None if settings.ENVIRONMENT.lower() == "production" and not settings.ENABLE_PUBLIC_DOCS else "/redoc",
+    openapi_url=None if settings.ENVIRONMENT.lower() == "production" and not settings.ENABLE_PUBLIC_DOCS else "/openapi.json",
     default_response_class=SafeJSONResponse,
     description=(
         "REST API for the Portfolio Mobile Migration.\n\n"
@@ -344,7 +347,8 @@ app = FastAPI(
 # ── Observability (Prometheus) ─────────────────────────────────────
 # Must be called at module level — add_middleware() cannot be called
 # after the application has started (i.e. inside lifespan).
-Instrumentator().instrument(app).expose(app, endpoint="/metrics")
+if settings.ENVIRONMENT.lower() != "production" or settings.ENABLE_PUBLIC_METRICS:
+    Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 # ── Exception handlers ──────────────────────────────────────────────
 app.state.limiter = limiter

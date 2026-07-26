@@ -21,6 +21,18 @@ from app.core.database import query_val, get_db as _get_db  # noqa: F401
 get_db = _get_db
 
 
+def _is_access_token_revoked_for_user(user_id: int, issued_at: int | None) -> bool:
+    revoked_at = query_val(
+        "SELECT COALESCE(access_tokens_revoked_at, 0) FROM users WHERE id = ?",
+        (user_id,),
+    ) or 0
+    if not revoked_at:
+        return False
+    if not issued_at:
+        return True
+    return int(issued_at) <= int(revoked_at)
+
+
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> TokenData:
     """
     Dependency that extracts & validates the JWT from the Authorization header.
@@ -42,6 +54,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> TokenData:
     # Verify user still exists in DB
     exists = query_val("SELECT id FROM users WHERE id = ?", (token_data.user_id,))
     if not exists:
+        raise credentials_exception
+
+    if _is_access_token_revoked_for_user(token_data.user_id, token_data.iat):
         raise credentials_exception
 
     return token_data

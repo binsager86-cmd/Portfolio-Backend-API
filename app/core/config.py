@@ -48,6 +48,8 @@ class Settings(BaseSettings):
 
     # Redis / shared infrastructure
     REDIS_URL: str = ""                         # Used by Celery and shared rate limiting when configured
+    ENABLE_PUBLIC_DOCS: bool = False             # Production docs/OpenAPI exposure opt-in
+    ENABLE_PUBLIC_METRICS: bool = False          # Production /metrics exposure opt-in
 
     # FX
     FX_CACHE_TTL: int = 3600  # 1 hour cache for USD/KWD rate

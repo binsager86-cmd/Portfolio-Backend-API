@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -35,8 +36,11 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-# Default root is sibling of the ml_models directory produced by model_store.py
-_DEFAULT_STORE_ROOT = Path(__file__).resolve().parents[4] / "ml_feature_store"
+def _default_store_root() -> Path:
+    configured = os.getenv("EAGLE_EYE_ML_FEATURE_STORE_DIR")
+    if configured:
+        return Path(configured)
+    return Path(__file__).resolve().parents[4] / "ml_feature_store"
 
 
 class FeatureStore:
@@ -50,7 +54,7 @@ class FeatureStore:
     """
 
     def __init__(self, root: Optional[Path | str] = None) -> None:
-        self.root = Path(root) if root is not None else _DEFAULT_STORE_ROOT
+        self.root = Path(root) if root is not None else _default_store_root()
         self.root.mkdir(parents=True, exist_ok=True)
 
     # ------------------------------------------------------------------

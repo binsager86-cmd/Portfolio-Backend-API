@@ -56,6 +56,8 @@ def ensure_all_tables() -> None:
                 expires_at      INTEGER NOT NULL
             )
         """)
+        add_column_if_missing("users", "refresh_tokens_revoked_at", "INTEGER DEFAULT 0")
+        add_column_if_missing("users", "access_tokens_revoked_at", "INTEGER DEFAULT 0")
         exec_sql(f"""
             CREATE TABLE IF NOT EXISTS audit_log (
                 id              {PK},

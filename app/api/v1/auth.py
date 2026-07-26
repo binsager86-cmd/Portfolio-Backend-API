@@ -48,6 +48,7 @@ from app.services.audit_service import (
     AUTH_PASSWORD_CHANGE,
     AUTH_TOKEN_REFRESH,
     AUTH_LOCKOUT,
+    AUTH_LOGOUT,
 )
 from app.services.password_service import apply_user_password_change, change_user_password
 from app.services.user_onboarding import setup_new_user
@@ -147,6 +148,8 @@ def _ensure_refresh_revocation_column() -> None:
     try:
         if not column_exists("users", "refresh_tokens_revoked_at"):
             exec_sql("ALTER TABLE users ADD COLUMN refresh_tokens_revoked_at INTEGER DEFAULT 0")
+        if not column_exists("users", "access_tokens_revoked_at"):
+            exec_sql("ALTER TABLE users ADD COLUMN access_tokens_revoked_at INTEGER DEFAULT 0")
     except Exception:
         pass
 
@@ -157,6 +160,16 @@ def _revoke_user_refresh_tokens(user_id: int) -> None:
     exec_sql(
         "UPDATE users SET refresh_tokens_revoked_at = ? WHERE id = ?",
         (int(time.time()), user_id),
+    )
+
+
+def _revoke_user_tokens(user_id: int) -> None:
+    """Invalidate access and refresh tokens issued before this point for a user."""
+    _ensure_refresh_revocation_column()
+    now = int(time.time())
+    exec_sql(
+        "UPDATE users SET refresh_tokens_revoked_at = ?, access_tokens_revoked_at = ? WHERE id = ?",
+        (now, now, user_id),
     )
 
 
@@ -302,6 +315,14 @@ async def refresh_token(request: Request, body: RefreshRequest):
         refresh_token=new_refresh,
         expires_in=_settings.JWT_EXPIRE_MINUTES * 60,
     )
+
+
+@router.post("/logout")
+async def logout(request: Request, current_user=Depends(get_current_user)):
+    """Server-side logout: revoke this user's active access and refresh tokens."""
+    _revoke_user_tokens(current_user.user_id)
+    log_event(AUTH_LOGOUT, user_id=current_user.user_id, request=request)
+    return {"status": "ok", "message": "Logged out"}
 
 
 # ── Current user info ────────────────────────────────────────────────

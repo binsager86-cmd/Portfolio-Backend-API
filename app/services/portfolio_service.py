@@ -668,8 +668,9 @@ class PortfolioService:
                                 "Manual-override cash for %s updated: %.3f + %.3f = %.3f",
                                 pf, old_bal, deposit_delta, new_bal,
                             )
-                        except Exception as exc:
-                            logger.debug("manual override delta update skipped: %s", exc)
+                        except Exception:
+                            logger.exception("manual override cash delta update failed")
+                            raise
                     continue
                 balances[pf] = balance
 
@@ -692,8 +693,9 @@ class PortfolioService:
                             "VALUES (?,?,?,?,?,0)",
                             (self.user_id, pf, balance, pf_ccy, now),
                         )
-                except Exception as exc:
-                    logger.debug("portfolio_cash upsert skipped: %s", exc)
+                except Exception:
+                    logger.exception("portfolio_cash upsert failed")
+                    raise
 
             # Zero out any non-manual portfolios that had no activity
             # (e.g. all transactions deleted → aggregate returned no rows)
@@ -714,8 +716,9 @@ class PortfolioService:
                         )
                         balances[pf] = 0.0
                         logger.info("Zeroed stale cash for portfolio %s", pf)
-            except Exception as exc:
-                logger.debug("stale portfolio_cash cleanup skipped: %s", exc)
+            except Exception:
+                logger.exception("stale portfolio_cash cleanup failed")
+                raise
 
             if owns_connection:
                 conn.commit()
