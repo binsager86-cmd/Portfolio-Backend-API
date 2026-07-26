@@ -2,7 +2,7 @@ import pytest
 
 from app.core.database import query_val
 from app.services.portfolio_service import PortfolioService
-from tests.helpers import create_buy
+from tests.helpers import create_buy, create_stock
 
 
 def test_bulk_delete_rolls_back_when_cash_recalc_fails(test_client, auth_headers, monkeypatch):
@@ -46,3 +46,33 @@ def test_transaction_delete_and_restore_are_state_conditional(test_client, auth_
 
     is_deleted = query_val("SELECT COALESCE(is_deleted, 0) FROM transactions WHERE id = ?", (txn_id,))
     assert int(is_deleted or 0) == 0
+
+
+def test_create_transaction_reuses_existing_user_symbol_stock(test_client, auth_headers, monkeypatch):
+    create_stock(user_id=1, portfolio="KFH", symbol="KRE")
+
+    def record_recalc(self, *args, **kwargs):
+        return None
+
+    monkeypatch.setattr(PortfolioService, "recalc_portfolio_cash", record_recalc)
+
+    response = test_client.post(
+        "/api/v1/portfolio/transactions",
+        headers=auth_headers,
+        json={
+            "portfolio": "BBYN",
+            "txn_type": "Buy",
+            "stock_symbol": "KRE",
+            "txn_date": "2026-07-26",
+            "shares": 9172,
+            "purchase_cost": 3104.49,
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json()["data"]["id"]
+    stock_count = query_val(
+        "SELECT COUNT(*) FROM stocks WHERE user_id = ? AND UPPER(TRIM(symbol)) = ?",
+        (1, "KRE"),
+    )
+    assert int(stock_count or 0) == 1

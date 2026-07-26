@@ -613,8 +613,8 @@ async def create_transaction(
         from app.core.database import query_val as _qv
         sym_upper = txn.stock_symbol.strip().upper()
         existing_stock = _qv(
-            "SELECT id FROM stocks WHERE UPPER(TRIM(symbol)) = ? AND user_id = ? AND COALESCE(NULLIF(TRIM(portfolio), ''), '') = ?",
-            (sym_upper, current_user.user_id, txn.portfolio),
+            "SELECT id FROM stocks WHERE UPPER(TRIM(symbol)) = ? AND user_id = ?",
+            (sym_upper, current_user.user_id),
         )
         if not existing_stock and txn.txn_type in ("Buy", "Sell"):
             ccy = "USD" if txn.portfolio == "USA" else "KWD"
@@ -630,6 +630,15 @@ async def create_transaction(
                  ccy, yf_ticker, int(time.time())),
             )
             logger.info("Auto-created stock record for %s (yf: %s)", sym_upper, yf_ticker)
+        elif existing_stock and txn.txn_type in ("Buy", "Sell"):
+            ccy = "USD" if txn.portfolio == "USA" else "KWD"
+            exec_sql(
+                """UPDATE stocks
+                   SET currency = COALESCE(NULLIF(currency, ''), ?),
+                       portfolio = COALESCE(NULLIF(portfolio, ''), ?)
+                   WHERE id = ? AND user_id = ?""",
+                (ccy, txn.portfolio, existing_stock, current_user.user_id),
+            )
 
         log_event(
             TXN_CREATE,
