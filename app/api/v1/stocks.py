@@ -11,6 +11,7 @@ single-ticker yfinance price fetch for use at stock-creation time.
 import time
 import asyncio
 import logging
+import dataclasses
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -469,8 +470,26 @@ async def manual_price_update(
             )
         )
 
-        data = result.to_dict() if hasattr(result, "to_dict") else {}
-        data["message"] = f"Updated {data.get('updated', 0)} of {data.get('stocks_found', 0)} stocks"
+        # Normalize result objects across Pydantic/dataclass/plain return types.
+        if hasattr(result, "model_dump") and callable(result.model_dump):
+            data = result.model_dump()
+        elif hasattr(result, "dict") and callable(result.dict):
+            data = result.dict()
+        elif dataclasses.is_dataclass(result):
+            data = dataclasses.asdict(result)
+        elif hasattr(result, "to_dict") and callable(result.to_dict):
+            data = result.to_dict()
+        else:
+            data = {}
+
+        if not isinstance(data, dict):
+            data = {}
+
+        updated_count = data.get("updated", 0)
+        stocks_found = data.get("stocks_found", 0)
+        data["message"] = f"Updated {updated_count} of {stocks_found} stocks"
+        data["updated_count"] = updated_count
+        data["updatedCount"] = updated_count
 
         return {"status": "ok", "data": data}
     except Exception as e:

@@ -311,6 +311,9 @@ def update_all_prices(
 
     conn = get_conn()
     cur = conn.cursor()
+    # Reuse one event loop per worker invocation to avoid per-row loop churn.
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
     try:
         # Ensure additive columns exist across SQLite/PostgreSQL before reads
@@ -366,14 +369,12 @@ def update_all_prices(
                 """,
                 (user_id,),
             )
+            # Strict holdings-only refresh: do not fall back to full-table scans.
             stocks = cur.fetchall()
-            if not stocks:
-                result.used_full_scan_fallback = True
-                logger.warning(
-                    "Price updater holdings-filter matched 0 stocks for user_id=%s; falling back to full stock scan",
-                    user_id,
-                )
-                stocks = _select_all_stocks()
+            result.stocks_found = len(stocks)
+            if result.stocks_found == 0:
+                logger.info("Price updater: 0 holdings found for user_id=%s, skipping update", user_id)
+                return result
         else:
             stocks = _select_all_stocks()
 
@@ -383,7 +384,9 @@ def update_all_prices(
         # ── Fetch & write prices ─────────────────────────────────────
         for stock_id, symbol, currency, stored_yf_ticker, existing_pe_ratio, _ in stocks:
             try:
-                snapshot = asyncio.run(get_price_snapshot(symbol, currency or "KWD", force_refresh=True))
+                snapshot = loop.run_until_complete(
+                    get_price_snapshot(symbol, currency or "KWD", force_refresh=True)
+                )
                 price = snapshot.get("price")
                 if price is None:
                     logger.warning("No price data for %s: %s", symbol, snapshot.get("error") or "no_data")
@@ -426,7 +429,10 @@ def update_all_prices(
         conn.commit()
 
     finally:
-        conn.close()
+        try:
+            loop.close()
+        finally:
+            conn.close()
 
     result.elapsed_sec = time.time() - t0
     logger.info(
