@@ -150,6 +150,20 @@ def _lock_position_identities(user_id: int, identities: Iterable[tuple[str, str]
         )
 
 
+def _normalize_position_txn_type(value: object) -> str:
+    raw = str(value or "").strip().upper().replace("-", "_")
+    collapsed = " ".join(raw.replace("_", " ").split())
+    if collapsed in {"BUY", "PURCHASE"}:
+        return "BUY"
+    if collapsed == "SELL":
+        return "SELL"
+    if collapsed in {"BONUS", "BONUS SHARES", "STOCK DIVIDEND", "STOCK DIVIDENDS"}:
+        return "BONUS"
+    if collapsed in {"DIVIDEND ONLY", "DIVIDEND", "CASH DIVIDEND", "CASH DIVIDENDS"}:
+        return "DIVIDEND"
+    return collapsed
+
+
 def _transaction_select_for_update(where_clause: str) -> str:
     suffix = " FOR UPDATE" if settings.use_postgres else ""
     return (
@@ -167,6 +181,14 @@ def _replay_position_timeline(
     additions: list[dict],
     exclude_transaction_ids: set[int],
 ) -> None:
+    exclude_clause = ""
+    exclude_params: tuple[int, ...] = ()
+    if exclude_transaction_ids:
+        exclude_clause = "AND id NOT IN ({placeholders})".format(
+            placeholders=",".join("?" for _ in exclude_transaction_ids)
+        )
+        exclude_params = tuple(exclude_transaction_ids)
+
     rows = query_all(
         """SELECT id, portfolio, stock_symbol, txn_date, txn_type, shares,
                   bonus_shares, created_at
@@ -176,10 +198,8 @@ def _replay_position_timeline(
              AND COALESCE(NULLIF(TRIM(portfolio), ''), 'KFH') = COALESCE(NULLIF(TRIM(?), ''), 'KFH')
              AND COALESCE(category, 'portfolio') = 'portfolio'
              AND COALESCE(is_deleted, 0) = 0
-             AND id NOT IN ({placeholders})""".format(
-                placeholders=",".join("?" for _ in exclude_transaction_ids) or "NULL"
-             ),
-        (user_id, symbol.strip().upper(), portfolio, *tuple(exclude_transaction_ids)),
+             {exclude_clause}""".format(exclude_clause=exclude_clause),
+        (user_id, symbol.strip().upper(), portfolio, *exclude_params),
     )
     timeline = [dict(row) for row in rows]
     timeline.extend(additions)
@@ -187,13 +207,15 @@ def _replay_position_timeline(
 
     shares_held = 0.0
     for row in timeline:
-        txn_type = str(row.get("txn_type") or "").strip()
+        txn_type = _normalize_position_txn_type(row.get("txn_type"))
         shares = float(row.get("shares") or 0)
         bonus = float(row.get("bonus_shares") or 0)
-        if txn_type == "Buy":
+        if txn_type == "BUY":
             shares_held += shares + bonus
-        elif txn_type == "Sell":
+        elif txn_type == "SELL":
             shares_held -= shares
+        elif txn_type == "BONUS":
+            shares_held += shares + bonus
         else:
             shares_held += bonus
         if shares_held < -1e-9:
