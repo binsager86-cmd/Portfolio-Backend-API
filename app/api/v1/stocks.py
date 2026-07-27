@@ -593,7 +593,8 @@ async def manual_price_update(
     from app.services.price_service import update_all_prices
 
     try:
-        result = update_all_prices(
+        result = await asyncio.to_thread(
+            update_all_prices,
             user_id=current_user.user_id,
             only_with_holdings=True,
         )

@@ -9,6 +9,7 @@ Provides:
 
 import logging
 import time
+import asyncio
 from typing import Optional
 
 from fastapi import APIRouter, Header, Query, HTTPException
@@ -68,7 +69,11 @@ async def trigger_price_update(
     _verify_cron_key(x_cron_key, key)
 
     logger.info("🚀 Price update triggered (user_id=%d)", user_id)
-    result = update_all_prices(user_id=user_id, only_with_holdings=only_holdings)
+    result = await asyncio.to_thread(
+        update_all_prices,
+        user_id=user_id,
+        only_with_holdings=only_holdings,
+    )
 
     _last_run.update({
         "timestamp": int(time.time()),

@@ -6,6 +6,7 @@ Protected by CRON_SECRET_KEY (header or query param).
 
 import logging
 import time
+import asyncio
 from typing import Optional
 
 from fastapi import APIRouter, Header, Query, HTTPException
@@ -76,7 +77,11 @@ async def trigger_price_update(
     total_updated = 0
     total_found = 0
     for uid in user_ids:
-        result = update_all_prices(user_id=uid, only_with_holdings=only_holdings)
+        result = await asyncio.to_thread(
+            update_all_prices,
+            user_id=uid,
+            only_with_holdings=only_holdings,
+        )
         all_results[uid] = result.to_dict()
         total_updated += result.updated
         total_found += result.stocks_found
@@ -176,7 +181,7 @@ async def trigger_price_update_and_snapshot(
     total_found = 0
 
     for uid in user_ids:
-        price_result = update_all_prices(user_id=uid)
+        price_result = await asyncio.to_thread(update_all_prices, user_id=uid)
         all_price_results[uid] = price_result.to_dict()
         total_updated += price_result.updated
         total_found += price_result.stocks_found

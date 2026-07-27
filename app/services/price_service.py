@@ -295,6 +295,7 @@ class PriceUpdateResult:
     updated: int = 0
     failed: int = 0
     skipped: int = 0
+    used_full_scan_fallback: bool = False
     details: list = field(default_factory=list)
     errors: list = field(default_factory=list)
     elapsed_sec: float = 0.0
@@ -305,6 +306,7 @@ class PriceUpdateResult:
             "updated": self.updated,
             "failed": self.failed,
             "skipped": self.skipped,
+            "used_full_scan_fallback": self.used_full_scan_fallback,
             "elapsed_sec": round(self.elapsed_sec, 2),
             "details": self.details,
             "errors": self.errors,
@@ -362,7 +364,7 @@ def update_all_prices(
             cur.execute(
                 """
                 SELECT s.id, s.symbol, s.currency, s.yf_ticker, 0 AS net_shares
-                FROM stocks s
+                                FROM stocks s
                 WHERE s.user_id = ?
                   AND s.symbol IS NOT NULL AND s.symbol != ''
                 """,
@@ -371,6 +373,25 @@ def update_all_prices(
 
         stocks = cur.fetchall()
         result.stocks_found = len(stocks)
+
+        if only_with_holdings and not stocks:
+            logger.info(
+                "Price updater: no positive-holding rows found for user %s; falling back to all stocks",
+                user_id,
+            )
+            result.used_full_scan_fallback = True
+            cur.execute(
+                """
+                SELECT s.id, s.symbol, s.currency, s.yf_ticker, 0 AS net_shares
+                FROM stocks s
+                WHERE s.user_id = ?
+                  AND s.symbol IS NOT NULL AND s.symbol != ''
+                """,
+                (user_id,),
+            )
+            stocks = cur.fetchall()
+            result.stocks_found = len(stocks)
+
         logger.info("Price updater: found %d stocks to update", len(stocks))
 
         # Ensure additive columns exist across SQLite/PostgreSQL
