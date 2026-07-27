@@ -311,7 +311,71 @@ async def portfolio_holdings(
 
         for _, row in df.iterrows():
             holding = row.to_dict()
+            holding["_portfolio"] = pname
             all_holdings.append(holding)
+
+    # When no portfolio filter is provided, consolidate duplicate symbols
+    # across portfolios so the overview shows cumulative effect per stock.
+    if not portfolio and all_holdings:
+        merged: dict[str, dict] = {}
+        for h in all_holdings:
+            sym = str(h.get("symbol", "")).strip()
+            if not sym:
+                continue
+            if sym in merged:
+                m = merged[sym]
+                m["shares_qty"] += float(h.get("shares_qty", 0) or 0)
+                m["total_cost"] += float(h.get("total_cost", 0) or 0)
+                m["market_value"] += float(h.get("market_value", 0) or 0)
+                m["unrealized_pnl"] += float(h.get("unrealized_pnl", 0) or 0)
+                m["realized_pnl"] += float(h.get("realized_pnl", 0) or 0)
+                m["cash_dividends"] += float(h.get("cash_dividends", 0) or 0)
+                m["reinvested_dividends"] += float(h.get("reinvested_dividends", 0) or 0)
+                m["bonus_dividend_shares"] += float(h.get("bonus_dividend_shares", 0) or 0)
+                m["bonus_share_value"] += float(h.get("bonus_share_value", 0) or 0)
+                m["total_pnl"] += float(h.get("total_pnl", 0) or 0)
+                m["market_value_kwd"] += float(h.get("market_value_kwd", 0) or 0)
+                m["unrealized_pnl_kwd"] += float(h.get("unrealized_pnl_kwd", 0) or 0)
+                m["total_pnl_kwd"] += float(h.get("total_pnl_kwd", 0) or 0)
+                m["total_cost_kwd"] += float(h.get("total_cost_kwd", 0) or 0)
+            else:
+                merged[sym] = {
+                    **h,
+                    "shares_qty": float(h.get("shares_qty", 0) or 0),
+                    "total_cost": float(h.get("total_cost", 0) or 0),
+                    "market_value": float(h.get("market_value", 0) or 0),
+                    "unrealized_pnl": float(h.get("unrealized_pnl", 0) or 0),
+                    "realized_pnl": float(h.get("realized_pnl", 0) or 0),
+                    "cash_dividends": float(h.get("cash_dividends", 0) or 0),
+                    "reinvested_dividends": float(h.get("reinvested_dividends", 0) or 0),
+                    "bonus_dividend_shares": float(h.get("bonus_dividend_shares", 0) or 0),
+                    "bonus_share_value": float(h.get("bonus_share_value", 0) or 0),
+                    "total_pnl": float(h.get("total_pnl", 0) or 0),
+                    "market_value_kwd": float(h.get("market_value_kwd", 0) or 0),
+                    "unrealized_pnl_kwd": float(h.get("unrealized_pnl_kwd", 0) or 0),
+                    "total_pnl_kwd": float(h.get("total_pnl_kwd", 0) or 0),
+                    "total_cost_kwd": float(h.get("total_cost_kwd", 0) or 0),
+                }
+
+        for m in merged.values():
+            qty = float(m.get("shares_qty", 0) or 0)
+            total_cost = float(m.get("total_cost", 0) or 0)
+            market_price = float(m.get("market_price", 0) or 0)
+            m["avg_cost"] = round(total_cost / qty, 6) if qty > 0 else 0.0
+            m["market_value"] = round(qty * market_price, 3)
+            m["unrealized_pnl"] = round((market_price - m["avg_cost"]) * qty, 3) if qty > 0 and market_price > 0 else 0.0
+            ccy = str(m.get("currency", "KWD") or "KWD")
+            m["market_value_kwd"] = convert_to_kwd(m["market_value"], ccy)
+            m["unrealized_pnl_kwd"] = convert_to_kwd(m["unrealized_pnl"], ccy)
+            m["total_pnl"] = round(m["unrealized_pnl"] + float(m.get("realized_pnl", 0) or 0) + float(m.get("cash_dividends", 0) or 0), 3)
+            m["total_pnl_kwd"] = convert_to_kwd(m["total_pnl"], ccy)
+            m["pnl_pct"] = (m["total_pnl"] / total_cost) if total_cost > 0 else 0.0
+            m.pop("_portfolio", None)
+
+        all_holdings = list(merged.values())
+    else:
+        for h in all_holdings:
+            h.pop("_portfolio", None)
 
     snapshot_tasks: dict[tuple[str, str], asyncio.Task] = {}
     for holding in all_holdings:
