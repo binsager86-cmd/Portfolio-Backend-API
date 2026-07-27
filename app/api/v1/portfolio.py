@@ -349,11 +349,11 @@ async def portfolio_holdings(
         pnl_pct = (total_pnl / total_cost) if total_cost > 0 else 0.0
 
         holding["market_price"] = live_price
-        # Use DB previous_close as the authoritative value.  When the DB value
-        # is null (e.g. the price updater has never run for this stock), fall
-        # back to the value returned by the TickerChart snapshot so the Holdings
-        # table still shows meaningful daily-change data.
-        if holding.get("previous_close") is None and snapshot.get("previous_close") is not None:
+        # Prefer the live snapshot's previous close for the holdings table so
+        # the UI can show today's daily movement even before the scheduled DB
+        # write has completed. The scheduler still persists the same value for
+        # overview/snapshot calculations.
+        if snapshot.get("previous_close") is not None:
             holding["previous_close"] = snapshot.get("previous_close")
         if snapshot.get("pe_ratio") is not None:
             holding["pe_ratio"] = snapshot.get("pe_ratio")

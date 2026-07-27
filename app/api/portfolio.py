@@ -5,6 +5,8 @@ All values that involve USD positions are pre-converted to KWD in the response
 so the frontend never needs to do currency math.
 """
 
+import asyncio
+
 from fastapi import APIRouter, Depends, Query
 from typing import Optional
 
@@ -19,6 +21,7 @@ from app.services.portfolio_service import (
     get_total_portfolio_value,
 )
 from app.services.fx_service import PORTFOLIO_CCY, get_usd_kwd_rate, convert_to_kwd
+from app.services.price_service import get_price_snapshot
 
 router = APIRouter(prefix="/api/portfolio", tags=["Portfolio"])
 
@@ -145,6 +148,58 @@ async def portfolio_holdings(
         # Single portfolio selected — remove internal tracking field
         for h in all_holdings:
             h.pop("_portfolio", None)
+
+    snapshot_tasks: dict[tuple[str, str], asyncio.Task] = {}
+    for holding in all_holdings:
+        symbol = str(holding.get("symbol", "")).strip()
+        currency = str(holding.get("currency", "KWD")).strip().upper()
+        if symbol:
+            snapshot_tasks.setdefault(
+                (symbol, currency),
+                asyncio.create_task(get_price_snapshot(symbol, currency)),
+            )
+
+    snapshot_results: dict[tuple[str, str], dict] = {}
+    if snapshot_tasks:
+        resolved = await asyncio.gather(*snapshot_tasks.values())
+        snapshot_results = dict(zip(snapshot_tasks.keys(), resolved))
+
+    for holding in all_holdings:
+        symbol = str(holding.get("symbol", "")).strip()
+        currency = str(holding.get("currency", "KWD")).strip().upper()
+        snapshot = snapshot_results.get((symbol, currency))
+        if not snapshot or snapshot.get("price") is None:
+            continue
+
+        live_price = float(snapshot["price"])
+        shares_qty = float(holding.get("shares_qty", 0) or 0)
+        avg_cost = float(holding.get("avg_cost", 0) or 0)
+        total_cost = float(holding.get("total_cost", 0) or 0)
+        realized_pnl = float(holding.get("realized_pnl", 0) or 0)
+        cash_dividends = float(holding.get("cash_dividends", 0) or 0)
+        bonus_shares = float(holding.get("bonus_dividend_shares", 0) or 0)
+
+        market_value = round(shares_qty * live_price, 3)
+        unrealized_pnl = round((live_price - avg_cost) * shares_qty, 3) if shares_qty > 0 else 0.0
+        total_pnl = round(unrealized_pnl + realized_pnl + cash_dividends, 3)
+        pnl_pct = (total_pnl / total_cost) if total_cost > 0 else 0.0
+
+        holding["market_price"] = live_price
+        if snapshot.get("previous_close") is not None:
+            holding["previous_close"] = snapshot.get("previous_close")
+        if snapshot.get("pe_ratio") is not None:
+            holding["pe_ratio"] = snapshot.get("pe_ratio")
+        holding["market_value"] = market_value
+        holding["unrealized_pnl"] = unrealized_pnl
+        holding["total_pnl"] = total_pnl
+        holding["pnl_pct"] = pnl_pct
+        holding["bonus_share_value"] = round(bonus_shares * live_price, 3)
+        holding["market_value_kwd"] = convert_to_kwd(market_value, currency)
+        holding["unrealized_pnl_kwd"] = convert_to_kwd(unrealized_pnl, currency)
+        holding["total_pnl_kwd"] = convert_to_kwd(total_pnl, currency)
+        holding["live_price_fetched_at"] = snapshot.get("fetched_at")
+        if snapshot.get("error"):
+            holding["live_price_error"] = snapshot.get("error")
 
     # ── Compute totals ──────────────────────────────────────────────
     totals = {

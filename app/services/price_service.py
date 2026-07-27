@@ -223,14 +223,14 @@ async def _fetch_snapshot_from_tickerchart(symbol: str, currency: str) -> dict:
     }
 
 
-async def get_price_snapshot(symbol: str, currency: str = "KWD") -> dict:
+async def get_price_snapshot(symbol: str, currency: str = "KWD", force_refresh: bool = False) -> dict:
     """Return a cached live quote, degrading gracefully on upstream failures.
 
     Tries TickerChart first (accurate KSE / US exchange data), then falls
     back to Yahoo Finance if TickerChart is unavailable or returns no data.
     """
     key = cache_key("price", symbol.strip().upper(), currency.upper())
-    cached = price_cache.get(key)
+    cached = None if force_refresh else price_cache.get(key)
     if cached is not None:
         return cached
 
@@ -369,7 +369,7 @@ def update_all_prices(
         # ── Fetch & write prices ─────────────────────────────────────
         for stock_id, symbol, currency, stored_yf_ticker, existing_pe_ratio, _ in stocks:
             try:
-                snapshot = asyncio.run(get_price_snapshot(symbol, currency or "KWD"))
+                snapshot = asyncio.run(get_price_snapshot(symbol, currency or "KWD", force_refresh=True))
                 price = snapshot.get("price")
                 if price is None:
                     logger.warning("No price data for %s: %s", symbol, snapshot.get("error") or "no_data")
