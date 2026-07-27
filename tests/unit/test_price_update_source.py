@@ -2,7 +2,7 @@ from app.core.database import query_one
 from app.api import portfolio as legacy_portfolio_api
 from app.api.v1 import stocks as stocks_api
 from app.services import price_service
-from tests.helpers import create_buy, create_stock
+from tests.helpers import create_buy, create_stock, ensure_user2
 
 
 def test_update_all_prices_uses_tickerchart_source(test_client, monkeypatch):
@@ -51,6 +51,39 @@ def test_update_all_prices_forces_fresh_snapshot(test_client, monkeypatch):
     price_service.update_all_prices(user_id=1)
 
     assert any(call == {"symbol": "TCFRESH", "force_refresh": True} for call in calls)
+
+
+def test_update_all_prices_falls_back_when_holdings_filter_matches_zero(test_client, monkeypatch):
+    user2 = ensure_user2(test_client)
+    uid = user2["user_id"]
+
+    stock_id = create_stock(user_id=uid, symbol="TCFALL", portfolio="KFH", currency="KWD", current_price=0.1)
+    # Deliberately mismatch transaction portfolio vs stock portfolio so strict
+    # holdings-join returns no rows and fallback path is required.
+    create_buy(user_id=uid, portfolio="BBYN", symbol="TCFALL", shares=10, cost=1.0)
+
+    async def fake_snapshot(symbol: str, currency: str = "KWD", force_refresh: bool = False) -> dict:
+        return {
+            "symbol": symbol,
+            "price": 0.444,
+            "previous_close": 0.4,
+            "pe_ratio": 8.5,
+            "currency": currency,
+            "source": "tickerchart",
+        }
+
+    monkeypatch.setattr(price_service, "get_price_snapshot", fake_snapshot)
+
+    result = price_service.update_all_prices(user_id=uid, only_with_holdings=True)
+
+    assert result.used_full_scan_fallback is True
+    assert result.updated >= 1
+
+    row = query_one("SELECT current_price, previous_close, pe_ratio, price_source FROM stocks WHERE id = ?", (stock_id,))
+    assert round(float(row[0]), 6) == 0.444
+    assert round(float(row[1]), 6) == 0.4
+    assert round(float(row[2]), 6) == 8.5
+    assert row[3] == "TICKERCHART"
 
 
 def test_legacy_holdings_endpoint_overlays_live_tickerchart_snapshot(test_client, auth_headers, monkeypatch):

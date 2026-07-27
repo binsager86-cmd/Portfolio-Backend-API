@@ -273,6 +273,7 @@ class PriceUpdateResult:
     details: list = field(default_factory=list)
     errors: list = field(default_factory=list)
     elapsed_sec: float = 0.0
+    used_full_scan_fallback: bool = False
 
     def to_dict(self) -> dict:
         return {
@@ -283,6 +284,7 @@ class PriceUpdateResult:
             "elapsed_sec": round(self.elapsed_sec, 2),
             "details": self.details,
             "errors": self.errors,
+            "used_full_scan_fallback": self.used_full_scan_fallback,
         }
 
 
@@ -315,7 +317,20 @@ def update_all_prices(
         add_column_if_missing("stocks", "pe_ratio", "REAL")
         add_column_if_missing("stocks", "previous_close", "REAL")
 
+        def _select_all_stocks() -> list:
+            cur.execute(
+                """
+                SELECT s.id, s.symbol, s.currency, s.yf_ticker, s.pe_ratio, 0 AS net_shares
+                FROM stocks s
+                WHERE s.user_id = ?
+                  AND s.symbol IS NOT NULL AND s.symbol != ''
+                """,
+                (user_id,),
+            )
+            return cur.fetchall()
+
         # ── Fetch eligible stocks ────────────────────────────────────
+        stocks = []
         if only_with_holdings:
             cur.execute(
                 """
@@ -351,18 +366,17 @@ def update_all_prices(
                 """,
                 (user_id,),
             )
+            stocks = cur.fetchall()
+            if not stocks:
+                result.used_full_scan_fallback = True
+                logger.warning(
+                    "Price updater holdings-filter matched 0 stocks for user_id=%s; falling back to full stock scan",
+                    user_id,
+                )
+                stocks = _select_all_stocks()
         else:
-            cur.execute(
-                """
-                SELECT s.id, s.symbol, s.currency, s.yf_ticker, s.pe_ratio, 0 AS net_shares
-                FROM stocks s
-                WHERE s.user_id = ?
-                  AND s.symbol IS NOT NULL AND s.symbol != ''
-                """,
-                (user_id,),
-            )
+            stocks = _select_all_stocks()
 
-        stocks = cur.fetchall()
         result.stocks_found = len(stocks)
         logger.info("Price updater: found %d stocks to update", len(stocks))
 
