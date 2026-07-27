@@ -190,14 +190,14 @@ async def _fetch_snapshot_from_tickerchart(symbol: str, currency: str) -> dict:
     if not rows:
         raise ValueError(f"No TickerChart data for {sym_upper}.{market_abb}")
 
-    # TickerChart returns rows in DESC order (newest first)
-    latest = rows[0]
+    # TickerChart parser returns rows in ASC order (oldest first)
+    latest = rows[-1]
     raw_price = float(latest["close"])
     price = _normalise_kwd_price(raw_price, currency)
 
     previous_close: Optional[float] = None
     if len(rows) >= 2:
-        raw_prev = float(rows[1]["close"])
+        raw_prev = float(rows[-2]["close"])
         previous_close = _normalise_kwd_price(raw_prev, currency)
 
     pe_ratio = tc.read_quotes_snapshot_pe(sym_upper, market_abb)
