@@ -903,6 +903,7 @@ async def list_stocks(
     stocks = await asyncio.to_thread(_list_analysis_stocks_sync, uid, search)
     return {"status": "ok", "data": {"stocks": stocks, "count": len(stocks)}}
 
+
 @router.get("/stocks/{stock_id}")
 async def get_stock(
     stock_id: int,
@@ -2011,10 +2012,14 @@ def _fetch_us_statements(stock_id: int, symbol: str, user_id: int) -> dict:
         logger.warning("macrotrends supplement failed for %s: %s", base, exc)
 
     if not saved_summary:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No financial data found for {base}.",
-        )
+        return {
+            "status": "ok",
+            "data": {
+                "message": f"No financial data found for {base}.",
+                "summary": [],
+                "source": "stockanalysis.com + macrotrends.net",
+            },
+        }
 
     total_periods = sum(s["periods_saved"] for s in saved_summary)
     return {
@@ -2580,10 +2585,14 @@ async def fetch_statements_online(
             })
 
     if not saved_summary:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No financial data found on stockanalysis.com for {base}.",
-        )
+        return {
+            "status": "ok",
+            "data": {
+                "message": f"No financial data found on stockanalysis.com for {base}.",
+                "summary": [],
+                "source": f"https://stockanalysis.com/quote/kwse/{base}/financials/",
+            },
+        }
 
     total_periods = sum(s["periods_saved"] for s in saved_summary)
     return {
@@ -6838,6 +6847,26 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
                 return rec
         return None
 
+    def _latest_interim_period_after(period_end_date: str) -> Optional[Dict[str, Any]]:
+        rows = query_all(
+            """SELECT fiscal_year, fiscal_quarter, period_end_date, source_file
+               FROM financial_statements
+               WHERE stock_id = ?
+               ORDER BY period_end_date DESC""",
+            (stock_id,),
+        )
+        for row in rows:
+            rec = {
+                "fiscal_year": row[0] if isinstance(row, (tuple, list)) else row["fiscal_year"],
+                "fiscal_quarter": row[1] if isinstance(row, (tuple, list)) else row["fiscal_quarter"],
+                "period_end_date": row[2] if isinstance(row, (tuple, list)) else row["period_end_date"],
+                "source_file": row[3] if isinstance(row, (tuple, list)) else row["source_file"],
+            }
+            quarter = _parse_fiscal_quarter(rec["fiscal_quarter"])
+            if rec["period_end_date"] > period_end_date and quarter in (1, 2, 3):
+                return rec
+        return None
+
     exec_sql("DELETE FROM stock_metrics WHERE stock_id = ? AND metric_type = 'growth'", (stock_id,))
 
     # Helper: fetch by-year series for a line item code.
@@ -6874,6 +6903,72 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
                 if fy is not None and fy not in by_year:
                     by_year[fy] = rec
         return by_year
+
+    def _statement_period(stmt_type: str, fiscal_year: int, fiscal_quarter: Optional[int]) -> Optional[str]:
+        rows = query_all(
+            """SELECT fiscal_quarter, period_end_date, source_file
+               FROM financial_statements
+               WHERE stock_id = ? AND statement_type = ? AND fiscal_year = ?
+               ORDER BY period_end_date DESC""",
+            (stock_id, stmt_type, fiscal_year),
+        )
+        for row in rows:
+            quarter = row[0] if isinstance(row, (tuple, list)) else row["fiscal_quarter"]
+            period = row[1] if isinstance(row, (tuple, list)) else row["period_end_date"]
+            source_file = row[2] if isinstance(row, (tuple, list)) else row["source_file"]
+            if fiscal_quarter is None:
+                if _is_annual_period(quarter, source_file):
+                    return period
+            elif _parse_fiscal_quarter(quarter) == fiscal_quarter:
+                return period
+        return None
+
+    def _period_value(stmt_type: str, period_end_date: Optional[str], codes: List[str]) -> Optional[float]:
+        if not period_end_date:
+            return None
+        for code in codes:
+            row = query_one(
+                """SELECT li.amount
+                   FROM financial_line_items li
+                   JOIN financial_statements fs ON fs.id = li.statement_id
+                   WHERE fs.stock_id = ? AND fs.statement_type = ? AND fs.period_end_date = ?
+                     AND UPPER(li.line_item_code) = UPPER(?)
+                   LIMIT 1""",
+                (stock_id, stmt_type, period_end_date, code),
+            )
+            if row:
+                return row[0] if isinstance(row, (tuple, list)) else row["amount"]
+        return None
+
+    def _ttm_flow_amount(stmt_type: str, fiscal_year: int, fiscal_quarter: int, codes: List[str]) -> Optional[float]:
+        latest_quarter_period = _statement_period(stmt_type, fiscal_year, fiscal_quarter)
+        prior_annual_period = _statement_period(stmt_type, fiscal_year - 1, None)
+        prior_same_quarter_period = _statement_period(stmt_type, fiscal_year - 1, fiscal_quarter)
+        latest_quarter_value = _period_value(stmt_type, latest_quarter_period, codes)
+        prior_annual_value = _period_value(stmt_type, prior_annual_period, codes)
+        prior_same_quarter_value = _period_value(stmt_type, prior_same_quarter_period, codes)
+        if latest_quarter_value is None or prior_annual_value is None or prior_same_quarter_value is None:
+            return None
+        return prior_annual_value + latest_quarter_value - prior_same_quarter_value
+
+    def _append_growth_point(
+        label: str,
+        fiscal_year: int,
+        fiscal_quarter: Optional[int],
+        period: str,
+        prev_period: str,
+        current_value: Optional[float],
+        previous_value: Optional[float],
+        period_label: Optional[str] = None,
+    ) -> None:
+        if current_value is None or previous_value is None or previous_value == 0:
+            return
+        rate = round((current_value - previous_value) / abs(previous_value), 4)
+        entry = {"period": period, "prev_period": prev_period, "growth": rate}
+        if period_label:
+            entry["period_label"] = period_label
+        growth.setdefault(label, []).append(entry)
+        _upsert_metric(stock_id, fiscal_year, period, "growth", label, rate, fiscal_quarter)
 
     # ── A) Standard YoY growth rates
     for code, label, stmt_type in growth_items:
@@ -6959,6 +7054,39 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
     if not latest_fy or not latest_pd:
         return growth
 
+    annual_growth: Dict[str, List[Dict[str, Any]]] = {
+        label: [dict(entry) for entry in entries]
+        for label, entries in growth.items()
+    }
+
+    latest_interim = _latest_interim_period_after(latest_pd)
+    if latest_interim:
+        interim_fy = int(latest_interim["fiscal_year"])
+        interim_q = _parse_fiscal_quarter(latest_interim["fiscal_quarter"])
+        interim_pd = str(latest_interim["period_end_date"])
+        if interim_q in (1, 2, 3):
+            for label, stmt_type, codes in [
+                ("Revenue Growth", "income", ["REVENUE", "TOTAL_REVENUE", "NET_REVENUE"]),
+                ("Net Income Growth", "income", ["NET_INCOME", "NET_INCOME_COMMON", "NET_INCOME_AVAILABLE_TO_COMMON_SHAREHOLDERS"]),
+                ("EPS Growth", "income", ["EPS_DILUTED", "EPS_BASIC"]),
+                ("Operating Cash Flow Growth", "cashflow", ["CASH_FROM_OPERATIONS", "OPERATING_CASH_FLOW"]),
+            ]:
+                annual_value = _period_value(stmt_type, latest_pd, codes)
+                ttm_value = _ttm_flow_amount(stmt_type, interim_fy, interim_q, codes)
+                _append_growth_point(label, interim_fy, interim_q, interim_pd, latest_pd, ttm_value, annual_value, f"TTM {interim_fy}")
+
+            annual_assets = _period_value("balance", latest_pd, ["TOTAL_ASSETS"])
+            interim_assets = _period_value("balance", interim_pd, ["TOTAL_ASSETS"])
+            _append_growth_point("Total Assets Growth", interim_fy, interim_q, interim_pd, latest_pd, interim_assets, annual_assets, f"TTM {interim_fy}")
+
+            annual_cfo = _period_value("cashflow", latest_pd, ["CASH_FROM_OPERATIONS", "OPERATING_CASH_FLOW"])
+            annual_capex = _period_value("cashflow", latest_pd, ["CAPITAL_EXPENDITURES", "CAPEX"])
+            ttm_cfo = _ttm_flow_amount("cashflow", interim_fy, interim_q, ["CASH_FROM_OPERATIONS", "OPERATING_CASH_FLOW"])
+            ttm_capex = _ttm_flow_amount("cashflow", interim_fy, interim_q, ["CAPITAL_EXPENDITURES", "CAPEX"])
+            annual_fcf = None if annual_cfo is None or annual_capex is None else annual_cfo - abs(annual_capex)
+            ttm_fcf = None if ttm_cfo is None or ttm_capex is None else ttm_cfo - abs(ttm_capex)
+            _append_growth_point("FCF Growth", interim_fy, interim_q, interim_pd, latest_pd, ttm_fcf, annual_fcf, f"TTM {interim_fy}")
+
     # ── B) CAGRs (3Y and 5Y) for Revenue and EPS
     cagr_items = [
         ("REVENUE", "Revenue", "income"),
@@ -6991,7 +7119,7 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
 
     # ── C) Growth stability (stdev of YoY rates)
     for label_stub in ["Revenue Growth", "EPS Growth"]:
-        rates_list = growth.get(label_stub, [])
+        rates_list = annual_growth.get(label_stub, [])
         # Use last 5 rates max
         recent_rates = [r["growth"] for r in rates_list[-5:]]
         if len(recent_rates) >= 3:
