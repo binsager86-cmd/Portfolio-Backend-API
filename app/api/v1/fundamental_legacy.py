@@ -2233,7 +2233,8 @@ _SA_FIELD_MAP_CASHFLOW = {
     # Net change in cash
     "ncf": ("net_change_in_cash", "Net Change in Cash"),
     # Free cash flow
-    "leveredFCF": ("free_cash_flow", "Free Cash Flow"),
+    "fcf": ("free_cash_flow", "Free Cash Flow"),
+    "leveredFCF": ("levered_free_cash_flow", "Levered Free Cash Flow"),
     "unleveredFCF": ("unlevered_fcf", "Unlevered Free Cash Flow"),
     # Other
     "cashInterestPaid": ("interest_paid", "Interest Paid"),
@@ -4696,16 +4697,12 @@ async def get_metrics(
     _ensure_schema()
     _verify_stock_owner(stock_id, current_user.user_id)
 
-    # Auto-compute growth-derived metrics (CAGR, stability, trends) if missing
-    has_growth = query_val(
-        "SELECT COUNT(*) FROM stock_metrics WHERE stock_id = ? AND metric_type = 'growth' AND metric_name LIKE '%CAGR%'",
-        (stock_id,),
-    )
-    if not has_growth:
-        try:
-            _calculate_growth(stock_id)
-        except Exception:
-            pass
+    # Recompute growth-derived metrics on read so stale quarter-vs-annual rows
+    # are cleared after statements are refreshed.
+    try:
+        _calculate_growth(stock_id)
+    except Exception:
+        pass
 
     if metric_type:
         df = query_df(
@@ -6809,16 +6806,39 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
         ("EPS_DILUTED", "EPS Growth", "income"),
         ("TOTAL_ASSETS", "Total Assets Growth", "balance"),
         ("CASH_FROM_OPERATIONS", "Operating Cash Flow Growth", "cashflow"),
-        ("FREE_CASH_FLOW", "FCF Growth", "cashflow"),
     ]
 
-    # FCF has many names across different statements/sources;
-    # try all variants when looking up a code.
-    _FCF_ALIASES = [
-        "FREE_CASH_FLOW",
-        "UNLEVERED_FREE_CASH_FLOW",
-        "LEVERED_FREE_CASH_FLOW",
-    ]
+    def _is_quarterly_source(source_file: Any) -> bool:
+        return isinstance(source_file, str) and "p=quarterly" in source_file.lower()
+
+    def _is_annual_period(fiscal_quarter: Any, source_file: Any) -> bool:
+        quarter = _parse_fiscal_quarter(fiscal_quarter)
+        if quarter == 4:
+            return True
+        if quarter is not None:
+            return False
+        return not _is_quarterly_source(source_file)
+
+    def _latest_annual_period() -> Optional[Dict[str, Any]]:
+        rows = query_all(
+            """SELECT fiscal_year, fiscal_quarter, period_end_date, source_file
+               FROM financial_statements
+               WHERE stock_id = ?
+               ORDER BY period_end_date DESC""",
+            (stock_id,),
+        )
+        for row in rows:
+            rec = {
+                "fiscal_year": row[0] if isinstance(row, (tuple, list)) else row["fiscal_year"],
+                "fiscal_quarter": row[1] if isinstance(row, (tuple, list)) else row["fiscal_quarter"],
+                "period_end_date": row[2] if isinstance(row, (tuple, list)) else row["period_end_date"],
+                "source_file": row[3] if isinstance(row, (tuple, list)) else row["source_file"],
+            }
+            if rec["fiscal_year"] is not None and _is_annual_period(rec["fiscal_quarter"], rec["source_file"]):
+                return rec
+        return None
+
+    exec_sql("DELETE FROM stock_metrics WHERE stock_id = ? AND metric_type = 'growth'", (stock_id,))
 
     # Helper: fetch by-year series for a line item code.
     # If `codes` (list) is provided, tries each code in order and merges results.
@@ -6827,7 +6847,8 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
         by_year: Dict[int, Dict[str, Any]] = {}
         for c in search_codes:
             rows = query_all(
-                """SELECT fs.period_end_date AS period, fs.fiscal_year, li.amount
+                """SELECT fs.period_end_date AS period, fs.fiscal_year, fs.fiscal_quarter,
+                          fs.source_file, li.amount
                    FROM financial_line_items li
                    JOIN financial_statements fs ON fs.id = li.statement_id
                    WHERE fs.stock_id = ? AND fs.statement_type = ?
@@ -6837,21 +6858,27 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
             )
             for r in rows:
                 if isinstance(r, (tuple, list)):
-                    rec = {"period": r[0], "fiscal_year": r[1], "amount": r[2]}
+                    rec = {"period": r[0], "fiscal_year": r[1], "fiscal_quarter": r[2], "source_file": r[3], "amount": r[4]}
                 else:
-                    rec = {"period": r["period"], "fiscal_year": r["fiscal_year"], "amount": r["amount"]}
+                    rec = {
+                        "period": r["period"],
+                        "fiscal_year": r["fiscal_year"],
+                        "fiscal_quarter": r["fiscal_quarter"],
+                        "source_file": r["source_file"],
+                        "amount": r["amount"],
+                    }
+                if not _is_annual_period(rec["fiscal_quarter"], rec["source_file"]):
+                    continue
                 fy = rec["fiscal_year"]
-                # Keep latest period in each fiscal year; preserve alias priority by not overwriting.
+                # Keep latest annual period in each fiscal year; preserve alias priority by not overwriting.
                 if fy is not None and fy not in by_year:
                     by_year[fy] = rec
         return by_year
 
     # ── A) Standard YoY growth rates
     for code, label, stmt_type in growth_items:
-        # For FCF + OCF, try multiple alias codes to cover naming variations
-        if code == "FREE_CASH_FLOW":
-            by_year = _fetch_series(code, stmt_type, codes=_FCF_ALIASES)
-        elif code == "CASH_FROM_OPERATIONS":
+        # For OCF, try multiple alias codes to cover naming variations.
+        if code == "CASH_FROM_OPERATIONS":
             by_year = _fetch_series(code, stmt_type, codes=["CASH_FROM_OPERATIONS", "OPERATING_CASH_FLOW"])
         elif code == "REVENUE":
             by_year = _fetch_series(code, stmt_type, codes=["REVENUE", "TOTAL_REVENUE", "NET_REVENUE"])
@@ -6883,55 +6910,52 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
         if rates:
             growth[label] = rates
 
-    # ── A2) FCF fallback: compute as CFO - CapEx when FREE_CASH_FLOW line item is missing
-    if "FCF Growth" not in growth:
-        cfo_by_year = _fetch_series("CASH_FROM_OPERATIONS", "cashflow")
-        capex_by_year = _fetch_series("CAPITAL_EXPENDITURES", "cashflow")
-        common_years = sorted(set(cfo_by_year.keys()) & set(capex_by_year.keys()))
-        if len(common_years) >= 2:
-            fcf_by_year = {}
-            for fy in common_years:
-                cfo_amt = cfo_by_year[fy]["amount"]
-                capex_amt = capex_by_year[fy]["amount"]
-                if cfo_amt is not None and capex_amt is not None:
-                    fcf_by_year[fy] = {
-                        "period": cfo_by_year[fy]["period"],
-                        "fiscal_year": fy,
-                        "amount": cfo_amt - abs(capex_amt),
-                    }
-            sorted_fy = sorted(fcf_by_year.keys())
-            rates_fcf: List[Dict[str, Any]] = []
-            for i in range(1, len(sorted_fy)):
-                prev_fy = sorted_fy[i - 1]
-                curr_fy = sorted_fy[i]
-                if curr_fy - prev_fy != 1:
-                    continue
-                prev_amt = fcf_by_year[prev_fy]["amount"]
-                curr_amt = fcf_by_year[curr_fy]["amount"]
-                if prev_amt and prev_amt != 0:
-                    g = (curr_amt - prev_amt) / abs(prev_amt)
-                    rates_fcf.append({
-                        "period": fcf_by_year[curr_fy]["period"],
-                        "prev_period": fcf_by_year[prev_fy]["period"],
-                        "growth": round(g, 4),
-                    })
-                    _upsert_metric(
-                        stock_id, curr_fy, fcf_by_year[curr_fy]["period"],
-                        "growth", "FCF Growth", round(g, 4),
-                    )
-            if rates_fcf:
-                growth["FCF Growth"] = rates_fcf
+    # ── A2) CFA FCF growth: Free Cash Flow = CFO - absolute CapEx.
+    # Do not use levered/unlevered FCF variants for this annual growth series.
+    cfo_by_year = _fetch_series("CASH_FROM_OPERATIONS", "cashflow", codes=["CASH_FROM_OPERATIONS", "OPERATING_CASH_FLOW"])
+    capex_by_year = _fetch_series("CAPITAL_EXPENDITURES", "cashflow", codes=["CAPITAL_EXPENDITURES", "CAPEX"])
+    common_years = sorted(set(cfo_by_year.keys()) & set(capex_by_year.keys()))
+    if len(common_years) >= 2:
+        fcf_by_year = {}
+        for fy in common_years:
+            cfo_amt = cfo_by_year[fy]["amount"]
+            capex_amt = capex_by_year[fy]["amount"]
+            if cfo_amt is not None and capex_amt is not None:
+                fcf_by_year[fy] = {
+                    "period": cfo_by_year[fy]["period"],
+                    "fiscal_year": fy,
+                    "amount": cfo_amt - abs(capex_amt),
+                }
+        sorted_fy = sorted(fcf_by_year.keys())
+        rates_fcf: List[Dict[str, Any]] = []
+        for i in range(1, len(sorted_fy)):
+            prev_fy = sorted_fy[i - 1]
+            curr_fy = sorted_fy[i]
+            if curr_fy - prev_fy != 1:
+                continue
+            prev_amt = fcf_by_year[prev_fy]["amount"]
+            curr_amt = fcf_by_year[curr_fy]["amount"]
+            if prev_amt and prev_amt != 0:
+                g = (curr_amt - prev_amt) / abs(prev_amt)
+                rates_fcf.append({
+                    "period": fcf_by_year[curr_fy]["period"],
+                    "prev_period": fcf_by_year[prev_fy]["period"],
+                    "growth": round(g, 4),
+                })
+                _upsert_metric(
+                    stock_id, curr_fy, fcf_by_year[curr_fy]["period"],
+                    "growth", "FCF Growth", round(g, 4),
+                )
+        if rates_fcf:
+            growth["FCF Growth"] = rates_fcf
 
-    # Get newest fiscal year from the latest period
-    latest_period = query_one(
-        """SELECT MAX(period_end_date) as p, MAX(fiscal_year) as fy
-           FROM financial_statements WHERE stock_id = ?""",
-        (stock_id,),
-    )
+    # Get newest fiscal year from the latest annual period. Do not anchor annual
+    # CAGR/stability metrics to a Q1-Q3 period.
+    latest_period = _latest_annual_period()
     if not latest_period:
         return growth
-    latest_fy = latest_period[1] if isinstance(latest_period, (tuple, list)) else latest_period["fy"]
-    latest_pd = latest_period[0] if isinstance(latest_period, (tuple, list)) else latest_period["p"]
+    latest_fy = latest_period["fiscal_year"]
+    latest_pd = latest_period["period_end_date"]
     if not latest_fy or not latest_pd:
         return growth
 
