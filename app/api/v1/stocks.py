@@ -15,6 +15,7 @@ from typing import Optional, List
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
+from starlette.concurrency import run_in_threadpool
 
 from app.api.deps import get_current_user
 from app.core.security import TokenData
@@ -461,9 +462,11 @@ async def manual_price_update(
     from app.services.price_service import update_all_prices
 
     try:
-        result = update_all_prices(
-            user_id=current_user.user_id,
-            only_with_holdings=True,
+        result = await run_in_threadpool(
+            lambda: update_all_prices(
+                user_id=current_user.user_id,
+                only_with_holdings=True,
+            )
         )
 
         data = result.to_dict() if hasattr(result, "to_dict") else {}

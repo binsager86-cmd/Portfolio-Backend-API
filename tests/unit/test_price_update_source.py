@@ -1,5 +1,6 @@
 from app.core.database import query_one
 from app.api import portfolio as legacy_portfolio_api
+from app.api.v1 import stocks as stocks_api
 from app.services import price_service
 from tests.helpers import create_buy, create_stock
 
@@ -76,3 +77,31 @@ def test_legacy_holdings_endpoint_overlays_live_tickerchart_snapshot(test_client
     assert round(float(row["market_price"]), 6) == 0.222
     assert round(float(row["previous_close"]), 6) == 0.2
     assert round(float(row["market_value_kwd"]), 6) == 2.22
+
+
+def test_manual_price_update_runs_service_in_threadpool(test_client, auth_headers, monkeypatch):
+    create_stock(symbol="TCTHREAD", portfolio="KFH", currency="KWD", current_price=0.1)
+    create_buy(user_id=1, portfolio="KFH", symbol="TCTHREAD", shares=10, cost=1.0)
+
+    class DummyResult:
+        def to_dict(self) -> dict:
+            return {"stocks_found": 1, "updated": 1, "failed": 0, "skipped": 0, "details": [], "errors": []}
+
+    calls: list[str] = []
+
+    def fake_update_all_prices(*, user_id: int, only_with_holdings: bool):
+        calls.append(f"update:{user_id}:{only_with_holdings}")
+        return DummyResult()
+
+    async def fake_run_in_threadpool(func):
+        calls.append("threadpool")
+        return func()
+
+    monkeypatch.setattr(price_service, "update_all_prices", fake_update_all_prices)
+    monkeypatch.setattr(stocks_api, "run_in_threadpool", fake_run_in_threadpool)
+
+    resp = test_client.post("/api/v1/stocks/update-prices", headers=auth_headers)
+
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ok"
+    assert calls == ["threadpool", "update:1:True"]
