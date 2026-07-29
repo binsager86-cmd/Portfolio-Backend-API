@@ -1,14 +1,12 @@
 """
 Eagle Eye Paper Trading Simulator — SimulatorEngine.
 
-Three parallel strategies run daily (after ratings recompute):
-  CONSERVATIVE: min_confidence=65, stages=[EARLY_BREAKOUT, MARKUP_TRENDING]
-  MODERATE:     min_confidence=60, stages=[STEALTH_ACCUMULATION, EARLY_BREAKOUT, MARKUP_TRENDING]
-  AGGRESSIVE:   min_confidence=55, stages=[STEALTH_ACCUMULATION, EARLY_BREAKOUT,
-                                           MARKUP_TRENDING, CAPITULATION_EXHAUSTION]
+Two parallel rating-transition cards run daily (after ratings recompute):
+    BUY:        enters current BUY/STRONG_BUY ratings
+    WATCHLIST:  enters current WATCH/WATCHLIST ratings for paper tracking
 
-Each strategy starts with 10,000 KWD fake capital, maintains independent positions,
-and never shares positions across strategies.
+Each card starts with 100,000 KWD fake capital, maintains independent positions,
+and exits when Eagle Eye emits SELL/STRONG_SELL.
 """
 from __future__ import annotations
 
@@ -23,6 +21,7 @@ from typing import Any, Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 # ── Constants ────────────────────────────────────────────────────────────────
+STARTING_CAPITAL_KWD = 100000.0
 MIN_TRADE_SIZE_KWD = 100.0      # ignore positions smaller than this
 MAX_OPEN_POSITIONS = 10         # per strategy
 SECTOR_CAP_PCT = 35.0           # max sector exposure %
@@ -46,10 +45,25 @@ BULLISH_ENTRY_STAGES_ALL = {
     "MARKUP_TRENDING", "CAPITULATION_EXHAUSTION",
 }
 
+STAGE_ALIASES = {
+    "ACCUMULATION": "STEALTH_ACCUMULATION",
+    "EARLY_MARKUP": "EARLY_BREAKOUT",
+    "BREAKOUT": "EARLY_BREAKOUT",
+    "MARKUP": "MARKUP_TRENDING",
+    "DISTRIBUTION": "DISTRIBUTION_TOPPING",
+    "MARKDOWN": "MARKDOWN_DECLINE",
+}
+
+
+def _normalize_stage(stage: Any) -> str:
+    raw = str(stage or "").strip().upper()
+    return STAGE_ALIASES.get(raw, raw)
+
 # ── Strategy Configs ─────────────────────────────────────────────────────────
 @dataclass
 class StrategyConfig:
     name: str
+    entry_ratings: set[str]
     min_confidence: float
     allowed_stages: set[str]
     portfolio_id: int
@@ -57,25 +71,18 @@ class StrategyConfig:
 
 STRATEGIES = [
     StrategyConfig(
-        name="CONSERVATIVE",
-        min_confidence=65.0,
-        allowed_stages={"EARLY_BREAKOUT", "MARKUP_TRENDING"},
+        name="BUY",
+        entry_ratings={"BUY", "STRONG_BUY"},
+        min_confidence=55.0,
+        allowed_stages=BULLISH_ENTRY_STAGES_ALL,
         portfolio_id=1,
     ),
     StrategyConfig(
-        name="MODERATE",
-        min_confidence=60.0,
-        allowed_stages={"STEALTH_ACCUMULATION", "EARLY_BREAKOUT", "MARKUP_TRENDING"},
+        name="WATCHLIST",
+        entry_ratings={"WATCH", "WATCHLIST"},
+        min_confidence=0.0,
+        allowed_stages=BULLISH_ENTRY_STAGES_ALL | {"NEUTRAL", "NEUTRAL_AMBIGUOUS"},
         portfolio_id=2,
-    ),
-    StrategyConfig(
-        name="AGGRESSIVE",
-        min_confidence=55.0,
-        allowed_stages={
-            "STEALTH_ACCUMULATION", "EARLY_BREAKOUT",
-            "MARKUP_TRENDING", "CAPITULATION_EXHAUSTION",
-        },
-        portfolio_id=3,
     ),
 ]
 
@@ -272,6 +279,41 @@ def _sector_exposure_pct(portfolio_id: int, sector: str, portfolio_value: float)
 class SimulatorEngine:
     """Runs daily after the Eagle Eye rating recompute."""
 
+    def is_running(self) -> bool:
+        row = _query_one("SELECT value FROM simulator_control WHERE key = 'enabled'", ())
+        if row is None:
+            return True
+        value = str(dict(row.items()).get("value") if hasattr(row, "items") else row[0]).strip().lower()
+        return value not in {"0", "false", "no", "off", "stopped"}
+
+    def control_status(self) -> dict:
+        self._ensure_simulator_tables()
+        row = _query_one("SELECT value, updated_at FROM simulator_control WHERE key = 'enabled'", ())
+        running = self.is_running()
+        updated_at = None
+        if row is not None:
+            data = dict(row.items()) if hasattr(row, "items") else {"value": row[0], "updated_at": row[1] if len(row) > 1 else None}
+            updated_at = data.get("updated_at")
+        return {"running": running, "updated_at": updated_at}
+
+    def set_running(self, enabled: bool) -> dict:
+        self._ensure_simulator_tables()
+        now_ts = _now_ts()
+        value = "1" if enabled else "0"
+        existing = _query_one("SELECT key FROM simulator_control WHERE key = 'enabled'", ())
+        if existing:
+            _exec("UPDATE simulator_control SET value = ?, updated_at = ? WHERE key = 'enabled'", (value, now_ts))
+        else:
+            _exec("INSERT INTO simulator_control (key, value, updated_at) VALUES ('enabled', ?, ?)", (value, now_ts))
+        if not enabled:
+            _exec(
+                """UPDATE simulator_pending_orders
+                      SET status = 'CANCELLED', updated_at = ?, notes_json = ?
+                    WHERE status = 'PENDING'""",
+                (now_ts, json.dumps({"cancel_reason": "SIMULATOR_STOPPED"})),
+            )
+        return self.control_status()
+
     def _assert_live_forward_date(self, as_of_date: Optional[date | str]) -> str:
         if isinstance(as_of_date, date):
             target_date = as_of_date
@@ -295,6 +337,14 @@ class SimulatorEngine:
         from app.services.eagle_eye.store import ensure_tables
         ensure_tables()
         self._ensure_simulator_tables()
+
+        if not self.is_running():
+            return {
+                "status": "stopped",
+                "running": False,
+                "processed_dates": [],
+                "target_date": self._assert_live_forward_date(run_date),
+            }
 
         if run_date is None:
             run_date = date.today()
@@ -464,7 +514,7 @@ class SimulatorEngine:
                 self._try_log_ml_signal(ticker, date_str, rating, would_have_entered=True, skip_reason="NO_PRICE_DATA")
                 continue
 
-            portfolio_value = float(portfolio.get("total_value_kwd") or 10000)
+            portfolio_value = float(portfolio.get("total_value_kwd") or STARTING_CAPITAL_KWD)
             requested_size_kwd = self._compute_position_size(rating, portfolio_value, actual_price, date_str)
             if requested_size_kwd < MIN_TRADE_SIZE_KWD:
                 self._log_considered(strategy.portfolio_id, date_str, rating, "POSITION_TOO_SMALL")
@@ -552,14 +602,14 @@ class SimulatorEngine:
         self, strategy: StrategyConfig, rating: dict, portfolio: dict, date_str: str = ""
     ) -> EntryDecision:
         confidence = float(rating.get("confidence") or 0)
-        stage = rating.get("stage") or ""
+        stage = _normalize_stage(rating.get("stage"))
         rating_label = str(rating.get("rating") or "HOLD").upper()
         ticker = rating.get("ticker") or ""
         sector = rating.get("sector") or "UNKNOWN"
 
         required_confidence = max(ML_MIN_CONFIDENCE, float(strategy.min_confidence))
-        if rating_label not in {"BUY", "STRONG_BUY"}:
-            return _skip("RATING_NOT_BUY")
+        if rating_label not in strategy.entry_ratings:
+            return _skip("RATING_NOT_CARD_ENTRY")
         if confidence < required_confidence:
             return _skip("CONFIDENCE_BELOW_THRESHOLD")
 
@@ -584,7 +634,7 @@ class SimulatorEngine:
         if len(open_positions) + self._pending_entry_count(strategy.portfolio_id) >= MAX_OPEN_POSITIONS:
             return _skip("MAX_POSITIONS_REACHED")
 
-        portfolio_value = float(portfolio.get("total_value_kwd") or 10000)
+        portfolio_value = float(portfolio.get("total_value_kwd") or STARTING_CAPITAL_KWD)
         if _sector_exposure_pct(strategy.portfolio_id, sector, portfolio_value) >= SECTOR_CAP_PCT:
             return _skip("SECTOR_CAP_REACHED")
 
@@ -697,7 +747,7 @@ class SimulatorEngine:
         actual_notional = round(shares * entry_price, 4)
         tier = self._market_tier_for_ticker(ticker_for_atr, rating, market_tier)
         entry_costs = self._leg_cost_breakdown(actual_notional, tier)
-        portfolio_value = float(portfolio.get("total_value_kwd") or 10000)
+        portfolio_value = float(portfolio.get("total_value_kwd") or STARTING_CAPITAL_KWD)
         size_pct = (actual_notional / portfolio_value * 100) if portfolio_value > 0 else 0
 
         indicators = rating.get("indicators_json") or {}
@@ -965,7 +1015,7 @@ class SimulatorEngine:
             open_value += shares_remaining * price
 
         total_value = cash + open_value
-        starting_capital = float(portfolio.get("starting_capital_kwd") or 10000)
+        starting_capital = float(portfolio.get("starting_capital_kwd") or STARTING_CAPITAL_KWD)
         cumulative_return_pct = ((total_value - starting_capital) / starting_capital * 100) if starting_capital > 0 else 0
 
         # Previous day's total value for daily P&L
@@ -1507,7 +1557,7 @@ class SimulatorEngine:
 
         cleared_rows: dict[str, int] = {}
         for table_name in simulator_tables:
-            if table_name == "simulator_portfolios":
+            if table_name in {"simulator_portfolios", "simulator_control"}:
                 continue
 
             count_row = _query_one(f"SELECT COUNT(*) AS n FROM {table_name}", ())
@@ -1520,7 +1570,7 @@ class SimulatorEngine:
 
         for strategy in STRATEGIES:
             existing = _get_portfolio(strategy.portfolio_id)
-            starting_capital = float(existing.get("starting_capital_kwd") or 10000.0) if existing else 10000.0
+            starting_capital = STARTING_CAPITAL_KWD
 
             if existing:
                 _exec(
@@ -1594,6 +1644,7 @@ class SimulatorEngine:
 
         return {
             "date": date_str,
+            "running": self.is_running(),
             "tables_found": simulator_tables,
             "cleared_rows": cleared_rows,
             "portfolios": portfolio_summaries,
@@ -1635,9 +1686,9 @@ class SimulatorEngine:
             """CREATE TABLE IF NOT EXISTS simulator_portfolios (
                id INTEGER PRIMARY KEY AUTOINCREMENT,
                strategy_name TEXT NOT NULL,
-               starting_capital_kwd REAL NOT NULL DEFAULT 10000,
-               cash_balance_kwd REAL NOT NULL DEFAULT 10000,
-               total_value_kwd REAL NOT NULL DEFAULT 10000,
+               starting_capital_kwd REAL NOT NULL DEFAULT 100000,
+               cash_balance_kwd REAL NOT NULL DEFAULT 100000,
+               total_value_kwd REAL NOT NULL DEFAULT 100000,
                created_at TEXT, updated_at TEXT
             )""",
         )
@@ -1727,16 +1778,66 @@ class SimulatorEngine:
                date TEXT, ticker TEXT, confidence REAL, stage TEXT, reason_skipped TEXT
             )""",
         )
-        # Seed portfolios if missing
-        count = _query_val("SELECT COUNT(*) FROM simulator_portfolios", ())
-        if not count or int(count) == 0:
-            now = _now_ts()
-            for strat in STRATEGIES:
+        _exec(
+            """CREATE TABLE IF NOT EXISTS simulator_control (
+               key TEXT PRIMARY KEY,
+               value TEXT NOT NULL,
+               updated_at TEXT
+            )""",
+        )
+        if _query_one("SELECT key FROM simulator_control WHERE key = 'enabled'", ()) is None:
+            _exec(
+                "INSERT INTO simulator_control (key, value, updated_at) VALUES ('enabled', '1', ?)",
+                (_now_ts(),),
+            )
+        # Seed or repair the canonical strategy rows. Existing paper state is
+        # only re-capitalized when that card has no positions or pending orders.
+        now = _now_ts()
+        for strat in STRATEGIES:
+            existing = _get_portfolio(strat.portfolio_id)
+            if existing:
+                active_count = _query_val(
+                    """SELECT COUNT(*) FROM simulator_positions WHERE portfolio_id = ?""",
+                    (strat.portfolio_id,),
+                ) or 0
+                pending_count = _query_val(
+                    """SELECT COUNT(*) FROM simulator_pending_orders WHERE portfolio_id = ?""",
+                    (strat.portfolio_id,),
+                ) or 0
+                if int(active_count) == 0 and int(pending_count) == 0:
+                    _exec(
+                        """UPDATE simulator_portfolios
+                              SET strategy_name = ?, starting_capital_kwd = ?,
+                                  cash_balance_kwd = ?, total_value_kwd = ?, updated_at = ?
+                            WHERE id = ?""",
+                        (
+                            strat.name,
+                            STARTING_CAPITAL_KWD,
+                            STARTING_CAPITAL_KWD,
+                            STARTING_CAPITAL_KWD,
+                            now,
+                            strat.portfolio_id,
+                        ),
+                    )
+                else:
+                    _exec(
+                        "UPDATE simulator_portfolios SET strategy_name = ?, updated_at = ? WHERE id = ?",
+                        (strat.name, now, strat.portfolio_id),
+                    )
+            else:
                 _exec(
                     """INSERT INTO simulator_portfolios
-                       (strategy_name, starting_capital_kwd, cash_balance_kwd, total_value_kwd, created_at, updated_at)
-                       VALUES (?, 10000, 10000, 10000, ?, ?)""",
-                    (strat.name, now, now),
+                       (id, strategy_name, starting_capital_kwd, cash_balance_kwd, total_value_kwd, created_at, updated_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        strat.portfolio_id,
+                        strat.name,
+                        STARTING_CAPITAL_KWD,
+                        STARTING_CAPITAL_KWD,
+                        STARTING_CAPITAL_KWD,
+                        now,
+                        now,
+                    ),
                 )
 
     # ── Manual override ──────────────────────────────────────────────────
