@@ -1720,6 +1720,12 @@ def _sim_portfolio_summary(portfolio: dict) -> dict:
     )
     open_count = len(open_rows) if open_rows else 0
 
+    pending_orders = int(query_val(
+        """SELECT COUNT(*) FROM simulator_pending_orders
+           WHERE portfolio_id = ? AND status = 'PENDING'""",
+        (pid,),
+    ) or 0)
+
     wins = [r for r in closed if float(r.get("realized_pnl_pct") or 0) > 0]
     losses = [r for r in closed if float(r.get("realized_pnl_pct") or 0) <= 0]
     win_rate = (len(wins) / len(closed) * 100) if closed else 0
@@ -1787,6 +1793,7 @@ def _sim_portfolio_summary(portfolio: dict) -> dict:
         "total_value_kwd": total,
         "cumulative_return_pct": round(cumulative_return_pct, 2),
         "open_positions_count": open_count,
+        "pending_orders_count": pending_orders,
         "total_trades": len(closed),
         "wins": len(wins),
         "losses": len(losses),
@@ -1824,7 +1831,7 @@ def _get_sim_portfolio_by_strategy(strategy_name: str) -> Optional[dict]:
 # ---------------------------------------------------------------------------
 
 @router.get("/simulator/portfolios", summary="All paper simulator card portfolios overview")
-async def get_simulator_portfolios(_user: TokenData = Depends(get_current_user)):
+async def get_simulator_portfolios(_admin: TokenData = Depends(require_admin)):
     portfolios = _get_all_sim_portfolios()
     summaries = [_sim_portfolio_summary(p) for p in portfolios]
     return {"status": "ok", "portfolios": summaries}
@@ -1835,7 +1842,7 @@ async def get_simulator_portfolios(_user: TokenData = Depends(get_current_user))
 # ---------------------------------------------------------------------------
 
 @router.get("/simulator/compare", summary="Side-by-side paper card comparison")
-async def get_simulator_compare(_user: TokenData = Depends(get_current_user)):
+async def get_simulator_compare(_admin: TokenData = Depends(require_admin)):
     portfolios = _get_all_sim_portfolios()
     summaries = {p["strategy_name"]: _sim_portfolio_summary(p) for p in portfolios}
     return {"status": "ok", "strategies": summaries}
@@ -1848,7 +1855,7 @@ async def get_simulator_compare(_user: TokenData = Depends(get_current_user)):
 @router.get("/simulator/portfolios/{strategy_name}", summary="Full strategy detail")
 async def get_simulator_portfolio_detail(
     strategy_name: str,
-    _user: TokenData = Depends(get_current_user),
+    _admin: TokenData = Depends(require_admin),
 ):
     from app.core.database import query_all
 
@@ -1968,7 +1975,7 @@ async def get_simulator_trades(
     ticker: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
-    _user: TokenData = Depends(get_current_user),
+    _admin: TokenData = Depends(require_admin),
 ):
     from app.core.database import query_all
 
@@ -2019,7 +2026,7 @@ async def get_simulator_trades(
 @router.get("/simulator/portfolios/{strategy_name}/performance", summary="Aggregate analytics")
 async def get_simulator_performance(
     strategy_name: str,
-    _user: TokenData = Depends(get_current_user),
+    _admin: TokenData = Depends(require_admin),
 ):
     from app.core.database import query_all
     import math as _math
@@ -2140,7 +2147,7 @@ async def get_simulator_performance(
 async def close_simulator_position(
     position_id: int,
     body: dict,
-    user: TokenData = Depends(get_current_user),
+    _admin: TokenData = Depends(require_admin),
 ):
     """Close an open simulator position at the provided price (manual override)."""
     current_price = body.get("current_price")
@@ -2165,7 +2172,7 @@ async def close_simulator_position(
 @router.get("/simulator/activity", summary="Recent activity across paper simulator cards")
 async def get_simulator_activity(
     limit: int = Query(20, ge=1, le=100),
-    _user: TokenData = Depends(get_current_user),
+    _admin: TokenData = Depends(require_admin),
 ):
     from app.core.database import query_all
 
@@ -2189,12 +2196,82 @@ async def get_simulator_activity(
            LIMIT ?""",
         (limit,),
     )
+    pending_entries = query_all(
+        """SELECT sp.strategy_name, po.ticker, 'ENTRY' as action,
+                  po.signal_date as event_date, po.scheduled_date, po.approved_size_kwd as size_kwd,
+                  po.rating_snapshot_json
+           FROM simulator_pending_orders po
+           JOIN simulator_portfolios sp ON sp.id = po.portfolio_id
+           WHERE po.status = 'PENDING' AND po.order_kind = 'ENTRY'
+             AND sp.strategy_name IN ('BUY', 'WATCHLIST')
+           ORDER BY po.signal_date DESC, po.id DESC
+           LIMIT ?""",
+        (limit,),
+    )
 
     exits = [{"action": "EXIT", **dict(r.items())} for r in (rows or [])]
     opens = [{"action": "ENTRY", **dict(r.items())} for r in (entries or [])]
-    feed = sorted(exits + opens, key=lambda x: x.get("exit_date") or x.get("event_date") or "", reverse=True)[:limit]
+    pending = []
+    for row in pending_entries or []:
+        item = dict(row.items())
+        raw_snapshot = item.pop("rating_snapshot_json", None)
+        if isinstance(raw_snapshot, str):
+            try:
+                snapshot = json.loads(raw_snapshot)
+            except Exception:
+                snapshot = {}
+            item["entry_stage"] = snapshot.get("stage")
+            item["entry_confidence"] = snapshot.get("confidence")
+        pending.append(item)
+    feed = sorted(
+        exits + opens + pending,
+        key=lambda x: x.get("exit_date") or x.get("event_date") or "",
+        reverse=True,
+    )[:limit]
 
     return {"status": "ok", "feed": feed}
+
+
+# ---------------------------------------------------------------------------
+# GET /eagle-eye/simulator/status   — running/stopped switch
+# ---------------------------------------------------------------------------
+
+@router.get("/simulator/status", summary="Paper simulator running state")
+async def get_simulator_status(_admin: TokenData = Depends(require_admin)):
+    try:
+        from app.services.eagle_eye.simulator import get_engine
+        return {"status": "ok", **get_engine().control_status()}
+    except Exception as exc:
+        logger.exception("Simulator status failed: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---------------------------------------------------------------------------
+# POST /eagle-eye/simulator/start   — resume automatic paper trading
+# ---------------------------------------------------------------------------
+
+@router.post("/simulator/start", summary="Resume automatic paper simulator runs")
+async def start_simulator(_admin: TokenData = Depends(require_admin)):
+    try:
+        from app.services.eagle_eye.simulator import get_engine
+        return {"status": "ok", **get_engine().set_running(True)}
+    except Exception as exc:
+        logger.exception("Simulator start failed: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---------------------------------------------------------------------------
+# POST /eagle-eye/simulator/stop   — pause automatic paper trading
+# ---------------------------------------------------------------------------
+
+@router.post("/simulator/stop", summary="Pause automatic paper simulator runs")
+async def stop_simulator(_admin: TokenData = Depends(require_admin)):
+    try:
+        from app.services.eagle_eye.simulator import get_engine
+        return {"status": "ok", **get_engine().set_running(False)}
+    except Exception as exc:
+        logger.exception("Simulator stop failed: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 # ---------------------------------------------------------------------------
@@ -2225,7 +2302,7 @@ async def reset_simulator_now(
 
 @router.post("/simulator/run", summary="Manually trigger simulator daily run")
 async def run_simulator_now(
-    user: TokenData = Depends(get_current_user),
+    _admin: TokenData = Depends(require_admin),
 ):
     try:
         from app.services.eagle_eye.simulator import get_engine

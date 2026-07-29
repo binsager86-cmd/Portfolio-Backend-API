@@ -271,6 +271,14 @@ class SimulatorEngine:
         return out
 
     def _assert_rating_snapshot_available(self, date_str: str) -> None:
+        if date_str == date.today().isoformat():
+            cache_count = _query_val(
+                "SELECT COUNT(*) FROM ee_ratings_cache WHERE computed_date = ?",
+                (date_str,),
+            )
+            if cache_count and int(cache_count) > 0:
+                return
+
         rows = _query_all(
             "SELECT created_at FROM ratings_history WHERE computed_date = ? LIMIT 5",
             (date_str,),
@@ -297,6 +305,41 @@ class SimulatorEngine:
         )
         return bool(cnt and int(cnt) > 0)
 
+    def is_running(self) -> bool:
+        row = _query_one("SELECT value FROM simulator_control WHERE key = 'enabled'", ())
+        if row is None:
+            return True
+        value = str(dict(row.items()).get("value") if hasattr(row, "items") else row[0]).strip().lower()
+        return value not in {"0", "false", "no", "off", "stopped"}
+
+    def control_status(self) -> dict:
+        self._ensure_simulator_tables()
+        row = _query_one("SELECT value, updated_at FROM simulator_control WHERE key = 'enabled'", ())
+        running = self.is_running()
+        updated_at = None
+        if row is not None:
+            data = dict(row.items()) if hasattr(row, "items") else {"value": row[0], "updated_at": row[1] if len(row) > 1 else None}
+            updated_at = data.get("updated_at")
+        return {"running": running, "updated_at": updated_at}
+
+    def set_running(self, enabled: bool) -> dict:
+        self._ensure_simulator_tables()
+        now_ts = _now_ts()
+        value = "1" if enabled else "0"
+        existing = _query_one("SELECT key FROM simulator_control WHERE key = 'enabled'", ())
+        if existing:
+            _exec("UPDATE simulator_control SET value = ?, updated_at = ? WHERE key = 'enabled'", (value, now_ts))
+        else:
+            _exec("INSERT INTO simulator_control (key, value, updated_at) VALUES ('enabled', ?, ?)", (value, now_ts))
+        if not enabled:
+            _exec(
+                """UPDATE simulator_pending_orders
+                      SET status = 'CANCELLED', updated_at = ?, notes_json = ?
+                    WHERE status = 'PENDING'""",
+                (now_ts, json.dumps({"cancel_reason": "SIMULATOR_STOPPED"})),
+            )
+        return self.control_status()
+
     def run_daily(self, run_date: Optional[date | str] = None, backfill_missing: bool = True) -> Dict[str, Any]:
         """
         Called once per trading day after market close.
@@ -305,6 +348,14 @@ class SimulatorEngine:
         from app.services.eagle_eye.store import ensure_tables
         ensure_tables()
         self._ensure_simulator_tables()
+
+        if not self.is_running():
+            return {
+                "status": "stopped",
+                "running": False,
+                "processed_dates": [],
+                "target_date": self._normalize_run_date(run_date),
+            }
 
         date_str = self._normalize_run_date(run_date)
         first_date = date_str
@@ -1478,30 +1529,55 @@ class SimulatorEngine:
                     except Exception:
                         r[key] = [] if key == "signals_json" else {}
             return r
+        if target_date == date.today().isoformat():
+            row = _query_one(
+                """SELECT stage, rating, confidence, ml_score, last_price, market_tier,
+                          entry_primary, stop_loss, tp1, tp2, tp3,
+                          signals_json, indicators_json, volume_context_json
+                   FROM ee_ratings_cache
+                   WHERE ticker = ? AND computed_date = ?""",
+                (ticker.upper(), target_date),
+            )
+            if row:
+                r = dict(row.items())
+                for key in ("signals_json", "indicators_json", "volume_context_json"):
+                    raw = r.get(key)
+                    if isinstance(raw, str):
+                        try:
+                            r[key] = json.loads(raw)
+                        except Exception:
+                            r[key] = [] if key == "signals_json" else {}
+                return r
         return None
 
     def _get_todays_ratings(self, date_str: str) -> List[dict]:
-        """Load all rated stocks for a specific date from persisted ratings_history only."""
+        """Load ratings for a simulator date.
+
+        Historical dates require immutable ratings_history. The current date can
+        use ee_ratings_cache because it is the live forward signal source.
+        """
         self._assert_rating_snapshot_available(date_str)
-        rows = _query_all(
-            """SELECT ticker, name_en, sector, stage, rating, confidence, NULL as ml_score, thesis,
-                      entry_primary, stop_loss, tp1, tp2, tp3, last_price,
-                      market_tier,
-                      signals_json, indicators_json, volume_context_json, computed_at
-               FROM ratings_history
-               WHERE computed_date = ?
-               ORDER BY confidence DESC""",
-            (date_str,),
-        )
-        if (not rows) and date_str == date.today().isoformat():
+        if date_str == date.today().isoformat():
             rows = _query_all(
                 """SELECT ticker, name_en, sector, stage, rating, confidence, ml_score, thesis,
                           entry_primary, stop_loss, tp1, tp2, tp3, last_price,
                           market_tier,
                           signals_json, indicators_json, volume_context_json, computed_at
                    FROM ee_ratings_cache
+                   WHERE computed_date = ?
                    ORDER BY confidence DESC""",
-                (),
+                (date_str,),
+            )
+        else:
+            rows = _query_all(
+                """SELECT ticker, name_en, sector, stage, rating, confidence, NULL as ml_score, thesis,
+                          entry_primary, stop_loss, tp1, tp2, tp3, last_price,
+                          market_tier,
+                          signals_json, indicators_json, volume_context_json, computed_at
+                   FROM ratings_history
+                   WHERE computed_date = ?
+                   ORDER BY confidence DESC""",
+                (date_str,),
             )
 
         result = []
@@ -1770,7 +1846,7 @@ class SimulatorEngine:
 
         cleared_rows: dict[str, int] = {}
         for table_name in simulator_tables:
-            if table_name == "simulator_portfolios":
+            if table_name in {"simulator_portfolios", "simulator_control"}:
                 continue
 
             count_row = _query_one(f"SELECT COUNT(*) AS n FROM {table_name}", ())
@@ -1856,6 +1932,7 @@ class SimulatorEngine:
 
         return {
             "date": date_str,
+            "running": self.is_running(),
             "tables_found": simulator_tables,
             "cleared_rows": cleared_rows,
             "portfolios": portfolio_summaries,
@@ -1989,6 +2066,18 @@ class SimulatorEngine:
                date TEXT, ticker TEXT, confidence REAL, stage TEXT, reason_skipped TEXT
             )""",
         )
+        _exec(
+            """CREATE TABLE IF NOT EXISTS simulator_control (
+               key TEXT PRIMARY KEY,
+               value TEXT NOT NULL,
+               updated_at TEXT
+            )""",
+        )
+        if _query_one("SELECT key FROM simulator_control WHERE key = 'enabled'", ()) is None:
+            _exec(
+                "INSERT INTO simulator_control (key, value, updated_at) VALUES ('enabled', '1', ?)",
+                (_now_ts(),),
+            )
         _exec(
             """CREATE TABLE IF NOT EXISTS sim_position_snapshots (
                id INTEGER PRIMARY KEY AUTOINCREMENT,
