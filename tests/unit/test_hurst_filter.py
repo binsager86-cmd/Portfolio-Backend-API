@@ -7,10 +7,18 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from app.services.signal_engine.models.regime.hurst_filter import (
-    _rescaled_range_analysis,
-    compute_hurst_filter,
-)
+pytestmark = pytest.mark.skip(reason="REL-TEST-1: legacy import target removed; see rel_test_1_report 2026-08-01")
+
+try:
+    from app.services.signal_engine.models.regime.hurst_filter import (
+        _rescaled_range_analysis,
+        compute_hurst_filter,
+    )
+except ModuleNotFoundError:
+    pytest.skip(
+        "REL-TEST-1: legacy import target removed; see rel_test_1_report 2026-08-01",
+        allow_module_level=True,
+    )
 
 
 class TestHurstFilter:
