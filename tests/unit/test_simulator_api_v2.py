@@ -6,8 +6,10 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.database import SessionLocal
 from app.main import app
 from app.services.eagle_eye_v2.simulator.ledger import SimulatorLedger
+from app.services.eagle_eye_v2.simulator.projection import project_simulator_ledger
 
 
 def _fixture_ledger(tmp_path: Path) -> Path:
@@ -48,7 +50,10 @@ def _fixture_ledger(tmp_path: Path) -> Path:
 
 
 def _client(monkeypatch, tmp_path: Path) -> TestClient:
-    monkeypatch.setenv("SIMULATOR_LEDGER_PATH", str(_fixture_ledger(tmp_path)))
+    ledger_path = _fixture_ledger(tmp_path)
+    monkeypatch.setenv("SIMULATOR_LEDGER_PATH", str(ledger_path))
+    with SessionLocal() as db:
+        project_simulator_ledger(db=db, ledger_path=ledger_path)
     return TestClient(app)
 
 
@@ -92,6 +97,8 @@ def test_symbols_state_uses_day_zero_fallback_for_genesis(monkeypatch, tmp_path:
     path = tmp_path / "empty.db"
     SimulatorLedger(path)
     monkeypatch.setenv("SIMULATOR_LEDGER_PATH", str(path))
+    with SessionLocal() as db:
+        project_simulator_ledger(db=db, ledger_path=path)
     client = TestClient(app)
 
     states = client.get("/api/v2/simulator/symbols/state").json()["symbols"]
@@ -107,7 +114,10 @@ def test_integrity_reports_row_counts_hash_and_no_cache(monkeypatch, tmp_path: P
     body = response.json()
 
     assert response.headers["Cache-Control"] == "no-store"
-    assert body["row_counts"]["transactions"] == 3
+    assert body["projection_status"] == "FRESH"
+    assert body["projection_stale"] is False
+    assert body["row_counts"]["sim_transactions"] == 3
+    assert body["source_row_counts"]["sim_transactions"] == 3
     assert body["guard_trips_count"] == 0
     assert len(body["ledger_sha256"]) == 64
     assert isinstance(body["seal_verification"]["pass"], bool)
@@ -119,4 +129,4 @@ def test_sql_map_contains_endpoint_queries(monkeypatch, tmp_path: Path):
     sql_map = client.get("/api/v2/simulator/sql-map").json()
 
     assert "GET /api/v2/simulator/portfolios" in sql_map
-    assert "decision_log" in sql_map["GET /api/v2/simulator/decisions"]
+    assert "eagle_eye_sim.sim_decisions" in sql_map["GET /api/v2/simulator/decisions"]

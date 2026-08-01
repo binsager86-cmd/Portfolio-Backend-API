@@ -106,6 +106,14 @@ def _run_daily_price_then_snapshot(user_id: int | None = None) -> dict:
         except Exception as exc:
             logger.warning("Portfolio news alert queue failed: %s", exc)
 
+        projection_result = None
+        try:
+            from app.services.eagle_eye_v2.simulator.projection import project_simulator_ledger
+            projection_result = project_simulator_ledger().to_dict()
+            logger.info("Eagle Eye simulator projection finished: %s", projection_result)
+        except Exception as exc:
+            logger.warning("Eagle Eye simulator projection failed: %s", exc)
+
         # Update the cron API status tracking so /status shows scheduler runs
         try:
             from app.api.v1.cron import _last_run, _last_snapshot_run
@@ -119,6 +127,7 @@ def _run_daily_price_then_snapshot(user_id: int | None = None) -> dict:
                         uid: r.to_dict() if hasattr(r, "to_dict") else r
                         for uid, r in all_price_results.items()
                     },
+                    "simulator_projection": projection_result,
                 },
             })
             _last_snapshot_run.update({
@@ -134,6 +143,7 @@ def _run_daily_price_then_snapshot(user_id: int | None = None) -> dict:
             "fundamentals": fundamentals_result,
             "price": all_price_results,
             "snapshot": all_snapshot_results,
+            "simulator_projection": projection_result,
         }
 
     return run_with_job_lock("daily_price_and_snapshot", _run)
