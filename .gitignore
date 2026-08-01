@@ -127,5 +127,14 @@ reset_ckpt.py
 # Local scratch workspace
 scratch/
 _tmp_*.py
+_tmp_*.txt
+_write_*.py
 trace_watch_*.txt
 _tmp_command_execution_report.ipynb
+
+# Eagle Eye generated evidence / archive snapshots
+artifacts/preview1a_prestart/
+artifacts/r11/
+_tmp_r13_repro_sandbox/
+eagle_eye_full_code/
+artifacts/simulator_audit_full_code_bundle.md
