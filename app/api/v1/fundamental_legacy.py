@@ -815,6 +815,14 @@ class MetricsCalculateRequest(BaseModel):
     fiscal_quarter: Optional[int] = None
 
 
+class MetricsEnsureSummary(BaseModel):
+    total_periods: int
+    calculated_periods: int
+    skipped_periods: int
+    failed_periods: int
+    failures: List[Dict[str, str]] = Field(default_factory=list)
+
+
 class GrahamRequest(BaseModel):
     eps: float
     growth_rate: float = 0.0
@@ -4775,6 +4783,91 @@ async def calculate_metrics(
         pass  # non-fatal — per-period metrics already saved
 
     return {"status": "ok", "data": {"metrics": results}}
+
+
+@router.post("/stocks/{stock_id}/metrics/ensure")
+async def ensure_metrics(
+    stock_id: int,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Lazy-calculate metrics for all valid periods for this stock.
+
+    This endpoint is idempotent and intentionally tolerant: periods with no
+    line items are skipped, and per-period failures are collected in a summary
+    so one bad period does not block the rest.
+    """
+    _ensure_schema()
+    _verify_stock_owner(stock_id, current_user.user_id)
+
+    rows = query_all(
+        """SELECT
+               fs.period_end_date,
+               MAX(fs.fiscal_year) AS fiscal_year,
+               MAX(fs.fiscal_quarter) AS fiscal_quarter,
+               COUNT(li.id) AS line_item_count
+           FROM financial_statements fs
+           LEFT JOIN financial_line_items li ON li.statement_id = fs.id
+           WHERE fs.stock_id = ?
+           GROUP BY fs.period_end_date
+           ORDER BY fs.period_end_date ASC""",
+        (stock_id,),
+    )
+
+    summary = MetricsEnsureSummary(
+        total_periods=len(rows),
+        calculated_periods=0,
+        skipped_periods=0,
+        failed_periods=0,
+        failures=[],
+    )
+
+    for row in rows:
+        if isinstance(row, (tuple, list)):
+            period_end_date, fiscal_year, fiscal_quarter, line_item_count = row
+        else:
+            period_end_date = row.get("period_end_date")
+            fiscal_year = row.get("fiscal_year")
+            fiscal_quarter = row.get("fiscal_quarter")
+            line_item_count = row.get("line_item_count")
+
+        if not period_end_date or fiscal_year is None:
+            summary.skipped_periods += 1
+            continue
+
+        if not line_item_count:
+            summary.skipped_periods += 1
+            continue
+
+        try:
+            results = _calculate_all_metrics(
+                stock_id,
+                str(period_end_date),
+                int(fiscal_year),
+                _parse_fiscal_quarter(fiscal_quarter),
+            )
+            if results:
+                summary.calculated_periods += 1
+            else:
+                summary.skipped_periods += 1
+        except Exception as exc:
+            summary.failed_periods += 1
+            summary.failures.append({
+                "period_end_date": str(period_end_date),
+                "error": str(exc),
+            })
+            logger.warning(
+                "ensure_metrics: period calculation failed for stock_id=%s period=%s: %s",
+                stock_id,
+                period_end_date,
+                exc,
+            )
+
+    try:
+        _calculate_growth(stock_id)
+    except Exception as exc:
+        logger.warning("ensure_metrics: growth refresh failed for stock_id=%s: %s", stock_id, exc)
+
+    return {"status": "ok", "data": summary.model_dump()}
 
 
 # ════════════════════════════════════════════════════════════════════
