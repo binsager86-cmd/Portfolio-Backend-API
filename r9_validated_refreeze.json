@@ -1,0 +1,68 @@
+{
+  "validated_history_start": "2021-01-01",
+  "freeze_hash_validated_window": "c91b354d6a50d520dd46502b1d80d78dfccf9fc8a30b290ae90e7b6edbc2e87b",
+  "counts": [
+    {
+      "symbol": "BPCC",
+      "n": 1455,
+      "min_td": 1609459200,
+      "max_td": 1783555200
+    },
+    {
+      "symbol": "MABANEE",
+      "n": 1473,
+      "min_td": 1609459200,
+      "max_td": 1783555200
+    },
+    {
+      "symbol": "SANAM",
+      "n": 1347,
+      "min_td": 1609459200,
+      "max_td": 1783468800
+    },
+    {
+      "symbol": "TIJARA",
+      "n": 1446,
+      "min_td": 1609459200,
+      "max_td": 1783555200
+    },
+    {
+      "symbol": "ZAIN",
+      "n": 1455,
+      "min_td": 1609459200,
+      "max_td": 1783555200
+    }
+  ],
+  "landmarks": [
+    {
+      "symbol": "MABANEE",
+      "landmark": "nov_2025_peak_close",
+      "trade_date": 1764115200,
+      "close": 1149.0
+    },
+    {
+      "symbol": "TIJARA",
+      "landmark": "base_reference_close_75_105",
+      "trade_date": 1609459200,
+      "close": 84.076
+    },
+    {
+      "symbol": "BPCC",
+      "landmark": "validated_window_low_close",
+      "trade_date": 1655424000,
+      "close": 548.087
+    },
+    {
+      "symbol": "ZAIN",
+      "landmark": "latest_close",
+      "trade_date": 1783555200,
+      "close": 596.0
+    },
+    {
+      "symbol": "SANAM",
+      "landmark": "latest_close",
+      "trade_date": 1783468800,
+      "close": 359.0
+    }
+  ]
+}

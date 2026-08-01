@@ -1,0 +1,21 @@
+{
+  "trace_id": "c4261651-bb97-46be-9286-8b35c18b59a8",
+  "change_request_id": 8,
+  "config_update_proposed_event_id": 6837,
+  "adjudication_event_ids": [
+    6838,
+    6839
+  ],
+  "new_window_weekday_clean_for_five": true,
+  "new_window_aggregate_counts_five": {
+    "Sun": 480,
+    "Mon": 513,
+    "Tue": 508,
+    "Wed": 509,
+    "Thu": 479,
+    "Fri": 0,
+    "Sat": 0
+  },
+  "refreeze_file": "r10_validated_refreeze.json",
+  "sanam_quarantine_found": true
+}

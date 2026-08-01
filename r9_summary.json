@@ -1,0 +1,36 @@
+{
+  "quarantine_count_now": 64,
+  "medians": {
+    "TIJARA": 670899.8200000001,
+    "BPCC": 1068415.5085,
+    "ZAIN": 1469316.0295,
+    "SANAM": 1204963175.5,
+    "MABANEE": 740572.3965
+  },
+  "below_100k": [],
+  "repair_events_for_five": {
+    "TIJARA": {
+      "event_id": 6631,
+      "rows_touched": 243,
+      "repair": "value_kwd_fils_to_kwd"
+    },
+    "BPCC": {
+      "event_id": 6628,
+      "rows_touched": 234,
+      "repair": "value_kwd_fils_to_kwd"
+    },
+    "ZAIN": {
+      "event_id": 6632,
+      "rows_touched": 234,
+      "repair": "value_kwd_fils_to_kwd"
+    },
+    "SANAM": null,
+    "MABANEE": {
+      "event_id": 6629,
+      "rows_touched": 252,
+      "repair": "value_kwd_fils_to_kwd"
+    }
+  },
+  "jump_count": 232,
+  "freeze_hash": "11d37f798c07587375d408a143605bc06710a7c6ee9fac4f168dc1810e772003"
+}

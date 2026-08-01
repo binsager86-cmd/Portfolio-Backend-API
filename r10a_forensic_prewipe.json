@@ -1,0 +1,2353 @@
+{
+  "timestamp_to_date_convention": "trade_date unix-seconds -> UTC instant -> Asia/Kuwait local date for weekday/date audits",
+  "weekday_case_study_contaminated": {
+    "symbol_counts": {
+      "BPCC": {
+        "Sun": 234,
+        "Mon": 279,
+        "Tue": 278,
+        "Wed": 281,
+        "Thu": 272,
+        "Fri": 111,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 111,
+          "min": "2021-01-01",
+          "max": "2023-02-10"
+        }
+      },
+      "MABANEE": {
+        "Sun": 234,
+        "Mon": 281,
+        "Tue": 279,
+        "Wed": 281,
+        "Thu": 272,
+        "Fri": 126,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 126,
+          "min": "2021-01-01",
+          "max": "2023-05-26"
+        }
+      },
+      "SANAM": {
+        "Sun": 153,
+        "Mon": 274,
+        "Tue": 270,
+        "Wed": 273,
+        "Thu": 264,
+        "Fri": 113,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 113,
+          "min": "2021-01-01",
+          "max": "2023-02-24"
+        }
+      },
+      "TIJARA": {
+        "Sun": 232,
+        "Mon": 276,
+        "Tue": 273,
+        "Wed": 278,
+        "Thu": 270,
+        "Fri": 117,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 117,
+          "min": "2021-01-01",
+          "max": "2023-03-24"
+        }
+      },
+      "ZAIN": {
+        "Sun": 234,
+        "Mon": 279,
+        "Tue": 278,
+        "Wed": 281,
+        "Thu": 272,
+        "Fri": 111,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 111,
+          "min": "2021-01-01",
+          "max": "2023-02-10"
+        }
+      }
+    },
+    "aggregate_counts": {
+      "Sun": 1087,
+      "Mon": 1389,
+      "Tue": 1378,
+      "Wed": 1394,
+      "Thu": 1350,
+      "Fri": 578,
+      "Sat": 0
+    },
+    "aggregate_weekend_summary": {
+      "count": 578,
+      "min": "2021-01-01",
+      "max": "2023-05-26"
+    }
+  },
+  "weekday_full_board_contaminated": {
+    "symbol_counts": {
+      "AAYAN": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "AAYANRE": {
+        "Sun": 233,
+        "Mon": 246,
+        "Tue": 243,
+        "Wed": 248,
+        "Thu": 240,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ABAR": {
+        "Sun": 229,
+        "Mon": 242,
+        "Tue": 244,
+        "Wed": 245,
+        "Thu": 237,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ABK": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ACICO": {
+        "Sun": 100,
+        "Mon": 106,
+        "Tue": 105,
+        "Wed": 106,
+        "Thu": 99,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "AINS": {
+        "Sun": 147,
+        "Mon": 167,
+        "Tue": 154,
+        "Wed": 163,
+        "Thu": 155,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ALAQARIA": {
+        "Sun": 135,
+        "Mon": 135,
+        "Tue": 139,
+        "Wed": 139,
+        "Thu": 133,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ALDEERA": {
+        "Sun": 183,
+        "Mon": 186,
+        "Tue": 180,
+        "Wed": 179,
+        "Thu": 195,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ALEID": {
+        "Sun": 200,
+        "Mon": 210,
+        "Tue": 211,
+        "Wed": 214,
+        "Thu": 207,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ALFTAQA": {
+        "Sun": 25,
+        "Mon": 28,
+        "Tue": 27,
+        "Wed": 28,
+        "Thu": 26,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ALG": {
+        "Sun": 192,
+        "Mon": 203,
+        "Tue": 203,
+        "Wed": 206,
+        "Thu": 197,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ALIMTIAZ": {
+        "Sun": 154,
+        "Mon": 161,
+        "Tue": 159,
+        "Wed": 163,
+        "Thu": 151,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ALKOUT": {
+        "Sun": 65,
+        "Mon": 63,
+        "Tue": 67,
+        "Wed": 56,
+        "Thu": 53,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ALMANAR": {
+        "Sun": 209,
+        "Mon": 216,
+        "Tue": 215,
+        "Wed": 218,
+        "Thu": 208,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ALOLA": {
+        "Sun": 158,
+        "Mon": 165,
+        "Tue": 163,
+        "Wed": 167,
+        "Thu": 157,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ALSAFAT": {
+        "Sun": 160,
+        "Mon": 167,
+        "Tue": 166,
+        "Wed": 169,
+        "Thu": 159,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ALTIJARIA": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "AMAR": {
+        "Sun": 112,
+        "Mon": 116,
+        "Tue": 112,
+        "Wed": 117,
+        "Thu": 111,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "AQAR": {
+        "Sun": 203,
+        "Mon": 215,
+        "Tue": 201,
+        "Wed": 212,
+        "Thu": 213,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ARABREC": {
+        "Sun": 158,
+        "Mon": 165,
+        "Tue": 163,
+        "Wed": 167,
+        "Thu": 157,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "AREEC": {
+        "Sun": 184,
+        "Mon": 197,
+        "Tue": 201,
+        "Wed": 211,
+        "Thu": 194,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ARGAN": {
+        "Sun": 156,
+        "Mon": 164,
+        "Tue": 163,
+        "Wed": 164,
+        "Thu": 156,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ARKAN": {
+        "Sun": 124,
+        "Mon": 133,
+        "Tue": 138,
+        "Wed": 123,
+        "Thu": 117,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ARZAN": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ASC": {
+        "Sun": 131,
+        "Mon": 132,
+        "Tue": 138,
+        "Wed": 142,
+        "Thu": 139,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ASIYA": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ATC": {
+        "Sun": 79,
+        "Mon": 77,
+        "Tue": 73,
+        "Wed": 71,
+        "Thu": 70,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "AZNOULA": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "BAYANINV": {
+        "Sun": 157,
+        "Mon": 164,
+        "Tue": 163,
+        "Wed": 165,
+        "Thu": 153,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "BEYOUT": {
+        "Sun": 98,
+        "Mon": 104,
+        "Tue": 104,
+        "Wed": 105,
+        "Thu": 99,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "BKIKWT": {
+        "Sun": 145,
+        "Mon": 152,
+        "Tue": 151,
+        "Wed": 153,
+        "Thu": 144,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "BOUBYAN": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "BOURSA": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "BPCC": {
+        "Sun": 234,
+        "Mon": 279,
+        "Tue": 278,
+        "Wed": 281,
+        "Thu": 272,
+        "Fri": 111,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 111,
+          "min": "2021-01-01",
+          "max": "2023-02-10"
+        }
+      },
+      "BURG": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "CABLE": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "CATTL": {
+        "Sun": 152,
+        "Mon": 154,
+        "Tue": 156,
+        "Wed": 152,
+        "Thu": 143,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "CBK": {
+        "Sun": 140,
+        "Mon": 149,
+        "Tue": 137,
+        "Wed": 145,
+        "Thu": 134,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "CGC": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "CLEANING": {
+        "Sun": 228,
+        "Mon": 236,
+        "Tue": 240,
+        "Wed": 236,
+        "Thu": 228,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "COAST": {
+        "Sun": 159,
+        "Mon": 165,
+        "Tue": 163,
+        "Wed": 167,
+        "Thu": 158,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "DALQANRE": {
+        "Sun": 146,
+        "Mon": 151,
+        "Tue": 152,
+        "Wed": 153,
+        "Thu": 143,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "DIGITUS": {
+        "Sun": 110,
+        "Mon": 120,
+        "Tue": 121,
+        "Wed": 120,
+        "Thu": 120,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "EKTTITAB": {
+        "Sun": 143,
+        "Mon": 148,
+        "Tue": 147,
+        "Wed": 149,
+        "Thu": 139,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "EMIRATES": {
+        "Sun": 138,
+        "Mon": 147,
+        "Tue": 138,
+        "Wed": 140,
+        "Thu": 143,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ENERGYH": {
+        "Sun": 146,
+        "Mon": 144,
+        "Tue": 143,
+        "Wed": 149,
+        "Thu": 142,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "EQUIPMENT": {
+        "Sun": 127,
+        "Mon": 134,
+        "Tue": 131,
+        "Wed": 134,
+        "Thu": 127,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ERESCO": {
+        "Sun": 154,
+        "Mon": 160,
+        "Tue": 159,
+        "Wed": 163,
+        "Thu": 153,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "FACIL": {
+        "Sun": 230,
+        "Mon": 243,
+        "Tue": 246,
+        "Wed": 247,
+        "Thu": 238,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "FTI": {
+        "Sun": 133,
+        "Mon": 139,
+        "Tue": 140,
+        "Wed": 140,
+        "Thu": 132,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "FUTUREKID": {
+        "Sun": 228,
+        "Mon": 241,
+        "Tue": 237,
+        "Wed": 243,
+        "Thu": 230,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "GBK": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "GFC": {
+        "Sun": 83,
+        "Mon": 75,
+        "Tue": 88,
+        "Wed": 96,
+        "Thu": 87,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "GFH": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "GIH": {
+        "Sun": 149,
+        "Mon": 157,
+        "Tue": 155,
+        "Wed": 162,
+        "Thu": 149,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "GINS": {
+        "Sun": 94,
+        "Mon": 96,
+        "Tue": 94,
+        "Wed": 96,
+        "Thu": 92,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "HUMANSOFT": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "IFA": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "IFAHR": {
+        "Sun": 158,
+        "Mon": 165,
+        "Tue": 163,
+        "Wed": 167,
+        "Thu": 157,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "INJAZZAT": {
+        "Sun": 124,
+        "Mon": 122,
+        "Tue": 117,
+        "Wed": 130,
+        "Thu": 119,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "INOVEST": {
+        "Sun": 153,
+        "Mon": 162,
+        "Tue": 161,
+        "Wed": 159,
+        "Thu": 153,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "INTEGRATED": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "IPG": {
+        "Sun": 144,
+        "Mon": 143,
+        "Tue": 143,
+        "Wed": 157,
+        "Thu": 148,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "JAZEERA": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "JOINER": {
+        "Sun": 0,
+        "Mon": 88,
+        "Tue": 88,
+        "Wed": 88,
+        "Thu": 88,
+        "Fri": 88,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 88,
+          "min": "2021-01-01",
+          "max": "2022-09-02"
+        }
+      },
+      "JTC": {
+        "Sun": 204,
+        "Mon": 215,
+        "Tue": 214,
+        "Wed": 221,
+        "Thu": 214,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "KAMCO": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 246,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "KBT": {
+        "Sun": 157,
+        "Mon": 161,
+        "Tue": 160,
+        "Wed": 163,
+        "Thu": 154,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "KCEM": {
+        "Sun": 229,
+        "Mon": 243,
+        "Tue": 244,
+        "Wed": 249,
+        "Thu": 240,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "KCIN": {
+        "Sun": 142,
+        "Mon": 136,
+        "Tue": 132,
+        "Wed": 125,
+        "Thu": 127,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "KCPC": {
+        "Sun": 232,
+        "Mon": 238,
+        "Tue": 240,
+        "Wed": 245,
+        "Thu": 237,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "KFH": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "KFIC": {
+        "Sun": 140,
+        "Mon": 132,
+        "Tue": 143,
+        "Wed": 148,
+        "Thu": 133,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "KFOUC": {
+        "Sun": 156,
+        "Mon": 164,
+        "Tue": 159,
+        "Wed": 162,
+        "Thu": 154,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "KGL": {
+        "Sun": 134,
+        "Mon": 136,
+        "Tue": 136,
+        "Wed": 140,
+        "Thu": 133,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "KHOT": {
+        "Sun": 79,
+        "Mon": 84,
+        "Tue": 89,
+        "Wed": 85,
+        "Thu": 83,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "KIB": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "KINS": {
+        "Sun": 138,
+        "Mon": 149,
+        "Tue": 145,
+        "Wed": 147,
+        "Thu": 140,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "KINV": {
+        "Sun": 234,
+        "Mon": 246,
+        "Tue": 246,
+        "Wed": 250,
+        "Thu": 241,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "KMEFIC": {
+        "Sun": 129,
+        "Mon": 138,
+        "Tue": 127,
+        "Wed": 130,
+        "Thu": 126,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "KPPC": {
+        "Sun": 154,
+        "Mon": 162,
+        "Tue": 159,
+        "Wed": 165,
+        "Thu": 154,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "KPROJ": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "KRE": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "KUWAITRE": {
+        "Sun": 75,
+        "Mon": 82,
+        "Tue": 91,
+        "Wed": 95,
+        "Thu": 79,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "MABANEE": {
+        "Sun": 234,
+        "Mon": 281,
+        "Tue": 279,
+        "Wed": 281,
+        "Thu": 272,
+        "Fri": 126,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 126,
+          "min": "2021-01-01",
+          "max": "2023-05-26"
+        }
+      },
+      "MADAR": {
+        "Sun": 112,
+        "Mon": 125,
+        "Tue": 122,
+        "Wed": 128,
+        "Thu": 109,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "MANAZEL": {
+        "Sun": 158,
+        "Mon": 165,
+        "Tue": 163,
+        "Wed": 167,
+        "Thu": 157,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "MARAKEZ": {
+        "Sun": 146,
+        "Mon": 150,
+        "Tue": 151,
+        "Wed": 154,
+        "Thu": 140,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "MARKAZ": {
+        "Sun": 232,
+        "Mon": 240,
+        "Tue": 244,
+        "Wed": 249,
+        "Thu": 237,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "MASAKEN": {
+        "Sun": 113,
+        "Mon": 117,
+        "Tue": 118,
+        "Wed": 120,
+        "Thu": 112,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "MASHAER": {
+        "Sun": 224,
+        "Mon": 226,
+        "Tue": 236,
+        "Wed": 235,
+        "Thu": 228,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "MAZAYA": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "MENA": {
+        "Sun": 116,
+        "Mon": 122,
+        "Tue": 121,
+        "Wed": 122,
+        "Thu": 113,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "MEZZAN": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "MIDAN": {
+        "Sun": 42,
+        "Mon": 43,
+        "Tue": 35,
+        "Wed": 30,
+        "Thu": 32,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "MKHZN": {
+        "Sun": 158,
+        "Mon": 165,
+        "Tue": 163,
+        "Wed": 167,
+        "Thu": 157,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "MRC": {
+        "Sun": 210,
+        "Mon": 219,
+        "Tue": 220,
+        "Wed": 219,
+        "Thu": 215,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "MUBARRAD": {
+        "Sun": 227,
+        "Mon": 239,
+        "Tue": 234,
+        "Wed": 243,
+        "Thu": 226,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "MUNSHAAT": {
+        "Sun": 210,
+        "Mon": 216,
+        "Tue": 216,
+        "Wed": 217,
+        "Thu": 208,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "MUNTAZAHAT": {
+        "Sun": 223,
+        "Mon": 238,
+        "Tue": 233,
+        "Wed": 245,
+        "Thu": 234,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "NAPESCO": {
+        "Sun": 174,
+        "Mon": 176,
+        "Tue": 176,
+        "Wed": 172,
+        "Thu": 168,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "NBK": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "NCCI": {
+        "Sun": 160,
+        "Mon": 167,
+        "Tue": 166,
+        "Wed": 169,
+        "Thu": 159,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "NICBM": {
+        "Sun": 177,
+        "Mon": 197,
+        "Tue": 193,
+        "Wed": 184,
+        "Thu": 202,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "NIH": {
+        "Sun": 157,
+        "Mon": 164,
+        "Tue": 162,
+        "Wed": 167,
+        "Thu": 157,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "NIND": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "NINV": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "NOOR": {
+        "Sun": 232,
+        "Mon": 245,
+        "Tue": 244,
+        "Wed": 249,
+        "Thu": 241,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "NRE": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "OOREDOO": {
+        "Sun": 157,
+        "Mon": 165,
+        "Tue": 163,
+        "Wed": 167,
+        "Thu": 157,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "OSOS": {
+        "Sun": 173,
+        "Mon": 180,
+        "Tue": 189,
+        "Wed": 189,
+        "Thu": 176,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "OSOUL": {
+        "Sun": 201,
+        "Mon": 206,
+        "Tue": 211,
+        "Wed": 214,
+        "Thu": 209,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "OULAFUEL": {
+        "Sun": 158,
+        "Mon": 165,
+        "Tue": 163,
+        "Wed": 167,
+        "Thu": 157,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "PAPCO": {
+        "Sun": 117,
+        "Mon": 124,
+        "Tue": 121,
+        "Wed": 124,
+        "Thu": 113,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "PAPER": {
+        "Sun": 143,
+        "Mon": 150,
+        "Tue": 151,
+        "Wed": 145,
+        "Thu": 141,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "PCEM": {
+        "Sun": 231,
+        "Mon": 244,
+        "Tue": 240,
+        "Wed": 248,
+        "Thu": 237,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "QIC": {
+        "Sun": 64,
+        "Mon": 71,
+        "Tue": 74,
+        "Wed": 79,
+        "Thu": 75,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "RASIYAT": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 243,
+        "Wed": 251,
+        "Thu": 241,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "SANAM": {
+        "Sun": 153,
+        "Mon": 274,
+        "Tue": 270,
+        "Wed": 273,
+        "Thu": 264,
+        "Fri": 113,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 113,
+          "min": "2021-01-01",
+          "max": "2023-02-24"
+        }
+      },
+      "SECH": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "SENERGY": {
+        "Sun": 147,
+        "Mon": 162,
+        "Tue": 156,
+        "Wed": 162,
+        "Thu": 148,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "SHIP": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "SOKOUK": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 245,
+        "Wed": 250,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "SOOR": {
+        "Sun": 158,
+        "Mon": 165,
+        "Tue": 163,
+        "Wed": 167,
+        "Thu": 157,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "SPEC": {
+        "Sun": 156,
+        "Mon": 164,
+        "Tue": 163,
+        "Wed": 165,
+        "Thu": 157,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "SRE": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "STC": {
+        "Sun": 158,
+        "Mon": 165,
+        "Tue": 163,
+        "Wed": 167,
+        "Thu": 157,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "TAHSSILAT": {
+        "Sun": 142,
+        "Mon": 146,
+        "Tue": 146,
+        "Wed": 144,
+        "Thu": 137,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "TAM": {
+        "Sun": 178,
+        "Mon": 192,
+        "Tue": 193,
+        "Wed": 193,
+        "Thu": 180,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "TAMINV": {
+        "Sun": 66,
+        "Mon": 55,
+        "Tue": 65,
+        "Wed": 74,
+        "Thu": 64,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "THURAYA": {
+        "Sun": 93,
+        "Mon": 95,
+        "Tue": 101,
+        "Wed": 106,
+        "Thu": 94,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "TIJARA": {
+        "Sun": 232,
+        "Mon": 276,
+        "Tue": 273,
+        "Wed": 278,
+        "Thu": 270,
+        "Fri": 117,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 117,
+          "min": "2021-01-01",
+          "max": "2023-03-24"
+        }
+      },
+      "TROLLEY": {
+        "Sun": 14,
+        "Mon": 15,
+        "Tue": 13,
+        "Wed": 15,
+        "Thu": 15,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "U1I_TMP": {
+        "Sun": 10,
+        "Mon": 10,
+        "Tue": 10,
+        "Wed": 10,
+        "Thu": 10,
+        "Fri": 10,
+        "Sat": 10,
+        "weekend_summary": {
+          "count": 20,
+          "min": "2024-04-12",
+          "max": "2024-06-15"
+        }
+      },
+      "U1J_DBG": {
+        "Sun": 31,
+        "Mon": 32,
+        "Tue": 32,
+        "Wed": 32,
+        "Thu": 32,
+        "Fri": 31,
+        "Sat": 31,
+        "weekend_summary": {
+          "count": 62,
+          "min": "2024-04-12",
+          "max": "2024-11-09"
+        }
+      },
+      "UNICAP": {
+        "Sun": 146,
+        "Mon": 153,
+        "Tue": 151,
+        "Wed": 151,
+        "Thu": 140,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "UPAC": {
+        "Sun": 133,
+        "Mon": 140,
+        "Tue": 135,
+        "Wed": 142,
+        "Thu": 129,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "URC": {
+        "Sun": 231,
+        "Mon": 243,
+        "Tue": 243,
+        "Wed": 248,
+        "Thu": 240,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "VALMORE": {
+        "Sun": 225,
+        "Mon": 237,
+        "Tue": 239,
+        "Wed": 243,
+        "Thu": 236,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "WARBABANK": {
+        "Sun": 234,
+        "Mon": 247,
+        "Tue": 247,
+        "Wed": 251,
+        "Thu": 242,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "WARBACAP": {
+        "Sun": 154,
+        "Mon": 161,
+        "Tue": 158,
+        "Wed": 160,
+        "Thu": 153,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "WETHAQ": {
+        "Sun": 148,
+        "Mon": 153,
+        "Tue": 155,
+        "Wed": 156,
+        "Thu": 152,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "WINSRE": {
+        "Sun": 153,
+        "Mon": 161,
+        "Tue": 155,
+        "Wed": 157,
+        "Thu": 149,
+        "Fri": 0,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "ZAIN": {
+        "Sun": 234,
+        "Mon": 279,
+        "Tue": 278,
+        "Wed": 281,
+        "Thu": 272,
+        "Fri": 111,
+        "Sat": 0,
+        "weekend_summary": {
+          "count": 111,
+          "min": "2021-01-01",
+          "max": "2023-02-10"
+        }
+      }
+    },
+    "aggregate_counts": {
+      "Sun": 24780,
+      "Mon": 26294,
+      "Tue": 26206,
+      "Wed": 26638,
+      "Thu": 25495,
+      "Fri": 707,
+      "Sat": 41
+    },
+    "aggregate_weekend_summary": {
+      "count": 748,
+      "min": "2021-01-01",
+      "max": "2024-11-09"
+    }
+  },
+  "request_shape_tests": {
+    "TIJARA_2020-12-20_2021-01-15": {
+      "clean_shape": {
+        "params": {
+          "path": "/tcdata/ondemandDataLoader.php",
+          "symbol": "TIJARA.KSE",
+          "interval": "day",
+          "period": "all"
+        },
+        "signature": "a9acbfa44cdda3848f06a6c2afbbb90f",
+        "rows_in_window": 14,
+        "sample_lines": [
+          "2021-01-14,45.20,45.20,43.60,44.00,15463349,682454617.00,379,0",
+          "2021-01-13,46.00,46.30,44.50,44.90,56390971,2549933436.00,873,0",
+          "2021-01-12,55.40,58.00,44.00,44.70,70915142,3455697258.00,1083,0",
+          "2021-01-11,50.00,55.50,48.80,55.40,16344283,850537357.00,474,0",
+          "2021-01-10,51.50,52.60,48.50,49.90,5153424,262540649.00,205,0",
+          "2021-01-07,52.90,54.50,48.50,49.50,11443457,587466133.00,420,0",
+          "2021-01-06,49.50,53.50,47.80,53.00,12554199,632056026.00,296,0",
+          "2021-01-05,42.00,49.50,42.00,48.90,12020076,553780401.00,302,0",
+          "2021-01-04,43.70,44.40,43.50,43.60,527548,23147324.00,13,0",
+          "2020-12-31,41.90,45.00,39.00,42.00,10703743,463509595.00,192,0"
+        ]
+      },
+      "dirty_shape": {
+        "params": {
+          "path": "/tcdata/ondemandDataLoader.php",
+          "symbol": "TIJARA.KSE",
+          "interval": "day",
+          "period": "1month"
+        },
+        "signature": "7190b35f1923eee1470f8f001749bb50",
+        "rows_in_window": 0,
+        "sample_lines": []
+      },
+      "helper_fetch_ohlcv_rows": 0,
+      "verdict": "clean_shape_has_rows"
+    },
+    "BPCC_2022-06-05_2022-06-30": {
+      "clean_shape": {
+        "params": {
+          "path": "/tcdata/ondemandDataLoader.php",
+          "symbol": "BPCC.KSE",
+          "interval": "day",
+          "period": "all"
+        },
+        "signature": "8d6998c814723c032edfdc3fb5c746c3",
+        "rows_in_window": 20,
+        "sample_lines": [
+          "2022-06-30,925.00,925.00,916.00,923.00,286027,263718054.00,73,0",
+          "2022-06-29,917.00,925.00,917.00,921.00,68989,63564862.00,57,0",
+          "2022-06-28,920.00,920.00,912.00,917.00,331517,302947656.00,68,0",
+          "2022-06-27,915.00,920.00,914.00,915.00,325462,298110830.00,63,0",
+          "2022-06-26,910.00,918.00,910.00,915.00,434195,397129118.00,55,0",
+          "2022-06-23,891.00,901.00,889.00,901.00,156912,140992160.00,66,0",
+          "2022-06-22,899.00,912.00,891.00,891.00,576114,516805318.00,111,0",
+          "2022-06-21,883.00,920.00,881.00,900.00,173913,156291278.00,74,0",
+          "2022-06-20,886.00,886.00,873.00,880.00,456695,401266877.00,128,0",
+          "2022-06-19,925.00,925.00,886.00,886.00,243446,217715530.00,100,0"
+        ]
+      },
+      "dirty_shape": {
+        "params": {
+          "path": "/tcdata/ondemandDataLoader.php",
+          "symbol": "BPCC.KSE",
+          "interval": "day",
+          "period": "1month"
+        },
+        "signature": "80da2e8ca92d60495baa641239a5a91e",
+        "rows_in_window": 0,
+        "sample_lines": []
+      },
+      "helper_fetch_ohlcv_rows": 0,
+      "verdict": "clean_shape_has_rows"
+    }
+  },
+  "control_tijara_last15": [
+    {
+      "date": "2026-06-21",
+      "open": 156.0,
+      "high": 159.0,
+      "low": 151.0,
+      "close": 153.0,
+      "volume": 1353709.0,
+      "value": 207126698.0,
+      "trades": 90
+    },
+    {
+      "date": "2026-06-22",
+      "open": 154.0,
+      "high": 158.0,
+      "low": 153.0,
+      "close": 157.0,
+      "volume": 3072157.0,
+      "value": 478718275.0,
+      "trades": 138
+    },
+    {
+      "date": "2026-06-23",
+      "open": 158.0,
+      "high": 158.0,
+      "low": 151.0,
+      "close": 157.0,
+      "volume": 3292860.0,
+      "value": 507620462.0,
+      "trades": 141
+    },
+    {
+      "date": "2026-06-24",
+      "open": 157.0,
+      "high": 163.0,
+      "low": 153.0,
+      "close": 163.0,
+      "volume": 4986083.0,
+      "value": 793950233.0,
+      "trades": 230
+    },
+    {
+      "date": "2026-06-25",
+      "open": 160.0,
+      "high": 171.0,
+      "low": 160.0,
+      "close": 171.0,
+      "volume": 7477381.0,
+      "value": 1234945569.0,
+      "trades": 312
+    },
+    {
+      "date": "2026-06-28",
+      "open": 168.0,
+      "high": 177.0,
+      "low": 166.0,
+      "close": 173.0,
+      "volume": 4589787.0,
+      "value": 782986822.0,
+      "trades": 377
+    },
+    {
+      "date": "2026-06-29",
+      "open": 174.0,
+      "high": 181.0,
+      "low": 171.0,
+      "close": 181.0,
+      "volume": 3227964.0,
+      "value": 570112709.0,
+      "trades": 278
+    },
+    {
+      "date": "2026-06-30",
+      "open": 179.0,
+      "high": 181.0,
+      "low": 174.0,
+      "close": 178.0,
+      "volume": 3926851.0,
+      "value": 695996481.0,
+      "trades": 216
+    },
+    {
+      "date": "2026-07-01",
+      "open": 179.0,
+      "high": 185.0,
+      "low": 174.0,
+      "close": 184.0,
+      "volume": 5885610.0,
+      "value": 1060550351.0,
+      "trades": 308
+    },
+    {
+      "date": "2026-07-02",
+      "open": 185.0,
+      "high": 186.0,
+      "low": 182.0,
+      "close": 185.0,
+      "volume": 6177359.0,
+      "value": 1137694249.0,
+      "trades": 259
+    },
+    {
+      "date": "2026-07-05",
+      "open": 185.0,
+      "high": 185.0,
+      "low": 172.0,
+      "close": 176.0,
+      "volume": 6051192.0,
+      "value": 1097109424.0,
+      "trades": 263
+    },
+    {
+      "date": "2026-07-06",
+      "open": 177.0,
+      "high": 180.0,
+      "low": 173.0,
+      "close": 180.0,
+      "volume": 2260323.0,
+      "value": 398117637.0,
+      "trades": 176
+    },
+    {
+      "date": "2026-07-07",
+      "open": 179.0,
+      "high": 185.0,
+      "low": 179.0,
+      "close": 185.0,
+      "volume": 3528784.0,
+      "value": 645803159.0,
+      "trades": 196
+    },
+    {
+      "date": "2026-07-08",
+      "open": 187.0,
+      "high": 188.0,
+      "low": 170.0,
+      "close": 175.0,
+      "volume": 7954083.0,
+      "value": 1425747780.0,
+      "trades": 434
+    },
+    {
+      "date": "2026-07-09",
+      "open": 173.0,
+      "high": 182.0,
+      "low": 171.0,
+      "close": 181.0,
+      "volume": 5846914.0,
+      "value": 1045046826.0,
+      "trades": 252
+    }
+  ]
+}

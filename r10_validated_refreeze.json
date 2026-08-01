@@ -1,0 +1,99 @@
+{
+  "validated_history_start_proposed": "2024-07-01",
+  "change_request_id": 8,
+  "freeze_hash_validated_window": "7018993a3f1efabd150e8f82c556f6d709f1f22e8b0ac0912407ca121fde251c",
+  "counts": [
+    {
+      "symbol": "BPCC",
+      "n": 499,
+      "min_td": 1719792000,
+      "max_td": 1783555200
+    },
+    {
+      "symbol": "MABANEE",
+      "n": 499,
+      "min_td": 1719792000,
+      "max_td": 1783555200
+    },
+    {
+      "symbol": "SANAM",
+      "n": 498,
+      "min_td": 1719792000,
+      "max_td": 1783468800
+    },
+    {
+      "symbol": "TIJARA",
+      "n": 494,
+      "min_td": 1719792000,
+      "max_td": 1783555200
+    },
+    {
+      "symbol": "ZAIN",
+      "n": 499,
+      "min_td": 1719792000,
+      "max_td": 1783555200
+    }
+  ],
+  "landmarks": [
+    {
+      "symbol": "TIJARA",
+      "landmark": "first_session_close_in_new_window",
+      "trade_date": 1719792000,
+      "close": 57.0
+    },
+    {
+      "symbol": "BPCC",
+      "landmark": "first_session_close_in_new_window",
+      "trade_date": 1719792000,
+      "close": 588.0
+    },
+    {
+      "symbol": "ZAIN",
+      "landmark": "first_session_close_in_new_window",
+      "trade_date": 1719792000,
+      "close": 446.0
+    },
+    {
+      "symbol": "SANAM",
+      "landmark": "first_session_close_in_new_window",
+      "trade_date": 1719792000,
+      "close": 169.0
+    },
+    {
+      "symbol": "MABANEE",
+      "landmark": "first_session_close_in_new_window",
+      "trade_date": 1719792000,
+      "close": 840.0
+    },
+    {
+      "symbol": "TIJARA",
+      "landmark": "latest_close_in_new_window",
+      "trade_date": 1783555200,
+      "close": 181.0
+    },
+    {
+      "symbol": "BPCC",
+      "landmark": "latest_close_in_new_window",
+      "trade_date": 1783555200,
+      "close": 691.0
+    },
+    {
+      "symbol": "ZAIN",
+      "landmark": "latest_close_in_new_window",
+      "trade_date": 1783555200,
+      "close": 596.0
+    },
+    {
+      "symbol": "SANAM",
+      "landmark": "latest_close_in_new_window",
+      "trade_date": 1783468800,
+      "close": 359.0
+    },
+    {
+      "symbol": "MABANEE",
+      "landmark": "latest_close_in_new_window",
+      "trade_date": 1783555200,
+      "close": 919.0
+    }
+  ]
+}
