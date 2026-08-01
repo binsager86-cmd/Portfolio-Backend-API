@@ -46,6 +46,7 @@ from app.core.feature_flags import get_flags
 
 # Versioned API router (all /api/v1/* routes)
 from app.api.v1 import v1_router
+from app.api.v2 import v2_router
 from app.api.deps import require_admin
 
 # Legacy flat routers kept for backward-compat on old prefixes
@@ -413,6 +414,7 @@ async def inject_flags(request, call_next):
 
 # v1 versioned API (primary)
 app.include_router(v1_router)
+app.include_router(v2_router)
 
 # Legacy unversioned routes (kept for backward compat — will be removed)
 # Guard against accidental `_IncludedRouter` objects to avoid runtime error:
