@@ -22,6 +22,20 @@ BOOKS = ("BUY", "WATCHLIST")
 CACHE_SECONDS = 60
 DAY_ZERO_INVENTORY_PATH = SIMULATOR_ROOT / "day_zero_state_inventory.json"
 SQL_MAP = SQL_MAP_POSTGRES
+SCANNER_COLUMNS = [
+    {"key": "book", "label": "BOOK", "source": "sim_symbol_state.book"},
+    {"key": "symbol", "label": "SYMBOL", "source": "sim_symbol_state.symbol"},
+    {"key": "lifecycle", "label": "STATE", "source": "sim_symbol_state.lifecycle"},
+    {"key": "tier", "label": "TIER", "source": "sim_symbol_state.tier"},
+    {"key": "gates_passing", "label": "GATES", "source": "sim_symbol_state.gates_passing"},
+    {"key": "base_json", "label": "BASE", "source": "sim_symbol_state.base_json"},
+    {"key": "confidence", "label": "CONF", "source": "sim_symbol_state.confidence"},
+    {"key": "last_disposition", "label": "LAST", "source": "sim_symbol_state.last_disposition"},
+]
+SCANNER_CHIPS = [
+    {"key": "confirmed_today", "label": "Confirmed today"},
+    {"key": "vetoed_today", "label": "Vetoed today"},
+]
 
 
 def _sha256(path: Path) -> str:
@@ -40,6 +54,16 @@ def _json_object(raw: str | None) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return value if isinstance(value, dict) else {}
+
+
+def _json_list(raw: str | None) -> list[Any]:
+    if not raw:
+        return []
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError:
+        return []
+    return value if isinstance(value, list) else []
 
 
 def _cache_response(response: Response) -> None:
@@ -119,6 +143,31 @@ def _rows(db: Session, sql: str, params: dict[str, Any] | None = None) -> list[d
 def _row(db: Session, sql: str, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
     rows = _rows(db, sql, params)
     return rows[0] if rows else None
+
+
+def _parse_state_row(row: dict[str, Any] | None) -> dict[str, Any] | None:
+    if row is None:
+        return None
+    result = dict(row)
+    result["gates"] = _json_list(result.get("gates_json"))
+    result["soft_conditions"] = _json_object(result.get("soft_conditions_json"))
+    result["hard_refs"] = _json_object(result.get("hard_refs_json"))
+    result["base"] = _json_object(result.get("base_json"))
+    result["entry_paths"] = _json_object(result.get("entry_paths_json"))
+    result["exit_watch"] = _json_object(result.get("exit_watch_json"))
+    return result
+
+
+def _parse_event_row(row: dict[str, Any]) -> dict[str, Any]:
+    result = dict(row)
+    result["payload"] = _json_object(result.pop("payload_json", None))
+    return result
+
+
+def _parse_cycle_row(row: dict[str, Any]) -> dict[str, Any]:
+    result = dict(row)
+    result["shakeout_dates"] = _json_list(result.pop("shakeout_dates_json", None))
+    return result
 
 
 @router.get("/portfolios")
@@ -224,8 +273,8 @@ def get_decisions(response: Response, symbol: str | None = Query(None), limit: i
 @router.get("/symbols/state")
 def get_symbols_state(response: Response, db: Session = Depends(get_db)) -> dict[str, Any]:
     _cache_response(response)
-    rows = _rows(db, f"SELECT symbol, lifecycle, tier, session, source FROM {table_name('sim_symbol_state')} ORDER BY symbol")
-    states = {row["symbol"]: row for row in rows}
+    rows = _rows(db, f"SELECT symbol, book, lifecycle, tier, session, source, last_kind, last_disposition, confidence, gates_passing, gates_json, soft_conditions_json, hard_refs_json, base_json, entry_paths_json, exit_watch_json FROM {table_name('sim_symbol_state')} ORDER BY symbol")
+    states = {row["symbol"]: _parse_state_row(row) for row in rows}
     if not states:
         for symbol, state in _day_zero_inventory().get("symbols", {}).items():
             if not isinstance(state, dict):
@@ -238,6 +287,68 @@ def get_symbols_state(response: Response, db: Session = Depends(get_db)) -> dict
                 "source": "day_zero_inventory",
             }
     return {"symbols": states, "sql_key": "GET /api/v2/simulator/symbols/state"}
+
+
+@router.get("/symbols/{symbol}/trace")
+def get_symbol_trace(symbol: str, response: Response, db: Session = Depends(get_db)) -> dict[str, Any]:
+    _cache_response(response)
+    normalized_symbol = symbol.upper()
+    state = _parse_state_row(
+        _row(db, f"SELECT * FROM {table_name('sim_symbol_state')} WHERE symbol = :symbol ORDER BY projected_at DESC LIMIT 1", {"symbol": normalized_symbol})
+    )
+    events = [
+        _parse_event_row(row)
+        for row in _rows(
+            db,
+            f"SELECT * FROM {table_name('sim_symbol_events')} WHERE symbol = :symbol ORDER BY decision_session DESC, id DESC LIMIT 50",
+            {"symbol": normalized_symbol},
+        )
+    ]
+    cycles = [
+        _parse_cycle_row(row)
+        for row in _rows(
+            db,
+            f"SELECT * FROM {table_name('sim_cycles')} WHERE symbol = :symbol ORDER BY COALESCE(exit_date, base_start) DESC, id DESC",
+            {"symbol": normalized_symbol},
+        )
+    ]
+    return {"symbol": normalized_symbol, "state": state, "events": events, "cycles": cycles, "sql_key": "GET /api/v2/simulator/symbols/{symbol}/trace"}
+
+
+@router.get("/symbols/{symbol}/events")
+def get_symbol_events(symbol: str, response: Response, limit: int = Query(50, ge=1, le=500), db: Session = Depends(get_db)) -> dict[str, Any]:
+    _cache_response(response)
+    normalized_symbol = symbol.upper()
+    events = [
+        _parse_event_row(row)
+        for row in _rows(
+            db,
+            f"SELECT * FROM {table_name('sim_symbol_events')} WHERE symbol = :symbol ORDER BY decision_session DESC, id DESC LIMIT :limit",
+            {"symbol": normalized_symbol, "limit": limit},
+        )
+    ]
+    return {"symbol": normalized_symbol, "count": len(events), "events": events, "sql_key": "GET /api/v2/simulator/symbols/{symbol}/events"}
+
+
+@router.get("/symbols/{symbol}/cycles")
+def get_symbol_cycles(symbol: str, response: Response, db: Session = Depends(get_db)) -> dict[str, Any]:
+    _cache_response(response)
+    normalized_symbol = symbol.upper()
+    cycles = [
+        _parse_cycle_row(row)
+        for row in _rows(
+            db,
+            f"SELECT * FROM {table_name('sim_cycles')} WHERE symbol = :symbol ORDER BY COALESCE(exit_date, base_start) DESC, id DESC",
+            {"symbol": normalized_symbol},
+        )
+    ]
+    return {"symbol": normalized_symbol, "count": len(cycles), "cycles": cycles, "sql_key": "GET /api/v2/simulator/symbols/{symbol}/cycles"}
+
+
+@router.get("/scanner/v2-columns")
+def get_scanner_v2_columns(response: Response) -> dict[str, Any]:
+    _cache_response(response)
+    return {"columns": SCANNER_COLUMNS, "chips": SCANNER_CHIPS, "sql_key": "GET /api/v2/simulator/scanner/v2-columns"}
 
 
 @router.get("/system/integrity")

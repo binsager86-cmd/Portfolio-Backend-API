@@ -33,7 +33,9 @@ PROJECTION_COLUMNS: dict[str, tuple[str, ...]] = {
     "sim_transactions": ("id", "created_at", "portfolio", "transaction_type", "symbol", "quantity", "price", "gross_value_kwd", "commission_kwd", "net_cash_delta_kwd", "decision_session", "fill_session", "source_event_id", "reason", "status", "voids_transaction_id", "suspension_gap_sessions", "data_ingested_at", "decision_close_ts", "state_snapshot_json", "projected_at"),
     "sim_decisions": ("id", "created_at", "symbol", "decision_session", "kind", "reason", "portfolio", "frozen_action_json", "state_snapshot_json", "veto_tier", "would_have_entry_reason", "data_ingested_at", "decision_close_ts", "disposition", "tier", "projected_at"),
     "sim_nav_daily": ("book", "session", "nav_kwd", "cash_kwd", "invested_kwd", "projected_at"),
-    "sim_symbol_state": ("symbol", "lifecycle", "tier", "session", "source", "projected_at"),
+    "sim_symbol_state": ("symbol", "book", "lifecycle", "tier", "session", "source", "last_kind", "last_disposition", "confidence", "gates_passing", "gates_json", "soft_conditions_json", "hard_refs_json", "base_json", "entry_paths_json", "exit_watch_json", "projected_at"),
+    "sim_symbol_events": ("id", "symbol", "decision_session", "created_at", "kind", "disposition", "payload_json", "projected_at"),
+    "sim_cycles": ("id", "book", "symbol", "base_start", "base_end", "entry_date", "entry_path", "entry_price", "peak_mfe", "shakeout_dates_json", "exit_date", "exit_reason", "exit_price", "pnl_pct", "projected_at"),
 }
 
 INTEGRITY_COLUMNS = (
@@ -53,7 +55,11 @@ SQL_MAP_POSTGRES: dict[str, str] = {
     "GET /api/v2/simulator/portfolios/{book}/nav": "SELECT session, nav_kwd, cash_kwd, invested_kwd FROM eagle_eye_sim.sim_nav_daily WHERE book = :book ORDER BY session DESC LIMIT :days",
     "GET /api/v2/simulator/transactions": "SELECT * FROM eagle_eye_sim.sim_transactions WHERE (:book IS NULL OR portfolio = :book) AND (:symbol IS NULL OR symbol = :symbol) ORDER BY id DESC LIMIT :limit",
     "GET /api/v2/simulator/decisions": "SELECT * FROM eagle_eye_sim.sim_decisions WHERE (:symbol IS NULL OR symbol = :symbol) ORDER BY id DESC LIMIT :limit",
-    "GET /api/v2/simulator/symbols/state": "SELECT symbol, lifecycle, tier, session, source FROM eagle_eye_sim.sim_symbol_state ORDER BY symbol",
+    "GET /api/v2/simulator/symbols/state": "SELECT symbol, book, lifecycle, tier, session, source, last_kind, last_disposition, confidence, gates_passing, gates_json, soft_conditions_json, hard_refs_json, base_json, entry_paths_json, exit_watch_json FROM eagle_eye_sim.sim_symbol_state ORDER BY symbol",
+    "GET /api/v2/simulator/symbols/{symbol}/trace": "SELECT * FROM eagle_eye_sim.sim_symbol_state WHERE symbol = :symbol ORDER BY projected_at DESC LIMIT 1",
+    "GET /api/v2/simulator/symbols/{symbol}/events": "SELECT * FROM eagle_eye_sim.sim_symbol_events WHERE symbol = :symbol ORDER BY decision_session DESC, id DESC LIMIT :limit",
+    "GET /api/v2/simulator/symbols/{symbol}/cycles": "SELECT * FROM eagle_eye_sim.sim_cycles WHERE symbol = :symbol ORDER BY COALESCE(exit_date, base_start) DESC, id DESC",
+    "GET /api/v2/simulator/scanner/v2-columns": "SELECT symbol, book, lifecycle, tier, gates_passing, confidence, last_kind, last_disposition, base_json FROM eagle_eye_sim.sim_symbol_state ORDER BY symbol",
     "GET /api/v2/simulator/system/integrity": "SELECT * FROM eagle_eye_sim.sim_integrity WHERE id = 1",
 }
 
@@ -279,10 +285,52 @@ def _projection_ddl() -> list[str]:
         f"""
         CREATE TABLE IF NOT EXISTS {table_name('sim_symbol_state')} (
             symbol TEXT PRIMARY KEY,
+            book TEXT,
             lifecycle TEXT NOT NULL,
             tier TEXT NOT NULL,
             session TEXT,
             source TEXT NOT NULL,
+            last_kind TEXT,
+            last_disposition TEXT,
+            confidence DOUBLE PRECISION,
+            gates_passing INTEGER,
+            gates_json TEXT,
+            soft_conditions_json TEXT,
+            hard_refs_json TEXT,
+            base_json TEXT,
+            entry_paths_json TEXT,
+            exit_watch_json TEXT,
+            projected_at TEXT NOT NULL
+        )
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS {table_name('sim_symbol_events')} (
+            id INTEGER PRIMARY KEY,
+            symbol TEXT NOT NULL,
+            decision_session TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            disposition TEXT NOT NULL,
+            payload_json TEXT NOT NULL,
+            projected_at TEXT NOT NULL
+        )
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS {table_name('sim_cycles')} (
+            id INTEGER PRIMARY KEY,
+            book TEXT NOT NULL,
+            symbol TEXT NOT NULL,
+            base_start TEXT,
+            base_end TEXT,
+            entry_date TEXT,
+            entry_path TEXT,
+            entry_price DOUBLE PRECISION NOT NULL,
+            peak_mfe DOUBLE PRECISION NOT NULL,
+            shakeout_dates_json TEXT NOT NULL,
+            exit_date TEXT,
+            exit_reason TEXT,
+            exit_price DOUBLE PRECISION,
+            pnl_pct DOUBLE PRECISION NOT NULL,
             projected_at TEXT NOT NULL
         )
         """,
@@ -315,6 +363,8 @@ def _read_sqlite_projection(conn: sqlite3.Connection) -> dict[str, Any]:
         "decisions": _decision_rows(conn),
         "nav_daily": _nav_rows(conn),
         "symbol_state": _symbol_state_rows(conn),
+        "symbol_events": _symbol_event_rows(conn),
+        "cycles": _cycle_rows(conn),
         "integrity": {
             "last_projected_session": conn.execute("SELECT MAX(session) FROM daily_valuations").fetchone()[0],
             "guard_trips_count": int(conn.execute("SELECT COUNT(*) FROM guard_trips").fetchone()[0] or 0),
@@ -408,7 +458,7 @@ def _symbol_state_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     rows = []
     for row in conn.execute(
         """
-        SELECT d.symbol, d.decision_session, d.veto_tier, d.state_snapshot_json
+        SELECT d.symbol, d.decision_session, d.portfolio, d.kind, d.veto_tier, d.state_snapshot_json
         FROM decision_log d JOIN (SELECT symbol, MAX(id) AS id FROM decision_log GROUP BY symbol) latest ON latest.id = d.id
         ORDER BY d.symbol
         """
@@ -416,16 +466,112 @@ def _symbol_state_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
         state = _json_object(row["state_snapshot_json"])
         rows.append({
             "symbol": row["symbol"],
+            "book": row["portfolio"] or state.get("book") or state.get("portfolio"),
             "lifecycle": state.get("lifecycle_state") or state.get("lifecycle") or "NEUTRAL",
             "tier": state.get("avoid_tier") or state.get("tier") or row["veto_tier"] or "NONE",
             "session": row["decision_session"],
             "source": "decision_log",
+            "last_kind": row["kind"],
+            "last_disposition": row["kind"],
+            "confidence": _maybe_float(state.get("confidence") or state.get("confidence_pct") or state.get("score")),
+            "gates_passing": _maybe_int(state.get("gates_passing") or state.get("gate_count") or state.get("gates_passed")),
+            "gates_json": _json_text(state.get("gates_json") or state.get("gates")),
+            "soft_conditions_json": _json_text(state.get("soft_conditions_json") or state.get("soft_conditions")),
+            "hard_refs_json": _json_text(state.get("hard_refs_json") or state.get("hard_refs")),
+            "base_json": _json_text(state.get("base_json") or state.get("base")),
+            "entry_paths_json": _json_text(state.get("entry_paths_json") or state.get("entry_paths")),
+            "exit_watch_json": _json_text(state.get("exit_watch_json") or state.get("exit_watch")),
         })
     return rows
 
 
+def _symbol_event_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    rows = []
+    for row in conn.execute("SELECT * FROM decision_log ORDER BY created_at, id"):
+        item = dict(row)
+        state = _json_object(item.get("state_snapshot_json"))
+        payload = {
+            "created_at": item.get("created_at"),
+            "decision_session": item.get("decision_session"),
+            "portfolio": item.get("portfolio"),
+            "reason": item.get("reason"),
+            "veto_tier": item.get("veto_tier"),
+            "would_have_entry_reason": item.get("would_have_entry_reason"),
+            "state_snapshot": state,
+            "frozen_action": _json_object(item.get("frozen_action_json")),
+        }
+        rows.append({
+            "id": int(item["id"]),
+            "symbol": item["symbol"],
+            "decision_session": item["decision_session"],
+            "created_at": item["created_at"],
+            "kind": item["kind"],
+            "disposition": item["kind"],
+            "payload_json": json.dumps(payload, sort_keys=True),
+        })
+    return rows
+
+
+def _cycle_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    tx_rows = [dict(row) for row in conn.execute("SELECT * FROM transactions WHERE status = 'POSTED' ORDER BY id")]
+    for book in BOOKS:
+        by_symbol: dict[str, list[dict[str, Any]]] = {}
+        for tx in tx_rows:
+            if tx["portfolio"] != book:
+                continue
+            by_symbol.setdefault(str(tx["symbol"]), []).append(tx)
+        for symbol, symbol_rows in by_symbol.items():
+            open_tx: dict[str, Any] | None = None
+            for tx in symbol_rows:
+                tx_type = str(tx["transaction_type"])
+                if tx_type == "BUY" and open_tx is None:
+                    open_tx = tx
+                    continue
+                if tx_type != "SELL" or open_tx is None:
+                    continue
+                entry_state = _json_object(open_tx.get("state_snapshot_json"))
+                exit_state = _json_object(tx.get("state_snapshot_json"))
+                base_start = entry_state.get("base_start") or entry_state.get("base_start_date") or open_tx["decision_session"]
+                base_end = entry_state.get("base_end") or entry_state.get("base_end_date") or open_tx["fill_session"]
+                entry_price = float(open_tx.get("price") or 0.0)
+                exit_price = float(tx.get("price") or 0.0)
+                valuations = [
+                    dict(row)
+                    for row in conn.execute(
+                        """
+                        SELECT session, close_price FROM daily_valuations
+                        WHERE portfolio = ? AND symbol = ? AND session BETWEEN ? AND ?
+                        ORDER BY session, id
+                        """,
+                        (book, symbol, open_tx["fill_session"], tx["fill_session"]),
+                    )
+                ]
+                peak_close = max([entry_price] + [float(row["close_price"] or 0.0) for row in valuations])
+                peak_mfe = _pct(peak_close - entry_price, entry_price)
+                shakeouts = [row["session"] for row in valuations if float(row["close_price"] or 0.0) < entry_price]
+                rows.append({
+                    "id": len(rows) + 1,
+                    "book": book,
+                    "symbol": symbol,
+                    "base_start": base_start,
+                    "base_end": base_end,
+                    "entry_date": open_tx["fill_session"],
+                    "entry_path": entry_state.get("entry_path") or entry_state.get("path") or open_tx["reason"],
+                    "entry_price": entry_price,
+                    "peak_mfe": peak_mfe,
+                    "shakeout_dates_json": json.dumps(shakeouts, sort_keys=True),
+                    "exit_date": tx["fill_session"],
+                    "exit_reason": tx["reason"],
+                    "exit_price": exit_price,
+                    "pnl_pct": _pct(exit_price - entry_price, entry_price),
+                })
+                open_tx = None
+    return rows
+
+
 def _replace_read_model(db: Session, payload: dict[str, Any], projected_at: str) -> None:
-    for table in ("sim_portfolios", "sim_positions", "sim_transactions", "sim_decisions", "sim_nav_daily", "sim_symbol_state"):
+    for table in ("sim_portfolios", "sim_positions", "sim_transactions", "sim_decisions", "sim_nav_daily", "sim_symbol_state", "sim_symbol_events", "sim_cycles"):
         db.execute(text(f"DELETE FROM {table_name(table)}"))
     _bulk_insert(db, "sim_portfolios", payload["portfolios"], projected_at)
     _bulk_insert(db, "sim_positions", payload["positions"], projected_at)
@@ -433,6 +579,8 @@ def _replace_read_model(db: Session, payload: dict[str, Any], projected_at: str)
     _bulk_insert(db, "sim_decisions", payload["decisions"], projected_at)
     _bulk_insert(db, "sim_nav_daily", payload["nav_daily"], projected_at)
     _bulk_insert(db, "sim_symbol_state", payload["symbol_state"], projected_at)
+    _bulk_insert(db, "sim_symbol_events", payload["symbol_events"], projected_at)
+    _bulk_insert(db, "sim_cycles", payload["cycles"], projected_at)
 
 
 def _bulk_insert(db: Session, table: str, rows: list[dict[str, Any]], projected_at: str) -> None:
@@ -478,11 +626,13 @@ def _sqlite_source_counts(conn: sqlite3.Connection) -> dict[str, int]:
         "sim_decisions": int(conn.execute("SELECT COUNT(*) FROM decision_log").fetchone()[0]),
         "sim_nav_daily": int(conn.execute("SELECT COUNT(*) FROM (SELECT portfolio, session FROM daily_valuations GROUP BY portfolio, session)").fetchone()[0]),
         "sim_symbol_state": int(conn.execute("SELECT COUNT(*) FROM (SELECT symbol FROM decision_log GROUP BY symbol)").fetchone()[0]),
+        "sim_symbol_events": int(conn.execute("SELECT COUNT(*) FROM decision_log").fetchone()[0]),
+        "sim_cycles": int(_sqlite_cycle_count(conn)),
     }
 
 
 def _projection_row_counts(db: Session) -> dict[str, int]:
-    return {table: int(db.execute(text(f"SELECT COUNT(*) FROM {table_name(table)}")).scalar() or 0) for table in ("sim_transactions", "sim_decisions", "sim_nav_daily", "sim_symbol_state")}
+    return {table: int(db.execute(text(f"SELECT COUNT(*) FROM {table_name(table)}")).scalar() or 0) for table in ("sim_transactions", "sim_decisions", "sim_nav_daily", "sim_symbol_state", "sim_symbol_events", "sim_cycles")}
 
 
 def _sqlite_transaction_checksum(conn: sqlite3.Connection) -> str:
@@ -519,6 +669,53 @@ def _json_object(raw: str | None) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return parsed if isinstance(parsed, dict) else {}
+
+
+def _json_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        try:
+            json.loads(value)
+        except json.JSONDecodeError:
+            return json.dumps(value, sort_keys=True)
+        return value
+    return json.dumps(value, sort_keys=True)
+
+
+def _maybe_int(value: Any) -> int | None:
+    try:
+        return None if value is None else int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _maybe_float(value: Any) -> float | None:
+    try:
+        return None if value is None else float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _sqlite_cycle_count(conn: sqlite3.Connection) -> int:
+    count = 0
+    tx_rows = [dict(row) for row in conn.execute("SELECT * FROM transactions WHERE status = 'POSTED' ORDER BY id")]
+    for book in BOOKS:
+        by_symbol: dict[str, list[dict[str, Any]]] = {}
+        for tx in tx_rows:
+            if tx["portfolio"] != book:
+                continue
+            by_symbol.setdefault(str(tx["symbol"]), []).append(tx)
+        for symbol_rows in by_symbol.values():
+            open_tx: dict[str, Any] | None = None
+            for tx in symbol_rows:
+                if tx["transaction_type"] == "BUY" and open_tx is None:
+                    open_tx = tx
+                    continue
+                if tx["transaction_type"] == "SELL" and open_tx is not None:
+                    count += 1
+                    open_tx = None
+    return count
 
 
 def _pct(numerator: float, denominator: float) -> float:

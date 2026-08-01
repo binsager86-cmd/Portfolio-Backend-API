@@ -91,6 +91,25 @@ def test_portfolios_positions_nav_transactions_decisions_and_state(monkeypatch, 
 
     states = client.get("/api/v2/simulator/symbols/state").json()["symbols"]
     assert states["ZAIN"]["lifecycle"] == "MARKUP_ACTIVE"
+    assert states["ZAIN"]["book"] == "WATCHLIST"
+    assert "base" in states["ZAIN"]
+
+    trace = client.get("/api/v2/simulator/symbols/ZAIN/trace").json()
+    assert trace["symbol"] == "ZAIN"
+    assert trace["state"]["book"] == "WATCHLIST"
+    assert trace["events"]
+    assert trace["cycles"] == []
+
+    events = client.get("/api/v2/simulator/symbols/ZAIN/events", params={"limit": 5}).json()
+    assert events["count"] == 1
+    assert events["events"][0]["payload"]["state_snapshot"]["lifecycle_state"] == "MARKUP_ACTIVE"
+
+    cycles = client.get("/api/v2/simulator/symbols/ZAIN/cycles").json()
+    assert cycles["cycles"] == []
+
+    columns = client.get("/api/v2/simulator/scanner/v2-columns").json()
+    assert any(column["key"] == "gates_passing" for column in columns["columns"])
+    assert any(chip["label"] == "Confirmed today" for chip in columns["chips"])
 
 
 def test_symbols_state_uses_day_zero_fallback_for_genesis(monkeypatch, tmp_path: Path):
@@ -130,3 +149,5 @@ def test_sql_map_contains_endpoint_queries(monkeypatch, tmp_path: Path):
 
     assert "GET /api/v2/simulator/portfolios" in sql_map
     assert "eagle_eye_sim.sim_decisions" in sql_map["GET /api/v2/simulator/decisions"]
+    assert "GET /api/v2/simulator/symbols/{symbol}/trace" in sql_map
+    assert "GET /api/v2/simulator/scanner/v2-columns" in sql_map
