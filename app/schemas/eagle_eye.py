@@ -3,9 +3,11 @@ Eagle Eye schemas — request/response models for the Eagle Eye API.
 """
 from __future__ import annotations
 
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # ---------------------------------------------------------------------------
@@ -274,3 +276,97 @@ class RegimeResponse(BaseModel):
     brent_trend: Optional[str] = None
     breadth_pct_above_50ma: Optional[float] = None
     last_updated: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# Strategy Simulator
+# ---------------------------------------------------------------------------
+
+class SimulationRequest(BaseModel):
+    """Request body for POST /api/v1/eagle-eye/simulations."""
+    start_date: date
+    end_date: date
+    initial_cash: Decimal = Field(default=Decimal("100000.00"), gt=0)
+    max_positions: int = Field(default=10, ge=1, le=50)
+    position_sizing_mode: str = Field(default="equal")     # equal|fixed|percentage
+    fixed_position_size: Optional[Decimal] = None
+    position_size_pct: Decimal = Field(default=Decimal("10.0"), ge=1, le=100)
+    commission_pct: Decimal = Field(default=Decimal("0.001"), ge=0)
+    slippage_pct: Decimal = Field(default=Decimal("0.001"), ge=0)
+    execution_rule: str = Field(default="next_open")        # next_open|same_close
+    allow_pyramiding: bool = False
+    include_dividends: bool = True
+    universe: Optional[List[str]] = None     # None = all available symbols
+    benchmark_symbol: Optional[str] = None
+
+
+class DailyLedgerRow(BaseModel):
+    """One daily record in the equity curve."""
+    date: str
+    cash: str
+    invested_value: str
+    total_equity: str
+    positions_count: int
+
+
+class TradeLedgerRow(BaseModel):
+    """One completed trade."""
+    symbol: str
+    entry_date: str
+    entry_price: str
+    exit_date: Optional[str] = None
+    exit_price: Optional[str] = None
+    quantity: str
+    realized_pnl_gross: str
+    realized_pnl_pct: str
+    holding_days: int
+
+
+class SkippedSignalRow(BaseModel):
+    """One skipped or rejected signal."""
+    symbol: str
+    signal_date: str
+    rating: str
+    reason: str
+    quantity_requested: Optional[str] = None
+
+
+class SimulationResponse(BaseModel):
+    """Response for simulation endpoints."""
+    run_id: str
+    status: str  # COMPLETED|FAILED|RUNNING
+
+    # Data availability
+    signal_data_status: str = "HISTORICAL_SIGNAL_DATA_UNAVAILABLE"
+    # HISTORICAL_SIGNAL_REPLAY | RECONSTRUCTED_RESEARCH | CURRENT_RATING_DEMO
+
+    error_message: Optional[str] = None
+
+    # Configuration (if completed)
+    config: Optional[Any] = None
+
+    # Summary metrics
+    ending_equity: Optional[Decimal] = None
+    ending_cash: Optional[Decimal] = None
+    total_return_pct: Optional[Decimal] = None
+    max_drawdown_pct: Optional[Decimal] = None
+    trades_count: Optional[int] = None
+    win_rate_pct: Optional[Decimal] = None
+    profit_factor: Optional[Decimal] = None
+    buy_signals_executed: Optional[int] = None
+    sell_signals_executed: Optional[int] = None
+
+    # Validation
+    cash_reconciliation_ok: Optional[bool] = None
+    equity_reconciliation_ok: Optional[bool] = None
+    validation_warnings: Optional[List[str]] = None
+
+    # Timestamps
+    created_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    execution_seconds: Optional[float] = None
+
+    # Ledger data (only in /result endpoint, not summary)
+    daily_ledger: Optional[List[DailyLedgerRow]] = None
+    trades: Optional[List[TradeLedgerRow]] = None
+    skipped_signals: Optional[List[SkippedSignalRow]] = None

@@ -279,6 +279,16 @@ def _ensure_schema() -> None:
     _SCHEMA_INIT = True
 
 
+def _delete_optional_extraction_cache(cur: Any, stock_id: int) -> None:
+    """Best-effort cleanup for cache tables created outside the core schema."""
+    try:
+        from app.services.extraction_service import _ensure_cache_table
+        _ensure_cache_table()
+        cur.execute("DELETE FROM extraction_cache WHERE stock_id = ?", (stock_id,))
+    except Exception as exc:
+        logger.warning("delete_stock: extraction_cache cleanup skipped for stock_id=%s: %s", stock_id, exc)
+
+
 # ── PDF file storage ─────────────────────────────────────────────────
 
 _PDF_UPLOAD_DIR = Path(__file__).resolve().parents[2] / "uploads" / "pdfs"
@@ -1062,7 +1072,7 @@ async def delete_stock(
         cur.execute("DELETE FROM cashflow_extraction_runs WHERE stock_id = ?", (stock_id,))
         cur.execute("DELETE FROM pdf_uploads WHERE stock_id = ?", (stock_id,))
         cur.execute("DELETE FROM peer_companies WHERE stock_id = ?", (stock_id,))
-        cur.execute("DELETE FROM extraction_cache WHERE stock_id = ?", (stock_id,))
+        _delete_optional_extraction_cache(cur, stock_id)
         cur.execute("DELETE FROM financial_statements WHERE stock_id = ?", (stock_id,))
         cur.execute("DELETE FROM stock_metrics WHERE stock_id = ?", (stock_id,))
         cur.execute("DELETE FROM valuation_models WHERE stock_id = ?", (stock_id,))

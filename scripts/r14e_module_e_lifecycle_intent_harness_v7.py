@@ -452,19 +452,20 @@ def owner_windows() -> dict[str, dict[str, Any]]:
 
 
 def main() -> None:
+    global HARNESS_DB
+
     REVIEW.mkdir(parents=True, exist_ok=True)
 
     out_interface = REVIEW / "r14e_module_e_interface_conformance_v7.json"
     out_evidence = REVIEW / "r14e_module_e_test_evidence_v7.json"
     out_report = REVIEW / "r14e_module_e_implementation_report_v7.md"
     out_sha = REVIEW / "r14e_module_e_artifacts_v7.sha256"
-    harness_db = REVIEW / "r14e_module_e_harness_surface_v7.db"
+    harness_db = HARNESS_DB
 
     attest = freeze_attestation()
     if not attest["byte_match"]:
         raise RuntimeError("Freeze v2 byte-match attestation failed.")
 
-    global HARNESS_DB
     HARNESS_DB = harness_db
     bind_harness_db()
     apply_schema_migration()
@@ -785,6 +786,25 @@ def main() -> None:
                                 **position_state,
                                 "base_transition_terms": base_out["base_transition_terms"],
                                 "base_reference": base_out["base_reference"],
+                                "run_nonce": RUN_NONCE,
+                            },
+                        )
+                        position_state = None
+                    elif int(position_state["sessions_held"] or 0) >= 60:
+                        position_state["state"] = "EXITED_TIMESTOP"
+                        symbol_counts["positions_closed"] += 1
+                        symbol_counts["time_stop_reviews_triggered"] += 1
+                        record_position_event(
+                            ledger_conn,
+                            symbol,
+                            trade_date,
+                            str(position_state["position_id"]),
+                            "EXITED_TIMESTOP",
+                            {
+                                **position_state,
+                                "exit_date": trade_date,
+                                "exit_close": float(day.get("close") or 0.0),
+                                "exit_reason": "EXITED_TIMESTOP",
                                 "run_nonce": RUN_NONCE,
                             },
                         )

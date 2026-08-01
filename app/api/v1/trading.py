@@ -292,6 +292,61 @@ async def trading_summary(
     """
     df = query_df(txn_sql, (user_id,))
 
+    # Include cash deposits/withdrawals in the transaction list so
+    # Deposit/Withdrawal filters show actual rows in the log.
+    dep_sql = """
+        SELECT
+            id,
+            deposit_date,
+            amount,
+            currency,
+            portfolio,
+            source,
+            notes
+        FROM cash_deposits
+        WHERE user_id = ?
+          AND include_in_analysis = 1
+          AND COALESCE(is_deleted, 0) = 0
+    """
+    dep_df = query_df(dep_sql, (user_id,))
+
+    if not dep_df.empty:
+        rows = []
+        for _, dep in dep_df.iterrows():
+            amount_native = float(dep.get("amount") or 0)
+            source_val = str(dep.get("source") or "deposit").strip().lower()
+            is_withdrawal = source_val == "withdrawal" or amount_native < 0
+            amount_abs = abs(amount_native)
+            rows.append({
+                # Keep IDs numeric and collision-safe against transactions.id.
+                "id": -int(dep.get("id") or 0),
+                "symbol": "CASH",
+                "date": dep.get("deposit_date"),
+                "portfolio": dep.get("portfolio") or "KFH",
+                "type": "Withdrawal" if is_withdrawal else "Deposit",
+                "category": "FLOW_OUT" if is_withdrawal else "FLOW_IN",
+                "quantity": 0,
+                "purchase_cost": amount_abs if not is_withdrawal else 0,
+                "sell_value": amount_abs if is_withdrawal else 0,
+                "fees": 0,
+                "dividend": 0,
+                "bonus_shares": 0,
+                "reinvested_dividend": 0,
+                "notes": dep.get("notes"),
+                "source": str(dep.get("source") or "MANUAL").upper(),
+                "source_reference": None,
+                "current_price": 0,
+                "company_name": "Cash Movement",
+                "stock_id": None,
+                "avg_cost_at_txn": None,
+                "realized_pnl_at_txn": None,
+                "cost_basis_at_txn": None,
+                "shares_held_at_txn": None,
+            })
+
+        dep_txn_df = pd.DataFrame(rows)
+        df = pd.concat([df, dep_txn_df], ignore_index=True, sort=False)
+
     if df.empty:
         return {
             "status": "ok",
