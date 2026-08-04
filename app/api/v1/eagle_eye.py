@@ -1231,6 +1231,14 @@ async def get_scanner(
                 if latest_volume is None:
                     latest_volume = vc_latest if vc_latest is not None else ind_latest
 
+            if vc_summary is not None:
+                rounded_average_volume = round(average_volume, 2) if average_volume is not None else None
+                rounded_latest_volume = round(latest_volume, 2) if latest_volume is not None else None
+                vc_summary.avg_20d_volume = rounded_average_volume
+                vc_summary.average_volume = rounded_average_volume
+                vc_summary.today_volume = rounded_latest_volume
+                vc_summary.latest_volume = rounded_latest_volume
+
             fmeta = fundamentals_map.get(t, {})
             bvps = _safe_float(fmeta.get("book_value_per_share"))
             # Use the most recent close from OHLCV for the scanner "Current" field.

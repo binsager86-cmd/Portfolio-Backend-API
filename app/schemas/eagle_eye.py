@@ -38,6 +38,10 @@ class VolumeContextSummary(BaseModel):
     is_volume_confirmed: bool = True
     volume_character: str = "NEUTRAL"
     volume_trend_5d: str = "NEUTRAL"
+    today_volume: Optional[float] = None
+    avg_20d_volume: Optional[float] = None
+    latest_volume: Optional[float] = None
+    average_volume: Optional[float] = None
 
 
 class RatedStock(BaseModel):
