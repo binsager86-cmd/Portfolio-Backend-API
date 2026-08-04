@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="100%" height="100%" fill="#0f172a"/>
+  <rect x="40" y="40" width="1200" height="640" rx="24" fill="#111827" stroke="#38bdf8" stroke-width="3"/>
+  <text x="80" y="112" fill="#f8fafc" font-size="36" font-family="Segoe UI, Arial, sans-serif">Decision transparency scanner</text>
+  <text x="80" y="155" fill="#94a3b8" font-size="20" font-family="Segoe UI, Arial, sans-serif">Genesis projection snapshot · book / state / tier / gates / base / confidence</text>
+  <rect x="80" y="220" width="1120" height="88" rx="12" fill="#1f2937"/>
+  <rect x="100" y="242" width="120" height="44" rx="999" fill="#0f766e"/>
+  <text x="132" y="270" fill="#f8fafc" font-size="18" font-family="Segoe UI, Arial, sans-serif">All books</text>
+  <rect x="240" y="242" width="120" height="44" rx="999" fill="#264653"/>
+  <text x="276" y="270" fill="#f8fafc" font-size="18" font-family="Segoe UI, Arial, sans-serif">BUY</text>
+  <rect x="380" y="242" width="140" height="44" rx="999" fill="#264653"/>
+  <text x="412" y="270" fill="#f8fafc" font-size="18" font-family="Segoe UI, Arial, sans-serif">WATCHLIST</text>
+  <rect x="80" y="338" width="1120" height="280" rx="16" fill="#111827" stroke="#334155" stroke-width="2"/>
+  <text x="108" y="382" fill="#e2e8f0" font-size="22" font-family="Segoe UI, Arial, sans-serif">KFH · BASE_VALID · NONE · 9/9 · 88% · Top 100,000.000</text>
+  <text x="108" y="428" fill="#94a3b8" font-size="20" font-family="Segoe UI, Arial, sans-serif">ZAIN · MARKUP_ACTIVE · AVOID_SOFT · 4/9 · 73% · Base width 12%</text>
+  <text x="108" y="474" fill="#94a3b8" font-size="20" font-family="Segoe UI, Arial, sans-serif">Tijara · NEUTRAL · NONE · 2/9 · 61% · Base width 9%</text>
+</svg>
