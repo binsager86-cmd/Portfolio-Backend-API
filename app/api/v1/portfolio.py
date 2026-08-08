@@ -72,6 +72,10 @@ def _txn_cash_delta(txn_type: str, purchase_cost: float, sell_value: float,
     return delta
 
 
+def _numeric_txn_value(txn: dict, field: str) -> float:
+    return float(txn.get(field) or 0.0)
+
+
 def _held_shares_before_txn(user_id: int, portfolio: str, symbol: str) -> float:
     row = query_one(
         """SELECT
@@ -771,8 +775,9 @@ async def update_transaction(
     current_user: TokenData = Depends(get_current_user),
 ):
     """Update an existing transaction."""
-    # Build SET clause from provided fields (only non-None)
-    updates = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
+    # Keep explicitly submitted nulls so edits can clear fields that no longer apply
+    # (for example changing a Buy into DIVIDEND_ONLY should clear purchase_cost).
+    updates = body.model_dump(exclude_unset=True)
     if not updates:
         raise BadRequestError("No valid fields to update")
 
@@ -788,24 +793,23 @@ async def update_transaction(
             raise NotFoundError("Transaction", txn_id)
 
         old_portfolio = existing["portfolio"]
-        old_delta = _txn_cash_delta(
-            existing["txn_type"],
-            float(existing["purchase_cost"] or 0),
-            float(existing["sell_value"] or 0),
-            float(existing["cash_dividend"] or 0),
-            float(existing["fees"] or 0),
-        )
-        new_txn_type = updates.get("txn_type", existing["txn_type"])
-        new_portfolio = updates.get("portfolio", old_portfolio)
-        new_symbol = updates.get("stock_symbol", existing["stock_symbol"])
         proposed_txn = dict(existing)
         proposed_txn.update(updates)
+        new_portfolio = proposed_txn["portfolio"]
+        new_symbol = proposed_txn["stock_symbol"]
+        old_delta = _txn_cash_delta(
+            existing["txn_type"],
+            _numeric_txn_value(existing, "purchase_cost"),
+            _numeric_txn_value(existing, "sell_value"),
+            _numeric_txn_value(existing, "cash_dividend"),
+            _numeric_txn_value(existing, "fees"),
+        )
         new_delta = _txn_cash_delta(
-            new_txn_type,
-            float(updates.get("purchase_cost", existing["purchase_cost"] or 0)),
-            float(updates.get("sell_value", existing["sell_value"] or 0)),
-            float(updates.get("cash_dividend", existing["cash_dividend"] or 0)),
-            float(updates.get("fees", existing["fees"] or 0)),
+            proposed_txn["txn_type"],
+            _numeric_txn_value(proposed_txn, "purchase_cost"),
+            _numeric_txn_value(proposed_txn, "sell_value"),
+            _numeric_txn_value(proposed_txn, "cash_dividend"),
+            _numeric_txn_value(proposed_txn, "fees"),
         )
         old_identity = _position_identity(old_portfolio, existing["stock_symbol"])
         new_identity = _position_identity(new_portfolio, new_symbol)
