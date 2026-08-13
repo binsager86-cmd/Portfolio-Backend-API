@@ -12,6 +12,8 @@ import time
 import logging
 import asyncio
 import threading
+import json
+from pathlib import Path
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -34,6 +36,12 @@ _US_STOCKS_CACHE: dict = {
     "stocks": [],
 }
 _US_STOCKS_CACHE_LOCK = threading.Lock()
+_US_STOCKS_DISK_CACHE_PATH = Path(__file__).resolve().parents[2] / "cache" / "us_stock_universe.json"
+_HTTP_HEADERS = {
+    # Improves compatibility with providers that reject empty/unknown user agents.
+    "User-Agent": "Mozilla/5.0 (compatible; PortfolioApp/1.0)",
+    "Accept": "text/plain,application/json;q=0.9,*/*;q=0.8",
+}
 
 
 def _normalize_us_symbol(raw_symbol: str) -> str:
@@ -68,21 +76,72 @@ def _build_cached_us_universe() -> list:
     for s in US_STOCKS:
         _append_us_entry(merged, seen, s.get("symbol", ""), s.get("name", ""))
 
-    # Best-effort expansion from NASDAQ Trader's official symbol directories.
-    # This is lightweight, returns thousands of US-listed symbols, and works
-    # without optional HTML parsing dependencies.
-    try:
+    def _fetch_text(url: str) -> Optional[str]:
         import requests
 
+        try:
+            resp = requests.get(url, timeout=20, headers=_HTTP_HEADERS)
+            resp.raise_for_status()
+            return resp.text
+        except Exception:
+            return None
+
+    def _persist_universe(stocks: list) -> None:
+        try:
+            _US_STOCKS_DISK_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+            payload = {
+                "updated_at": int(time.time()),
+                "count": len(stocks),
+                "stocks": stocks,
+            }
+            _US_STOCKS_DISK_CACHE_PATH.write_text(json.dumps(payload), encoding="utf-8")
+        except Exception as e:
+            logger.debug("Failed to persist US stock universe cache: %s", e)
+
+    def _load_persisted_universe() -> list:
+        try:
+            if not _US_STOCKS_DISK_CACHE_PATH.exists():
+                return []
+            payload = json.loads(_US_STOCKS_DISK_CACHE_PATH.read_text(encoding="utf-8"))
+            rows = payload.get("stocks") if isinstance(payload, dict) else []
+            if not isinstance(rows, list):
+                return []
+            restored: list = []
+            restored_seen: set[str] = set()
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                _append_us_entry(
+                    restored,
+                    restored_seen,
+                    str(row.get("symbol", "")),
+                    str(row.get("name", "")),
+                )
+            return restored
+        except Exception as e:
+            logger.debug("Failed to load persisted US stock universe cache: %s", e)
+            return []
+
+    external_added = 0
+
+    # Best-effort expansion from NASDAQ Trader's official symbol directories.
+    # Uses multiple mirrors because availability can vary by hosting environment.
+    try:
         feeds = [
             {
-                "url": "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt",
+                "urls": [
+                    "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt",
+                    "https://ftp.nasdaqtrader.com/SymbolDirectory/nasdaqlisted.txt",
+                ],
                 "symbol_key": "Symbol",
                 "name_key": "Security Name",
                 "test_key": "Test Issue",
             },
             {
-                "url": "https://www.nasdaqtrader.com/dynamic/SymDir/otherlisted.txt",
+                "urls": [
+                    "https://www.nasdaqtrader.com/dynamic/SymDir/otherlisted.txt",
+                    "https://ftp.nasdaqtrader.com/SymbolDirectory/otherlisted.txt",
+                ],
                 "symbol_key": "ACT Symbol",
                 "name_key": "Security Name",
                 "test_key": "Test Issue",
@@ -90,13 +149,15 @@ def _build_cached_us_universe() -> list:
         ]
 
         for feed in feeds:
-            try:
-                resp = requests.get(feed["url"], timeout=20)
-                resp.raise_for_status()
-            except Exception:
+            text = None
+            for url in feed["urls"]:
+                text = _fetch_text(url)
+                if text:
+                    break
+            if not text:
                 continue
 
-            lines = [ln.strip() for ln in resp.text.splitlines() if ln.strip()]
+            lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
             if not lines:
                 continue
 
@@ -121,9 +182,63 @@ def _build_cached_us_universe() -> list:
 
                 symbol_val = parts[symbol_i].strip()
                 name_val = parts[name_i].strip()
+                before = len(seen)
                 _append_us_entry(merged, seen, symbol_val, name_val)
+                if len(seen) > before:
+                    external_added += 1
     except Exception as e:
-        logger.warning("US universe expansion failed; using baseline US_STOCKS only: %s", e)
+        logger.warning("US universe expansion (NASDAQ feeds) failed: %s", e)
+
+    # Secondary source: SEC company tickers exchange mapping.
+    # This helps when NASDAQ trader feeds are temporarily unavailable.
+    try:
+        sec_text = _fetch_text("https://www.sec.gov/files/company_tickers_exchange.json")
+        if sec_text:
+            payload = json.loads(sec_text)
+            fields = payload.get("fields") if isinstance(payload, dict) else []
+            data = payload.get("data") if isinstance(payload, dict) else []
+            if isinstance(fields, list) and isinstance(data, list):
+                field_map = {str(name).strip().lower(): i for i, name in enumerate(fields)}
+                ticker_i = field_map.get("ticker")
+                name_i = field_map.get("name")
+                exchange_i = field_map.get("exchange")
+                allowed = {
+                    "nasdaq", "nyse", "nyse american", "nyse arca", "nyse mkt",
+                    "cboe", "amex",
+                }
+                if ticker_i is not None and name_i is not None:
+                    for row in data:
+                        if not isinstance(row, list):
+                            continue
+                        if len(row) <= max(ticker_i, name_i):
+                            continue
+                        exchange_val = ""
+                        if exchange_i is not None and len(row) > exchange_i:
+                            exchange_val = str(row[exchange_i] or "").strip().lower()
+                        if exchange_val and exchange_val not in allowed:
+                            continue
+                        symbol_val = str(row[ticker_i] or "").strip()
+                        name_val = str(row[name_i] or "").strip()
+                        before = len(seen)
+                        _append_us_entry(merged, seen, symbol_val, name_val)
+                        if len(seen) > before:
+                            external_added += 1
+    except Exception as e:
+        logger.warning("US universe expansion (SEC feed) failed: %s", e)
+
+    if external_added > 0:
+        _persist_universe(merged)
+        return merged
+
+    # Final fallback: use last successful on-disk expansion if available.
+    restored = _load_persisted_universe()
+    if restored:
+        for row in restored:
+            _append_us_entry(merged, seen, row.get("symbol", ""), row.get("name", ""))
+        logger.warning(
+            "US universe live feeds unavailable; restored %d symbols from disk cache",
+            len(merged),
+        )
 
     return merged
 

@@ -47,6 +47,7 @@ uploads/
 # ─────────────────────────────────────────────
 *.log
 phase*_run.log
+app/cache/us_stock_universe.json
 
 # ─────────────────────────────────────────────
 # ML artifacts — DO NOT COMMIT MODEL FILES
