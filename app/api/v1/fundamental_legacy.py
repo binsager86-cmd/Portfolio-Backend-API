@@ -7054,6 +7054,16 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
             return None
         return prior_annual_value + latest_quarter_value - prior_same_quarter_value
 
+    def _safe_growth_rate(current_value: Optional[float], previous_value: Optional[float]) -> Optional[float]:
+        if current_value is None or previous_value is None or previous_value == 0:
+            return None
+        # Sign flips across zero are turnaround/deterioration events, not a
+        # finance-grade percentage growth rate. Skip them rather than emitting
+        # misleading triple-digit percentages.
+        if (previous_value < 0 < current_value) or (previous_value > 0 > current_value):
+            return None
+        return round((current_value - previous_value) / abs(previous_value), 4)
+
     def _append_growth_point(
         label: str,
         fiscal_year: int,
@@ -7064,9 +7074,9 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
         previous_value: Optional[float],
         period_label: Optional[str] = None,
     ) -> None:
-        if current_value is None or previous_value is None or previous_value == 0:
+        rate = _safe_growth_rate(current_value, previous_value)
+        if rate is None:
             return
-        rate = round((current_value - previous_value) / abs(previous_value), 4)
         entry = {"period": period, "prev_period": prev_period, "growth": rate}
         if period_label:
             entry["period_label"] = period_label
@@ -7094,16 +7104,16 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
                 continue
             prev = by_year[prev_fy]
             curr = by_year[curr_fy]
-            if prev["amount"] and prev["amount"] != 0:
-                g = (curr["amount"] - prev["amount"]) / abs(prev["amount"])
+            g = _safe_growth_rate(curr["amount"], prev["amount"])
+            if g is not None:
                 rates.append({
                     "period": curr["period"],
                     "prev_period": prev["period"],
-                    "growth": round(g, 4),
+                    "growth": g,
                 })
                 _upsert_metric(
                     stock_id, curr_fy, curr["period"],
-                    "growth", label, round(g, 4),
+                    "growth", label, g,
                 )
         if rates:
             growth[label] = rates
@@ -7133,16 +7143,16 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
                 continue
             prev_amt = fcf_by_year[prev_fy]["amount"]
             curr_amt = fcf_by_year[curr_fy]["amount"]
-            if prev_amt and prev_amt != 0:
-                g = (curr_amt - prev_amt) / abs(prev_amt)
+            g = _safe_growth_rate(curr_amt, prev_amt)
+            if g is not None:
                 rates_fcf.append({
                     "period": fcf_by_year[curr_fy]["period"],
                     "prev_period": fcf_by_year[prev_fy]["period"],
-                    "growth": round(g, 4),
+                    "growth": g,
                 })
                 _upsert_metric(
                     stock_id, curr_fy, fcf_by_year[curr_fy]["period"],
-                    "growth", "FCF Growth", round(g, 4),
+                    "growth", "FCF Growth", g,
                 )
         if rates_fcf:
             growth["FCF Growth"] = rates_fcf
@@ -7178,9 +7188,20 @@ def _calculate_growth(stock_id: int) -> Dict[str, List[Dict[str, Any]]]:
                 ttm_value = _ttm_flow_amount(stmt_type, interim_fy, interim_q, codes)
                 _append_growth_point(label, interim_fy, interim_q, interim_pd, latest_pd, ttm_value, annual_value, f"TTM {interim_fy}")
 
-            annual_assets = _period_value("balance", latest_pd, ["TOTAL_ASSETS"])
+            prior_same_quarter_balance_pd = _statement_period("balance", interim_fy - 1, interim_q)
+            prior_same_quarter_assets = _period_value("balance", prior_same_quarter_balance_pd, ["TOTAL_ASSETS"])
             interim_assets = _period_value("balance", interim_pd, ["TOTAL_ASSETS"])
-            _append_growth_point("Total Assets Growth", interim_fy, interim_q, interim_pd, latest_pd, interim_assets, annual_assets, f"TTM {interim_fy}")
+            if prior_same_quarter_balance_pd:
+                _append_growth_point(
+                    "Total Assets Growth",
+                    interim_fy,
+                    interim_q,
+                    interim_pd,
+                    prior_same_quarter_balance_pd,
+                    interim_assets,
+                    prior_same_quarter_assets,
+                    f"Q{interim_q} {interim_fy}",
+                )
 
             annual_cfo = _period_value("cashflow", latest_pd, ["CASH_FROM_OPERATIONS", "OPERATING_CASH_FLOW"])
             annual_capex = _period_value("cashflow", latest_pd, ["CAPITAL_EXPENDITURES", "CAPEX"])
