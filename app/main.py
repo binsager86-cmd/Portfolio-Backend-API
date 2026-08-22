@@ -110,14 +110,22 @@ if os.getenv("ENVIRONMENT") == "production" and os.getenv("SENTRY_DSN"):
 async def lifespan(app: FastAPI):
     # Startup
     if not check_db_exists():
-        logger.error(
-            "⛔  dev_portfolio.db NOT FOUND at %s\n"
-            "    → Copy your portfolio.db into mobile-migration/ first:\n"
-            "      copy portfolio.db mobile-migration/dev_portfolio.db",
-            settings.database_abs_path,
-        )
+        if settings.use_postgres:
+            logger.error(
+                "⛔  PostgreSQL is not reachable. Check DATABASE_URL, network access, and credentials."
+            )
+        else:
+            logger.error(
+                "⛔  dev_portfolio.db NOT FOUND at %s\n"
+                "    → Copy your portfolio.db into mobile-migration/ first:\n"
+                "      copy portfolio.db mobile-migration/dev_portfolio.db",
+                settings.database_abs_path,
+            )
     else:
-        logger.info("✅  Database found: %s", settings.database_abs_path)
+        if settings.use_postgres:
+            logger.info("✅  PostgreSQL connection verified")
+        else:
+            logger.info("✅  Database found: %s", settings.database_abs_path)
 
         # ── [B-3] Schema managed by Alembic — skipped in-process to avoid
         # SQLite lock contention on OneDrive/networked filesystems.
