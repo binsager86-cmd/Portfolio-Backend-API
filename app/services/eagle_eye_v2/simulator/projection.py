@@ -454,6 +454,22 @@ def _nav_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     ]
 
 
+def _derived_gate_payload(state: dict[str, Any]) -> tuple[int, list[dict[str, Any]]]:
+    lifecycle = str(state.get("lifecycle_state") or state.get("lifecycle") or "NEUTRAL").upper()
+    tier = str(state.get("avoid_tier") or state.get("tier") or "NONE").upper()
+    confirmation = str(state.get("confirmation_state") or "NOT_CONFIRMED").upper()
+    intent = str(state.get("candidate_intent_state") or "INTENT_NONE").upper()
+    position = state.get("position")
+    gates = [
+        {"name": "Lifecycle eligible", "value": lifecycle, "passed": lifecycle in {"BASE_VALID", "MARKUP_ACTIVE"}},
+        {"name": "Confirmation state", "value": confirmation, "passed": confirmation.startswith("CONFIRMED")},
+        {"name": "Avoid veto", "value": tier, "passed": not tier.startswith("AVOID") and "VETO" not in tier},
+        {"name": "Candidate intent", "value": intent, "passed": intent not in {"", "INTENT_NONE"}},
+        {"name": "Position state", "value": "FLAT" if position is None else "IN_POSITION", "passed": position is None},
+    ]
+    return sum(1 for gate in gates if gate["passed"]), gates
+
+
 def _symbol_state_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     rows = []
     for row in conn.execute(
@@ -464,6 +480,8 @@ def _symbol_state_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
         """
     ):
         state = _json_object(row["state_snapshot_json"])
+        derived_gates_passing, derived_gates = _derived_gate_payload(state)
+        gates = state.get("gates_json") or state.get("gates") or derived_gates
         rows.append({
             "symbol": row["symbol"],
             "book": row["portfolio"] or state.get("book") or state.get("portfolio"),
@@ -474,8 +492,8 @@ def _symbol_state_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
             "last_kind": row["kind"],
             "last_disposition": row["kind"],
             "confidence": _maybe_float(state.get("confidence") or state.get("confidence_pct") or state.get("score")),
-            "gates_passing": _maybe_int(state.get("gates_passing") or state.get("gate_count") or state.get("gates_passed")),
-            "gates_json": _json_text(state.get("gates_json") or state.get("gates")),
+            "gates_passing": _maybe_int(state.get("gates_passing") or state.get("gate_count") or state.get("gates_passed") or derived_gates_passing),
+            "gates_json": _json_text(gates),
             "soft_conditions_json": _json_text(state.get("soft_conditions_json") or state.get("soft_conditions")),
             "hard_refs_json": _json_text(state.get("hard_refs_json") or state.get("hard_refs")),
             "base_json": _json_text(state.get("base_json") or state.get("base")),
