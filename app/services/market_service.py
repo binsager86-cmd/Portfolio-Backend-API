@@ -61,6 +61,25 @@ def _build_degraded_market_payload(trade_date: str, exception: Exception) -> dic
     }
 
 
+def get_latest_market_snapshot() -> dict | None:
+    """Return the latest cached market snapshot from DB without triggering a live fetch."""
+    from app.core.database import query_one
+
+    row = query_one(
+        "SELECT trade_date, data_json, fetched_at FROM market_data ORDER BY trade_date DESC, fetched_at DESC LIMIT 1"
+    )
+    if not row:
+        return None
+
+    cached = json.loads(row["data_json"])
+    cached["_cached"] = True
+    cached["_fetched_at"] = row["fetched_at"]
+    trade_date = row.get("trade_date") if hasattr(row, "get") else row["trade_date"]
+    if trade_date:
+        cached["_trade_date"] = trade_date
+    return cached
+
+
 async def get_market_data(force_refresh: bool = False) -> dict:
     """
     Return cached market data for today, or fetch fresh from TickerChart if stale/missing.

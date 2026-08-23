@@ -9,6 +9,7 @@ Endpoints:
 
 import asyncio
 import logging
+import threading
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -17,11 +18,25 @@ from app.api.deps import get_current_user
 from app.core.cache import cache_key, price_cache, get_cached, set_cached
 from app.core.security import TokenData
 from app.services.price_service import get_price_snapshot
-from app.services.market_service import get_market_data, get_market_history
+from app.services.market_service import get_market_data, get_market_history, get_latest_market_snapshot
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/market", tags=["Market"])
+_market_refresh_lock = threading.Lock()
+
+
+def _run_background_market_refresh(overview_cache_key: str) -> None:
+    """Run the expensive TickerChart refresh away from the FastAPI event loop."""
+    if not _market_refresh_lock.acquire(blocking=False):
+        return
+    try:
+        fresh = asyncio.run(get_market_data(True))
+        set_cached(price_cache, overview_cache_key, fresh)
+    except Exception as exc:
+        logger.warning("Background market refresh failed: %s", exc)
+    finally:
+        _market_refresh_lock.release()
 
 
 @router.get("/overview")
@@ -39,15 +54,27 @@ async def market_overview(
     """
     overview_cache_key = cache_key("market", "overview")
     cached = get_cached(price_cache, overview_cache_key)
+
+    if live:
+        # Never run the full TickerChart universe fetch on the request loop.
+        asyncio.create_task(asyncio.to_thread(_run_background_market_refresh, overview_cache_key))
+
     if cached is not None and not live:
         return {"data": cached, "live": False, "status": "cached"}
 
-    # Serve the most recent DB snapshot
-    try:
-        snapshot = await get_market_data(False)
-    except Exception as e:
-        logger.error("Market overview snapshot failed: %s", e)
-        raise HTTPException(status_code=502, detail="Market snapshot unavailable")
+    # Keep overview instant: serve latest in-memory/DB snapshot first and never
+    # block this endpoint on a long market scrape.
+    snapshot = cached
+    if snapshot is None:
+        snapshot = get_latest_market_snapshot()
+
+    if snapshot is None:
+        # Cold-start fallback when DB has no historical snapshots yet.
+        try:
+            snapshot = await get_market_data(False)
+        except Exception as e:
+            logger.error("Market overview snapshot failed: %s", e)
+            raise HTTPException(status_code=502, detail="Market snapshot unavailable")
 
     if include_quotes:
         symbols: dict[str, str] = {}
@@ -67,15 +94,6 @@ async def market_overview(
     set_cached(price_cache, overview_cache_key, snapshot)
 
     if live:
-        # Fire-and-forget background refresh; caller gets the stale snapshot now
-        async def _bg_refresh():
-            try:
-                fresh = await get_market_data(True)
-                set_cached(price_cache, overview_cache_key, fresh)
-            except Exception as _e:
-                logger.warning("Background market refresh failed: %s", _e)
-
-        asyncio.create_task(_bg_refresh())
         return {"data": snapshot, "live": True, "status": "refreshing"}
 
     return {"data": snapshot, "live": False, "status": "ok"}

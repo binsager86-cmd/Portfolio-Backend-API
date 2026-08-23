@@ -56,8 +56,8 @@ class Settings(BaseSettings):
 
     # Cron / Scheduler
     CRON_SECRET_KEY: str = ""           # Required for POST /api/cron/update-prices
-    PRICE_UPDATE_HOUR: int = 14         # Hour (24h) in Asia/Kuwait to run daily
-    PRICE_UPDATE_MINUTE: int = 0
+    PRICE_UPDATE_HOUR: int = 13         # Hour (24h) in Asia/Kuwait to run daily
+    PRICE_UPDATE_MINUTE: int = 20
     PRICE_UPDATE_ENABLED: bool = True   # Set False to disable the built-in scheduler
     TECHNICAL_BATCH_ENABLED: bool = True
     TECHNICAL_BATCH_HOUR: int = 14      # Daily technical universe scoring (Asia/Kuwait)

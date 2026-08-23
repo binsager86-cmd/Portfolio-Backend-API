@@ -1030,6 +1030,7 @@ async def fetch_ohlcv(
     from_d: Optional[date] = None,
     to_d: Optional[date] = None,
     interval: str = "day",
+    client: Optional[httpx.AsyncClient] = None,
 ) -> list[dict]:
     """Return list of EODHD-shaped rows: {date, open, high, low, close, volume}.
 
@@ -1056,11 +1057,14 @@ async def fetch_ohlcv(
     resp: Optional[httpx.Response] = None
     for attempt in range(1, _TC_FETCH_MAX_ATTEMPTS + 1):
         try:
-            async with httpx.AsyncClient(timeout=_TC_HTTP_TIMEOUT, follow_redirects=True) as client:
-                resp = await client.get(
-                    url,
-                    headers={"User-Agent": _USER_AGENT},
-                )
+            if client is None:
+                async with httpx.AsyncClient(timeout=_TC_HTTP_TIMEOUT, follow_redirects=True) as request_client:
+                    resp = await request_client.get(
+                        url,
+                        headers={"User-Agent": _USER_AGENT},
+                    )
+            else:
+                resp = await client.get(url, headers={"User-Agent": _USER_AGENT})
             resp.raise_for_status()
             break
         except (httpx.TimeoutException, httpx.TransportError, httpx.HTTPStatusError) as exc:
@@ -1439,16 +1443,31 @@ async def fetch_kse_market_snapshot(symbols: list[str], stock_name_map: dict[str
     from_d = today_d - timedelta(days=7)
     market_tiers = _load_kse_market_tiers()
 
-    # ── Fetch all stocks concurrently ────────────────────────────────
-    async def _safe_fetch(symbol: str) -> tuple[str, list[dict]]:
-        try:
-            rows = await fetch_ohlcv(symbol, "KSE", from_d=from_d, to_d=today_d, interval="day")
-            return symbol, rows
-        except Exception as exc:
-            logger.debug("Market snapshot: fetch failed for %s: %s", symbol, exc)
-            return symbol, []
+    # ── Fetch all stocks concurrently over one shared connection pool ───
+    # Creating one AsyncClient per symbol causes connection churn and can
+    # queue requests behind timeout retries. A bounded shared pool preserves
+    # concurrency without overwhelming the provider or local socket table.
+    async with httpx.AsyncClient(
+        timeout=_TC_HTTP_TIMEOUT,
+        follow_redirects=True,
+        limits=httpx.Limits(max_connections=64, max_keepalive_connections=32),
+    ) as market_client:
+        async def _safe_fetch(symbol: str) -> tuple[str, list[dict]]:
+            try:
+                rows = await fetch_ohlcv(
+                    symbol,
+                    "KSE",
+                    from_d=from_d,
+                    to_d=today_d,
+                    interval="day",
+                    client=market_client,
+                )
+                return symbol, rows
+            except Exception as exc:
+                logger.debug("Market snapshot: fetch failed for %s: %s", symbol, exc)
+                return symbol, []
 
-    stock_results = await _asyncio.gather(*[_safe_fetch(sym) for sym in symbols])
+        stock_results = await _asyncio.gather(*[_safe_fetch(sym) for sym in symbols])
 
     # ── Fetch indices concurrently ───────────────────────────────────
     index_tasks = [
