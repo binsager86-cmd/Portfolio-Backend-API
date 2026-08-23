@@ -70,6 +70,44 @@ class SimulatorRunner:
         return self.engine.process_session(session, normalized, frozen_events)
 
     @staticmethod
+    def daily_state_events(session: str, market_sessions: dict[str, MarketSession]) -> list[FrozenEvent]:
+        """Create one auditable, fail-closed decision record per processed row."""
+        events: list[FrozenEvent] = []
+        for symbol, market in sorted(market_sessions.items()):
+            snapshot = {
+                "session": session,
+                "lifecycle": "NEUTRAL",
+                "tier": "NONE",
+                "confirmation_state": "NOT_CONFIRMED",
+                "candidate_intent_state": "INTENT_NONE",
+                "disposition": "NONE",
+                "position": None,
+                "sessions_held": None,
+                "source": "SIM-OPS daily-state accounting boundary",
+                "evaluation_status": "FAIL_CLOSED_NO_FROZEN_EVENT_PAYLOAD",
+            }
+            events.append(
+                FrozenEvent(
+                    symbol=symbol.upper(),
+                    decision_session=session,
+                    kind=DecisionKind.DAILY_STATE,
+                    reason="NONE",
+                    action={
+                        "state": "NEUTRAL",
+                        "avoid_tier": "NONE",
+                        "confirmation_state": "NOT_CONFIRMED",
+                        "candidate_intent_state": "INTENT_NONE",
+                        "disposition_state": "NONE",
+                        "position": None,
+                        "sessions_held": None,
+                        "evaluation_status": "FAIL_CLOSED_NO_FROZEN_EVENT_PAYLOAD",
+                    },
+                    state_snapshot=snapshot,
+                )
+            )
+        return events
+
+    @staticmethod
     def events_from_actions(symbol: str, decision_session: str, actions: Iterable[dict[str, Any]], state_snapshot: dict[str, Any]) -> list[FrozenEvent]:
         events: list[FrozenEvent] = []
         for action in actions:

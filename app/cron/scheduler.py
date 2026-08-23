@@ -26,6 +26,7 @@ _scheduler = None
 _lock_fd = None  # file descriptor for cross-worker lock
 _eagle_eye_ingest_succeeded = False
 _simulator_heartbeat_at = 0
+_simulator_silent_sessions = 0
 
 
 def _queue_portfolio_news_alerts() -> None:
@@ -420,7 +421,7 @@ def start_scheduler() -> None:
         # ── Simulator daily run (Sun–Thu 14:20 — after rating recompute) ──
         def _run_eagle_eye_simulator() -> None:
             """Paper trading simulator: exits → entries → snapshot for all 3 strategies."""
-            global _simulator_heartbeat_at
+            global _simulator_heartbeat_at, _simulator_silent_sessions
             try:
                 from app.cron.job_locks import run_with_job_lock
                 from app.core.database import query_val
@@ -443,7 +444,11 @@ def start_scheduler() -> None:
                         runner.load_replay_window(symbol, str(latest_session), str(latest_session), surface_db)
                     _simulator_heartbeat_at = int(time.time())
                     market_sessions = runner.load_market_sessions(str(latest_session), expected_symbol_count=None)
-                    result = runner.ingest_session(session=str(latest_session), market_sessions=market_sessions, frozen_events=[])
+                    events = runner.daily_state_events(str(latest_session), market_sessions)
+                    result = runner.ingest_session(session=str(latest_session), market_sessions=market_sessions, frozen_events=events)
+                    _simulator_silent_sessions = 0 if market_sessions else _simulator_silent_sessions + 1
+                    if _simulator_silent_sessions >= 3:
+                        raise RuntimeError("SIM-OPS heartbeat guard: CYCLE_SILENT after three silent sessions")
                     _simulator_heartbeat_at = int(time.time())
                     return {"session": str(latest_session), "result": result}
 
