@@ -14,7 +14,9 @@ import os
 import sys
 import tempfile
 import threading
+import time
 from typing import Optional
+from pathlib import Path
 
 from app.core.config import get_settings
 
@@ -22,6 +24,8 @@ logger = logging.getLogger(__name__)
 
 _scheduler = None
 _lock_fd = None  # file descriptor for cross-worker lock
+_eagle_eye_ingest_succeeded = False
+_simulator_heartbeat_at = 0
 
 
 def _queue_portfolio_news_alerts() -> None:
@@ -58,7 +62,6 @@ def _run_daily_price_then_snapshot(user_id: int | None = None) -> dict:
     Also updates the in-memory tracking dicts in the cron API router
     so the /status endpoint reflects the last scheduler run.
     """
-    import time
     from app.core.database import query_all
     from app.cron.job_locks import run_with_job_lock
     from app.cron.fundamentals_updater import run_tickerchart_fundamentals_update
@@ -355,7 +358,12 @@ def start_scheduler() -> None:
 
         def _run_eagle_eye_daily() -> None:
             """Nightly incremental OHLCV fetch + ratings (no DNA — that runs weekly on Sundays)."""
-            run_nightly_recompute(dna_refresh=False, verbose=False)
+            global _eagle_eye_ingest_succeeded
+            result = run_nightly_recompute(dna_refresh=False, verbose=False)
+            ohlcv = result.get("ohlcv") if isinstance(result, dict) else {}
+            _eagle_eye_ingest_succeeded = bool((ohlcv or {}).get("errors", 0) == 0 and (ohlcv or {}).get("ok", 0) > 0)
+            if not _eagle_eye_ingest_succeeded:
+                raise RuntimeError(f"SIM-OPS ingest prerequisite failed: {result}")
 
         def _run_eagle_eye_dna() -> None:
             """Weekly full recompute including DNA profiles (Sundays)."""
@@ -412,9 +420,34 @@ def start_scheduler() -> None:
         # ── Simulator daily run (Sun–Thu 14:20 — after rating recompute) ──
         def _run_eagle_eye_simulator() -> None:
             """Paper trading simulator: exits → entries → snapshot for all 3 strategies."""
+            global _simulator_heartbeat_at
             try:
-                from app.services.eagle_eye.simulator import get_engine
-                result = get_engine().run_daily()
+                from app.cron.job_locks import run_with_job_lock
+                from app.core.database import query_val
+                from app.core.config import get_settings
+                from app.services.eagle_eye_v2.simulator import ForwardSurfaceBuilder, SimulatorRunner
+
+                def _run_once() -> dict:
+                    global _simulator_heartbeat_at
+                    if not _eagle_eye_ingest_succeeded:
+                        raise RuntimeError("SIM-OPS heartbeat guard blocked cycle: successful ingest prerequisite is absent")
+                    settings = get_settings()
+                    live_db = Path(settings.database_abs_path)
+                    latest_session = query_val("SELECT MAX(bar_date) FROM ee_ohlcv_cache")
+                    if not latest_session:
+                        raise RuntimeError("SIM-OPS cycle has no completed market session")
+                    surface_db = ForwardSurfaceBuilder(live_db_path=live_db).surface_db_path
+                    ForwardSurfaceBuilder(live_db_path=live_db, surface_db_path=surface_db).append_session_rows(str(latest_session))
+                    runner = SimulatorRunner(mode="live", live_db_path=live_db, expected_symbol_count=139)
+                    for symbol in ("SANAM", "TIJARA", "MABANEE"):
+                        runner.load_replay_window(symbol, str(latest_session), str(latest_session), surface_db)
+                    _simulator_heartbeat_at = int(time.time())
+                    market_sessions = runner.load_market_sessions(str(latest_session), expected_symbol_count=139)
+                    result = runner.ingest_session(session=str(latest_session), market_sessions=market_sessions, frozen_events=[])
+                    _simulator_heartbeat_at = int(time.time())
+                    return {"session": str(latest_session), "result": result}
+
+                result = run_with_job_lock("sim_ops_daily_cycle", _run_once)
                 logger.info("📈 Simulator daily run complete: %s", result)
             except Exception as _exc:
                 logger.warning("📈 Simulator daily run failed: %s", _exc)

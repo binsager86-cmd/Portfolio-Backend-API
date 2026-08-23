@@ -3,24 +3,62 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+import sys
 from pathlib import Path
 from typing import Any, Iterable
 
 from app.services.eagle_eye_v2.simulator.accounting import PaperPortfolioEngine, SessionExecutionResult, canonical_entry_reason
 from app.services.eagle_eye_v2.simulator.constants import ARCHIVE_ROOT, ENTRY_REASONS, FROZEN_VARIANT, SIMULATOR_ROOT
 from app.services.eagle_eye_v2.simulator.ledger import SimulatorLedger
+from app.services.eagle_eye_v2.simulator.market_data_source import SealedReplayMarketDataSource, resolve_market_data_source
 from app.services.eagle_eye_v2.simulator.models import DecisionKind, FrozenEvent, MarketSession
 from app.services.eagle_eye_v2.simulator.sealed_imports import verify_frozen_imports
 
 DAY_ZERO_SOURCE_DB = ARCHIVE_ROOT / "v5x_candidates" / "harness_dbs" / "harness_v53A_2026-07-27T150230_580976Z.db"
+FORWARD_SURFACE_DB = ARCHIVE_ROOT / "preview1a_prestart" / "review_final" / "forward_surface_gate_live_full.db"
 RUN_KEY = "R16_3_HARNESS_V53_A"
 
 
 class SimulatorRunner:
-    def __init__(self, ledger: SimulatorLedger | None = None) -> None:
+    def __init__(self, ledger: SimulatorLedger | None = None, *, mode: str = "sealed", source_db: Path | str | None = None, live_db_path: Path | str | None = None, expected_symbol_count: int | None = None) -> None:
         self.ledger = ledger or SimulatorLedger()
         self.engine = PaperPortfolioEngine(self.ledger)
         self.frozen_hashes = verify_frozen_imports()
+        self.mode = mode
+        self.expected_symbol_count = expected_symbol_count
+        self.market_data_source = resolve_market_data_source(
+            mode,
+            source_db=source_db or DAY_ZERO_SOURCE_DB,
+            db_path=live_db_path,
+            expected_symbol_count=expected_symbol_count,
+            surface_db_path=FORWARD_SURFACE_DB,
+        )
+
+    def load_market_sessions(self, session_date: str, *, mode: str | None = None, expected_symbol_count: int | None = None) -> dict[str, MarketSession]:
+        source_mode = mode or self.mode
+        source = self.market_data_source if source_mode == self.mode and (source_mode == "sealed" or source_mode == "live") else resolve_market_data_source(
+            source_mode,
+            source_db=DAY_ZERO_SOURCE_DB,
+            db_path=self.market_data_source.db_path if hasattr(self.market_data_source, "db_path") else None,
+            expected_symbol_count=expected_symbol_count,
+            surface_db_path=getattr(self.market_data_source, "surface_db_path", FORWARD_SURFACE_DB),
+        )
+        return source.load_session_rows(session_date=session_date, expected_symbol_count=expected_symbol_count)
+
+    @staticmethod
+    def load_replay_window(symbol: str, start_date: str, end_date: str, forward_db: Path | str | None = None) -> list[dict[str, Any]]:
+        release_scripts = ARCHIVE_ROOT.parent / "mobile-migration" / "backend-api-main-release" / "scripts"
+        if str(release_scripts) not in sys.path:
+            sys.path.insert(0, str(release_scripts))
+        import forward_replay
+
+        load_from, effective_end = forward_replay.symbol_replay_window(symbol, start_date, end_date)
+        return forward_replay.continuous_symbol_rows(
+            symbol,
+            load_from,
+            effective_end,
+            forward_replay.resolve_forward_db(forward_db),
+        )
 
     def ingest_session(
         self,
