@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from app.services.eagle_eye_v2.simulator.accounting import PaperPortfolioEngine, SessionExecutionResult, canonical_entry_reason
-from app.services.eagle_eye_v2.simulator.constants import ARCHIVE_ROOT, ENTRY_REASONS, FORWARD_SURFACE_DB, FROZEN_VARIANT, SIMULATOR_ROOT
+from app.services.eagle_eye_v2.simulator.constants import ARCHIVE_ROOT, ENTRY_REASONS, FORWARD_SURFACE_DB, FROZEN_VARIANT, RELEASE_ROOT, SIMULATOR_ROOT
 from app.services.eagle_eye_v2.simulator.ledger import SimulatorLedger
 from app.services.eagle_eye_v2.simulator.market_data_source import SealedReplayMarketDataSource, resolve_market_data_source
 from app.services.eagle_eye_v2.simulator.models import DecisionKind, FrozenEvent, MarketSession
@@ -46,7 +46,7 @@ class SimulatorRunner:
 
     @staticmethod
     def load_replay_window(symbol: str, start_date: str, end_date: str, forward_db: Path | str | None = None) -> list[dict[str, Any]]:
-        release_scripts = ARCHIVE_ROOT.parent / "mobile-migration" / "backend-api-main-release" / "scripts"
+        release_scripts = RELEASE_ROOT / "scripts"
         if str(release_scripts) not in sys.path:
             sys.path.insert(0, str(release_scripts))
         import forward_replay
