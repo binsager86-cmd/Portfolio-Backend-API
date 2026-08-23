@@ -920,7 +920,8 @@ def _bg_fetch_live(lang: str) -> None:
     boursa_lang = "A" if lang == "ar" else "E"
     try:
         raw: list[dict] = []
-        with httpx.Client(timeout=15.0) as client:
+        # Boursa's RSS host 403s requests without a browser-like User-Agent.
+        with httpx.Client(timeout=15.0, headers={"User-Agent": "Mozilla/5.0 (compatible; PortfolioTracker/1.0)"}) as client:
             for url in _rss_urls(boursa_lang):
                 try:
                     resp = client.get(url)

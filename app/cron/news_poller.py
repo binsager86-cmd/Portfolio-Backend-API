@@ -27,6 +27,10 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
+# Boursa Kuwait's RSS host returns 403 Forbidden to requests without a
+# browser-like User-Agent (httpx's default UA gets blocked outright).
+_RSS_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; PortfolioTracker/1.0)"}
+
 # Polling intervals (seconds)
 _MARKET_HOURS_INTERVAL = 15      # 15 s during trading
 _OFF_HOURS_INTERVAL = 300        # 5 min outside trading
@@ -176,7 +180,7 @@ def _poll_single_language(boursa_lang: str) -> dict:
 
     from app.api.v1.news import _extract_news_id, _parse_rss_xml, _rss_urls
 
-    with httpx.Client(timeout=15.0) as client:
+    with httpx.Client(timeout=15.0, headers=_RSS_HEADERS) as client:
         for url in _rss_urls(boursa_lang):
             cache_key = f"rss_{boursa_lang}_{url}"
 
