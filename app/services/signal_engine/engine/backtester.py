@@ -21,6 +21,7 @@ from __future__ import annotations
 import logging
 import math
 import random
+import asyncio
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -61,7 +62,7 @@ class TradeResult:
     tp1: float
     tp2: float
     rr_ratio: float
-    outcome: str                    # TP1_HIT | TP2_HIT | SL_HIT | EXPIRED
+    outcome: str                    # NOT_FILLED | TP1_HIT | TP2_HIT | SL_HIT | EXPIRED
     pnl_r: float                    # P&L in R-multiples (net of costs)
     win_tp1: bool
     win_tp2: bool
@@ -78,6 +79,9 @@ class WindowMetrics:
     test_from: str
     test_to: str
     n_signals: int = 0
+    orders_filled: int = 0
+    not_filled: int = 0
+    fill_rate: float = 0.0
     n_trades: int = 0
     win_rate_tp1: float = 0.0
     win_rate_tp2: float = 0.0
@@ -89,6 +93,10 @@ class WindowMetrics:
     expectancy_per_trade: float = 0.0
     win_rate_ci_95: tuple[float, float] = (0.0, 1.0)
     positive_expectancy: bool = False
+    exposure_days: int = 0
+    turnover_r: float = 0.0
+    max_losing_streak: int = 0
+    tail_loss_r_5pct: float = 0.0
 
 
 @dataclass
@@ -104,6 +112,10 @@ class BacktestReport:
     parameter_stability_pct: float = 0.0
     cvar_compliance_pct: float = 0.0
     total_trades: int = 0
+    signals_generated: int = 0
+    orders_filled: int = 0
+    not_filled: int = 0
+    fill_rate: float = 0.0
     passed_all_criteria: bool = False
 
 
@@ -142,19 +154,26 @@ def simulate_trade(
         TradeResult with outcome and R-multiple P&L.
     """
     exe = signal.get("execution", {})
-    entry_mid = (
-        (exe.get("entry_zone_fils", [None, None])[0] or 0.0) +
-        (exe.get("entry_zone_fils", [None, None])[1] or 0.0)
-    ) / 2.0
+    entry_zone = exe.get("entry_zone_fils") or [None, None]
+    entry_low = entry_zone[0] if len(entry_zone) > 0 else None
+    entry_high = entry_zone[1] if len(entry_zone) > 1 else None
+    entry_mid = ((entry_low or 0.0) + (entry_high or 0.0)) / 2.0
     stop = exe.get("stop_loss_fils") or 0.0
-    tp1 = exe.get("tp1_fils") or 0.0
-    tp2 = exe.get("tp2_fils") or 0.0
-    direction = signal.get("signal", "NEUTRAL")
+    tp1 = exe.get("tp1_fils")
+    tp2 = exe.get("tp2_fils")
+    raw_direction = str(signal.get("signal") or signal.get("recommendation") or "NEUTRAL").upper()
+    direction = "BUY" if raw_direction in {"BUY", "STRONG_BUY"} else "SELL" if raw_direction == "SELL" else "NEUTRAL"
     segment = signal.get("segment", "PREMIER")
     cost_frac = _total_cost_factor(segment)
 
     risk = abs(entry_mid - stop)
-    if risk < 1e-9 or direction == "NEUTRAL" or entry_mid <= 0:
+    if (
+        risk < 1e-9
+        or direction == "NEUTRAL"
+        or entry_mid <= 0
+        or not exe.get("actionable", signal.get("actionable", True))
+        or tp1 is None
+    ):
         return TradeResult(
             date=signal.get("metadata", {}).get("data_as_of", ""),
             stock_code=signal.get("stock_code", ""),
@@ -182,62 +201,116 @@ def simulate_trade(
             start_idx = i + 1  # enter next bar after signal date
             break
 
-    outcome = "EXPIRED"
+    outcome = "NOT_FILLED"
     exit_price = entry_mid
     win_tp1 = False
     win_tp2 = False
 
-    for row in rows[start_idx: start_idx + max_hold_days]:
+    filled = False
+    fill_price = entry_mid
+    eligible_rows = rows[start_idx: start_idx + max_hold_days]
+    for row in eligible_rows:
         h = float(row.get("high") or 0.0)
         l = float(row.get("low") or 0.0)
+        open_price = float(row.get("open") or 0.0)
 
+        if not filled:
+            if direction == "BUY":
+                if open_price > 0 and open_price <= entry_high:
+                    fill_price = max(entry_low or entry_mid, open_price)
+                elif entry_low is not None and entry_high is not None and l <= entry_high and h >= entry_low:
+                    fill_price = entry_mid
+            else:
+                if open_price > 0 and open_price >= entry_low:
+                    fill_price = min(entry_high or entry_mid, open_price)
+                elif entry_low is not None and entry_high is not None and l <= entry_high and h >= entry_low:
+                    fill_price = entry_mid
+            if not filled and fill_price != entry_mid:
+                filled = True
+            elif not filled and entry_low is not None and entry_high is not None and l <= entry_high and h >= entry_low:
+                filled = True
+            if not filled:
+                continue
+
+        # If a bar opens beyond the stop, a stop order fills at the tradable open.
+        # When both stop and target are touched in one bar, stop wins conservatively.
         if direction == "BUY":
-            if l <= stop:
-                exit_price = stop
+            stop_hit = (open_price > 0 and open_price <= stop) or l <= stop
+            tp2_hit = tp2 is not None and h >= tp2
+            tp1_hit = h >= tp1
+            if stop_hit:
+                exit_price = open_price if open_price > 0 and open_price < stop else stop
                 outcome = "SL_HIT"
                 break
-            if h >= tp2:
+            if tp2_hit:
                 exit_price = tp2
                 outcome = "TP2_HIT"
                 win_tp1 = True
                 win_tp2 = True
                 break
-            if h >= tp1:
+            if tp1_hit:
                 exit_price = tp1
                 outcome = "TP1_HIT"
                 win_tp1 = True
                 break
-        else:  # SELL
-            if h >= stop:
-                exit_price = stop
+        else:
+            stop_hit = (open_price > 0 and open_price >= stop) or h >= stop
+            tp2_hit = tp2 is not None and l <= tp2
+            tp1_hit = l <= tp1
+            if stop_hit:
+                exit_price = open_price if open_price > 0 and open_price > stop else stop
                 outcome = "SL_HIT"
                 break
-            if l <= tp2:
+            if tp2_hit:
                 exit_price = tp2
                 outcome = "TP2_HIT"
                 win_tp1 = True
                 win_tp2 = True
                 break
-            if l <= tp1:
+            if tp1_hit:
                 exit_price = tp1
                 outcome = "TP1_HIT"
                 win_tp1 = True
                 break
 
-    if outcome == "EXPIRED":
-        exit_price = float(rows[min(start_idx + max_hold_days - 1, len(rows) - 1)].get("close") or entry_mid)
+    if not filled:
+        return TradeResult(
+            date=sig_date,
+            stock_code=signal.get("stock_code", ""),
+            signal=direction,
+            setup_type=signal.get("setup_type", ""),
+            entry=fill_price,
+            stop_loss=stop,
+            tp1=tp1,
+            tp2=tp2,
+            rr_ratio=signal.get("risk_metrics", {}).get("risk_reward_ratio") or 0.0,
+            outcome="NOT_FILLED",
+            pnl_r=0.0,
+            win_tp1=False,
+            win_tp2=False,
+            segment=segment,
+            regime=signal.get("confluence_details", {}).get("regime", ""),
+            confluence_score=signal.get("confluence_details", {}).get("total_score", 0),
+        )
+
+    if outcome == "NOT_FILLED":
+        last_eligible = eligible_rows[-1] if eligible_rows else {}
+        exit_price = float(last_eligible.get("close") or fill_price)
+        outcome = "EXPIRED"
+    risk = abs(fill_price - stop)
 
     # P&L in R-multiples, net of transaction costs
-    raw_pnl = (exit_price - entry_mid) if direction == "BUY" else (entry_mid - exit_price)
-    cost_fils = entry_mid * cost_frac
-    net_pnl_r = (raw_pnl - cost_fils) / risk if risk > 0 else 0.0
+    raw_pnl = (exit_price - fill_price) if direction == "BUY" else (fill_price - exit_price)
+    entry_cost_fils = fill_price * (cost_frac / 2.0)
+    exit_cost_fils = abs(exit_price) * (cost_frac / 2.0)
+    net_pnl_r = (raw_pnl - entry_cost_fils - exit_cost_fils) / risk if risk > 0 else 0.0
 
     return TradeResult(
         date=sig_date,
         stock_code=signal.get("stock_code", ""),
         signal=direction,
         setup_type=signal.get("setup_type", ""),
-        entry=entry_mid,
+        entry=fill_price,
         stop_loss=stop,
         tp1=tp1,
         tp2=tp2,
@@ -319,7 +392,12 @@ def compute_window_metrics(
     test_to: str,
 ) -> WindowMetrics:
     """Compute all KPI metrics for one walk-forward window."""
-    actual = [t for t in trades if t.date >= test_from and t.date <= test_to and t.outcome != "SKIPPED"]
+    actual = [
+        t for t in trades
+        if t.date >= test_from
+        and t.date <= test_to
+        and t.outcome not in {"SKIPPED", "NOT_FILLED"}
+    ]
     n_trades = len(actual)
     m = WindowMetrics(
         train_from=train_from,
@@ -329,6 +407,9 @@ def compute_window_metrics(
         n_signals=len(trades),
         n_trades=n_trades,
     )
+    m.orders_filled = n_trades
+    m.not_filled = sum(1 for t in trades if t.outcome == "NOT_FILLED")
+    m.fill_rate = round(n_trades / len(trades), 4) if trades else 0.0
     if n_trades == 0:
         return m
 
@@ -345,6 +426,15 @@ def compute_window_metrics(
     m.sharpe = _compute_sharpe(pnl_series)
     m.win_rate_ci_95 = _bootstrap_win_rate_ci(len(wins_tp1), n_trades)
     m.positive_expectancy = m.avg_r > 0.0
+    m.exposure_days = n_trades
+    m.turnover_r = round(sum(abs(t.pnl_r) for t in actual), 4)
+    streak = 0
+    for pnl in pnl_series:
+        streak = streak + 1 if pnl < 0 else 0
+        m.max_losing_streak = max(m.max_losing_streak, streak)
+    sorted_losses = sorted(pnl_series)
+    tail_count = max(1, int(math.ceil(len(sorted_losses) * 0.05)))
+    m.tail_loss_r_5pct = round(float(np.mean(sorted_losses[:tail_count])), 4)
     return m
 
 
@@ -485,13 +575,13 @@ def run_walk_forward_test(
                 continue
 
             try:
-                sig = generate_kuwait_signal(
+                sig = asyncio.run(generate_kuwait_signal(
                     rows=train_rows,
                     stock_code=code,
                     segment=segment,
                     account_equity=account_equity,
                     delay_hours=0,
-                )
+                ))
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Signal generation failed for %s (window %d): %s", code, win_idx + 1, exc)
                 continue
@@ -499,10 +589,8 @@ def run_walk_forward_test(
             if sig.get("signal") == "NEUTRAL":
                 continue
 
-            # Collect predicted probability for calibration check
+            # Collect predicted probability only after an order fills.
             p_tp1 = sig.get("probabilities", {}).get("p_tp1_before_sl")
-            if p_tp1 is not None:
-                all_preds.append(float(p_tp1))
 
             # Simulate trade outcome in test rows
             trade = simulate_trade(
@@ -512,8 +600,15 @@ def run_walk_forward_test(
             )
             if trade.outcome != "SKIPPED":
                 window_trades.append(trade)
+                report.signals_generated += 1
+                if trade.outcome == "NOT_FILLED":
+                    report.not_filled += 1
+                else:
+                    report.orders_filled += 1
+            if trade.outcome not in {"SKIPPED", "NOT_FILLED"}:
                 all_trades_global.append(trade)
                 if p_tp1 is not None:
+                    all_preds.append(float(p_tp1))
                     all_wins.append(trade.win_tp1)
 
             if verbose:
@@ -534,6 +629,7 @@ def run_walk_forward_test(
 
     # ── Aggregate stats ───────────────────────────────────────────────────────
     report.total_trades = len(all_trades_global)
+    report.fill_rate = round(report.orders_filled / report.signals_generated, 4) if report.signals_generated else 0.0
     if all_trades_global:
         wins_tp1 = [t for t in all_trades_global if t.win_tp1]
         report.aggregate_win_rate_tp1 = round(len(wins_tp1) / len(all_trades_global), 4)

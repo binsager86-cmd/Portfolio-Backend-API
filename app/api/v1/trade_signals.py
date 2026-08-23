@@ -668,6 +668,26 @@ async def kuwait_signal(
     from app.services.signal_engine.data.preprocessing import forward_fill_gaps
     rows = forward_fill_gaps(rows)
 
+    # Corporate-action adjustments must be point-in-time and provenance-backed.
+    # TickerChart daily rows do not provide that ledger, so do not silently call
+    # raw prices adjusted. If an upstream adapter supplies embedded events, apply
+    # only events known by the signal date; otherwise mark the feed unverified.
+    from app.services.signal_engine.data.fetchers.corporate_actions import apply_all_adjustments
+    signal_date = str(rows[-1].get("date") or "")
+    embedded_events = rows[-1].get("corporate_action_events") or []
+    known_events = [
+        event for event in embedded_events
+        if not event.get("knowledge_as_of") or str(event.get("knowledge_as_of")) <= signal_date
+    ]
+    if known_events:
+        rows = apply_all_adjustments(rows, known_events)
+        integrity = "VERIFIED"
+    else:
+        integrity = "UNVERIFIED"
+    for row in rows:
+        row["corporate_action_integrity"] = integrity
+        row["corporate_actions"] = known_events
+
     # Attach TA-Lib indicators (same as whale-candles endpoint)
     rows = attach_indicators(rows)
 

@@ -31,6 +31,9 @@ CMF_PERIOD: int = 20
 ROC_PERIOD: int = 10                # rate of change lookback for momentum
 OBV_SLOPE_BARS: int = 5             # bars used for OBV linear-slope calculation
 VWAP_ANCHOR_LOOKBACK: int = 60      # bars for anchored-VWAP calculation
+RVOL_LOOKBACK: int = 20             # valid prior sessions; current bar excluded
+MIN_INDICATOR_COVERAGE: float = 0.75  # required latest-bar indicator coverage
+MIN_REQUIRED_DATA_QUALITY: float = 35.0
 
 # ── Trend Score Thresholds ────────────────────────────────────────────────────
 ADX_TRENDING_MIN: float = 20.0

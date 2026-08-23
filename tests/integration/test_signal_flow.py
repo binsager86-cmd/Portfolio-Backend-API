@@ -132,7 +132,8 @@ class TestNBKSignalFlow:
 
     def test_execution_fields_present(self, signal):
         exe = signal["execution"]
-        for k in ["entry_zone_fils", "stop_loss_fils", "tp1_fils", "tp2_fils",
+        for k in ["actionable", "direction", "entry_zone_fils", "stop_loss_fils", "tp1_fils", "tp2_fils",
+                  "scenario_levels",
                   "tick_alignment", "preferred_order_type"]:
             assert k in exe
 
@@ -144,6 +145,36 @@ class TestNBKSignalFlow:
 
     def test_signal_value_is_valid(self, signal):
         assert signal["signal"] in {"BUY", "SELL", "NEUTRAL"}
+
+    def test_new_contract_fields_present(self, signal):
+        for key in (
+            "direction",
+            "direction_score",
+            "setup_quality_score",
+            "timing_score",
+            "data_quality_score",
+            "expected_value_r",
+            "recommendation",
+            "actionable",
+        ):
+            assert key in signal, f"Missing contract field: {key}"
+
+    def test_new_contract_field_ranges(self, signal):
+        assert signal["direction"] in {"LONG", "SHORT", "NEUTRAL"}
+        assert -100 <= signal["direction_score"] <= 100
+        assert 0 <= signal["setup_quality_score"] <= 100
+        assert 0 <= signal["timing_score"] <= 100
+        assert 0.0 <= signal["data_quality_score"] <= 100.0
+        assert signal["recommendation"] in {
+            "STRONG_BUY",
+            "BUY",
+            "WATCH_LONG",
+            "HOLD",
+            "WATCH_SHORT",
+            "SELL",
+            "AVOID",
+            "INSUFFICIENT_DATA",
+        }
 
     def test_tick_alignment_on_entry(self, signal):
         if signal["signal"] == "NEUTRAL":
@@ -230,7 +261,8 @@ class TestMABANEESignalFlow:
     def test_tick_alignment_note_matches_price(self, signal):
         exe = signal["execution"]
         note = exe.get("tick_alignment", "")
-        entry_low = exe.get("entry_zone_fils", [None, None])[0]
+        entry_zone = exe.get("entry_zone_fils")
+        entry_low = entry_zone[0] if isinstance(entry_zone, list) and len(entry_zone) >= 1 else None
         if entry_low and entry_low >= TICK_BOUNDARY:
             assert "1.0-fil" in note
         elif entry_low and entry_low < TICK_BOUNDARY:
@@ -285,6 +317,11 @@ class TestLiquidityGate:
         rows = _make_ohlcv(n=300, adtv_kd=10_000.0, seed=55)  # far below 100k KD min
         sig = _run(generate_kuwait_signal(rows, "ILLIQUID", "PREMIER", 100_000.0, delay_hours=0))
         assert sig["signal"] == "NEUTRAL"
+        assert sig["execution"]["actionable"] is False
+        assert sig["execution"]["entry_zone_fils"] is None
+        assert sig["execution"]["stop_loss_fils"] is None
+        assert sig["execution"]["tp1_fils"] is None
+        assert sig["execution"].get("scenario_levels") is not None
 
     def test_liquid_stock_can_generate_directional_signal(self):
         """Strong trend + liquid stock should NOT always be NEUTRAL."""

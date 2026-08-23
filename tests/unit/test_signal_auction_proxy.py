@@ -18,38 +18,9 @@ from app.services.signal_engine.processors.auction_proxy import (
 # ── Intensity calculation ──────────────────────────────────────────────────────
 
 class TestAuctionIntensity:
-    def test_close_at_high_gives_intensity_2(self):
+    def test_daily_bars_are_unavailable_for_auction_analysis(self):
         rows = [{"high": 110.0, "low": 100.0, "close": 110.0}]
-        assert calculate_auction_intensity(rows) == pytest.approx(2.0)
-
-    def test_close_at_low_gives_intensity_0(self):
-        rows = [{"high": 110.0, "low": 100.0, "close": 100.0}]
-        assert calculate_auction_intensity(rows) == pytest.approx(0.0)
-
-    def test_close_at_midrange_gives_intensity_1(self):
-        rows = [{"high": 110.0, "low": 100.0, "close": 105.0}]
-        intensity = calculate_auction_intensity(rows)
-        assert intensity == pytest.approx(1.0, abs=0.01)
-
-    def test_empty_rows_returns_neutral(self):
-        assert calculate_auction_intensity([]) == 1.0
-
-    def test_zero_range_returns_neutral(self):
-        rows = [{"high": 100.0, "low": 100.0, "close": 100.0}]
-        assert calculate_auction_intensity(rows) == 1.0
-
-    def test_intensity_non_negative(self):
-        """Intensity must always be ≥ 0 (close below low is clamped to 0)."""
-        row_below_low = {"high": 200.0, "low": 100.0, "close": 50.0}
-        v = calculate_auction_intensity([row_below_low])
-        assert v >= 0.0
-
-    def test_uses_last_row_only(self):
-        rows = [
-            {"high": 110.0, "low": 100.0, "close": 100.0},  # intensity = 0
-            {"high": 110.0, "low": 100.0, "close": 110.0},  # intensity = 2
-        ]
-        assert calculate_auction_intensity(rows) == pytest.approx(2.0)
+        assert calculate_auction_intensity(rows) is None
 
 
 # ── Confidence adjustments at boundary thresholds ─────────────────────────────
@@ -64,6 +35,9 @@ class TestConfidenceAdjustment:
         adj = auction_confidence_adjustment(0.5)
         assert adj < 1.0, f"Expected multiplier < 1.0 for low intensity, got {adj}"
         assert adj == pytest.approx(0.80, abs=0.01)
+
+    def test_unavailable_auction_returns_neutral_multiplier(self):
+        assert auction_confidence_adjustment(None) == 1.0
 
     def test_intensity_exactly_1_returns_neutral_multiplier(self):
         adj = auction_confidence_adjustment(1.0)

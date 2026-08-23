@@ -102,7 +102,7 @@ def _ema_alignment_score(last: dict[str, Any]) -> tuple[int, str]:
     sma200 = last.get("sma_200")
 
     if ema20 is None or ema50 is None:
-        return 20, "ema_missing"
+        return 0, "ema_unavailable_missing"
 
     e20, e50 = float(ema20), float(ema50)
     s200 = float(sma200) if sma200 is not None else None
@@ -134,7 +134,7 @@ def _adx_score(last: dict[str, Any]) -> tuple[int, str]:
     """Score ADX trend strength (max 30 pts)."""
     adx = last.get("adx_14")
     if adx is None:
-        return 10, "adx_missing"
+        return 0, "adx_unavailable_missing"
     v = float(adx)
     if v >= ADX_VERY_STRONG_MIN:
         return 30, f"very_strong_trend_adx_{v:.1f}"
@@ -154,7 +154,7 @@ def _swing_structure_score(rows: list[dict[str, Any]]) -> tuple[int, str]:
     lookback = PIVOT_LOOKBACK
     window = rows[-(lookback * 6):]  # need several pivots worth of bars
     if len(window) < lookback * 2 + 1:
-        return 15, "insufficient_history"
+        return 0, "unavailable_insufficient_history"
 
     from numpy.lib.stride_tricks import sliding_window_view
 
@@ -243,10 +243,12 @@ def compute_trend_score(
     atr14_val = last.get("atr_14")
     if ema20_val is not None and atr14_val and float(atr14_val) > 0:
         stretch = abs(close - float(ema20_val)) / float(atr14_val)
-        if stretch > STRETCH_SEVERE_ATR:
+        severe_threshold = min(STRETCH_SEVERE_ATR, 2.5)
+        moderate_threshold = min(STRETCH_MODERATE_ATR, 2.0)
+        if stretch >= severe_threshold:
             stretch_mult = 0.45
             stretch_label = f"severely_extended_{stretch:.2f}x_atr"
-        elif stretch > STRETCH_MODERATE_ATR:
+        elif stretch >= moderate_threshold:
             stretch_mult = 0.75
             stretch_label = f"moderately_extended_{stretch:.2f}x_atr"
         else:
@@ -304,6 +306,7 @@ def compute_trend_score(
         "combined_mult":       round(combined_mult, 4),
         "final_score":         final_score,
         "raw_score":           final_score,
+        "available": not any("unavailable" in desc for desc in (ema_desc, adx_desc, swing_desc)),
     }
     return final_score, details
 

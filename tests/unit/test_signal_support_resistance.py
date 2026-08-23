@@ -83,29 +83,11 @@ class TestSRScore:
         _, d, _, _ = compute_sr_score(rows)
         assert d["psych_level_guard"] is False
 
-    def test_session_vol_skew_guard_reduces_score(self):
-        """Front-loaded volume (>70 % in first half) → -10 % penalty."""
-        # 15 heavy rows + 10 light rows = 25 total (≥ 22 minimum for PIVOT_LOOKBACK=10)
-        # skew window = last 20 rows = 5 heavy + 10 light rows
-        # first_half (10 rows) = 5 heavy (50M) + 5 light (0.5M); second_half = 5 light (0.5M)
-        # To guarantee >0.70: use all-heavy first 15 + all-light last 10
-        heavy = [_row(close=620.0 + i * 0.5, volume=10_000_000.0) for i in range(15)]
-        light = [_row(close=627.5 + i * 0.5, volume=50_000.0) for i in range(10)]
-        rows = heavy + light
-        _, d, _, _ = compute_sr_score(rows)
-        assert d["session_vol_skew"] > 0.70
-
-    def test_session_vol_skew_neutral_for_uniform_volume(self):
-        """Uniform volume across window → skew ≈ 0.5, guard not fired."""
-        rows = _rows(n=60, close=620.0)  # all rows have volume=2_000_000
-        _, d, _, _ = compute_sr_score(rows)
-        assert d["session_vol_skew"] == pytest.approx(0.5, abs=0.05)
-
-    def test_details_contains_guard_keys(self):
-        """Guard diagnostic keys always present in details."""
+    def test_details_exposes_auction_unavailable(self):
+        """Daily bars cannot support intraday auction inference."""
         _, d, _, _ = compute_sr_score(_rows())
         assert "psych_level_guard" in d
-        assert "session_vol_skew" in d
+        assert d["auction_analysis"]["available"] is False
 
 
 # ── compute_entry_stop_tp ─────────────────────────────────────────────────────

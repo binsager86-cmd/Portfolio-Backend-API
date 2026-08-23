@@ -98,13 +98,30 @@ def _volume_profile_poc(
 
 # ── Anchored VWAP ─────────────────────────────────────────────────────────────
 
-def _anchored_vwap(rows: list[dict[str, Any]], anchor_lookback: int) -> float | None:
-    """Compute VWAP anchored to the lowest close in the lookback window."""
+def _anchored_vwap(rows: list[dict[str, Any]], anchor_lookback: int, direction: str) -> float | None:
+    """Compute VWAP from the latest confirmed directional swing anchor.
+
+    The final ``PIVOT_LOOKBACK`` bars are excluded from pivot confirmation, so
+    the anchor cannot use a future-looking pivot. A long anchor uses a swing
+    low; a short anchor uses a swing high.
+    """
     window = rows[-anchor_lookback:]
-    if not window:
+    confirmed_end = len(window) - PIVOT_LOOKBACK
+    if confirmed_end <= PIVOT_LOOKBACK:
         return None
-    closes = [float(r.get("close") or 0.0) for r in window]
-    anchor_idx = int(np.argmin(closes))
+    highs = [float(r.get("high") or 0.0) for r in window]
+    lows = [float(r.get("low") or 0.0) for r in window]
+    candidates: list[int] = []
+    for idx in range(PIVOT_LOOKBACK, confirmed_end):
+        sample_h = highs[idx - PIVOT_LOOKBACK: idx + PIVOT_LOOKBACK + 1]
+        sample_l = lows[idx - PIVOT_LOOKBACK: idx + PIVOT_LOOKBACK + 1]
+        if direction.upper() == "LONG" and lows[idx] == min(sample_l):
+            candidates.append(idx)
+        elif direction.upper() == "SHORT" and highs[idx] == max(sample_h):
+            candidates.append(idx)
+    if not candidates:
+        return None
+    anchor_idx = candidates[-1]
     segment = window[anchor_idx:]
     if not segment:
         return None
@@ -114,30 +131,6 @@ def _anchored_vwap(rows: list[dict[str, Any]], anchor_lookback: int) -> float | 
     cum_pv = sum(t * v for t, v in zip(typical, vols))
     cum_v = sum(vols)
     return cum_pv / cum_v if cum_v > 0 else None
-
-
-# ── Session Volume Skew Proxy ────────────────────────────────────────────────
-
-def _compute_session_volume_skew(rows: list[dict[str, Any]], lookback: int = 20) -> float:
-    """Proxy for intraday volume front-loading using a rolling daily window.
-
-    In the absence of tick-level time data, compares volume in the first half of
-    the lookback window against total window volume.  A ratio > 0.70 suggests
-    most buying occurred early while price extended later — a late-session
-    exhaustion pattern commonly seen on the Kuwait 9:30–12:30 AST session.
-
-    Returns:
-        Float in [0.0, 1.0].  0.0 when data is insufficient.
-    """
-    window = rows[-lookback:] if len(rows) >= lookback else rows
-    if len(window) < 4:
-        return 0.0
-    vols = [float(r.get("volume") or 0.0) for r in window]
-    total = sum(vols)
-    if total == 0:
-        return 0.0
-    half = len(vols) // 2
-    return sum(vols[:half]) / total
 
 
 # ── Main S/R Scorer ──────────────────────────────────────────────────────────
@@ -169,13 +162,15 @@ def compute_sr_score(
 
     # Add volume POC and anchored VWAP as extra reference levels
     poc = _volume_profile_poc(rows[-60:])
-    avwap = _anchored_vwap(rows, VWAP_ANCHOR_LOOKBACK)
+    avwap_long = _anchored_vwap(rows, VWAP_ANCHOR_LOOKBACK, "LONG")
+    avwap_short = _anchored_vwap(rows, VWAP_ANCHOR_LOOKBACK, "SHORT")
 
     details: dict[str, Any] = {
         "support_levels": [round(s, 1) for s in support_levels[:5]],
         "resistance_levels": [round(r, 1) for r in resistance_levels[:5]],
         "volume_poc": round(poc, 1) if poc else None,
-        "anchored_vwap": round(avwap, 1) if avwap else None,
+        "anchored_vwap_long": round(avwap_long, 1) if avwap_long else None,
+        "anchored_vwap_short": round(avwap_short, 1) if avwap_short else None,
     }
 
     # ── 1. Proximity to nearest support (max 40 pts) ──────────────────────────
@@ -213,7 +208,7 @@ def compute_sr_score(
     vp_pts = 10  # baseline
     if poc and abs(poc - close) / close <= SR_PROXIMITY_PCT:
         vp_pts = 25   # price at POC = strong volume-based support
-    elif avwap and close > avwap:
+    elif avwap_long and close > avwap_long:
         vp_pts = 18   # price above anchored VWAP = bullish
     details["volume_profile_pts"] = vp_pts
 
@@ -230,17 +225,9 @@ def compute_sr_score(
     if psych_guard:
         raw = int(raw * 0.85)
 
-    # 2. Session-Hour Volume Clustering Guard
-    #    Proxy: first-half of 20-bar rolling window > 70 % of total volume →
-    #    late-session price extension without volume support (exhaustion).
-    session_vol_skew = _compute_session_volume_skew(rows)
-    vol_skew_guard = session_vol_skew > 0.70
-    if vol_skew_guard:
-        raw = int(raw * 0.90)
-
     raw = max(0, min(100, raw))
     details["psych_level_guard"] = psych_guard
-    details["session_vol_skew"] = round(session_vol_skew, 3)
+    details["auction_analysis"] = {"available": False, "reason": "daily_bars_have_no_intraday_auction_data"}
     details["raw_score"] = raw
 
     return raw, details, support_levels, resistance_levels
@@ -260,7 +247,7 @@ def compute_entry_stop_tp(
 
     Args:
         rows: OHLCV rows sorted ascending.
-        direction: "BUY" or "SELL".
+        direction: "BUY" | "SELL" | "NEUTRAL".
         nearest_resistance: Nearest resistance level above price.
         nearest_support:    Nearest support level below price.
 
@@ -273,27 +260,47 @@ def compute_entry_stop_tp(
     atr_raw = last.get("atr_14")
     atr = float(atr_raw) if atr_raw is not None else close * 0.015
 
-    buffer = close * ENTRY_BUFFER_PCT
+    spread_proxy = max(
+        0.0,
+        float(last.get("high") or close) - float(last.get("low") or close),
+    )
+    buffer = max(close * ENTRY_BUFFER_PCT, spread_proxy * 0.25, atr * 0.15)
     entry_low = align_to_tick(close - buffer)
     entry_high = align_to_tick(close + buffer)
     entry_mid = align_to_tick((entry_low + entry_high) / 2.0)
 
     risk = atr * STOP_ATR_MULTIPLIER
+    normalized_direction = str(direction or "NEUTRAL").upper()
 
-    if direction == "BUY":
-        stop_loss = align_to_tick(entry_mid - risk)
+    if normalized_direction == "BUY":
+        invalidation = nearest_support if nearest_support and nearest_support < entry_mid else entry_mid - risk
+        stop_loss = align_to_tick(min(entry_mid - risk, invalidation - max(atr * 0.25, 0.1)))
         tp1 = align_to_tick(entry_mid + risk * TP1_RR_MULTIPLIER)
         tp2 = align_to_tick(entry_mid + risk * TP2_RR_MULTIPLIER)
         # Cap TP1 just below nearest resistance if relevant
         if nearest_resistance and tp1 > nearest_resistance:
             tp1 = align_to_tick(nearest_resistance * 0.99)
-    else:  # SELL
-        stop_loss = align_to_tick(entry_mid + risk)
+    elif normalized_direction == "SELL":
+        invalidation = nearest_resistance if nearest_resistance and nearest_resistance > entry_mid else entry_mid + risk
+        stop_loss = align_to_tick(max(entry_mid + risk, invalidation + max(atr * 0.25, 0.1)))
         tp1 = align_to_tick(entry_mid - risk * TP1_RR_MULTIPLIER)
         tp2 = align_to_tick(entry_mid - risk * TP2_RR_MULTIPLIER)
         # Floor TP1 just above nearest support if relevant
         if nearest_support and tp1 < nearest_support:
             tp1 = align_to_tick(nearest_support * 1.01)
+    else:
+        # Non-directional scenario: keep only a diagnostic entry zone,
+        # but never fabricate executable stop/target levels.
+        return {
+            "entry_low": entry_low,
+            "entry_mid": entry_mid,
+            "entry_high": entry_high,
+            "stop_loss": None,
+            "tp1": None,
+            "tp2": None,
+            "risk_per_share": None,
+            "risk_reward_ratio": None,
+        }
 
     actual_risk = abs(entry_mid - stop_loss)
     actual_reward = abs(tp1 - entry_mid)
@@ -444,7 +451,9 @@ def compute_tp_methods(
         tp1_hvn = align_to_tick(min(hvns) if direction == "BUY" else max(hvns))
 
     tp1_vals = [tp1_rr, tp1_fib, tp1_atr, tp1_hvn]
-    tp1_median = _median_of_valid(tp1_vals) or tp1_rr
+    tp1_median = _median_of_valid(tp1_vals)
+    if tp1_median is None:
+        return {}
     tp1_conf = _confluence_count(tp1_vals, tp1_median, 0.02)
 
     # Cap TP1 below nearest resistance for BUY
@@ -468,7 +477,7 @@ def compute_tp_methods(
     tp2_swing = _fib_target(rows, direction, 1.0)  # full swing re-test
 
     tp2_vals = [tp2_rr, tp2_fib, tp2_atr, tp2_poc, tp2_swing]
-    tp2_median = _median_of_valid(tp2_vals) or tp2_rr
+    tp2_median = _median_of_valid(tp2_vals)
     tp2_conf = _confluence_count(tp2_vals, tp2_median, 0.03)
 
     # ── TP3 (aggressive — 5 methods) ─────────────────────────────────────────
@@ -479,18 +488,20 @@ def compute_tp_methods(
     tp3_52w = _52w_extreme(rows, direction)
 
     tp3_vals = [tp3_rr, tp3_fib, tp3_atr, tp3_psych, tp3_52w]
-    tp3_median = _median_of_valid(tp3_vals) or tp3_rr
+    tp3_median = _median_of_valid(tp3_vals)
     tp3_conf = _confluence_count(tp3_vals, tp3_median, 0.05)
 
-    # Ensure TP3 > TP2 > TP1 (BUY) or TP3 < TP2 < TP1 (SELL)
-    if direction == "BUY":
-        tp2_median = max(tp2_median, tp1_median * 1.01)
-        tp3_median = max(tp3_median, tp2_median * 1.01)
-    else:
-        tp2_median = min(tp2_median, tp1_median * 0.99)
-        tp3_median = min(tp3_median, tp2_median * 0.99)
+    # Keep only genuinely profitable, ordered levels after tick rounding.
+    if tp2_median is not None:
+        tp2_median = align_to_tick(tp2_median)
+        if (direction == "BUY" and tp2_median <= tp1_median) or (direction == "SELL" and tp2_median >= tp1_median):
+            tp2_median = None
+    if tp3_median is not None:
+        tp3_median = align_to_tick(tp3_median)
+        if tp2_median is None or (direction == "BUY" and tp3_median <= tp2_median) or (direction == "SELL" and tp3_median >= tp2_median):
+            tp3_median = None
 
-    actual_risk = risk
+    actual_risk = abs(entry_mid - stop_loss)
     rr = round(abs(tp1_median - entry_mid) / actual_risk, 2) if actual_risk > 0 else 0.0
 
     return {
@@ -502,7 +513,7 @@ def compute_tp_methods(
             "hvn_nearest": round(tp1_hvn, 1) if tp1_hvn else None,
         },
         "tp1_confluence": tp1_conf,
-        "tp2": round(tp2_median, 1),
+        "tp2": round(tp2_median, 1) if tp2_median is not None else None,
         "tp2_methods": {
             "rr_3_0x": round(tp2_rr, 1),
             "fib_161": round(tp2_fib, 1) if tp2_fib else None,
@@ -511,7 +522,7 @@ def compute_tp_methods(
             "swing_retest": round(tp2_swing, 1) if tp2_swing else None,
         },
         "tp2_confluence": tp2_conf,
-        "tp3": round(tp3_median, 1),
+        "tp3": round(tp3_median, 1) if tp3_median is not None else None,
         "tp3_methods": {
             "rr_4_0x": round(tp3_rr, 1),
             "fib_261": round(tp3_fib, 1) if tp3_fib else None,

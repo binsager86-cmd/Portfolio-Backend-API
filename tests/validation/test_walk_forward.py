@@ -110,6 +110,53 @@ def _make_ohlcv_rows(
 # ── simulate_trade() outcomes ─────────────────────────────────────────────────
 
 class TestSimulateTrade:
+    def test_strong_buy_is_simulated_as_long(self):
+        dates = [f"2023-06-{i:02d}" for i in range(1, 5)]
+        rows = _make_ohlcv_rows(dates, [500.0] * 4, [501.0, 512.0, 501.0, 501.0], [499.0] * 4)
+        sig = _make_signal_dict(direction="STRONG_BUY", entry=500.0, stop=490.0, tp1=510.0, tp2=520.0, date="2023-06-01")
+        sig["execution"]["actionable"] = True
+        trade = simulate_trade(rows, sig)
+        assert trade.outcome == "TP1_HIT"
+        assert trade.signal == "BUY"
+
+    def test_unfilled_limit_order_is_not_filled(self):
+        dates = [f"2023-06-{i:02d}" for i in range(1, 8)]
+        rows = _make_ohlcv_rows(dates, [500.0] * len(dates), [502.0] * len(dates), [498.0] * len(dates))
+        sig = _make_signal_dict(entry=400.0, stop=390.0, tp1=420.0, tp2=440.0, date="2023-06-01")
+        trade = simulate_trade(rows, sig)
+        assert trade.outcome == "NOT_FILLED"
+        assert trade.pnl_r == 0.0
+
+    def test_entry_is_filled_before_exit_checks(self):
+        dates = [f"2023-06-{i:02d}" for i in range(1, 8)]
+        highs = [501.0] * len(dates)
+        lows = [499.0] * len(dates)
+        highs[2] = 511.0
+        rows = _make_ohlcv_rows(dates, [500.0] * len(dates), highs, lows)
+        sig = _make_signal_dict(entry=500.0, stop=490.0, tp1=510.0, tp2=520.0, date="2023-06-01")
+        trade = simulate_trade(rows, sig)
+        assert trade.entry == 500.0
+        assert trade.outcome == "TP1_HIT"
+
+    def test_gap_through_stop_uses_opening_price(self):
+        dates = [f"2023-06-{i:02d}" for i in range(1, 5)]
+        rows = _make_ohlcv_rows(dates, [500.0] * len(dates), [501.0] * len(dates), [499.0] * len(dates))
+        rows[1]["open"] = 480.0
+        rows[1]["low"] = 475.0
+        sig = _make_signal_dict(entry=500.0, stop=490.0, tp1=510.0, tp2=520.0, date="2023-06-01")
+        trade = simulate_trade(rows, sig)
+        assert trade.outcome == "SL_HIT"
+        assert trade.pnl_r < -1.0
+
+    def test_same_bar_stop_and_target_is_conservatively_stop_first(self):
+        dates = [f"2023-06-{i:02d}" for i in range(1, 4)]
+        highs = [501.0, 512.0, 501.0]
+        lows = [499.0, 488.0, 499.0]
+        rows = _make_ohlcv_rows(dates, [500.0] * len(dates), highs, lows)
+        sig = _make_signal_dict(entry=500.0, stop=490.0, tp1=510.0, tp2=520.0, date="2023-06-01")
+        trade = simulate_trade(rows, sig)
+        assert trade.outcome == "SL_HIT"
+
     def test_tp1_hit(self):
         dates = [f"2023-06-{i:02d}" for i in range(1, 15)]
         closes = [500.0] * 14

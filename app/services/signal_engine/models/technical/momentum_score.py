@@ -31,7 +31,7 @@ def _rsi_score(last: dict[str, Any]) -> tuple[int, str]:
     """Max 25 pts (Option A: RSI=25%). Overbought threshold raised to 75."""
     rsi = last.get("rsi_14")
     if rsi is None:
-        return 12, "rsi_missing"
+        return 0, "rsi_unavailable_missing"
     v = float(rsi)
     if 50.0 <= v <= 65.0:
         return 25, f"healthy_bull_momentum_rsi_{v:.1f}"
@@ -53,7 +53,7 @@ def _macd_score(last: dict[str, Any]) -> tuple[int, str]:
     hist = last.get("macd_hist")
 
     if macd is None or signal is None:
-        return 17, "macd_missing"
+        return 0, "macd_unavailable_missing"
 
     m, s = float(macd), float(signal)
     h = float(hist) if hist is not None else m - s
@@ -74,14 +74,14 @@ def _macd_score(last: dict[str, Any]) -> tuple[int, str]:
 def _roc_score(rows: list[dict[str, Any]]) -> tuple[int, str]:
     """Max 25 pts (Option A: ROC=25%). Breakout momentum; ROC(10) bars."""
     if len(rows) < ROC_PERIOD + 1:
-        return 12, "roc_insufficient_data"
+        return 0, "roc_unavailable_insufficient_data"
 
     closes = [float(r.get("close") or 0.0) for r in rows]
     c_now = closes[-1]
     c_prev = closes[-(ROC_PERIOD + 1)]
 
     if c_prev == 0:
-        return 12, "roc_zero_division"
+        return 0, "roc_unavailable_zero_division"
 
     roc_pct = (c_now - c_prev) / c_prev * 100.0
 
@@ -103,7 +103,7 @@ def _stoch_score(last: dict[str, Any]) -> tuple[int, str]:
     sk = last.get("stoch_k")
     sd = last.get("stoch_d")
     if sk is None or sd is None:
-        return 5, "stoch_missing"
+        return 0, "stoch_unavailable_missing"
     k, d = float(sk), float(sd)
     if k > d:
         if 40.0 <= k <= 70.0:
@@ -156,6 +156,7 @@ def compute_momentum_score(rows: list[dict[str, Any]]) -> tuple[int, dict[str, A
         "stoch_pts": stoch_pts,
         "stoch_desc": stoch_desc,
         "raw_score": raw,
+        "available": not any("unavailable" in desc for desc in (rsi_desc, macd_desc, roc_desc, stoch_desc)),
     }
     return raw, details
 
