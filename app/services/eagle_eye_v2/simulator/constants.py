@@ -6,6 +6,8 @@ ARCHIVE_ROOT = Path(r"F:\eagle_eye_archive")
 SIMULATOR_ROOT = ARCHIVE_ROOT / "simulator"
 LEDGER_PATH = SIMULATOR_ROOT / "ee_sim_ledger.db"
 MANIFEST_PATH = ARCHIVE_ROOT / "MANIFEST.json"
+RELEASE_ROOT = Path(__file__).resolve().parents[5] / "backend-api-main-release"
+FORWARD_SURFACE_DB = RELEASE_ROOT / "artifacts" / "preview1a_prestart" / "review_final" / "forward_surface_gate_live_full.db"
 
 INITIAL_CAPITAL_KWD = 100_000.0
 POSITION_SIZE_FRACTION = 0.10

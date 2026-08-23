@@ -8,14 +8,13 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from app.services.eagle_eye_v2.simulator.accounting import PaperPortfolioEngine, SessionExecutionResult, canonical_entry_reason
-from app.services.eagle_eye_v2.simulator.constants import ARCHIVE_ROOT, ENTRY_REASONS, FROZEN_VARIANT, SIMULATOR_ROOT
+from app.services.eagle_eye_v2.simulator.constants import ARCHIVE_ROOT, ENTRY_REASONS, FORWARD_SURFACE_DB, FROZEN_VARIANT, SIMULATOR_ROOT
 from app.services.eagle_eye_v2.simulator.ledger import SimulatorLedger
 from app.services.eagle_eye_v2.simulator.market_data_source import SealedReplayMarketDataSource, resolve_market_data_source
 from app.services.eagle_eye_v2.simulator.models import DecisionKind, FrozenEvent, MarketSession
 from app.services.eagle_eye_v2.simulator.sealed_imports import verify_frozen_imports
 
 DAY_ZERO_SOURCE_DB = ARCHIVE_ROOT / "v5x_candidates" / "harness_dbs" / "harness_v53A_2026-07-27T150230_580976Z.db"
-FORWARD_SURFACE_DB = ARCHIVE_ROOT / "preview1a_prestart" / "review_final" / "forward_surface_gate_live_full.db"
 RUN_KEY = "R16_3_HARNESS_V53_A"
 
 
