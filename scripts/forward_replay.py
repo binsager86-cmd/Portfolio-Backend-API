@@ -73,7 +73,12 @@ def configure_runtime_db(runtime_db: Path | None = None) -> Path:
     target = runtime_db or (Path(tempfile.gettempdir()) / "ee_forward_replay_runtime.db")
     target.parent.mkdir(parents=True, exist_ok=True)
     if target.exists():
-        target.unlink()
+        try:
+            target.unlink()
+        except PermissionError:
+            # File is locked, try with a unique suffix
+            import random
+            target = target.parent / f"ee_forward_replay_runtime_{random.randint(10000, 99999)}.db"
     target.touch()
     os.environ["EE_V2_RUNTIME_DB_PATH"] = str(target)
     os.environ["DATABASE_PATH"] = str(target)
