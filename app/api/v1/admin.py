@@ -38,6 +38,7 @@ class AdminUserRow(BaseModel):
     total_value: float = 0.0
     portfolio_value: float = 0.0
     growth_value: float = 0.0
+    daily_change: float = 0.0
     transaction_count: int = 0
 
 
@@ -94,11 +95,21 @@ async def list_users(current_user: TokenData = Depends(require_admin)):
             (uid,),
         ) or 0
 
-        summary = PortfolioService(uid).get_total_portfolio_value()
-        market_val = float(summary.get("stocks_value_kwd") or summary.get("portfolio_value_kwd") or 0.0)
-        cash_bal = float(summary.get("cash_kwd") or 0.0)
-        total_val = float(summary.get("total_value_kwd") or (market_val + cash_bal))
-        cost_val = float(summary.get("total_cost_kwd") or 0.0)
+        # get_total_portfolio_value() returns stocks_kwd/cash_kwd/total_value_kwd —
+        # this used to read stocks_value_kwd/portfolio_value_kwd/total_cost_kwd (keys
+        # that don't exist on that dict), so stocks/growth silently computed as 0 for
+        # every user. get_overview() has the right keys plus total_gain (lifetime P&L
+        # vs net deposits, cash included) and daily_movement (change vs yesterday's
+        # snapshot), which is what "growth" and "updated daily" should reflect.
+        try:
+            overview = PortfolioService(uid).get_overview()
+        except Exception:
+            overview = {}
+        market_val = float(overview.get("portfolio_value") or 0.0)
+        cash_bal = float(overview.get("cash_balance") or 0.0)
+        total_val = float(overview.get("total_value") or (market_val + cash_bal))
+        growth_val = float(overview.get("total_gain") or 0.0)
+        daily_change_val = float(overview.get("daily_movement") or 0.0)
 
         # Last login: most recent auth activity. Password login and Google login
         # cover explicit sign-ins; token_refresh covers silent re-auth on app open,
@@ -124,7 +135,8 @@ async def list_users(current_user: TokenData = Depends(require_admin)):
             cash_balance=round(cash_bal, 2),
             total_value=round(total_val, 2),
             portfolio_value=stocks_val,
-            growth_value=round(market_val - cost_val, 2),
+            growth_value=round(growth_val, 2),
+            daily_change=round(daily_change_val, 2),
             transaction_count=txn_count,
         ))
 
