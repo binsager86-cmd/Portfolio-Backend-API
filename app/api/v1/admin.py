@@ -133,9 +133,15 @@ async def list_users(current_user: TokenData = Depends(require_admin)):
             except Exception:
                 pass  # graceful fallback
 
-        # Last login: most recent audit log entry for login
+        # Last login: most recent auth activity. Password login and Google login
+        # cover explicit sign-ins; token_refresh covers silent re-auth on app open,
+        # which is how most returning sessions actually happen (mobile apps keep
+        # users signed in and just rotate the refresh token instead of re-hitting
+        # /login), so restricting this to 'auth.login' alone made active users show
+        # as "Never" once their initial session token was refreshed.
         last_login = query_val(
-            "SELECT MAX(created_at) FROM audit_log WHERE user_id = ? AND action = 'auth.login'",
+            "SELECT MAX(created_at) FROM audit_log WHERE user_id = ? "
+            "AND action IN ('auth.login', 'auth.google_login', 'auth.token_refresh')",
             (uid,),
         )
 
