@@ -444,13 +444,13 @@ def start_scheduler() -> None:
                         runner.load_replay_window(symbol, str(latest_session), str(latest_session), surface_db)
                     _simulator_heartbeat_at = int(time.time())
                     market_sessions = runner.load_market_sessions(str(latest_session), expected_symbol_count=None)
-                    events = runner.daily_state_events(str(latest_session), market_sessions)
+                    events, replay_timings = runner.frozen_events_for_session(str(latest_session), market_sessions, surface_db)
                     result = runner.ingest_session(session=str(latest_session), market_sessions=market_sessions, frozen_events=events)
                     _simulator_silent_sessions = 0 if market_sessions else _simulator_silent_sessions + 1
                     if _simulator_silent_sessions >= 3:
                         raise RuntimeError("SIM-OPS heartbeat guard: CYCLE_SILENT after three silent sessions")
                     _simulator_heartbeat_at = int(time.time())
-                    return {"session": str(latest_session), "result": result}
+                    return {"session": str(latest_session), "result": result, "replay_timings": replay_timings}
 
                 result = run_with_job_lock("sim_ops_daily_cycle", _run_once)
                 logger.info("📈 Simulator daily run complete: %s", result)

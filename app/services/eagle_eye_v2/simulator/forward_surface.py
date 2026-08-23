@@ -72,6 +72,19 @@ class ForwardSurfaceBuilder:
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_forward_surface_quarantine_session ON forward_surface_quarantine(run_key, session, symbol)"
             )
+            conn.execute(
+                """
+                DELETE FROM forward_surface_quarantine
+                WHERE rowid NOT IN (
+                    SELECT MIN(rowid)
+                    FROM forward_surface_quarantine
+                    GROUP BY run_key, session, symbol
+                )
+                """
+            )
+            conn.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_forward_surface_quarantine_key ON forward_surface_quarantine(run_key, session, symbol)"
+            )
             conn.commit()
 
     @staticmethod
@@ -210,7 +223,7 @@ class ForwardSurfaceBuilder:
                     resolved_symbol = self._resolve_market_symbol(canonical_symbol, segment_map, session_date)
                 except Exception as exc:
                     conn.execute(
-                        "INSERT INTO forward_surface_quarantine (run_key, symbol, session, reason) VALUES (?, ?, ?, ?)",
+                        "INSERT OR IGNORE INTO forward_surface_quarantine (run_key, symbol, session, reason) VALUES (?, ?, ?, ?)",
                         (self.run_key, canonical_symbol, session_date, str(exc)),
                     )
                     quarantined += 1

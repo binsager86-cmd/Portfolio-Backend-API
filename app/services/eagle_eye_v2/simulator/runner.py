@@ -4,6 +4,7 @@ import hashlib
 import json
 import sqlite3
 import sys
+import time
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -69,43 +70,85 @@ class SimulatorRunner:
         normalized = {symbol.upper(): row for symbol, row in market_sessions.items()}
         return self.engine.process_session(session, normalized, frozen_events)
 
-    @staticmethod
-    def daily_state_events(session: str, market_sessions: dict[str, MarketSession]) -> list[FrozenEvent]:
-        """Create one auditable, fail-closed decision record per processed row."""
+    def frozen_events_for_session(
+        self,
+        session: str,
+        market_sessions: dict[str, MarketSession],
+        forward_db: Path | str | None = None,
+    ) -> tuple[list[FrozenEvent], dict[str, float]]:
+        release_scripts = RELEASE_ROOT / "scripts"
+        if str(release_scripts) not in sys.path:
+            sys.path.insert(0, str(release_scripts))
+        import app.services.eagle_eye_v2 as eagle_eye_v2_package
+
+        release_package = str(RELEASE_ROOT / "app" / "services" / "eagle_eye_v2")
+        if release_package not in eagle_eye_v2_package.__path__:
+            eagle_eye_v2_package.__path__.append(release_package)
+        import app.services.eagle_eye as eagle_eye_package
+
+        release_eagle_eye = str(RELEASE_ROOT / "app" / "services" / "eagle_eye")
+        if release_eagle_eye not in eagle_eye_package.__path__:
+            eagle_eye_package.__path__.append(release_eagle_eye)
+        import forward_replay
+
+        canonical_by_segment = forward_replay.canonical_by_segment()
         events: list[FrozenEvent] = []
-        for symbol, market in sorted(market_sessions.items()):
-            snapshot = {
+        timings: dict[str, float] = {}
+        total_started = time.perf_counter()
+        for source_symbol in sorted(market_sessions):
+            canonical = canonical_by_segment.get(source_symbol.upper(), source_symbol.upper())
+            started = time.perf_counter()
+            load_from, effective_end = forward_replay.symbol_replay_window(canonical, session, session)
+            rows = forward_replay.continuous_symbol_rows(
+                canonical,
+                load_from,
+                effective_end,
+                forward_replay.resolve_forward_db(forward_db),
+            )
+            replay_rows = forward_replay.replay_symbol(canonical, rows)
+            target = next((row for row in reversed(replay_rows) if row["date"] == session), None)
+            if target is None:
+                raise RuntimeError(f"frozen replay produced no target row for {canonical} on {session}")
+
+            daily = dict(target.get("daily") or {})
+            state_snapshot = {
                 "session": session,
-                "lifecycle": "NEUTRAL",
-                "tier": "NONE",
-                "confirmation_state": "NOT_CONFIRMED",
-                "candidate_intent_state": "INTENT_NONE",
-                "disposition": "NONE",
-                "position": None,
-                "sessions_held": None,
-                "source": "SIM-OPS daily-state accounting boundary",
-                "evaluation_status": "FAIL_CLOSED_NO_FROZEN_EVENT_PAYLOAD",
+                "canonical_symbol": canonical,
+                "segment_symbol": source_symbol.upper(),
+                "lifecycle": target.get("state"),
+                "tier": target.get("tier"),
+                "confirmation_state": target.get("confirmation_state"),
+                "candidate_intent_state": target.get("candidate_intent_state"),
+                "disposition": daily.get("disposition_state"),
+                "position": target.get("position"),
+                "sessions_held": (target.get("position") or {}).get("sessions_held"),
+                "mfe": (target.get("position") or {}).get("mfe"),
+                "base_state": daily.get("base_state"),
+                "source": "r16_3_candidate_state_machine.step via forward_replay.replay_symbol",
             }
-            events.append(
-                FrozenEvent(
-                    symbol=symbol.upper(),
-                    decision_session=session,
-                    kind=DecisionKind.DAILY_STATE,
-                    reason="NONE",
-                    action={
-                        "state": "NEUTRAL",
-                        "avoid_tier": "NONE",
-                        "confirmation_state": "NOT_CONFIRMED",
-                        "candidate_intent_state": "INTENT_NONE",
-                        "disposition_state": "NONE",
-                        "position": None,
-                        "sessions_held": None,
-                        "evaluation_status": "FAIL_CLOSED_NO_FROZEN_EVENT_PAYLOAD",
-                    },
-                    state_snapshot=snapshot,
+            actions = [*list(daily.get("execution") or []), {
+                "type": "DAILY_STATE",
+                "state": target.get("state"),
+                "avoid_tier": target.get("tier"),
+                "confirmation_state": target.get("confirmation_state"),
+                "candidate_intent_state": target.get("candidate_intent_state"),
+                "disposition_state": daily.get("disposition_state"),
+                "position": target.get("position"),
+                "sessions_held": (target.get("position") or {}).get("sessions_held"),
+                "mfe": (target.get("position") or {}).get("mfe"),
+            }]
+            events.extend(
+                self.events_from_actions(
+                    source_symbol,
+                    session,
+                    actions,
+                    state_snapshot,
                 )
             )
-        return events
+            elapsed = time.perf_counter() - started
+            timings[canonical] = round(elapsed, 3)
+        timings["__total__"] = round(time.perf_counter() - total_started, 3)
+        return events, timings
 
     @staticmethod
     def events_from_actions(symbol: str, decision_session: str, actions: Iterable[dict[str, Any]], state_snapshot: dict[str, Any]) -> list[FrozenEvent]:
