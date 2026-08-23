@@ -90,6 +90,76 @@ def _day_zero_inventory() -> dict[str, Any]:
     return _day_zero_inventory_cached(mtime_ns)
 
 
+def _day_zero_gate_snapshot(symbol: str, state: dict[str, Any]) -> dict[str, Any]:
+    lifecycle = str(state.get("lifecycle") or "NEUTRAL").upper()
+    tier = str(state.get("tier") or state.get("avoid_tier") or "NONE").upper()
+    confirmation = str(state.get("confirmation_state") or "NOT_CONFIRMED").upper()
+    candidate_intent = str(state.get("candidate_intent_state") or "INTENT_NONE").upper()
+    position = state.get("position")
+
+    gates = [
+        {
+            "name": "Lifecycle eligible",
+            "value": lifecycle,
+            "threshold": "BASE_VALID or MARKUP_ACTIVE",
+            "passed": lifecycle in {"BASE_VALID", "MARKUP_ACTIVE"},
+        },
+        {
+            "name": "Confirmation state",
+            "value": confirmation,
+            "threshold": "CONFIRMED*",
+            "passed": confirmation.startswith("CONFIRMED"),
+        },
+        {
+            "name": "Avoid veto",
+            "value": tier,
+            "threshold": "No AVOID_* veto",
+            "passed": not tier.startswith("AVOID") and "VETO" not in tier,
+        },
+        {
+            "name": "Candidate intent",
+            "value": candidate_intent,
+            "threshold": "Intent armed",
+            "passed": candidate_intent not in {"", "INTENT_NONE"},
+        },
+        {
+            "name": "Position state",
+            "value": "FLAT" if position is None else "IN_POSITION",
+            "threshold": "FLAT",
+            "passed": position is None,
+        },
+    ]
+    passing = sum(1 for gate in gates if bool(gate.get("passed")))
+    confidence = round((passing / len(gates)) * 100, 2) if gates else None
+    return {
+        "symbol": symbol,
+        "lifecycle": lifecycle,
+        "tier": tier,
+        "session": state.get("last_sealed_session"),
+        "source": "day_zero_inventory",
+        "last_kind": None,
+        "last_disposition": None,
+        "confidence": confidence,
+        "gates_passing": passing,
+        "gates": gates,
+        "soft_conditions": {
+            "confirmation_state": confirmation,
+            "candidate_intent_state": candidate_intent,
+        },
+        "hard_refs": {
+            "fallback_mode": "projection_empty",
+            "inventory_session": state.get("last_sealed_session"),
+        },
+        "base": {
+            "from_day_zero_inventory": True,
+            "estimated_gate_payload": True,
+            "avoid_tier": state.get("avoid_tier"),
+        },
+        "entry_paths": {},
+        "exit_watch": {},
+    }
+
+
 def _verify_simulator_seals() -> dict[str, Any]:
     manifest_path = Path(os.environ.get("SIMULATOR_MANIFEST_PATH", str(MANIFEST_PATH)))
     started = time()
@@ -279,13 +349,7 @@ def get_symbols_state(response: Response, db: Session = Depends(get_db)) -> dict
         for symbol, state in _day_zero_inventory().get("symbols", {}).items():
             if not isinstance(state, dict):
                 continue
-            states[symbol] = {
-                "symbol": symbol,
-                "lifecycle": state.get("lifecycle") or "NEUTRAL",
-                "tier": state.get("tier") or state.get("avoid_tier") or "NONE",
-                "session": state.get("last_sealed_session"),
-                "source": "day_zero_inventory",
-            }
+            states[symbol] = _day_zero_gate_snapshot(symbol, state)
     return {"symbols": states, "sql_key": "GET /api/v2/simulator/symbols/state"}
 
 
@@ -359,7 +423,12 @@ def get_system_integrity(response: Response, db: Session = Depends(get_db)) -> d
         raise HTTPException(status_code=503, detail="simulator projection integrity is not available")
     row_counts = _json_object(integrity.get("postgres_row_counts_json"))
     source_counts = _json_object(integrity.get("sqlite_row_counts_json"))
+    from app.services.eagle_eye_v2.simulator.runner import get_cycle_integrity_status
+
+    cycle_integrity = get_cycle_integrity_status()
     return {
+        "cycle_integrity": cycle_integrity,
+        "cycle_drift": cycle_integrity.get("status") == "CYCLE_DRIFT",
         "seal_verification": _verify_simulator_seals(),
         "guard_trips_count": int(integrity.get("guard_trips_count") or 0),
         "last_session_processed": integrity.get("last_projected_session"),

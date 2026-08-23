@@ -17,6 +17,16 @@ from app.services.eagle_eye_v2.simulator.sealed_imports import verify_frozen_imp
 
 DAY_ZERO_SOURCE_DB = ARCHIVE_ROOT / "v5x_candidates" / "harness_dbs" / "harness_v53A_2026-07-27T150230_580976Z.db"
 RUN_KEY = "R16_3_HARNESS_V53_A"
+CYCLE_INTEGRITY_STATUS: dict[str, Any] = {"status": "UNINITIALIZED"}
+
+
+def get_cycle_integrity_status() -> dict[str, Any]:
+    return dict(CYCLE_INTEGRITY_STATUS)
+
+
+def set_cycle_integrity_status(value: dict[str, Any]) -> None:
+    CYCLE_INTEGRITY_STATUS.clear()
+    CYCLE_INTEGRITY_STATUS.update(value)
 
 
 class SimulatorRunner:
@@ -149,6 +159,118 @@ class SimulatorRunner:
             timings[canonical] = round(elapsed, 3)
         timings["__total__"] = round(time.perf_counter() - total_started, 3)
         return events, timings
+
+    @staticmethod
+    def _events_from_target(source_symbol: str, session: str, target: dict[str, Any]) -> list[FrozenEvent]:
+        daily = dict(target.get("daily") or {})
+        position = target.get("position")
+        snapshot = {
+            "session": session,
+            "canonical_symbol": target.get("canonical_symbol") or source_symbol,
+            "segment_symbol": source_symbol.upper(),
+            "lifecycle": target.get("state"),
+            "tier": target.get("tier"),
+            "confirmation_state": target.get("confirmation_state"),
+            "candidate_intent_state": target.get("candidate_intent_state"),
+            "disposition": daily.get("disposition_state"),
+            "position": position,
+            "sessions_held": (position or {}).get("sessions_held"),
+            "mfe": (position or {}).get("mfe"),
+            "base_state": daily.get("base_state"),
+            "source": "r16_3_candidate_state_machine.step via forward_replay.replay_symbol",
+        }
+        actions = [*list(daily.get("execution") or []), {
+            "type": "DAILY_STATE",
+            "state": target.get("state"),
+            "avoid_tier": target.get("tier"),
+            "confirmation_state": target.get("confirmation_state"),
+            "candidate_intent_state": target.get("candidate_intent_state"),
+            "disposition_state": daily.get("disposition_state"),
+            "position": position,
+            "sessions_held": (position or {}).get("sessions_held"),
+            "mfe": (position or {}).get("mfe"),
+        }]
+        return SimulatorRunner.events_from_actions(source_symbol, session, actions, snapshot)
+
+    def bootstrap_machine_state(self, symbol: str, session: str, forward_db: Path | str | None = None) -> dict[str, Any]:
+        release_scripts = RELEASE_ROOT / "scripts"
+        if str(release_scripts) not in sys.path:
+            sys.path.insert(0, str(release_scripts))
+        import forward_replay
+
+        load_from, effective_end = forward_replay.symbol_replay_window(symbol, session, session)
+        rows = forward_replay.continuous_symbol_rows(symbol, load_from, effective_end, forward_replay.resolve_forward_db(forward_db))
+        captured: dict[str, Any] = {}
+        started = time.perf_counter()
+        replay_rows = forward_replay.replay_symbol(symbol, rows, state_sink=captured)
+        target = next((row for row in reversed(replay_rows) if row["date"] == session), None)
+        if target is None:
+            raise RuntimeError(f"bootstrap replay produced no target row for {symbol} on {session}")
+        self.ledger.append_machine_state(symbol=symbol, session=session, state=captured)
+        return {"symbol": symbol, "session": session, "elapsed_sec": round(time.perf_counter() - started, 3), "state": captured, "target": target}
+
+    def carryforward_events_for_session(self, session: str, market_sessions: dict[str, MarketSession], forward_db: Path | str | None = None) -> tuple[list[FrozenEvent], dict[str, dict[str, Any]], dict[str, float]]:
+        release_scripts = RELEASE_ROOT / "scripts"
+        if str(release_scripts) not in sys.path:
+            sys.path.insert(0, str(release_scripts))
+        import forward_replay
+
+        canonical_by_segment = forward_replay.canonical_by_segment()
+        events: list[FrozenEvent] = []
+        next_states: dict[str, dict[str, Any]] = {}
+        timings: dict[str, float] = {}
+        started_total = time.perf_counter()
+        for source_symbol in sorted(market_sessions):
+            canonical = canonical_by_segment.get(source_symbol.upper(), source_symbol.upper())
+            previous = self.ledger.latest_machine_state(canonical)
+            if previous is None:
+                raise RuntimeError(f"machine_state bootstrap missing for {canonical}")
+            day = forward_replay.load_session_row(canonical, session, forward_replay.resolve_forward_db(forward_db))
+            if day is None:
+                raise RuntimeError(f"carryforward surface row missing for {canonical} on {session}")
+            started = time.perf_counter()
+            captured: dict[str, Any] = {}
+            replay_rows = forward_replay.replay_symbol(canonical, [day], initial_state=previous, state_sink=captured)
+            target = replay_rows[-1] if replay_rows else None
+            if target is None:
+                raise RuntimeError(f"carryforward produced no target row for {canonical} on {session}")
+            target["canonical_symbol"] = canonical
+            events.extend(self._events_from_target(source_symbol, session, target))
+            next_states[canonical] = captured
+            timings[canonical] = round(time.perf_counter() - started, 3)
+        timings["__total__"] = round(time.perf_counter() - started_total, 3)
+        return events, next_states, timings
+
+    def reconcile_symbols(self, session: str, symbols: Iterable[str], forward_db: Path | str | None = None) -> dict[str, Any]:
+        release_scripts = RELEASE_ROOT / "scripts"
+        if str(release_scripts) not in sys.path:
+            sys.path.insert(0, str(release_scripts))
+        import forward_replay
+
+        results: list[dict[str, Any]] = []
+        started_total = time.perf_counter()
+        for symbol in symbols:
+            canonical = str(symbol).upper()
+            previous = self.ledger.latest_machine_state(canonical)
+            if previous is None:
+                results.append({"symbol": canonical, "match": False, "reason": "machine_state bootstrap missing"})
+                continue
+            day = forward_replay.load_session_row(canonical, session, forward_replay.resolve_forward_db(forward_db))
+            if day is None:
+                results.append({"symbol": canonical, "match": False, "reason": "target row missing"})
+                continue
+            carry_state: dict[str, Any] = {}
+            carry_rows = forward_replay.replay_symbol(canonical, [day], initial_state=previous, state_sink=carry_state)
+            full_state: dict[str, Any] = {}
+            load_from, effective_end = forward_replay.symbol_replay_window(canonical, session, session)
+            full_rows = forward_replay.continuous_symbol_rows(canonical, load_from, effective_end, forward_replay.resolve_forward_db(forward_db))
+            full_replay_rows = forward_replay.replay_symbol(canonical, full_rows, state_sink=full_state)
+            carry_target = carry_rows[-1] if carry_rows else None
+            full_target = next((row for row in reversed(full_replay_rows) if row["date"] == session), None)
+            fields = ("state", "tier", "confirmation_state", "candidate_intent_state", "position")
+            match = bool(carry_target and full_target and all(carry_target.get(field) == full_target.get(field) for field in fields))
+            results.append({"symbol": canonical, "match": match, "fields": list(fields), "carryforward": carry_target, "full_replay": full_target, "reason": None if match else "field mismatch"})
+        return {"status": "FRESH" if all(row["match"] for row in results) else "CYCLE_DRIFT", "session": session, "symbols": results, "elapsed_sec": round(time.perf_counter() - started_total, 3)}
 
     @staticmethod
     def events_from_actions(symbol: str, decision_session: str, actions: Iterable[dict[str, Any]], state_snapshot: dict[str, Any]) -> list[FrozenEvent]:

@@ -427,11 +427,14 @@ def start_scheduler() -> None:
                 from app.core.database import query_val
                 from app.core.config import get_settings
                 from app.services.eagle_eye_v2.simulator import ForwardSurfaceBuilder, SimulatorRunner
+                from app.services.eagle_eye_v2.simulator.runner import get_cycle_integrity_status
 
                 def _run_once() -> dict:
                     global _simulator_heartbeat_at
                     if not _eagle_eye_ingest_succeeded:
                         raise RuntimeError("SIM-OPS heartbeat guard blocked cycle: successful ingest prerequisite is absent")
+                    if get_cycle_integrity_status().get("status") == "CYCLE_DRIFT":
+                        raise RuntimeError("SIM-OPS cycle blocked by CYCLE_DRIFT reconciliation failure")
                     settings = get_settings()
                     live_db = Path(settings.database_abs_path)
                     latest_session = query_val("SELECT MAX(bar_date) FROM ee_ohlcv_cache")
@@ -444,8 +447,10 @@ def start_scheduler() -> None:
                         runner.load_replay_window(symbol, str(latest_session), str(latest_session), surface_db)
                     _simulator_heartbeat_at = int(time.time())
                     market_sessions = runner.load_market_sessions(str(latest_session), expected_symbol_count=None)
-                    events, replay_timings = runner.frozen_events_for_session(str(latest_session), market_sessions, surface_db)
+                    events, next_states, replay_timings = runner.carryforward_events_for_session(str(latest_session), market_sessions, surface_db)
                     result = runner.ingest_session(session=str(latest_session), market_sessions=market_sessions, frozen_events=events)
+                    for symbol, state in next_states.items():
+                        runner.ledger.append_machine_state(symbol=symbol, session=str(latest_session), state=state)
                     _simulator_silent_sessions = 0 if market_sessions else _simulator_silent_sessions + 1
                     if _simulator_silent_sessions >= 3:
                         raise RuntimeError("SIM-OPS heartbeat guard: CYCLE_SILENT after three silent sessions")
@@ -456,6 +461,34 @@ def start_scheduler() -> None:
                 logger.info("📈 Simulator daily run complete: %s", result)
             except Exception as _exc:
                 logger.warning("📈 Simulator daily run failed: %s", _exc)
+
+        def _run_eagle_eye_reconciliation() -> None:
+            from app.core.database import query_val
+            from app.services.eagle_eye_v2.simulator import SimulatorRunner
+            from app.services.eagle_eye_v2.simulator.runner import set_cycle_integrity_status
+
+            try:
+                session = str(query_val("SELECT MAX(bar_date) FROM ee_ohlcv_cache") or "")
+                if not session:
+                    raise RuntimeError("no completed market session")
+                report = SimulatorRunner(mode="live").reconcile_symbols(session, ("SANAM", "TIJARA", "MABANEE"))
+                set_cycle_integrity_status(report)
+                if report.get("status") == "CYCLE_DRIFT":
+                    raise RuntimeError(f"CYCLE_DRIFT: {report}")
+                logger.info("SIM-OPS weekly reconciliation passed: %s", report)
+            except Exception as exc:
+                set_cycle_integrity_status({"status": "CYCLE_DRIFT", "error": str(exc)})
+                logger.error("SIM-OPS weekly reconciliation failed: %s", exc)
+
+        _scheduler.add_job(
+            _run_eagle_eye_reconciliation,
+            trigger=CronTrigger(day_of_week="sun", hour=14, minute=10, timezone="Asia/Kuwait"),
+            id="eagle_eye_simulator_reconciliation",
+            name="Eagle Eye simulator weekly drift reconciliation",
+            replace_existing=True,
+            coalesce=True,
+            max_instances=1,
+        )
 
         _scheduler.add_job(
             _run_eagle_eye_simulator,

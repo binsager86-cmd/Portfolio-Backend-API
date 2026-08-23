@@ -119,9 +119,74 @@ class SimulatorLedger:
                     manifest_path TEXT,
                     UNIQUE (ledger_month, ledger_sha256)
                 );
+
+                CREATE TABLE IF NOT EXISTS machine_state (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    symbol TEXT NOT NULL,
+                    session TEXT NOT NULL,
+                    state_json TEXT NOT NULL,
+                    pivot_json TEXT NOT NULL,
+                    windows_json TEXT NOT NULL,
+                    base_recovery_stamps_json TEXT NOT NULL,
+                    prev_ready TEXT NOT NULL,
+                    prev_segment_json TEXT,
+                    prev_masked INTEGER NOT NULL DEFAULT 0,
+                    created_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_machine_state_symbol_session
+                    ON machine_state(symbol, session, id);
                 """
             )
             conn.commit()
+
+    def append_machine_state(self, *, symbol: str, session: str, state: dict[str, Any]) -> int:
+        with self.connect() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO machine_state (
+                    symbol, session, state_json, pivot_json, windows_json,
+                    base_recovery_stamps_json, prev_ready, prev_segment_json,
+                    prev_masked, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    symbol.upper(), session,
+                    json.dumps(state.get("machine") or {}, sort_keys=True),
+                    json.dumps(state.get("pivot") or {}, sort_keys=True),
+                    json.dumps({"history_window": state.get("history_window") or [], "flow_window": state.get("flow_window") or [], "coverage_dates": state.get("coverage_dates") or [], "segment_dates": state.get("segment_dates") or [], "flag_rows": state.get("flag_rows") or [], "prior_base": state.get("prior_base")}, sort_keys=True),
+                    json.dumps(state.get("base_recovery_stamps") or {}, sort_keys=True),
+                    str(state.get("prev_ready") or "READINESS_PENDING"),
+                    json.dumps(state.get("prev_segment"), sort_keys=True) if state.get("prev_segment") is not None else None,
+                    1 if state.get("prev_masked") else 0,
+                    self.utc_now(),
+                ),
+            )
+            return int(cursor.lastrowid)
+
+    def latest_machine_state(self, symbol: str) -> dict[str, Any] | None:
+        with self.connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM machine_state WHERE symbol = ? ORDER BY session DESC, id DESC LIMIT 1",
+                (symbol.upper(),),
+            ).fetchone()
+        if row is None:
+            return None
+        windows = json.loads(row["windows_json"])
+        return {
+            "machine": json.loads(row["state_json"]),
+            "pivot": json.loads(row["pivot_json"]),
+            "history_window": windows.get("history_window", []),
+            "flow_window": windows.get("flow_window", []),
+            "coverage_dates": windows.get("coverage_dates", []),
+            "segment_dates": windows.get("segment_dates", []),
+            "flag_rows": windows.get("flag_rows", []),
+            "prior_base": windows.get("prior_base"),
+            "base_recovery_stamps": json.loads(row["base_recovery_stamps_json"]),
+            "prev_ready": row["prev_ready"],
+            "prev_segment": json.loads(row["prev_segment_json"]) if row["prev_segment_json"] else None,
+            "prev_masked": bool(row["prev_masked"]),
+            "session": row["session"],
+        }
 
     @staticmethod
     def utc_now() -> str:
