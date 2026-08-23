@@ -228,6 +228,10 @@ class SimulatorRunner:
             day = forward_replay.load_session_row(canonical, session, forward_replay.resolve_forward_db(forward_db))
             if day is None:
                 raise RuntimeError(f"carryforward surface row missing for {canonical} on {session}")
+            if not day.get("indicator_payload"):
+                indicator_rows = [*list(previous.get("history_window") or []), day]
+                payloads = forward_replay.recompute_indicator_payloads_for_forward_rows(canonical, indicator_rows)
+                day = {**day, "indicator_payload": payloads.get(str(day.get("trade_date_ts")), {})}
             started = time.perf_counter()
             captured: dict[str, Any] = {}
             replay_rows = forward_replay.replay_symbol(canonical, [day], initial_state=previous, state_sink=captured)
