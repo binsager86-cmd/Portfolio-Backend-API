@@ -438,11 +438,11 @@ def start_scheduler() -> None:
                         raise RuntimeError("SIM-OPS cycle has no completed market session")
                     surface_db = ForwardSurfaceBuilder(live_db_path=live_db).surface_db_path
                     ForwardSurfaceBuilder(live_db_path=live_db, surface_db_path=surface_db).append_session_rows(str(latest_session))
-                    runner = SimulatorRunner(mode="live", live_db_path=live_db, expected_symbol_count=139)
+                    runner = SimulatorRunner(mode="live", live_db_path=live_db, expected_symbol_count=None)
                     for symbol in ("SANAM", "TIJARA", "MABANEE"):
                         runner.load_replay_window(symbol, str(latest_session), str(latest_session), surface_db)
                     _simulator_heartbeat_at = int(time.time())
-                    market_sessions = runner.load_market_sessions(str(latest_session), expected_symbol_count=139)
+                    market_sessions = runner.load_market_sessions(str(latest_session), expected_symbol_count=None)
                     result = runner.ingest_session(session=str(latest_session), market_sessions=market_sessions, frozen_events=[])
                     _simulator_heartbeat_at = int(time.time())
                     return {"session": str(latest_session), "result": result}
