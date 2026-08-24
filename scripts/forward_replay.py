@@ -421,6 +421,7 @@ def replay_symbol(symbol: str, rows: list[dict[str, Any]], *, variant: str = "A"
             "disposition_state": disposition_state,
             "confirmation_state": ctx["confirmation_state"],
             "candidate_intent_state": ctx["candidate_intent_state"],
+            "confirmation_gates": flow_out.get("confirmation_gates") or [],
             "execution": execution_actions,
             "position": machine.get("position"),
             "base_state": ctx["base_state"],

@@ -134,6 +134,17 @@ class FlowConfirmationEngine:
             "chase_advisory_flag": chase_advisory_flag,
             "extension_pct_vs_current_valid_reference": extension_pct,
         }
+        confirmation_gates = [
+            {"name": FLOW_OBV_SLOPE_OK, "value": obv_slope, "threshold": self.params.require(OBV_SLOPE_MIN), "pass": obv_ok},
+            {"name": FLOW_ANV_SLOPE_OK, "value": anv_slope, "threshold": self.params.require(ANV_SLOPE_MIN), "pass": anv_ok},
+            {"name": FLOW_ACCUMULATION_DIVERGENCE_OK, "value": acc_div_ok, "threshold": True, "pass": acc_div_ok},
+            {"name": CONFIRM_FLOW_CORE_OK, "value": cmf_10, "threshold": self.params.require(CMF_FLOOR), "pass": flow_core_ok},
+            {"name": CONFIRM_STRUCTURE_OK, "value": structure_gate_ok, "threshold": "close_gt_base_ref_and_ema_and_rsi_adx", "pass": structure_gate_ok},
+            {"name": CONFIRM_RELATIVE_VOLUME_CONTEXT_OK, "value": rel_volume, "threshold": self.params.require(REL_VOLUME_CONTEXT_MIN), "pass": rel_ctx_ok},
+            {"name": CONFIRM_CHASE_GUARD_OK, "value": has_current_valid_reference, "threshold": "current_valid_base_reference", "pass": chase_guard_ok},
+            {"name": CURRENT_DAY_LIQUIDITY_OK, "value": current_day_liq, "threshold": self.params.require(MIN_CURRENT_DAY_VALUE_KWD), "pass": current_day_liq_ok},
+            {"name": LIQUIDITY_CONTEXT_OK, "value": trailing_liq, "threshold": self.params.require(MIN_DAILY_VALUE_KWD), "pass": trailing_liq_ok},
+        ]
 
         self._append_predicate(
             normalized_day_payload=normalized_day_payload,
@@ -310,6 +321,7 @@ class FlowConfirmationEngine:
         return {
             "confirmation_state": confirmation_state,
             "confirmation_terms": confirmation_terms,
+            "confirmation_gates": confirmation_gates,
             "candidate_intent": candidate_intent,
         }
 
