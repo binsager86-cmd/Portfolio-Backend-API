@@ -1,1 +1,8 @@
 ml_models/cache/event_features_latest.pkl filter=lfs diff=lfs merge=lfs -text
+
+# ML model artifacts are binary; without this, core.autocrlf=true rewrites
+# LF bytes to CRLF on checkout and corrupts LightGBM's text-format boosters.
+*.lgb binary
+*.pkl binary
+*.joblib binary
+*.onnx binary
