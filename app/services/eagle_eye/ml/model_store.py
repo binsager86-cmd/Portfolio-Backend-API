@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import shutil
+import subprocess
+import sys
+import time
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -11,6 +15,15 @@ from typing import Any, Dict, List, Optional
 import joblib
 import lightgbm as lgb
 import numpy as np
+
+
+LOGGER = logging.getLogger(__name__)
+# Cache value: (loadable, failure_expires_at_monotonic). Successes never expire;
+# failures expire after _PREFLIGHT_FAILURE_TTL_SEC so a transient timeout under
+# load doesn't blacklist a model until the worker restarts (ML_PREFLIGHT_NEGATIVE_CACHE_PERMANENT).
+_MODEL_PREFLIGHT_CACHE: Dict[tuple[str, int, int], tuple[bool, Optional[float]]] = {}
+_PREFLIGHT_TIMEOUT_SEC = 30
+_PREFLIGHT_FAILURE_TTL_SEC = 300
 
 
 class BoosterAdapter:
@@ -110,6 +123,54 @@ def _current_dir(root: Path, tier: str, identifier: str) -> Path:
     return root / tier / _id(identifier) / "current"
 
 
+def _model_preflight_key(model_path: Path) -> tuple[str, int, int]:
+    stat = model_path.stat()
+    return (str(model_path.resolve()), stat.st_mtime_ns, stat.st_size)
+
+
+def _is_model_loadable(model_path: Path, *, context: str = "", timeout_sec: int = _PREFLIGHT_TIMEOUT_SEC) -> bool:
+    if not model_path.exists():
+        return False
+    if os.environ.get("EAGLE_EYE_SKIP_MODEL_PREFLIGHT") == "1":
+        return True
+
+    cache_key = _model_preflight_key(model_path)
+    cached = _MODEL_PREFLIGHT_CACHE.get(cache_key)
+    if cached is not None:
+        loadable, failure_expires_at = cached
+        if loadable or (failure_expires_at is not None and time.monotonic() < failure_expires_at):
+            return loadable
+
+    started = time.perf_counter()
+    code = (
+        "import os, lightgbm as lgb; "
+        "os.environ['EAGLE_EYE_SKIP_MODEL_PREFLIGHT']='1'; "
+        f"lgb.Booster(model_file=r'{str(model_path)}')"
+    )
+    try:
+        completed = subprocess.run(
+            [sys.executable, "-c", code],
+            capture_output=True,
+            text=True,
+            timeout=timeout_sec,
+            check=False,
+        )
+    except Exception as exc:
+        duration = time.perf_counter() - started
+        LOGGER.warning("ML model preflight failed for %s (context=%s, duration=%.1fs): %s", model_path, context or "-", duration, exc)
+        _MODEL_PREFLIGHT_CACHE[cache_key] = (False, time.monotonic() + _PREFLIGHT_FAILURE_TTL_SEC)
+        return False
+
+    duration = time.perf_counter() - started
+    loadable = completed.returncode == 0
+    if not loadable:
+        stderr = (completed.stderr or "").strip().splitlines()
+        detail = stderr[-1] if stderr else f"returncode={completed.returncode}"
+        LOGGER.warning("ML model preflight rejected %s (context=%s, duration=%.1fs): %s", model_path, context or "-", duration, detail)
+    _MODEL_PREFLIGHT_CACHE[cache_key] = (loadable, None if loadable else time.monotonic() + _PREFLIGHT_FAILURE_TTL_SEC)
+    return loadable
+
+
 def _versions(root: Path, tier: str, identifier: str) -> List[Path]:
     base = root / tier / _id(identifier)
     if not base.exists():
@@ -198,9 +259,35 @@ def load_model_bundle(
     elif names_path.exists():
         feature_list = json.loads(names_path.read_text(encoding="utf-8"))
 
-    raw_model = lgb.Booster(model_file=str(model_path)) if model_path.exists() else None
+    bundle_errors: List[str] = []
+
+    raw_model = None
+    if model_path.exists():
+        if not _is_model_loadable(model_path, context=identifier):
+            message = "model_load_failed: preflight_rejected"
+            bundle_errors.append(message)
+        else:
+            try:
+                raw_model = lgb.Booster(model_file=str(model_path))
+            except Exception as exc:
+                message = f"model_load_failed: {exc}"
+                bundle_errors.append(message)
+                LOGGER.warning("ML bundle load failed for %s: %s", model_path, exc)
+
     model = BoosterAdapter(raw_model) if raw_model is not None else None
-    calibrator = joblib.load(cal_path) if cal_path.exists() else None
+
+    calibrator = None
+    if cal_path.exists():
+        try:
+            calibrator = joblib.load(cal_path)
+        except Exception as exc:
+            message = f"calibrator_load_failed: {exc}"
+            bundle_errors.append(message)
+            LOGGER.warning("ML calibrator load failed for %s: %s", cal_path, exc)
+
+    if bundle_errors:
+        metadata = dict(metadata)
+        metadata["bundle_load_errors"] = bundle_errors
 
     return ModelBundle(
         tier=tier,
