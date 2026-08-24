@@ -133,6 +133,8 @@ def _day_zero_gate_snapshot(symbol: str, state: dict[str, Any]) -> dict[str, Any
     confidence = round((passing / len(gates)) * 100, 2) if gates else None
     return {
         "symbol": symbol,
+        "canonical_symbol": symbol,
+        "segment_symbol": symbol,
         "lifecycle": lifecycle,
         "tier": tier,
         "session": state.get("last_sealed_session"),
@@ -324,11 +326,11 @@ def get_decisions(response: Response, symbol: str | None = Query(None), limit: i
     rows = _rows(
         db,
         f"""
-        SELECT id, created_at, symbol, decision_session, kind, reason, portfolio,
+        SELECT id, created_at, symbol, canonical_symbol, segment_symbol, decision_session, kind, reason, portfolio,
                frozen_action_json, state_snapshot_json, veto_tier,
                would_have_entry_reason, disposition, tier
         FROM {table_name('sim_decisions')}
-        WHERE (:symbol IS NULL OR symbol = :symbol) ORDER BY id DESC LIMIT :limit
+        WHERE (:symbol IS NULL OR symbol = :symbol OR canonical_symbol = :symbol) ORDER BY id DESC LIMIT :limit
         """,
         {"symbol": normalized_symbol, "limit": limit},
     )
@@ -343,7 +345,7 @@ def get_decisions(response: Response, symbol: str | None = Query(None), limit: i
 @router.get("/symbols/state")
 def get_symbols_state(response: Response, db: Session = Depends(get_db)) -> dict[str, Any]:
     _cache_response(response)
-    rows = _rows(db, f"SELECT symbol, book, lifecycle, tier, session, source, last_kind, last_disposition, confidence, gates_passing, gates_json, soft_conditions_json, hard_refs_json, base_json, entry_paths_json, exit_watch_json FROM {table_name('sim_symbol_state')} ORDER BY symbol")
+    rows = _rows(db, f"SELECT symbol, canonical_symbol, segment_symbol, book, lifecycle, tier, session, source, last_kind, last_disposition, confidence, gates_passing, gates_json, soft_conditions_json, hard_refs_json, base_json, entry_paths_json, exit_watch_json FROM {table_name('sim_symbol_state')} ORDER BY symbol")
     states = {row["symbol"]: _parse_state_row(row) for row in rows}
     if not states:
         for symbol, state in _day_zero_inventory().get("symbols", {}).items():
@@ -358,13 +360,13 @@ def get_symbol_trace(symbol: str, response: Response, db: Session = Depends(get_
     _cache_response(response)
     normalized_symbol = symbol.upper()
     state = _parse_state_row(
-        _row(db, f"SELECT * FROM {table_name('sim_symbol_state')} WHERE symbol = :symbol ORDER BY projected_at DESC LIMIT 1", {"symbol": normalized_symbol})
+        _row(db, f"SELECT * FROM {table_name('sim_symbol_state')} WHERE symbol = :symbol OR canonical_symbol = :symbol ORDER BY projected_at DESC LIMIT 1", {"symbol": normalized_symbol})
     )
     events = [
         _parse_event_row(row)
         for row in _rows(
             db,
-            f"SELECT * FROM {table_name('sim_symbol_events')} WHERE symbol = :symbol ORDER BY decision_session DESC, id DESC LIMIT 50",
+            f"SELECT * FROM {table_name('sim_symbol_events')} WHERE symbol = :symbol OR canonical_symbol = :symbol ORDER BY decision_session DESC, id DESC LIMIT 50",
             {"symbol": normalized_symbol},
         )
     ]
@@ -372,7 +374,7 @@ def get_symbol_trace(symbol: str, response: Response, db: Session = Depends(get_
         _parse_cycle_row(row)
         for row in _rows(
             db,
-            f"SELECT * FROM {table_name('sim_cycles')} WHERE symbol = :symbol ORDER BY COALESCE(exit_date, base_start) DESC, id DESC",
+            f"SELECT * FROM {table_name('sim_cycles')} WHERE symbol = :symbol OR canonical_symbol = :symbol ORDER BY COALESCE(exit_date, base_start) DESC, id DESC",
             {"symbol": normalized_symbol},
         )
     ]
@@ -387,7 +389,7 @@ def get_symbol_events(symbol: str, response: Response, limit: int = Query(50, ge
         _parse_event_row(row)
         for row in _rows(
             db,
-            f"SELECT * FROM {table_name('sim_symbol_events')} WHERE symbol = :symbol ORDER BY decision_session DESC, id DESC LIMIT :limit",
+            f"SELECT * FROM {table_name('sim_symbol_events')} WHERE symbol = :symbol OR canonical_symbol = :symbol ORDER BY decision_session DESC, id DESC LIMIT :limit",
             {"symbol": normalized_symbol, "limit": limit},
         )
     ]
@@ -402,7 +404,7 @@ def get_symbol_cycles(symbol: str, response: Response, db: Session = Depends(get
         _parse_cycle_row(row)
         for row in _rows(
             db,
-            f"SELECT * FROM {table_name('sim_cycles')} WHERE symbol = :symbol ORDER BY COALESCE(exit_date, base_start) DESC, id DESC",
+            f"SELECT * FROM {table_name('sim_cycles')} WHERE symbol = :symbol OR canonical_symbol = :symbol ORDER BY COALESCE(exit_date, base_start) DESC, id DESC",
             {"symbol": normalized_symbol},
         )
     ]

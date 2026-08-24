@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -31,11 +32,11 @@ PROJECTION_COLUMNS: dict[str, tuple[str, ...]] = {
     "sim_portfolios": ("book", "nav_kwd", "cash_kwd", "invested_kwd", "open_position_count", "total_pnl_kwd", "change_since_inception_pct", "inception_date", "projected_at"),
     "sim_positions": ("book", "symbol", "entry_date", "entry_price", "entry_reason", "sessions_held", "last_close", "unrealized_pnl_pct", "unrealized_pnl_kwd", "current_lifecycle", "avoid_tier", "projected_at"),
     "sim_transactions": ("id", "created_at", "portfolio", "transaction_type", "symbol", "quantity", "price", "gross_value_kwd", "commission_kwd", "net_cash_delta_kwd", "decision_session", "fill_session", "source_event_id", "reason", "status", "voids_transaction_id", "suspension_gap_sessions", "data_ingested_at", "decision_close_ts", "state_snapshot_json", "projected_at"),
-    "sim_decisions": ("id", "created_at", "symbol", "decision_session", "kind", "reason", "portfolio", "frozen_action_json", "state_snapshot_json", "veto_tier", "would_have_entry_reason", "data_ingested_at", "decision_close_ts", "disposition", "tier", "projected_at"),
+    "sim_decisions": ("id", "created_at", "symbol", "canonical_symbol", "segment_symbol", "decision_session", "kind", "reason", "portfolio", "frozen_action_json", "state_snapshot_json", "veto_tier", "would_have_entry_reason", "data_ingested_at", "decision_close_ts", "disposition", "tier", "projected_at"),
     "sim_nav_daily": ("book", "session", "nav_kwd", "cash_kwd", "invested_kwd", "projected_at"),
-    "sim_symbol_state": ("symbol", "book", "lifecycle", "tier", "session", "source", "last_kind", "last_disposition", "confidence", "gates_passing", "gates_json", "soft_conditions_json", "hard_refs_json", "base_json", "entry_paths_json", "exit_watch_json", "projected_at"),
-    "sim_symbol_events": ("id", "symbol", "decision_session", "created_at", "kind", "disposition", "payload_json", "projected_at"),
-    "sim_cycles": ("id", "book", "symbol", "base_start", "base_end", "entry_date", "entry_path", "entry_price", "peak_mfe", "shakeout_dates_json", "exit_date", "exit_reason", "exit_price", "pnl_pct", "projected_at"),
+    "sim_symbol_state": ("symbol", "canonical_symbol", "segment_symbol", "book", "lifecycle", "tier", "session", "source", "last_kind", "last_disposition", "confidence", "gates_passing", "gates_json", "soft_conditions_json", "hard_refs_json", "base_json", "entry_paths_json", "exit_watch_json", "projected_at"),
+    "sim_symbol_events": ("id", "symbol", "canonical_symbol", "segment_symbol", "decision_session", "created_at", "kind", "disposition", "payload_json", "projected_at"),
+    "sim_cycles": ("id", "book", "symbol", "canonical_symbol", "segment_symbol", "base_start", "base_end", "entry_date", "entry_path", "entry_price", "peak_mfe", "shakeout_dates_json", "exit_date", "exit_reason", "exit_price", "pnl_pct", "projected_at"),
 }
 
 INTEGRITY_COLUMNS = (
@@ -54,12 +55,12 @@ SQL_MAP_POSTGRES: dict[str, str] = {
     "GET /api/v2/simulator/portfolios/{book}/positions": "SELECT symbol, entry_date, entry_price, entry_reason, sessions_held, last_close, unrealized_pnl_pct, unrealized_pnl_kwd, current_lifecycle, avoid_tier FROM eagle_eye_sim.sim_positions WHERE book = :book ORDER BY symbol",
     "GET /api/v2/simulator/portfolios/{book}/nav": "SELECT session, nav_kwd, cash_kwd, invested_kwd FROM eagle_eye_sim.sim_nav_daily WHERE book = :book ORDER BY session DESC LIMIT :days",
     "GET /api/v2/simulator/transactions": "SELECT * FROM eagle_eye_sim.sim_transactions WHERE (:book IS NULL OR portfolio = :book) AND (:symbol IS NULL OR symbol = :symbol) ORDER BY id DESC LIMIT :limit",
-    "GET /api/v2/simulator/decisions": "SELECT * FROM eagle_eye_sim.sim_decisions WHERE (:symbol IS NULL OR symbol = :symbol) ORDER BY id DESC LIMIT :limit",
-    "GET /api/v2/simulator/symbols/state": "SELECT symbol, book, lifecycle, tier, session, source, last_kind, last_disposition, confidence, gates_passing, gates_json, soft_conditions_json, hard_refs_json, base_json, entry_paths_json, exit_watch_json FROM eagle_eye_sim.sim_symbol_state ORDER BY symbol",
-    "GET /api/v2/simulator/symbols/{symbol}/trace": "SELECT * FROM eagle_eye_sim.sim_symbol_state WHERE symbol = :symbol ORDER BY projected_at DESC LIMIT 1",
-    "GET /api/v2/simulator/symbols/{symbol}/events": "SELECT * FROM eagle_eye_sim.sim_symbol_events WHERE symbol = :symbol ORDER BY decision_session DESC, id DESC LIMIT :limit",
-    "GET /api/v2/simulator/symbols/{symbol}/cycles": "SELECT * FROM eagle_eye_sim.sim_cycles WHERE symbol = :symbol ORDER BY COALESCE(exit_date, base_start) DESC, id DESC",
-    "GET /api/v2/simulator/scanner/v2-columns": "SELECT symbol, book, lifecycle, tier, gates_passing, confidence, last_kind, last_disposition, base_json FROM eagle_eye_sim.sim_symbol_state ORDER BY symbol",
+    "GET /api/v2/simulator/decisions": "SELECT * FROM eagle_eye_sim.sim_decisions WHERE (:symbol IS NULL OR symbol = :symbol OR canonical_symbol = :symbol) ORDER BY id DESC LIMIT :limit",
+    "GET /api/v2/simulator/symbols/state": "SELECT symbol, canonical_symbol, segment_symbol, book, lifecycle, tier, session, source, last_kind, last_disposition, confidence, gates_passing, gates_json, soft_conditions_json, hard_refs_json, base_json, entry_paths_json, exit_watch_json FROM eagle_eye_sim.sim_symbol_state ORDER BY symbol",
+    "GET /api/v2/simulator/symbols/{symbol}/trace": "SELECT * FROM eagle_eye_sim.sim_symbol_state WHERE symbol = :symbol OR canonical_symbol = :symbol ORDER BY projected_at DESC LIMIT 1",
+    "GET /api/v2/simulator/symbols/{symbol}/events": "SELECT * FROM eagle_eye_sim.sim_symbol_events WHERE symbol = :symbol OR canonical_symbol = :symbol ORDER BY decision_session DESC, id DESC LIMIT :limit",
+    "GET /api/v2/simulator/symbols/{symbol}/cycles": "SELECT * FROM eagle_eye_sim.sim_cycles WHERE symbol = :symbol OR canonical_symbol = :symbol ORDER BY COALESCE(exit_date, base_start) DESC, id DESC",
+    "GET /api/v2/simulator/scanner/v2-columns": "SELECT symbol, canonical_symbol, segment_symbol, book, lifecycle, tier, gates_passing, confidence, last_kind, last_disposition, base_json FROM eagle_eye_sim.sim_symbol_state ORDER BY symbol",
     "GET /api/v2/simulator/system/integrity": "SELECT * FROM eagle_eye_sim.sim_integrity WHERE id = 1",
 }
 
@@ -256,6 +257,8 @@ def _projection_ddl() -> list[str]:
             id INTEGER PRIMARY KEY,
             created_at TEXT NOT NULL,
             symbol TEXT NOT NULL,
+            canonical_symbol TEXT NOT NULL,
+            segment_symbol TEXT NOT NULL,
             decision_session TEXT NOT NULL,
             kind TEXT NOT NULL,
             reason TEXT NOT NULL,
@@ -285,6 +288,8 @@ def _projection_ddl() -> list[str]:
         f"""
         CREATE TABLE IF NOT EXISTS {table_name('sim_symbol_state')} (
             symbol TEXT PRIMARY KEY,
+            canonical_symbol TEXT NOT NULL,
+            segment_symbol TEXT NOT NULL,
             book TEXT,
             lifecycle TEXT NOT NULL,
             tier TEXT NOT NULL,
@@ -307,6 +312,8 @@ def _projection_ddl() -> list[str]:
         CREATE TABLE IF NOT EXISTS {table_name('sim_symbol_events')} (
             id INTEGER PRIMARY KEY,
             symbol TEXT NOT NULL,
+            canonical_symbol TEXT NOT NULL,
+            segment_symbol TEXT NOT NULL,
             decision_session TEXT NOT NULL,
             created_at TEXT NOT NULL,
             kind TEXT NOT NULL,
@@ -320,6 +327,8 @@ def _projection_ddl() -> list[str]:
             id INTEGER PRIMARY KEY,
             book TEXT NOT NULL,
             symbol TEXT NOT NULL,
+            canonical_symbol TEXT NOT NULL,
+            segment_symbol TEXT NOT NULL,
             base_start TEXT,
             base_end TEXT,
             entry_date TEXT,
@@ -436,6 +445,9 @@ def _decision_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     for row in conn.execute("SELECT * FROM decision_log ORDER BY id"):
         item = dict(row)
         state = _json_object(item.get("state_snapshot_json"))
+        canonical_symbol, segment_symbol = _canonical_and_segment(item["symbol"], state)
+        item["canonical_symbol"] = canonical_symbol
+        item["segment_symbol"] = segment_symbol
         item["disposition"] = item.get("kind")
         item["tier"] = item.get("veto_tier") or state.get("avoid_tier") or state.get("tier")
         rows.append(item)
@@ -454,6 +466,16 @@ def _nav_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     ]
 
 
+_SEGMENT_SUFFIX_RE = re.compile(r"__SEG\d+$")
+
+
+def _canonical_and_segment(symbol: str, state: dict[str, Any]) -> tuple[str, str]:
+    """Derive canonical/segment tickers from the engine-recorded state snapshot, never the client."""
+    segment_symbol = str(state.get("segment_symbol") or symbol or "").upper()
+    canonical_symbol = str(state.get("canonical_symbol") or _SEGMENT_SUFFIX_RE.sub("", segment_symbol) or segment_symbol).upper()
+    return canonical_symbol, segment_symbol
+
+
 def _symbol_state_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     rows = []
     for row in conn.execute(
@@ -464,10 +486,13 @@ def _symbol_state_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
         """
     ):
         state = _json_object(row["state_snapshot_json"])
+        canonical_symbol, segment_symbol = _canonical_and_segment(row["symbol"], state)
         gates = state.get("confirmation_gates") or state.get("gates")
         gates_passing = sum(1 for gate in gates if gate.get("pass") is True) if isinstance(gates, list) else None
         rows.append({
             "symbol": row["symbol"],
+            "canonical_symbol": canonical_symbol,
+            "segment_symbol": segment_symbol,
             "book": row["portfolio"] or state.get("book") or state.get("portfolio"),
             "lifecycle": state.get("lifecycle_state") or state.get("lifecycle") or "NEUTRAL",
             "tier": state.get("avoid_tier") or state.get("tier") or row["veto_tier"] or "NONE",
@@ -505,6 +530,8 @@ def _symbol_event_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
         rows.append({
             "id": int(item["id"]),
             "symbol": item["symbol"],
+            "canonical_symbol": _canonical_and_segment(item["symbol"], state)[0],
+            "segment_symbol": _canonical_and_segment(item["symbol"], state)[1],
             "decision_session": item["decision_session"],
             "created_at": item["created_at"],
             "kind": item["kind"],
@@ -552,10 +579,13 @@ def _cycle_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
                 peak_close = max([entry_price] + [float(row["close_price"] or 0.0) for row in valuations])
                 peak_mfe = _pct(peak_close - entry_price, entry_price)
                 shakeouts = [row["session"] for row in valuations if float(row["close_price"] or 0.0) < entry_price]
+                canonical_symbol, segment_symbol = _canonical_and_segment(symbol, entry_state)
                 rows.append({
                     "id": len(rows) + 1,
                     "book": book,
                     "symbol": symbol,
+                    "canonical_symbol": canonical_symbol,
+                    "segment_symbol": segment_symbol,
                     "base_start": base_start,
                     "base_end": base_end,
                     "entry_date": open_tx["fill_session"],
