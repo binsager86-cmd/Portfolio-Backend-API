@@ -284,7 +284,14 @@ def continuous_symbol_rows(symbol: str, start_date: str, end_date: str, forward_
     return rows
 
 
-def replay_symbol(symbol: str, rows: list[dict[str, Any]], *, variant: str = "A") -> list[dict[str, Any]]:
+def replay_symbol(
+    symbol: str,
+    rows: list[dict[str, Any]],
+    *,
+    variant: str = "A",
+    initial_state: dict[str, Any] | None = None,
+    state_sink: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
     runtime_db = configure_runtime_db()
     print(f"RUNTIME_DB|{runtime_db}")
     cal = load_default_calendar_context(ROOT)
@@ -324,18 +331,25 @@ def replay_symbol(symbol: str, rows: list[dict[str, Any]], *, variant: str = "A"
         )
     )
 
-    prev_segment: SegmentState | None = None
-    prev_masked = False
-    prev_ready = "READINESS_PENDING"
-    history_window: list[dict[str, Any]] = []
-    flow_window: list[dict[str, Any]] = []
-    prior_base: dict[str, Any] | None = None
-    coverage_dates: list[str] = []
-    segment_dates: list[str] = []
-    flag_rows: deque[dict[str, Any]] = deque(maxlen=16)
-    machine = sm.initial_state(variant)
+    saved = dict(initial_state or {})
+    prev_segment_data = saved.get("prev_segment")
+    prev_segment: SegmentState | None = SegmentState(**prev_segment_data) if prev_segment_data else None
+    prev_masked = bool(saved.get("prev_masked", False))
+    prev_ready = str(saved.get("prev_ready") or "READINESS_PENDING")
+    history_window: list[dict[str, Any]] = list(saved.get("history_window") or [])
+    flow_window: list[dict[str, Any]] = list(saved.get("flow_window") or [])
+    prior_base: dict[str, Any] | None = saved.get("prior_base")
+    coverage_dates: list[str] = list(saved.get("coverage_dates") or [])
+    segment_dates: list[str] = list(saved.get("segment_dates") or [])
+    flag_rows: deque[dict[str, Any]] = deque(saved.get("flag_rows") or [], maxlen=16)
+    machine = dict(saved.get("machine") or sm.initial_state(variant))
     pivot = harness.PivotEngine(harness.PIVOT_CONFIRMATION_LAG_SESSIONS, harness.SIGNIFICANT_PIVOT_ATR_MULT)
-    base_recovery_stamps: dict[str, int] = {}
+    saved_pivot = saved.get("pivot") or {}
+    for name in ("rows", "pending", "significant_highs", "significant_lows"):
+        setattr(pivot, name, list(saved_pivot.get(name) or []))
+    pivot.last_opposite = dict(saved_pivot.get("last_opposite") or {})
+    pivot.last_markup_swing_low = saved_pivot.get("last_markup_swing_low")
+    base_recovery_stamps: dict[str, int] = {str(k): int(v) for k, v in (saved.get("base_recovery_stamps") or {}).items()}
     out: list[dict[str, Any]] = []
 
     for day in rows:
@@ -413,6 +427,15 @@ def replay_symbol(symbol: str, rows: list[dict[str, Any]], *, variant: str = "A"
         execution_actions = [a for a in actions if a.get("type") in {"OPEN_POSITION", "CLOSE_POSITION"}]
         avoid_tier = next((a.get("avoid_tier") for a in actions if a.get("type") == "DAILY_STATE"), "NONE")
         disposition_state = harness.disposition_for_day(avoid_tier, execution_actions)
+        base_ref_out = dict(base_out.get("base_reference") or {})
+        base_top = base_ref_out.get("base_high_ref")
+        base_low = base_ref_out.get("base_low_ref")
+        base_width_pct = None
+        if base_top is not None and base_low not in (None, 0):
+            try:
+                base_width_pct = round((float(base_top) - float(base_low)) / float(base_low) * 100.0, 2)
+            except (TypeError, ZeroDivisionError):
+                base_width_pct = None
         daily = {
             "date": trade_date,
             "close": ctx["close"],
@@ -426,6 +449,20 @@ def replay_symbol(symbol: str, rows: list[dict[str, Any]], *, variant: str = "A"
             "position": machine.get("position"),
             "base_state": ctx["base_state"],
             "usable_pivots": usable_pivots,
+            # Ctx fields the frozen engine already computed to reach this decision,
+            # exposed here so the UI can explain the call (was previously dropped
+            # before serialization — see SNAPSHOT_FIELD_DROP).
+            "ema10": ctx["ema10"],
+            "ema30": ctx["ema30"],
+            "atr14": ctx["atr14"],
+            "obv": ctx["obv"],
+            "base_reference": {
+                "id": base_ref_out.get("base_reference_id"),
+                "top": base_top,
+                "low": base_low,
+                "width_pct": base_width_pct,
+                "validity_state": base_ref_out.get("base_validity_state"),
+            },
         }
         out.append(
             {
@@ -444,7 +481,44 @@ def replay_symbol(symbol: str, rows: list[dict[str, Any]], *, variant: str = "A"
         prev_segment = seg
         prev_masked = bool(mask_ctx["masked_flag"])
         flag_rows.append(current_for_flag)
+    if state_sink is not None:
+        state_sink.clear()
+        state_sink.update(
+            {
+                "machine": machine,
+                "pivot": {
+                    "rows": pivot.rows,
+                    "pending": pivot.pending,
+                    "significant_highs": pivot.significant_highs,
+                    "significant_lows": pivot.significant_lows,
+                    "last_opposite": pivot.last_opposite,
+                    "last_markup_swing_low": pivot.last_markup_swing_low,
+                },
+                "history_window": history_window,
+                "flow_window": flow_window,
+                "base_recovery_stamps": base_recovery_stamps,
+                "prev_ready": prev_ready,
+                "prev_segment": None if prev_segment is None else {
+                    "segment_id": prev_segment.segment_id,
+                    "segment_day_index": prev_segment.segment_day_index,
+                    "segment_restart_flag": prev_segment.segment_restart_flag,
+                },
+                "prev_masked": prev_masked,
+                "coverage_dates": coverage_dates,
+                "segment_dates": segment_dates,
+                "flag_rows": list(flag_rows),
+                "prior_base": prior_base,
+            }
+        )
     return out
+
+
+def load_session_row(symbol: str, session: str, forward_db: Path = FORWARD_DB_DEFAULT) -> dict[str, Any] | None:
+    if session <= "2026-07-09":
+        rows = load_sealed_rows(symbol, session, session)
+    else:
+        rows = load_forward_rows(symbol, session, session, forward_db)
+    return rows[0] if rows else None
 
 
 def format_replay_line(row: dict[str, Any]) -> str:
