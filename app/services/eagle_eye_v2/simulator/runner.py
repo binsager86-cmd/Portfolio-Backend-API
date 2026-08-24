@@ -56,6 +56,22 @@ class SimulatorRunner:
         return source.load_session_rows(session_date=session_date, expected_symbol_count=expected_symbol_count)
 
     @staticmethod
+    def _prepare_replay_imports() -> None:
+        release_scripts = RELEASE_ROOT / "scripts"
+        if str(release_scripts) not in sys.path:
+            sys.path.insert(0, str(release_scripts))
+        import app.services.eagle_eye_v2 as eagle_eye_v2_package
+        import app.services.eagle_eye as eagle_eye_package
+
+        for package, path in (
+            (eagle_eye_v2_package, RELEASE_ROOT / "app" / "services" / "eagle_eye_v2"),
+            (eagle_eye_package, RELEASE_ROOT / "app" / "services" / "eagle_eye"),
+        ):
+            package_path = str(path)
+            if package_path not in package.__path__:
+                package.__path__.append(package_path)
+
+    @staticmethod
     def load_replay_window(symbol: str, start_date: str, end_date: str, forward_db: Path | str | None = None) -> list[dict[str, Any]]:
         release_scripts = RELEASE_ROOT / "scripts"
         if str(release_scripts) not in sys.path:
@@ -172,6 +188,7 @@ class SimulatorRunner:
             "tier": target.get("tier"),
             "confirmation_state": target.get("confirmation_state"),
             "candidate_intent_state": target.get("candidate_intent_state"),
+            "confirmation_gates": daily.get("confirmation_gates") or [],
             "disposition": daily.get("disposition_state"),
             "position": position,
             "sessions_held": (position or {}).get("sessions_held"),
@@ -185,6 +202,7 @@ class SimulatorRunner:
             "avoid_tier": target.get("tier"),
             "confirmation_state": target.get("confirmation_state"),
             "candidate_intent_state": target.get("candidate_intent_state"),
+            "confirmation_gates": daily.get("confirmation_gates") or [],
             "disposition_state": daily.get("disposition_state"),
             "position": position,
             "sessions_held": (position or {}).get("sessions_held"),
@@ -193,9 +211,7 @@ class SimulatorRunner:
         return SimulatorRunner.events_from_actions(source_symbol, session, actions, snapshot)
 
     def bootstrap_machine_state(self, symbol: str, session: str, forward_db: Path | str | None = None) -> dict[str, Any]:
-        release_scripts = RELEASE_ROOT / "scripts"
-        if str(release_scripts) not in sys.path:
-            sys.path.insert(0, str(release_scripts))
+        self._prepare_replay_imports()
         import forward_replay
 
         load_from, effective_end = forward_replay.symbol_replay_window(symbol, session, session)
@@ -210,9 +226,7 @@ class SimulatorRunner:
         return {"symbol": symbol, "session": session, "elapsed_sec": round(time.perf_counter() - started, 3), "state": captured, "target": target}
 
     def carryforward_events_for_session(self, session: str, market_sessions: dict[str, MarketSession], forward_db: Path | str | None = None) -> tuple[list[FrozenEvent], dict[str, dict[str, Any]], dict[str, float]]:
-        release_scripts = RELEASE_ROOT / "scripts"
-        if str(release_scripts) not in sys.path:
-            sys.path.insert(0, str(release_scripts))
+        self._prepare_replay_imports()
         import forward_replay
 
         canonical_by_segment = forward_replay.canonical_by_segment()
@@ -246,9 +260,7 @@ class SimulatorRunner:
         return events, next_states, timings
 
     def reconcile_symbols(self, session: str, symbols: Iterable[str], forward_db: Path | str | None = None) -> dict[str, Any]:
-        release_scripts = RELEASE_ROOT / "scripts"
-        if str(release_scripts) not in sys.path:
-            sys.path.insert(0, str(release_scripts))
+        self._prepare_replay_imports()
         import forward_replay
 
         results: list[dict[str, Any]] = []

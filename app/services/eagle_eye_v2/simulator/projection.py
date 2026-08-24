@@ -159,12 +159,12 @@ def _project_with_session(db: Session, ledger_path: Path) -> ProjectionResult:
     with _connect_sqlite_ro(ledger_path) as sqlite_conn:
         payload = _read_sqlite_projection(sqlite_conn)
         sqlite_row_counts = _sqlite_source_counts(sqlite_conn)
-        sqlite_checksum = _sqlite_transaction_checksum(sqlite_conn)
+        sqlite_checksum = _sqlite_decision_checksum(sqlite_conn)
         ledger_sha = _sha256(ledger_path)
 
     _replace_read_model(db, payload, started)
     postgres_row_counts = _projection_row_counts(db)
-    postgres_checksum = _projection_transaction_checksum(db)
+    postgres_checksum = _projection_decision_checksum(db)
     row_count_match = all(sqlite_row_counts.get(key) == postgres_row_counts.get(key) for key in sqlite_row_counts)
     checksum_match = sqlite_checksum == postgres_checksum
     stale_reason = None if row_count_match and checksum_match else "projection verification mismatch"
@@ -454,22 +454,6 @@ def _nav_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     ]
 
 
-def _derived_gate_payload(state: dict[str, Any]) -> tuple[int, list[dict[str, Any]]]:
-    lifecycle = str(state.get("lifecycle_state") or state.get("lifecycle") or "NEUTRAL").upper()
-    tier = str(state.get("avoid_tier") or state.get("tier") or "NONE").upper()
-    confirmation = str(state.get("confirmation_state") or "NOT_CONFIRMED").upper()
-    intent = str(state.get("candidate_intent_state") or "INTENT_NONE").upper()
-    position = state.get("position")
-    gates = [
-        {"name": "Lifecycle eligible", "value": lifecycle, "passed": lifecycle in {"BASE_VALID", "MARKUP_ACTIVE"}},
-        {"name": "Confirmation state", "value": confirmation, "passed": confirmation.startswith("CONFIRMED")},
-        {"name": "Avoid veto", "value": tier, "passed": not tier.startswith("AVOID") and "VETO" not in tier},
-        {"name": "Candidate intent", "value": intent, "passed": intent not in {"", "INTENT_NONE"}},
-        {"name": "Position state", "value": "FLAT" if position is None else "IN_POSITION", "passed": position is None},
-    ]
-    return sum(1 for gate in gates if gate["passed"]), gates
-
-
 def _symbol_state_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     rows = []
     for row in conn.execute(
@@ -480,8 +464,8 @@ def _symbol_state_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
         """
     ):
         state = _json_object(row["state_snapshot_json"])
-        derived_gates_passing, derived_gates = _derived_gate_payload(state)
-        gates = state.get("gates_json") or state.get("gates") or derived_gates
+        gates = state.get("confirmation_gates") or state.get("gates")
+        gates_passing = sum(1 for gate in gates if gate.get("pass") is True) if isinstance(gates, list) else None
         rows.append({
             "symbol": row["symbol"],
             "book": row["portfolio"] or state.get("book") or state.get("portfolio"),
@@ -492,7 +476,7 @@ def _symbol_state_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
             "last_kind": row["kind"],
             "last_disposition": row["kind"],
             "confidence": _maybe_float(state.get("confidence") or state.get("confidence_pct") or state.get("score")),
-            "gates_passing": _maybe_int(state.get("gates_passing") or state.get("gate_count") or state.get("gates_passed") or derived_gates_passing),
+            "gates_passing": _maybe_int(state.get("gates_passing") or state.get("gate_count") or state.get("gates_passed") or gates_passing),
             "gates_json": _json_text(gates),
             "soft_conditions_json": _json_text(state.get("soft_conditions_json") or state.get("soft_conditions")),
             "hard_refs_json": _json_text(state.get("hard_refs_json") or state.get("hard_refs")),
@@ -653,14 +637,25 @@ def _projection_row_counts(db: Session) -> dict[str, int]:
     return {table: int(db.execute(text(f"SELECT COUNT(*) FROM {table_name(table)}")).scalar() or 0) for table in ("sim_transactions", "sim_decisions", "sim_nav_daily", "sim_symbol_state", "sim_symbol_events", "sim_cycles")}
 
 
-def _sqlite_transaction_checksum(conn: sqlite3.Connection) -> str:
-    rows = conn.execute("SELECT id, portfolio, transaction_type, symbol, net_cash_delta_kwd FROM transactions ORDER BY id").fetchall()
-    return _md5_rows(f"{row['id']}|{row['portfolio']}|{row['transaction_type']}|{row['symbol']}|{float(row['net_cash_delta_kwd']):.12f}" for row in rows)
+DECISION_CHECKSUM_COLUMNS = ("id", "symbol", "decision_session", "kind", "reason", "portfolio", "frozen_action_json", "state_snapshot_json", "veto_tier", "would_have_entry_reason", "data_ingested_at", "decision_close_ts")
 
 
-def _projection_transaction_checksum(db: Session) -> str:
-    rows = db.execute(text(f"SELECT id, portfolio, transaction_type, symbol, net_cash_delta_kwd FROM {table_name('sim_transactions')} ORDER BY id")).mappings().all()
-    return _md5_rows(f"{row['id']}|{row['portfolio']}|{row['transaction_type']}|{row['symbol']}|{float(row['net_cash_delta_kwd']):.12f}" for row in rows)
+def _canonical_decision_row(row: Any) -> str:
+    return json.dumps([row[column] for column in DECISION_CHECKSUM_COLUMNS], ensure_ascii=True, separators=(",", ":"), default=str)
+
+
+def _sqlite_decision_checksum(conn: sqlite3.Connection) -> str:
+    rows = conn.execute("SELECT id, symbol, decision_session, kind, reason, portfolio, frozen_action_json, state_snapshot_json, veto_tier, would_have_entry_reason, data_ingested_at, decision_close_ts FROM decision_log ORDER BY id").fetchall()
+    if not rows:
+        return ""
+    return _md5_rows(_canonical_decision_row(row) for row in rows)
+
+
+def _projection_decision_checksum(db: Session) -> str:
+    rows = db.execute(text(f"SELECT id, symbol, decision_session, kind, reason, portfolio, frozen_action_json, state_snapshot_json, veto_tier, would_have_entry_reason, data_ingested_at, decision_close_ts FROM {table_name('sim_decisions')} ORDER BY id")).mappings().all()
+    if not rows:
+        return ""
+    return _md5_rows(_canonical_decision_row(row) for row in rows)
 
 
 def _md5_rows(rows: Iterable[str]) -> str:
