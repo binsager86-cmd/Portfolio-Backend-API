@@ -521,7 +521,10 @@ def start_scheduler() -> None:
         def _run_ml_shadow_scoring() -> None:
             try:
                 summary = run_shadow_scoring()
-                logger.info("🤖 ML shadow scoring complete: %s", summary)
+                if summary.get("scored", 0) < summary.get("expected", 0):
+                    logger.warning("🚨 ML shadow scoring COVERAGE GAP: %s", summary)
+                else:
+                    logger.info("🤖 ML shadow scoring complete: %s", summary)
             except Exception as _exc:
                 logger.warning("🤖 ML shadow scoring failed: %s", _exc)
 

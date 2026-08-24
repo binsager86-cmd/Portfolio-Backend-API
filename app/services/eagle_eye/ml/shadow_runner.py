@@ -48,9 +48,12 @@ def run_shadow_scoring(signal_date: Optional[str] = None) -> Dict:
     Returns a summary dict:
       {
         "signal_date": "YYYY-MM-DD",
+        "expected": int,
         "scored": int,
         "skipped": int,
         "errors": int,
+        "coverage_pct": float,
+        "missing_tickers": [str, ...],
         "details": [{ticker, band, calibrated_prob, error?}, ...]
       }
     """
@@ -65,6 +68,7 @@ def run_shadow_scoring(signal_date: Optional[str] = None) -> Dict:
 
     summary = {
         "signal_date": today_str,
+        "expected": len(SHADOW_ROSTER),
         "scored": 0,
         "skipped": 0,
         "errors": 0,
@@ -98,13 +102,23 @@ def run_shadow_scoring(signal_date: Optional[str] = None) -> Dict:
 
         summary["details"].append(detail)
 
-    LOGGER.info(
-        "shadow_runner: date=%s scored=%d skipped=%d errors=%d",
-        today_str,
-        summary["scored"],
-        summary["skipped"],
-        summary["errors"],
-    )
+    expected = summary["expected"]
+    scored = summary["scored"]
+    missing = [d["ticker"] for d in summary["details"] if not d.get("band")]
+    summary["coverage_pct"] = round((scored / expected) * 100, 1) if expected else 0.0
+    summary["missing_tickers"] = missing
+
+    if scored < expected:
+        # Partial silence is a failure state — the same principle as the V2 heartbeat guard.
+        LOGGER.warning(
+            "shadow_runner: COVERAGE GAP date=%s expected=%d scored=%d (%.1f%%) missing=%s",
+            today_str, expected, scored, summary["coverage_pct"], missing,
+        )
+    else:
+        LOGGER.info(
+            "shadow_runner: date=%s scored=%d/%d skipped=%d errors=%d",
+            today_str, scored, expected, summary["skipped"], summary["errors"],
+        )
     return summary
 
 
@@ -127,11 +141,15 @@ def _score_one(
     """Score one ticker.  Returns a dict describing the outcome."""
 
     # ── 1. Load model bundle ──────────────────────────────────────────────
-    model_id_str = f"{ticker}_{PRIMARY_LABEL}"
-    bundle = load_model_bundle(tier="per_stock", identifier=model_id_str)
+    # Bundle identifier is the bare ticker, matching trainer.py/tier_resolver.py's
+    # on-disk convention (per_stock/<TICKER>/current) — not "<ticker>_<label>".
+    bundle = load_model_bundle(tier="per_stock", identifier=ticker)
     if bundle is None:
         LOGGER.debug("shadow_runner: no bundle for %s — skip", ticker)
         return {"skipped": True, "reason": "no_bundle"}
+    if bundle.model is None:
+        LOGGER.debug("shadow_runner: bundle for %s has no loadable model — skip", ticker)
+        return {"skipped": True, "reason": "model_load_failed"}
 
     # Resolve model_id (the UUID stored in models table, not the filesystem id)
     model_row = query_one(
