@@ -63,6 +63,10 @@ class SetupSignalStat:
     fired_count: int
     total_setups: int
     presence_pct: float
+    lift: Optional[float] = None
+    """presence-in-hit-episodes ÷ presence-in-all-episodes; >1 means the signal is
+    more common in setups that went on to hit the primary move threshold than in
+    setups overall. None when there aren't enough hit episodes to estimate it."""
 
 
 @dataclass
@@ -91,6 +95,11 @@ class SetupWindowProfile:
     confidence_label: str
     percentages_visible: bool
     threshold_profiles: List[ThresholdProfile] = field(default_factory=list)
+    raw_setup_count: int = 0
+    """Count of setup matches before de-duplicating overlapping episodes (see
+    _deduplicate_episodes). setup_count is the honest, non-overlapping figure
+    used for all percentages; raw_setup_count is reported alongside it so the
+    UI can show "N setups -> M distinct episodes"."""
 
 
 @dataclass
@@ -463,7 +472,32 @@ def _select_setup_signals(
     return best_signals, best_occurrences
 
 
-def _build_setup_signal_stats(occurrences: List[Dict[str, Any]]) -> List[SetupSignalStat]:
+def _deduplicate_episodes(
+    occurrences: List[Dict[str, Any]],
+    horizon_days: int,
+) -> List[Dict[str, Any]]:
+    """
+    Collapse setup matches whose forward-outcome windows overlap into a single
+    episode. A new episode is only counted once the prior episode's `horizon_days`
+    window has closed (next match's `pos` > previous kept match's `pos` + horizon_days).
+    Without this, temporally adjacent matches (e.g. three matches within one
+    move) are pseudo-replicated as independent samples for hit-rate statistics.
+    """
+    if not occurrences:
+        return []
+
+    ordered = sorted(occurrences, key=lambda occ: occ["pos"])
+    episodes: List[Dict[str, Any]] = [ordered[0]]
+    for occurrence in ordered[1:]:
+        if occurrence["pos"] > episodes[-1]["pos"] + horizon_days:
+            episodes.append(occurrence)
+    return episodes
+
+
+def _build_setup_signal_stats(
+    occurrences: List[Dict[str, Any]],
+    target_threshold: Optional[float] = None,
+) -> List[SetupSignalStat]:
     if not occurrences:
         return []
 
@@ -473,15 +507,35 @@ def _build_setup_signal_stats(occurrences: List[Dict[str, Any]]) -> List[SetupSi
         for signal in occurrence["signals"]:
             counts[signal] += 1
 
-    return [
-        SetupSignalStat(
-            signal=signal,
-            fired_count=int(fired_count),
-            total_setups=total,
-            presence_pct=float(fired_count / total * 100),
+    hit_occurrences = (
+        [occ for occ in occurrences if float(occ.get("forward_gain_pct", 0.0)) >= target_threshold]
+        if target_threshold is not None
+        else []
+    )
+    hit_counts: Counter = Counter()
+    for occurrence in hit_occurrences:
+        for signal in occurrence["signals"]:
+            hit_counts[signal] += 1
+    n_hits = len(hit_occurrences)
+
+    stats: List[SetupSignalStat] = []
+    for signal, fired_count in sorted(counts.items(), key=lambda item: (-item[1], item[0])):
+        presence_pct = float(fired_count / total * 100)
+        lift: Optional[float] = None
+        base_rate = fired_count / total
+        if n_hits > 0 and base_rate > 0:
+            hit_rate = hit_counts.get(signal, 0) / n_hits
+            lift = round(hit_rate / base_rate, 2)
+        stats.append(
+            SetupSignalStat(
+                signal=signal,
+                fired_count=int(fired_count),
+                total_setups=total,
+                presence_pct=presence_pct,
+                lift=lift,
+            )
         )
-        for signal, fired_count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
-    ]
+    return stats
 
 
 def _classify_personality(dna_inputs: Dict[str, Any]) -> str:
@@ -1075,7 +1129,8 @@ def extract_dna(
     profiles_by_window: Dict[int, List[ThresholdProfile]] = {}
 
     for window in windows:
-        setup_occurrences = _collect_setup_occurrences(indicators_df, setup_matches, window, thresholds)
+        raw_occurrences = _collect_setup_occurrences(indicators_df, setup_matches, window, thresholds)
+        setup_occurrences = _deduplicate_episodes(raw_occurrences, window)
         occurrences_by_window[window] = setup_occurrences
         confidence_tier, confidence_label, percentages_visible, history_status = _confidence_meta(
             len(setup_occurrences),
@@ -1097,11 +1152,13 @@ def extract_dna(
                 confidence_label=confidence_label,
                 percentages_visible=percentages_visible,
                 threshold_profiles=threshold_profiles,
+                raw_setup_count=len(raw_occurrences),
             )
         )
 
     default_occurrences = occurrences_by_window.get(default_window, [])
-    setup_signal_stats = _build_setup_signal_stats(default_occurrences)
+    target_threshold = thresholds[0] if thresholds else None
+    setup_signal_stats = _build_setup_signal_stats(default_occurrences, target_threshold=target_threshold)
     profiles = profiles_by_window.get(default_window, [])
 
     top_overall = sorted(
@@ -1243,6 +1300,7 @@ def dna_to_dict(dna: BehavioralDNA) -> Dict[str, Any]:
                 "fired_count": stat.fired_count,
                 "total_setups": stat.total_setups,
                 "presence_pct": round(stat.presence_pct, 1),
+                "lift": round(stat.lift, 2) if stat.lift is not None else None,
             }
             for stat in dna.signal_stats
         ],
@@ -1257,6 +1315,7 @@ def dna_to_dict(dna: BehavioralDNA) -> Dict[str, Any]:
                 "confidence_tier": profile.confidence_tier,
                 "confidence_label": profile.confidence_label,
                 "percentages_visible": profile.percentages_visible,
+                "raw_setup_count": profile.raw_setup_count,
                 "threshold_profiles": [
                     _serialize_threshold_profile(threshold_profile)
                     for threshold_profile in profile.threshold_profiles

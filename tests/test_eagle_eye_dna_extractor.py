@@ -111,12 +111,16 @@ def test_extract_dna_uses_forward_setup_base_rates():
             _indicator_row(close=112.0, setup_active=False),
             _indicator_row(close=100.0, setup_active=True),
             _indicator_row(close=95.0, setup_active=False),
+            # Filler bar so the next setup starts beyond the horizon=2 outcome
+            # window of the previous one (episode de-duplication requires the
+            # prior episode's window to have closed before counting a new one).
+            _indicator_row(close=100.0, setup_active=False),
             _indicator_row(close=100.0, setup_active=True),
             _indicator_row(close=120.0, setup_active=False),
             _indicator_row(close=160.0, setup_active=False),
             _indicator_row(close=150.0, setup_active=True),
         ],
-        index=pd.date_range("2024-01-01", periods=12, freq="D"),
+        index=pd.date_range("2024-01-01", periods=13, freq="D"),
     )
 
     dna = extract_dna(
@@ -244,26 +248,20 @@ def test_extract_dna_builds_multi_window_profiles_and_examples():
         ),
     ]
 
+    # Setups spaced 5 bars apart so both the horizon=2 and horizon=4 windows
+    # close before the next setup starts -- otherwise episode de-duplication
+    # would (correctly) collapse them, which is not what this test covers.
+    block = [
+        (100.0, True),
+        (105.0, False),
+        (110.0, False),
+        (130.0, False),
+        (140.0, False),
+    ]
+    rows_spec = block * 4
     indicators_df = pd.DataFrame(
-        [
-            _indicator_row(close=100.0, setup_active=True),
-            _indicator_row(close=105.0, setup_active=False),
-            _indicator_row(close=110.0, setup_active=False),
-            _indicator_row(close=130.0, setup_active=False),
-            _indicator_row(close=100.0, setup_active=True),
-            _indicator_row(close=108.0, setup_active=False),
-            _indicator_row(close=112.0, setup_active=False),
-            _indicator_row(close=118.0, setup_active=False),
-            _indicator_row(close=100.0, setup_active=True),
-            _indicator_row(close=120.0, setup_active=False),
-            _indicator_row(close=140.0, setup_active=False),
-            _indicator_row(close=160.0, setup_active=False),
-            _indicator_row(close=150.0, setup_active=True),
-            _indicator_row(close=148.0, setup_active=False),
-            _indicator_row(close=152.0, setup_active=False),
-            _indicator_row(close=154.0, setup_active=False),
-        ],
-        index=pd.date_range("2024-01-01", periods=16, freq="D"),
+        [_indicator_row(close=close, setup_active=active) for close, active in rows_spec],
+        index=pd.date_range("2024-01-01", periods=len(rows_spec), freq="D"),
     )
 
     dna = extract_dna(

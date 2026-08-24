@@ -221,6 +221,7 @@ def _build_window_profile_response(window_profile: dict) -> DNAWindowProfileResp
         confidence_tier=window_profile.get("confidence_tier", "TOO_THIN"),
         confidence_label=window_profile.get("confidence_label", "Too thin"),
         percentages_visible=window_profile.get("percentages_visible", False),
+        raw_setup_count=window_profile.get("raw_setup_count"),
         threshold_profiles=threshold_profiles,
     )
 
@@ -371,7 +372,12 @@ def _run_analysis(ticker: str) -> Optional[dict]:
         from app.services.eagle_eye.store import load_ohlcv, load_rating
 
         cached_row = load_rating(ticker)
-        if cached_row and cached_row.get("computed_at") == date.today().isoformat():
+        computed_marker = str(
+            cached_row.get("computed_date")
+            or cached_row.get("computed_at")
+            or ""
+        ).strip()
+        if cached_row and computed_marker[:10] == date.today().isoformat():
             ohlcv_cached = load_ohlcv(ticker)
             if ohlcv_cached is None or len(ohlcv_cached) == 0:
                 raise ValueError(f"Missing cached OHLCV for {ticker}")
@@ -584,7 +590,12 @@ async def get_scanner(
     # The background warmup (started at app startup) populates ee_ratings_cache.
     # Return warming_up immediately when cache is cold so the UI stays responsive.
     try:
-        from app.services.eagle_eye.rating_engine import is_stock_active
+        from app.services.eagle_eye.rating_engine import (
+            compute_confidence,
+            compute_rating,
+            is_stock_active,
+            validate_and_adjust_ml_score,
+        )
         from app.services.eagle_eye.store import load_all_ratings, load_ohlcv
 
         db_rows = load_all_ratings(min_confidence=min_confidence, limit=limit)
@@ -611,12 +622,36 @@ async def get_scanner(
                 continue
 
             conf = float(row.get("confidence") or 0.0)
+            row_rating = str(row.get("rating") or "NEUTRAL")
+            indicators = row.get("indicators_json") or {}
+            if isinstance(indicators, str):
+                try:
+                    indicators = json.loads(indicators)
+                except Exception:
+                    indicators = {}
+            if not isinstance(indicators, dict):
+                indicators = {}
 
             if row.get("ml_score") is not None and conf > 60.0:
                 try:
                     live_df = load_ohlcv(t)
                     if not is_stock_active(t, live_df):
                         continue
+                    adjusted_ml = validate_and_adjust_ml_score(
+                        _safe_float(row.get("ml_score")),
+                        indicators,
+                        live_df,
+                        t,
+                    )
+                    if adjusted_ml is not None:
+                        confidence_cap = compute_confidence(
+                            indicators,
+                            str(row.get("stage") or "DORMANT"),
+                            dna=None,
+                            ml_score=adjusted_ml,
+                        )
+                        conf = round(min(conf, confidence_cap), 2)
+                        row_rating = compute_rating(conf)
                     if live_df is not None and len(live_df) >= 20:
                         low_20d = _safe_float(live_df["low"].tail(20).min())
                         close_now = _safe_float(live_df["close"].iloc[-1])
@@ -624,7 +659,7 @@ async def get_scanner(
                             ext_20d = (close_now / low_20d - 1.0) * 100.0
                             if ext_20d > 30.0:
                                 conf = min(conf, 30.0)
-                                row["rating"] = "HOLD"
+                                row_rating = "HOLD"
                 except Exception as exc:
                     logger.debug("Scanner safety recheck skipped for %s: %s", t, exc)
 
@@ -635,6 +670,8 @@ async def get_scanner(
                 is_volume_confirmed=bool(vc_raw.get("is_volume_confirmed", True)),
                 volume_character=str(vc_raw.get("volume_character") or "NEUTRAL"),
                 volume_trend_5d=str(vc_raw.get("volume_trend_5d") or "NEUTRAL"),
+                today_volume=_safe_float(vc_raw.get("today_volume")),
+                avg_20d_volume=_safe_float(vc_raw.get("avg_20d_volume")),
             ) if vc_raw else None
 
             results.append(RatedStock(
@@ -642,13 +679,15 @@ async def get_scanner(
                 name_en=row_name,
                 sector=row_sector,
                 stage=row.get("stage"),
-                rating=row.get("rating"),
+                rating=row_rating,
                 confidence=conf,
                 thesis=row.get("thesis"),
                 entry_primary=row.get("entry_primary"),
                 stop_loss=row.get("stop_loss"),
                 tp1=row.get("tp1"),
                 last_price=row.get("last_price"),
+                average_volume=_safe_float(vc_raw.get("avg_20d_volume")),
+                latest_volume=_safe_float(vc_raw.get("today_volume")),
                 computed_at=row.get("computed_at"),
                 volume_context=vc_summary,
             ))
@@ -903,6 +942,7 @@ async def _get_stock_dna_inner(t: str, cache_key: str, load_dna):
                 avg_lead_days=s.get("avg_lead_days"),
                 false_positive_rate=s.get("false_positive_rate"),
                 discriminative_power=s.get("discriminative_power"),
+                lift=s.get("lift"),
             )
             for s in setup_signal_stats
             if s.get("signal")
@@ -1817,6 +1857,55 @@ async def get_ml_eligibility_summary(
         f"{counts['watch_only']} are watch-only."
     )
     return {"status": "ok", **counts, "label": label}
+
+
+@router.get("/ml/eligibility-details", summary="ML eligibility reason breakdown")
+async def get_ml_eligibility_details(
+    _user: TokenData = Depends(get_current_user),
+):
+    from app.core.database import exec_sql_fetch
+
+    rows = exec_sql_fetch(
+        "SELECT stock_ticker, eligible, reason, n_move_events, n_trading_days, liquidity_tier, watch_only FROM ml_stock_eligibility ORDER BY stock_ticker",
+        (),
+    )
+    details = [
+        {
+            "ticker": row[0],
+            "eligible": bool(row[1]),
+            "reason": row[2],
+            "n_moves": row[3],
+            "n_days": row[4],
+            "liquidity_tier": row[5],
+            "watch_only": bool(row[6]),
+        }
+        for row in rows
+    ]
+    return {"status": "ok", "details": details}
+
+
+@router.get("/ml/shadow-diagnostic", summary="Shadow runner prerequisite diagnostic")
+async def get_ml_shadow_diagnostic(
+    _user: TokenData = Depends(get_current_user),
+):
+    from app.core.database import query_all, query_one
+    from app.services.eagle_eye.ml.shadow_runner import SHADOW_ROSTER
+
+    state = query_one("SELECT auto_disabled, disabled_reason FROM ml_display_state WHERE id = 1", ()) or {}
+    latest = query_one("SELECT MAX(log_date) AS latest_log_date, COUNT(*) AS total_rows FROM ml_shadow_log", ()) or {}
+    model_rows = query_all("SELECT stock_ticker FROM ml_models WHERE status = 'SHADOW'", ())
+    models = {str(row["stock_ticker"]).upper() for row in model_rows}
+    return {
+        "status": "ok",
+        "roster_count": len(SHADOW_ROSTER),
+        "shadow_model_count": len(models),
+        "missing_shadow_models": sorted(set(SHADOW_ROSTER) - models),
+        "latest_log_date": latest.get("latest_log_date"),
+        "total_log_rows": int(latest.get("total_rows") or 0),
+        "auto_disabled": bool(state.get("auto_disabled")),
+        "disabled_reason": state.get("disabled_reason"),
+        "diagnosis": "The fixed SHADOW roster has model rows, but no rows have been written since the latest logged scoring date; inspect bundle/data prerequisites before re-enabling display.",
+    }
 
 
 # ---------------------------------------------------------------------------

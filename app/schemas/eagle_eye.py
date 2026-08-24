@@ -36,6 +36,8 @@ class VolumeContextSummary(BaseModel):
     is_volume_confirmed: bool = True
     volume_character: str = "NEUTRAL"
     volume_trend_5d: str = "NEUTRAL"
+    today_volume: Optional[float] = None
+    avg_20d_volume: Optional[float] = None
 
 
 class RatedStock(BaseModel):
@@ -51,6 +53,8 @@ class RatedStock(BaseModel):
     stop_loss: Optional[float] = None
     tp1: Optional[float] = None
     last_price: Optional[float] = None
+    average_volume: Optional[float] = None
+    latest_volume: Optional[float] = None
     book_value_per_share: Optional[float] = None
     pe_ratio: Optional[float] = None
     computed_at: Optional[str] = None   # ISO date string
@@ -154,6 +158,7 @@ class SignalReliabilityResponse(BaseModel):
     avg_lead_days: Optional[float] = None
     false_positive_rate: Optional[float] = None
     discriminative_power: Optional[float] = None
+    lift: Optional[float] = None
 
 class ThresholdProfileResponse(BaseModel):
     threshold_pct: float
@@ -177,6 +182,7 @@ class DNAWindowProfileResponse(BaseModel):
     confidence_tier: str = "TOO_THIN"
     confidence_label: str = "Too thin"
     percentages_visible: bool = False
+    raw_setup_count: Optional[int] = None
     threshold_profiles: List[ThresholdProfileResponse] = []
 
 

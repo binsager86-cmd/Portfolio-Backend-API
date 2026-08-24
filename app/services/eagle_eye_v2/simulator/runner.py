@@ -29,6 +29,87 @@ def set_cycle_integrity_status(value: dict[str, Any]) -> None:
     CYCLE_INTEGRITY_STATUS.update(value)
 
 
+# Mirrors r16_3_candidate_state_machine's frozen time-stop thresholds
+# (TIME_STOP_MFE_WAIVER_PCT, TIME_STOP_RECHECK_SESSIONS) for exit_watch display only;
+# does not affect any decision logic.
+_TIME_STOP_MFE_WAIVER_PCT = 0.08
+_TIME_STOP_RECHECK_SESSIONS = 20
+_TIME_STOP_MIN_SESSIONS_HELD = 60
+
+# Every key here must be a top-level key of the decision-log snapshot built by
+# _events_from_target()/frozen_events_for_session(), because the mobile UI's
+# SimulatorSymbolState (hooks/useSimulatorReadOnly.ts) reads it from
+# state_snapshot_json via the projection. This is the SNAPSHOT_FIELD_DROP guard:
+# when a new field the UI needs is added to ctx/daily, it must be added here too,
+# or test_decision_log_snapshot_field_coverage fails instead of the screen
+# silently showing "n/a".
+UI_REQUIRED_SNAPSHOT_FIELDS: frozenset[str] = frozenset({
+    "lifecycle",
+    "tier",
+    "confirmation_state",
+    "candidate_intent_state",
+    "position",
+    "base_state",
+    "base_reference",
+    "ema10",
+    "ema30",
+    "atr14",
+    "obv",
+    "usable_pivots",
+    "entry_paths",
+    "exit_watch",
+    "source",
+})
+
+
+def _entry_path_status(daily: dict[str, Any], target: dict[str, Any]) -> dict[str, Any]:
+    """Real-time entry readiness, derived from the frozen flow-confirmation gates
+    that already exist in `daily["confirmation_gates"]` -- no new computation,
+    just an explanation-focused view of the same evidence used elsewhere."""
+    gates = daily.get("confirmation_gates") or []
+    blocking = [g for g in gates if isinstance(g, dict) and g.get("pass") is False]
+    return {
+        "confirmation_state": target.get("confirmation_state"),
+        "candidate_intent_state": target.get("candidate_intent_state"),
+        "gates_passing": sum(1 for g in gates if isinstance(g, dict) and g.get("pass") is True),
+        "gates_total": len(gates),
+        "blocked_by": [
+            {"name": g.get("name"), "value": g.get("value"), "threshold": g.get("threshold")}
+            for g in blocking
+        ],
+    }
+
+
+def _exit_watch_status(daily: dict[str, Any], target: dict[str, Any]) -> dict[str, Any]:
+    """Structural-exit distance and time-stop status for an open position,
+    computed from the same close/ema30/position fields the frozen machine
+    used for EXIT_STRUCTURAL_EMA30_2C and time-stop actions."""
+    position = target.get("position") or {}
+    if not position:
+        return {}
+    sessions_held = int(position.get("sessions_held") or 0)
+    mfe_frac = float(position.get("mfe") or 0.0)
+    close = daily.get("close")
+    ema30 = daily.get("ema30")
+    structural_exit_distance_pct = None
+    if close is not None and ema30:
+        try:
+            structural_exit_distance_pct = round((float(close) - float(ema30)) / float(ema30) * 100.0, 2)
+        except (TypeError, ZeroDivisionError):
+            structural_exit_distance_pct = None
+    sessions_past_floor = sessions_held - _TIME_STOP_MIN_SESSIONS_HELD
+    time_stop_recheck_due = sessions_held >= _TIME_STOP_MIN_SESSIONS_HELD and sessions_past_floor % _TIME_STOP_RECHECK_SESSIONS == 0
+    time_stop_waived = mfe_frac >= _TIME_STOP_MFE_WAIVER_PCT or daily.get("state") == "MARKUP_ACTIVE"
+    return {
+        "sessions_held": sessions_held,
+        "mfe_pct": round(mfe_frac * 100.0, 2),
+        "structural_exit_reference": "close_vs_ema30",
+        "structural_exit_distance_pct": structural_exit_distance_pct,
+        "time_stop_recheck_due": time_stop_recheck_due,
+        "time_stop_waived": time_stop_waived,
+    }
+
+
 class SimulatorRunner:
     def __init__(self, ledger: SimulatorLedger | None = None, *, mode: str = "sealed", source_db: Path | str | None = None, live_db_path: Path | str | None = None, expected_symbol_count: int | None = None) -> None:
         self.ledger = ledger or SimulatorLedger()
@@ -150,6 +231,14 @@ class SimulatorRunner:
                 "sessions_held": (target.get("position") or {}).get("sessions_held"),
                 "mfe": (target.get("position") or {}).get("mfe"),
                 "base_state": daily.get("base_state"),
+                "base_reference": daily.get("base_reference"),
+                "ema10": daily.get("ema10"),
+                "ema30": daily.get("ema30"),
+                "atr14": daily.get("atr14"),
+                "obv": daily.get("obv"),
+                "usable_pivots": daily.get("usable_pivots"),
+                "entry_paths": _entry_path_status(daily, target),
+                "exit_watch": _exit_watch_status(daily, target),
                 "source": "r16_3_candidate_state_machine.step via forward_replay.replay_symbol",
             }
             actions = [*list(daily.get("execution") or []), {
@@ -194,6 +283,14 @@ class SimulatorRunner:
             "sessions_held": (position or {}).get("sessions_held"),
             "mfe": (position or {}).get("mfe"),
             "base_state": daily.get("base_state"),
+            "base_reference": daily.get("base_reference"),
+            "ema10": daily.get("ema10"),
+            "ema30": daily.get("ema30"),
+            "atr14": daily.get("atr14"),
+            "obv": daily.get("obv"),
+            "usable_pivots": daily.get("usable_pivots"),
+            "entry_paths": _entry_path_status(daily, target),
+            "exit_watch": _exit_watch_status(daily, target),
             "source": "r16_3_candidate_state_machine.step via forward_replay.replay_symbol",
         }
         actions = [*list(daily.get("execution") or []), {

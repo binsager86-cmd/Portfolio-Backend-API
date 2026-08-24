@@ -489,6 +489,21 @@ def _symbol_state_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
         canonical_symbol, segment_symbol = _canonical_and_segment(row["symbol"], state)
         gates = state.get("confirmation_gates") or state.get("gates")
         gates_passing = sum(1 for gate in gates if gate.get("pass") is True) if isinstance(gates, list) else None
+        # base_reference/ema10/ema30/atr14/obv are separate top-level snapshot keys
+        # (see SNAPSHOT_FIELD_DROP fix) -- merge them into the base/hard_refs blobs
+        # the UI already reads, instead of adding new UI-side field names.
+        base_reference = state.get("base_reference")
+        base_payload = dict(base_reference) if isinstance(base_reference, dict) else {}
+        if state.get("ema10") is not None:
+            base_payload["ema_10"] = state.get("ema10")
+        if state.get("ema30") is not None:
+            base_payload["ema_30"] = state.get("ema30")
+        hard_refs = state.get("hard_refs")
+        hard_refs_payload = dict(hard_refs) if isinstance(hard_refs, dict) else {}
+        if state.get("atr14") is not None:
+            hard_refs_payload["atr14"] = state.get("atr14")
+        if state.get("obv") is not None:
+            hard_refs_payload["obv"] = state.get("obv")
         rows.append({
             "symbol": row["symbol"],
             "canonical_symbol": canonical_symbol,
@@ -504,8 +519,8 @@ def _symbol_state_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
             "gates_passing": _maybe_int(state.get("gates_passing") or state.get("gate_count") or state.get("gates_passed") or gates_passing),
             "gates_json": _json_text(gates),
             "soft_conditions_json": _json_text(state.get("soft_conditions_json") or state.get("soft_conditions")),
-            "hard_refs_json": _json_text(state.get("hard_refs_json") or state.get("hard_refs")),
-            "base_json": _json_text(state.get("base_json") or state.get("base")),
+            "hard_refs_json": _json_text(state.get("hard_refs_json") or hard_refs_payload or state.get("hard_refs")),
+            "base_json": _json_text(state.get("base_json") or base_payload or state.get("base")),
             "entry_paths_json": _json_text(state.get("entry_paths_json") or state.get("entry_paths")),
             "exit_watch_json": _json_text(state.get("exit_watch_json") or state.get("exit_watch")),
         })
