@@ -13,6 +13,7 @@ Handles:
 import asyncio
 import time
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from typing import Optional, Dict
@@ -311,9 +312,6 @@ def update_all_prices(
 
     conn = get_conn()
     cur = conn.cursor()
-    # Reuse one event loop per worker invocation to avoid per-row loop churn.
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
 
     try:
         # Ensure additive columns exist across SQLite/PostgreSQL before reads
@@ -381,12 +379,30 @@ def update_all_prices(
         result.stocks_found = len(stocks)
         logger.info("Price updater: found %d stocks to update", len(stocks))
 
-        # ── Fetch & write prices ─────────────────────────────────────
-        for stock_id, symbol, currency, stored_yf_ticker, existing_pe_ratio, _ in stocks:
+        # ── Fetch prices concurrently, then write them on this thread ──
+        # Upstream requests are I/O-bound. Keep the worker count bounded so
+        # one user's manual refresh cannot flood either provider or SQLite.
+        def _fetch_snapshot(stock: tuple) -> tuple:
+            stock_id, symbol, currency, stored_yf_ticker, existing_pe_ratio, _ = stock
             try:
-                snapshot = loop.run_until_complete(
+                snapshot = asyncio.run(
                     get_price_snapshot(symbol, currency or "KWD", force_refresh=True)
                 )
+                return stock, snapshot, None
+            except Exception as exc:
+                return stock, None, exc
+
+        max_workers = min(8, max(1, len(stocks)))
+        with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="price-fetch") as executor:
+            fetched = list(executor.map(_fetch_snapshot, stocks))
+
+        # Database writes and the final commit stay serialized on the owning
+        # connection; only network-bound quote retrieval is parallelized.
+        for (stock_id, symbol, currency, stored_yf_ticker, existing_pe_ratio, _), snapshot, fetch_error in fetched:
+            try:
+                if fetch_error is not None:
+                    raise fetch_error
+                assert snapshot is not None
                 price = snapshot.get("price")
                 if price is None:
                     logger.warning("No price data for %s: %s", symbol, snapshot.get("error") or "no_data")
@@ -429,10 +445,7 @@ def update_all_prices(
         conn.commit()
 
     finally:
-        try:
-            loop.close()
-        finally:
-            conn.close()
+        conn.close()
 
     result.elapsed_sec = time.time() - t0
     logger.info(
