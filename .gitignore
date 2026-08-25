@@ -41,6 +41,9 @@ Thumbs.db
 # Uploaded files
 uploads/
 
+# Runtime caches
+app/cache/
+
 # ─────────────────────────────────────────────
 # Runtime logs
 # ─────────────────────────────────────────────
