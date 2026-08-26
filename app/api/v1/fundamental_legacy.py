@@ -1759,6 +1759,7 @@ def _fetch_us_statements(stock_id: int, symbol: str, user_id: int) -> dict:
 
                 # ── Include ALL remaining fields not in field_map ────────
                 mapped_sa_keys = set(field_map.keys())
+                label_map = data.get("_label_map") if isinstance(data.get("_label_map"), dict) else {}
                 for extra_key, vals in data.items():
                     if extra_key in _SA_METADATA_KEYS:
                         continue
@@ -1773,9 +1774,10 @@ def _fetch_us_statements(stock_id: int, symbol: str, user_id: int) -> dict:
                     if idx >= len(vals) or vals[idx] is None:
                         continue
                     seen_codes.add(extra_key)
+                    display_name = label_map.get(extra_key) if label_map else None
                     line_items.append({
                         "code": extra_key,
-                        "name": _camel_to_display(extra_key),
+                        "name": display_name or _camel_to_display(extra_key),
                         "amount": vals[idx],
                         "currency": "USD",
                         "order": order,
@@ -1792,6 +1794,26 @@ def _fetch_us_statements(stock_id: int, symbol: str, user_id: int) -> dict:
                        WHERE stock_id = ? AND statement_type = ? AND period_end_date = ?""",
                     (stock_id, stmt_type, period_end_date),
                 )
+
+                # Guard against destructive sparse overwrites from partial source payloads.
+                if existing:
+                    stmt_id_existing = existing["id"] if isinstance(existing, dict) else existing[0]
+                    existing_count_row = query_one(
+                        "SELECT COUNT(*) AS c FROM financial_line_items WHERE statement_id = ?",
+                        (stmt_id_existing,),
+                    )
+                    existing_count = int((existing_count_row["c"] if isinstance(existing_count_row, dict) else existing_count_row[0]) or 0)
+                    new_count = len(line_items)
+                    if existing_count >= 12 and new_count * 2 < existing_count:
+                        logger.warning(
+                            "skip sparse overwrite %s/%s/%s existing=%s new=%s",
+                            base,
+                            stmt_type,
+                            period_end_date,
+                            existing_count,
+                            new_count,
+                        )
+                        continue
 
                 source_label = url
 
@@ -2012,10 +2034,14 @@ def _fetch_us_statements(stock_id: int, symbol: str, user_id: int) -> dict:
         logger.warning("macrotrends supplement failed for %s: %s", base, exc)
 
     if not saved_summary:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No financial data found for {base}.",
-        )
+        return {
+            "status": "ok",
+            "data": {
+                "message": f"No financial data found for {base}.",
+                "summary": [],
+                "source": "stockanalysis.com + macrotrends.net",
+            },
+        }
 
     total_periods = sum(s["periods_saved"] for s in saved_summary)
     return {
@@ -2228,13 +2254,13 @@ _SA_FIELD_MAP_CASHFLOW = {
 }
 
 _SA_STMT_MAP = {
-    "income":   ("https://stockanalysis.com/quote/kwse/{sym}/financials/", _SA_FIELD_MAP_INCOME),
+    "income":   ("https://stockanalysis.com/quote/kwse/{sym}/financials/income-statement/", _SA_FIELD_MAP_INCOME),
     "balance":  ("https://stockanalysis.com/quote/kwse/{sym}/financials/balance-sheet/", _SA_FIELD_MAP_BALANCE),
     "cashflow": ("https://stockanalysis.com/quote/kwse/{sym}/financials/cash-flow-statement/", _SA_FIELD_MAP_CASHFLOW),
 }
 
 _SA_STATEMENT_PATHS = {
-    "income": "financials/",
+    "income": "financials/income-statement/",
     "balance": "financials/balance-sheet/",
     "cashflow": "financials/cash-flow-statement/",
 }
@@ -2262,42 +2288,105 @@ def _sa_parse_financial_data(html: str) -> Optional[Dict]:
     """Extract the financialData object from stockanalysis.com SvelteKit page."""
     import re as _re
 
-    m = _re.search(r'financialData:\{(.*?)\},(?:mapData|columns)', html, _re.DOTALL)
+    def _parse_array_object(raw: str) -> Dict[str, Any]:
+        result: Dict[str, Any] = {}
+
+        dk = _re.search(r'datekey:\[([^\]]+)\]', raw)
+        if dk:
+            result["datekey"] = [s.strip().strip('"') for s in dk.group(1).split(",")]
+
+        fy = _re.search(r'fiscalYear:\[([^\]]+)\]', raw)
+        if fy:
+            result["fiscalYear"] = [s.strip().strip('"') for s in fy.group(1).split(",")]
+
+        fq = _re.search(r'fiscalQuarter:\[([^\]]+)\]', raw)
+        if fq:
+            result["fiscalQuarter"] = [s.strip().strip('"') for s in fq.group(1).split(",")]
+
+        for fm in _re.finditer(r'(?:"([^"]+)"|(\w+)):\[([^\]]*)\]', raw):
+            name = fm.group(1) or fm.group(2)
+            if name in ("datekey", "fiscalYear", "fiscalQuarter"):
+                continue
+            vals = []
+            for v in fm.group(3).split(","):
+                v = v.strip().strip('"')
+                if v in ("null", "void 0", ""):
+                    vals.append(None)
+                else:
+                    try:
+                        vals.append(float(v))
+                    except ValueError:
+                        vals.append(None)
+            result[name] = vals
+
+        return result
+
+    def _merge_section_data(section_blocks: List[Dict[str, Any]]) -> Dict[str, Any]:
+        date_order: List[str] = []
+        fiscal_year_by_date: Dict[str, Any] = {}
+        fiscal_quarter_by_date: Dict[str, Any] = {}
+
+        for section in section_blocks:
+            for idx, date_key in enumerate(section.get("datekey", [])):
+                if date_key not in date_order:
+                    date_order.append(date_key)
+                if idx < len(section.get("fiscalYear", [])):
+                    fiscal_year_by_date.setdefault(date_key, section["fiscalYear"][idx])
+                if idx < len(section.get("fiscalQuarter", [])):
+                    fiscal_quarter_by_date.setdefault(date_key, section["fiscalQuarter"][idx])
+
+        result: Dict[str, Any] = {
+            "datekey": date_order,
+            "fiscalYear": [fiscal_year_by_date.get(date_key) for date_key in date_order],
+            "fiscalQuarter": [fiscal_quarter_by_date.get(date_key) for date_key in date_order],
+        }
+        date_index = {date_key: idx for idx, date_key in enumerate(date_order)}
+
+        for section in section_blocks:
+            section_dates = section.get("datekey", [])
+            for key, values in section.items():
+                if key in ("datekey", "fiscalYear", "fiscalQuarter"):
+                    continue
+                if not isinstance(values, list):
+                    continue
+                aligned = result.setdefault(key, [None] * len(date_order))
+                for section_idx, date_key in enumerate(section_dates):
+                    if section_idx >= len(values) or date_key not in date_index:
+                        continue
+                    target_idx = date_index[date_key]
+                    if aligned[target_idx] is None:
+                        aligned[target_idx] = values[section_idx]
+
+        return result
+
+    m = _re.search(r'financialData:\{(.*?),rows:\[', html, _re.DOTALL)
     if not m:
-        m = _re.search(r'financialData:\{(.+)', html, _re.DOTALL)
+        m = _re.search(r'financialData:\{(.*?)\},(?:map:|mapData|columns)', html, _re.DOTALL)
         if not m:
-            return None
+            # Newer StockAnalysis pages may render financialData as void 0 and
+            # store statement arrays under section data blocks instead.
+            if "sections:[" not in html:
+                return None
+            section_blocks = [
+                _parse_array_object(section_match.group(1))
+                for section_match in _re.finditer(r'data:\{(datekey:\[.*?\])\},ttm:', html, _re.DOTALL)
+            ]
+            section_blocks = [section for section in section_blocks if section.get("datekey")]
+            if not section_blocks:
+                return None
+            result = _merge_section_data(section_blocks)
+            return result if result.get("datekey") else None
 
     raw = m.group(1)
-    result: Dict[str, Any] = {}
+    result = _parse_array_object(raw)
 
-    dk = _re.search(r'datekey:\[([^\]]+)\]', raw)
-    if dk:
-        result["datekey"] = [s.strip().strip('"') for s in dk.group(1).split(",")]
-
-    fy = _re.search(r'fiscalYear:\[([^\]]+)\]', raw)
-    if fy:
-        result["fiscalYear"] = [s.strip().strip('"') for s in fy.group(1).split(",")]
-
-    fq = _re.search(r'fiscalQuarter:\[([^\]]+)\]', raw)
-    if fq:
-        result["fiscalQuarter"] = [s.strip().strip('"') for s in fq.group(1).split(",")]
-
-    for fm in _re.finditer(r'(\w+):\[([^\]]*)\]', raw):
-        name = fm.group(1)
-        if name in ("datekey", "fiscalYear", "fiscalQuarter"):
-            continue
-        vals = []
-        for v in fm.group(2).split(","):
-            v = v.strip()
-            if v in ("null", "void 0", ""):
-                vals.append(None)
-            else:
-                try:
-                    vals.append(float(v))
-                except ValueError:
-                    vals.append(None)
-        result[name] = vals
+    # StockAnalysis as-reported pages use opaque id keys with a companion `map` block.
+    # Capture labels so ingestion can keep readable line-item names.
+    label_map: Dict[str, str] = {}
+    for lm in _re.finditer(r'\{id:"([^"]+)",title:"([^"]+)"', html):
+        label_map[lm.group(1)] = lm.group(2)
+    if label_map:
+        result["_label_map"] = label_map
 
     return result if result.get("datekey") else None
 
@@ -2430,6 +2519,7 @@ async def fetch_statements_online(
 
                 # ── Include ALL remaining fields not in field_map ────────
                 mapped_sa_keys = set(field_map.keys())
+                label_map = data.get("_label_map") if isinstance(data.get("_label_map"), dict) else {}
                 for extra_key, vals in data.items():
                     if extra_key in _SA_METADATA_KEYS:
                         continue
@@ -2444,9 +2534,10 @@ async def fetch_statements_online(
                     if idx >= len(vals) or vals[idx] is None:
                         continue
                     seen_codes.add(extra_key)
+                    display_name = label_map.get(extra_key) if label_map else None
                     line_items.append({
                         "code": extra_key,
-                        "name": _camel_to_display(extra_key),
+                        "name": display_name or _camel_to_display(extra_key),
                         "amount": vals[idx],
                         "currency": "KWD",
                         "order": order,
@@ -2463,6 +2554,26 @@ async def fetch_statements_online(
                        WHERE stock_id = ? AND statement_type = ? AND period_end_date = ?""",
                     (stock_id, stmt_type, period_end_date),
                 )
+
+                # Guard against destructive sparse overwrites from partial source payloads.
+                if existing:
+                    stmt_id_existing = existing["id"] if isinstance(existing, dict) else existing[0]
+                    existing_count_row = query_one(
+                        "SELECT COUNT(*) AS c FROM financial_line_items WHERE statement_id = ?",
+                        (stmt_id_existing,),
+                    )
+                    existing_count = int((existing_count_row["c"] if isinstance(existing_count_row, dict) else existing_count_row[0]) or 0)
+                    new_count = len(line_items)
+                    if existing_count >= 12 and new_count * 2 < existing_count:
+                        logger.warning(
+                            "skip sparse overwrite %s/%s/%s existing=%s new=%s",
+                            base,
+                            stmt_type,
+                            period_end_date,
+                            existing_count,
+                            new_count,
+                        )
+                        continue
 
                 source_label = url
 
@@ -2517,10 +2628,14 @@ async def fetch_statements_online(
             })
 
     if not saved_summary:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No financial data found on stockanalysis.com for {base}.",
-        )
+        return {
+            "status": "ok",
+            "data": {
+                "message": f"No financial data found on stockanalysis.com for {base}.",
+                "summary": [],
+                "source": f"https://stockanalysis.com/quote/kwse/{base}/financials/",
+            },
+        }
 
     total_periods = sum(s["periods_saved"] for s in saved_summary)
     return {
