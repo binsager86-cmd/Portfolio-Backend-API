@@ -747,6 +747,50 @@ def snapshot_ratings_history(computed_date: Optional[str] = None) -> int:
 # Compute log
 # ---------------------------------------------------------------------------
 
+def get_ratings_cache_row_count() -> int:
+    """Return current ee_ratings_cache row count."""
+    from app.core.database import query_val
+
+    return int(query_val("SELECT COUNT(*) FROM ee_ratings_cache", ()) or 0)
+
+
+def get_last_ratings_cache_row_count() -> Optional[int]:
+    """Return the last persisted ee_ratings_cache row count, or None."""
+    from app.core.database import query_one
+
+    row = query_one(
+        """
+        SELECT message
+        FROM ee_compute_log
+        WHERE run_type = 'rating_run' AND status = 'row_count'
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (),
+    )
+    if row is None:
+        return None
+    message = str(row.get("message") or "")
+    marker = "cache_rows="
+    if marker not in message:
+        return None
+    tail = message.split(marker, 1)[1].split()[0]
+    try:
+        return int(float(tail))
+    except (TypeError, ValueError):
+        return None
+
+
+def record_ratings_cache_row_count(run_id: str, row_count: int) -> None:
+    """Persist the current ratings-cache row count for later sanity checks."""
+    log_compute(
+        "rating_run",
+        None,
+        "row_count",
+        f"run_id={run_id} cache_rows={row_count}",
+    )
+
+
 def log_compute(
     run_type: str,
     ticker: Optional[str],

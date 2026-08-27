@@ -638,8 +638,7 @@ def compute_all_ratings(
     from app.services.eagle_eye import stage_classifier as stage_classifier_module
     from app.services.eagle_eye.stage_classifier import classify_stage_with_confidence
     from app.services.eagle_eye.store import (
-        ensure_tables, list_tickers_with_ohlcv, load_ohlcv,
-        log_compute, save_rating,
+        ensure_tables, list_tickers_with_ohlcv, load_ohlcv, log_compute, save_rating,
     )
 
     ensure_tables()
@@ -682,10 +681,28 @@ def compute_all_ratings(
     ]
     market_proxy = _build_premier_market_proxy(premier_tickers)
 
-    stats: dict = {"ok": 0, "skipped": 0, "errors": 0}
+    stats: dict = {"ok": 0, "skipped": 0, "errors": 0, "expected": len(tickers)}
     total_tickers = len(tickers)
     phase_t0 = time.time()
     verbose_per_ticker = os.getenv("EE_VERBOSE_PER_TICKER", "0").strip() == "1"
+
+    def _session_date_for_frame(df):
+        if df is None or len(df) == 0:
+            return run_date
+        try:
+            latest_index = getattr(df, "index", None)
+            if latest_index is not None and len(latest_index) > 0:
+                latest_value = latest_index.max()
+                if hasattr(latest_value, "date"):
+                    return latest_value.date().isoformat()
+                return str(latest_value)[:10]
+        except Exception:
+            pass
+        try:
+            latest_close = df["close"].dropna().iloc[-1]
+            return str(df.index[df["close"].notna()].max())[:10]
+        except Exception:
+            return run_date
 
     _emit_progress(
         progress_callback,
@@ -699,6 +716,7 @@ def compute_all_ratings(
     )
 
     def _save_placeholder_rating(symbol: str, reason: str, df=None) -> None:
+        session_date = _session_date_for_frame(df)
         meta = stock_meta.get(symbol)
         name_en = meta.name_en if meta else symbol
         sector = meta.sector if meta else "Kuwait"
@@ -783,7 +801,7 @@ def compute_all_ratings(
             },
             "days_of_history": days_of_history,
             "computed_at": run_started,
-            "computed_date": run_date,
+            "computed_date": session_date,
             "run_id": run_id,
             "run_started_at": run_started,
             "code_fingerprint": code_fingerprint,
@@ -888,6 +906,7 @@ def compute_all_ratings(
     for idx, ticker in enumerate(tickers, start=1):
         try:
             df = load_ohlcv(ticker)
+            ticker_session_date = _session_date_for_frame(df)
             # Keep this in sync with compute_all_indicators minimum history requirement.
             if df is None or len(df) < 50:
                 stats["skipped"] += 1
@@ -999,7 +1018,7 @@ def compute_all_ratings(
                 "volume_context": volume_context,
                 "days_of_history": len(df),
                 "computed_at": run_started,
-                "computed_date": run_date,
+                "computed_date": ticker_session_date,
                 "run_id": run_id,
                 "run_started_at": run_started,
                 "code_fingerprint": code_fingerprint,
@@ -1139,7 +1158,17 @@ def compute_all_ratings(
         "summary",
         (
             f"run_id={run_id} run_started={run_started} "
-            f"ok={stats['ok']} skipped={stats['skipped']} errors={stats['errors']}"
+            f"ok={stats['ok']} expected={stats.get('expected', total_tickers)} "
+            f"skipped={stats['skipped']} errors={stats['errors']}"
+        ),
+    )
+    log_compute(
+        "rating_run",
+        None,
+        "complete",
+        (
+            f"rated={stats['ok']} expected={stats.get('expected', total_tickers)} "
+            f"skipped={stats['skipped']} errors={stats['errors']}"
         ),
     )
 
@@ -1158,6 +1187,44 @@ def compute_all_ratings(
         logger.warning("Recommendation tracker failed (non-fatal): %s", exc)
 
     return stats
+
+
+# ---------------------------------------------------------------------------
+# Ratings-cache row-count drop guard — AUD-002/AUD-004
+#
+# Extracted so it can run independently of OHLCV ingest success (a cache wipe
+# during an ingest outage would otherwise go undetected) and so it can be
+# tested in isolation from the full rating pipeline.
+# ---------------------------------------------------------------------------
+
+def check_ratings_cache_drop(run_id: str) -> None:
+    """
+    Compare the current ee_ratings_cache row count to the last recorded
+    snapshot. Logs a RATINGS_CACHE_UNEXPLAINED_LOSS warning when the count
+    drops by more than 20%, then persists the current count as the new
+    snapshot for the next comparison. Never raises.
+    """
+    from app.services.eagle_eye.store import (
+        get_last_ratings_cache_row_count, get_ratings_cache_row_count,
+        log_compute, record_ratings_cache_row_count,
+    )
+
+    current_cache_rows = get_ratings_cache_row_count()
+    previous_cache_rows = get_last_ratings_cache_row_count()
+    if previous_cache_rows is not None:
+        drop_pct = 0.0 if previous_cache_rows == 0 else (previous_cache_rows - current_cache_rows) / previous_cache_rows * 100.0
+        if current_cache_rows < previous_cache_rows and drop_pct > 20.0:
+            log_compute(
+                "rating_run",
+                None,
+                "warning",
+                (
+                    f"RATINGS_CACHE_UNEXPLAINED_LOSS run_id={run_id} "
+                    f"previous_rows={previous_cache_rows} current_rows={current_cache_rows} "
+                    f"drop_pct={drop_pct:.1f}%"
+                ),
+            )
+    record_ratings_cache_row_count(run_id, current_cache_rows)
 
 
 # ---------------------------------------------------------------------------
@@ -1191,6 +1258,9 @@ def run_nightly_recompute(
 
     log_compute("nightly_recompute", None, "start", f"dna_refresh={dna_refresh}")
 
+    nightly_run_id = f"nightly_{uuid.uuid4().hex[:12]}"
+    check_ratings_cache_drop(nightly_run_id)
+
     if verbose:
         print(f"[EagleEye] Nightly recompute started (dna_refresh={dna_refresh})")
 
@@ -1219,6 +1289,44 @@ def run_nightly_recompute(
             f"[EagleEye] Phase 1/3 done in {time.time() - phase_t0:.1f}s: "
             f"{ohlcv_stats}"
         )
+
+    ohlcv_ok = int(ohlcv_stats.get("ok", 0) or 0)
+    ohlcv_errors = int(ohlcv_stats.get("errors", 0) or 0)
+    failed_ingest = ohlcv_errors > 0 or ohlcv_ok == 0
+
+    if failed_ingest:
+        elapsed = round(time.time() - t0, 1)
+        cache_rows = int(query_val("SELECT COUNT(*) FROM ee_ratings_cache", ()) or 0)
+        summary = (
+            "elapsed_sec=%s ohlcv_ok=%s ohlcv_errors=%s ratings_skipped=true cache_rows=%s"
+        ) % (elapsed, ohlcv_ok, ohlcv_errors, cache_rows)
+        logger.error(
+            "Eagle Eye nightly recompute aborted because OHLCV ingest failed or produced no fresh rows: %s",
+            summary,
+        )
+        log_compute("nightly_recompute", None, "error", summary)
+        _emit_progress(
+            progress_callback,
+            {
+                "phase": "done",
+                "phase_label": "Failed",
+                "current": 1,
+                "total": 1,
+                "message": "Nightly recompute aborted: OHLCV ingest returned no valid fresh data",
+                "elapsed_sec": elapsed,
+                "ohlcv_errors": ohlcv_errors,
+                "ohlcv_ok": ohlcv_ok,
+                "status": "failure",
+            },
+        )
+        return {
+            "elapsed_sec": elapsed,
+            "status": "failure",
+            "ohlcv": ohlcv_stats,
+            "dna": dna_stats,
+            "ratings": rating_stats,
+            "cache_rows": cache_rows,
+        }
 
     if dna_refresh:
         if verbose:
@@ -1251,19 +1359,35 @@ def run_nightly_recompute(
 
     elapsed = round(time.time() - t0, 1)
     cache_rows = int(query_val("SELECT COUNT(*) FROM ee_ratings_cache", ()) or 0)
+    rated = int(rating_stats.get("ok", 0) or 0)
+    skipped = int(rating_stats.get("skipped", 0) or 0)
+    covered = rated + skipped
+    expected = int(rating_stats.get("expected") or 0)
+    rating_errors = int(rating_stats.get("errors", 0) or 0)
+    rating_run_exception = bool(rating_stats.get("error"))
+    partial_run = bool(expected and covered < expected)
+    empty_cache = cache_rows == 0
+    status = "ok"
+    if rating_run_exception or partial_run or rating_errors > 0 or empty_cache:
+        status = "failure"
+
     summary = (
-        "elapsed_sec=%s ohlcv_ok=%s ohlcv_errors=%s ratings_ok=%s "
-        "ratings_errors=%s cache_rows=%s"
+        "elapsed_sec=%s ohlcv_ok=%s ohlcv_errors=%s ratings_ok=%s ratings_skipped=%s "
+        "ratings_covered=%s ratings_expected=%s ratings_errors=%s cache_rows=%s status=%s"
     ) % (
         elapsed,
-        ohlcv_stats.get("ok", 0),
-        ohlcv_stats.get("errors", 0),
-        rating_stats.get("ok", 0),
-        rating_stats.get("errors", 0),
+        ohlcv_ok,
+        ohlcv_errors,
+        rated,
+        skipped,
+        covered,
+        expected,
+        rating_errors,
         cache_rows,
+        status,
     )
-    if cache_rows == 0:
-        logger.error("Eagle Eye nightly recompute finished with empty ratings cache: %s", summary)
+    if status == "failure":
+        logger.error("Eagle Eye nightly recompute failed: %s", summary)
         log_compute("nightly_recompute", None, "error", summary)
     else:
         logger.info("Eagle Eye nightly recompute finished in %.1fs (%s)", elapsed, summary)
@@ -1277,17 +1401,19 @@ def run_nightly_recompute(
         progress_callback,
         {
             "phase": "done",
-            "phase_label": "Complete",
+            "phase_label": "Complete" if status == "ok" else "Failed",
             "current": 1,
             "total": 1,
-            "message": f"Recompute complete in {elapsed:.1f}s",
+            "message": f"Recompute {'completed' if status == 'ok' else 'failed'} in {elapsed:.1f}s",
             "elapsed_sec": elapsed,
             "cache_rows": cache_rows,
+            "status": status,
         },
     )
 
     return {
         "elapsed_sec": elapsed,
+        "status": status,
         "ohlcv": ohlcv_stats,
         "dna": dna_stats,
         "ratings": rating_stats,
