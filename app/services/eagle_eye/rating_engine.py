@@ -366,12 +366,12 @@ def compute_final_confidence(
     if avg_turnover is not None and avg_turnover < 2000.0:
         volume_cap = min(volume_cap, 40.0)
 
-    if stage in ("MARKDOWN_DECLINE", "DISTRIBUTION_TOPPING"):
+    if stage in ("MARKDOWN", "MARKDOWN_DECLINE", "DISTRIBUTION", "DISTRIBUTION_TOPPING"):
         confidence = min(confidence, 40.0)
 
     # Dormant-stage sanity rails keep weak basing names from overstating conviction,
     # while preserving a minimum floor for rare strong-confluence accumulation setups.
-    if stage == "DORMANT":
+    if stage in ("DORMANT", "NEUTRAL_AMBIGUOUS"):
         trend_conf = _safe_numeric(indicators.get("trend_confluence"))
         momentum_conf = _safe_numeric(indicators.get("momentum_confluence"))
         overall_conf = _safe_numeric(indicators.get("overall_confluence"))
@@ -1163,7 +1163,7 @@ def compute_confidence(
             if p_sell > p_buy and p_sell > 0.40:
                 buy_confidence = min(buy_confidence, 20.0)
 
-            if stage in ("MARKDOWN_DECLINE", "DISTRIBUTION_TOPPING"):
+            if stage in ("MARKDOWN", "MARKDOWN_DECLINE", "DISTRIBUTION", "DISTRIBUTION_TOPPING"):
                 buy_confidence = min(buy_confidence, 30.0)
 
             regime_u = str(regime or "NEUTRAL").upper()
@@ -1198,7 +1198,7 @@ def compute_confidence(
                     base_confidence = 90.0 + min(8.0, (predicted_gain - 40.0) * 0.13)
 
                 # Stage hard cap for clearly bearish lifecycle states.
-                if stage in ("MARKDOWN_DECLINE", "DISTRIBUTION_TOPPING"):
+                if stage in ("MARKDOWN", "MARKDOWN_DECLINE", "DISTRIBUTION", "DISTRIBUTION_TOPPING"):
                     base_confidence = min(base_confidence, 35.0)
 
                 # Regime nudge.
@@ -1286,15 +1286,25 @@ def compute_confidence(
     regime_align = regime_map.get(regime.upper(), 0.6)
 
     # --- 6. Stage score ---
+    # Keyed by both the raw stage names returned by classify_stage_with_confidence
+    # (MARKUP, ACCUMULATION, DISTRIBUTION, MARKDOWN, EARLY_MARKUP, NEUTRAL_AMBIGUOUS)
+    # and the legacy alias names, so this cap applies regardless of which
+    # naming convention the caller passes.
     stage_scores = {
         "EARLY_BREAKOUT":         1.0,
+        "EARLY_MARKUP":           1.0,
         "STEALTH_ACCUMULATION":   1.0,
+        "ACCUMULATION":           1.0,
         "MARKUP_TRENDING":        0.8,
+        "MARKUP":                 0.8,
         "DORMANT":                0.5,
+        "NEUTRAL_AMBIGUOUS":      0.5,
         "CAPITULATION_EXHAUSTION": 0.5,  # contrarian opportunity
         "ACCELERATION_CLIMAX":    0.3,
         "DISTRIBUTION_TOPPING":   0.1,
+        "DISTRIBUTION":           0.1,
         "MARKDOWN_DECLINE":       0.1,
+        "MARKDOWN":               0.1,
     }
     stage_sc = stage_scores.get(stage, 0.5)
 
@@ -1354,14 +1364,22 @@ def compute_confidence(
     # --- TASK 1: Stage-gated confidence caps ---
     # A DORMANT stock structurally cannot hit TP1 in 20 days.
     # These caps prevent the composite score from misleading callers.
+    # Keyed by both the raw stage names returned by classify_stage_with_confidence
+    # and the legacy alias names — see stage_scores above for why both are needed.
     STAGE_CONFIDENCE_CAPS = {
         "DORMANT":                 40,  # quiet stock — should NEVER be high-conf BUY
+        "NEUTRAL_AMBIGUOUS":       40,
         "STEALTH_ACCUMULATION":    75,  # institutional accumulation — can be high
+        "ACCUMULATION":            75,
         "EARLY_BREAKOUT":         100,  # the IDEAL buy stage — no cap
+        "EARLY_MARKUP":           100,
         "MARKUP_TRENDING":         90,  # trending up — high but not max
+        "MARKUP":                  90,
         "ACCELERATION_CLIMAX":     55,  # late stage — risk rising
         "DISTRIBUTION_TOPPING":    30,  # actively topping — almost never BUY
+        "DISTRIBUTION":            30,
         "MARKDOWN_DECLINE":        20,  # declining — should be SELL/HOLD only
+        "MARKDOWN":                20,
         "CAPITULATION_EXHAUSTION": 50,  # potential reversal — moderate ceiling
     }
     stage_cap = STAGE_CONFIDENCE_CAPS.get(stage, 70)

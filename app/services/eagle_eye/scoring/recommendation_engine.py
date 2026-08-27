@@ -286,7 +286,9 @@ def generate_recommendation(
             # ADD upgrade: stock is in healthy pullback during confirmed uptrend
             if rq_action == "ADD" and p_add > 0.60 and base_rec == "HOLD":
                 base_rec = "BUY"
-                veto_reasons_note = "Ride model: healthy pullback ADD signal"
+                veto_reasons.append(
+                    f"Ride model: healthy pullback ADD signal (p_add={p_add:.0%})"
+                )
                 final_confidence = min(_clip(final_confidence + 8.0), 92.0)
 
             # EXIT advisory: ride model sees weakening trend
