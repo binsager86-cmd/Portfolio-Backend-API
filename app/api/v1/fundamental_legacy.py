@@ -2284,6 +2284,16 @@ def _build_sa_us_statement_urls(symbol: str, statement_type: str) -> Tuple[str, 
     return annual_url, f"{annual_url}?p=quarterly"
 
 
+def _normalize_sa_us_symbol(symbol: str) -> str:
+    """Normalize portfolio ticker variants to StockAnalysis US symbols."""
+    value = (symbol or "").strip().upper()
+    for suffix in (".US", ".USA", ".NYSE", ".NASDAQ"):
+        if value.endswith(suffix):
+            value = value[: -len(suffix)]
+            break
+    return value.replace("-", ".")
+
+
 def _sa_parse_financial_data(html: str) -> Optional[Dict]:
     """Extract the financialData object from stockanalysis.com SvelteKit page."""
     import re as _re
@@ -2421,12 +2431,9 @@ async def fetch_statements_online(
     # Route US stocks to stockanalysis.com (/stocks/ path).
     # Use the resolved ticker first so renamed symbols keep working.
     if not is_kuwait:
-        us_symbol = (resolved or symbol or "").strip().upper()
-        # StockAnalysis uses canonical symbols without exchange suffixes.
-        if "." in us_symbol:
-            us_symbol = us_symbol.split(".", 1)[0]
+        us_symbol = _normalize_sa_us_symbol(resolved or symbol)
         if not us_symbol:
-            us_symbol = (symbol or "").strip().upper()
+            us_symbol = _normalize_sa_us_symbol(symbol)
         return _fetch_us_statements(stock_id, us_symbol, current_user.user_id)
 
     base = resolved.replace(".KW", "").upper()
