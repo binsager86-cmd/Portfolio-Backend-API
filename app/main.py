@@ -161,6 +161,14 @@ async def lifespan(app: FastAPI):
         except Exception as sim_err:
             logger.warning("⚠️  Simulator schema init failed: %s", sim_err)
 
+        # ── Trend-Hold Book tables (independent paper-trading ledger) ──
+        try:
+            from app.services.eagle_eye_v2.trend_hold_book_store import ensure_trend_hold_book_tables as _thb_init
+            _thb_init()
+            logger.info("✅  Trend-Hold Book schema ensured (idempotent)")
+        except Exception as thb_err:
+            logger.warning("⚠️  Trend-Hold Book schema init failed: %s", thb_err)
+
         start_scheduler()
 
         # ── Eagle Eye cache warmup: if ratings cache is cold (<50 rows),

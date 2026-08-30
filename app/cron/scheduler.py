@@ -392,6 +392,20 @@ def start_scheduler() -> None:
             except Exception as exc:
                 logger.warning("trend_hold_batch: run failed: %s", exc)
 
+        def _run_trend_hold_book_step() -> None:
+            """Daily Trend-Hold Book paper-trading step.
+
+            Mechanically fills BUY/SCALE_OUT/SELL_SIGNAL decisions already
+            written to ee_trend_hold_state into the independent, virtual-money
+            trend_hold_book ledger. Runs after the 14:15 trend-hold scan so it
+            always acts on that session's freshest decisions."""
+            try:
+                from app.services.eagle_eye_v2.trend_hold_book import run_trend_hold_book_step
+                summary = run_trend_hold_book_step()
+                logger.info("trend_hold_book: complete: %s", summary)
+            except Exception as exc:
+                logger.warning("trend_hold_book: run failed: %s", exc)
+
         # Sun–Thu at 14:35 Asia/Kuwait — secondary refresh after nightly recompute (~14:05–14:25)
         _scheduler.add_job(
             _run_eagle_eye_secondary_refresh,
@@ -436,6 +450,23 @@ def start_scheduler() -> None:
             ),
             id="eagle_eye_trend_hold_scan",
             name="Eagle Eye trend-hold engine scan",
+            replace_existing=True,
+            coalesce=True,
+            max_instances=1,
+        )
+
+        # Sun–Thu at 14:18 Asia/Kuwait — Trend-Hold Book paper-trading step.
+        # After the 14:15 trend-hold scan writes fresh state, before 14:20.
+        _scheduler.add_job(
+            _run_trend_hold_book_step,
+            trigger=CronTrigger(
+                day_of_week="sun,mon,tue,wed,thu",
+                hour=14,
+                minute=18,
+                timezone="Asia/Kuwait",
+            ),
+            id="eagle_eye_trend_hold_book",
+            name="Eagle Eye trend-hold book paper-trading step",
             replace_existing=True,
             coalesce=True,
             max_instances=1,
@@ -546,8 +577,8 @@ def start_scheduler() -> None:
 
         logger.info(
             "Eagle Eye jobs scheduled "
-            "(Sun–Thu 14:05 nightly; 14:15 trend-hold scan; 14:35 secondary refresh; "
-            "DNA rebuild Sun 14:30; Simulator 14:20 Asia/Kuwait)"
+            "(Sun–Thu 14:05 nightly; 14:15 trend-hold scan; 14:18 trend-hold book; "
+            "14:35 secondary refresh; DNA rebuild Sun 14:30; Simulator 14:20 Asia/Kuwait)"
         )
     except Exception as exc:
         logger.warning("Could not schedule Eagle Eye jobs: %s", exc)
