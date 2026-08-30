@@ -146,8 +146,8 @@ def notify_portfolio_update(user_id: int) -> dict:
 
         # Pull tokens once.
         tokens = [
-            t[0]
-            for t in db.query(PushToken.token)
+            (token, provider)
+            for token, provider in db.query(PushToken.token, PushToken.token_provider)
             .filter(PushToken.user_id == user_id)
             .all()
         ]
@@ -325,7 +325,7 @@ async def notify_portfolio_news_alerts() -> None:
                 continue
 
             tokens = (
-                db.query(PushToken.token)
+                db.query(PushToken.token, PushToken.token_provider)
                 .filter(PushToken.user_id == user_id)
                 .all()
             )
@@ -337,7 +337,7 @@ async def notify_portfolio_news_alerts() -> None:
                     continue
 
                 sent_any = False
-                for (token,) in tokens:
+                for token, token_provider in tokens:
                     # Build a rich title: "📰 NBK • National Bank of Kuwait"
                     article_title = (latest_news.title or "New announcement")[:180]
                     # Show up to 2 matched symbols in the title
@@ -364,6 +364,7 @@ async def notify_portfolio_news_alerts() -> None:
                         sound="default",
                         priority="high",
                         android={"channelId": "portfolio-news"},
+                        token_provider=token_provider,
                     )
                     sent_any = sent_any or sent
 

@@ -16,5 +16,6 @@ class PushToken(Base):
     user_id = Column(Integer, nullable=False, index=True)
     token = Column(Text, nullable=False, unique=True)
     platform = Column(String(20), nullable=False, default="unknown")  # ios / android / web
+    token_provider = Column(String(20), nullable=False, default="expo")  # expo / fcm
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)

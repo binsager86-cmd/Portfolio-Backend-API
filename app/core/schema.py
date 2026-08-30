@@ -543,6 +543,7 @@ def ensure_all_tables() -> None:
                 user_id         INTEGER NOT NULL,
                 token           TEXT UNIQUE NOT NULL,
                 platform        TEXT NOT NULL DEFAULT 'unknown',
+                token_provider  TEXT NOT NULL DEFAULT 'expo',
                 created_at      TIMESTAMP NOT NULL,
                 updated_at      TIMESTAMP NOT NULL
             )
@@ -603,6 +604,9 @@ def ensure_all_tables() -> None:
 
         # -- portfolio_snapshots (legacy DBs may miss this nullable column) --
         add_column_if_missing("portfolio_snapshots", "portfolio", "TEXT")
+
+        # -- push_tokens --
+        add_column_if_missing("push_tokens", "token_provider", "TEXT NOT NULL DEFAULT 'expo'")
 
         logger.info("✅  Additive column migrations applied")
     except Exception as e:

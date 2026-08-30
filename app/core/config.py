@@ -66,6 +66,7 @@ class Settings(BaseSettings):
     TECHNICAL_BATCH_SEGMENT: str = "PREMIER"
     STOCKANALYSIS_MAX_WORKERS: int = 4  # bounded concurrency for daily fundamentals scrape
     PUSH_NOTIFICATIONS_ENABLED: bool = True
+    FIREBASE_SERVICE_ACCOUNT_FILE: str = ""  # Deployment-only Firebase Admin JSON credential path
 
     # App version gating
     MIN_APP_VERSION: str = "1.2.0"      # Oldest version allowed to connect

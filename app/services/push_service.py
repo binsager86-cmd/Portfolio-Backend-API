@@ -6,13 +6,59 @@ to deliver notifications to registered devices.
 """
 
 import logging
+from pathlib import Path
 from typing import Optional
 
 import httpx
 
+from app.core.config import get_settings
+
 logger = logging.getLogger(__name__)
 
 EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
+
+
+def _send_fcm_notification(
+    token: str,
+    title: str,
+    body: str,
+    data: Optional[dict] = None,
+    channel_id: str = "default",
+) -> bool:
+    """Send a notification through Firebase Admin when credentials are configured."""
+    service_account_file = get_settings().FIREBASE_SERVICE_ACCOUNT_FILE.strip()
+    if not service_account_file:
+        logger.warning("FCM delivery skipped: FIREBASE_SERVICE_ACCOUNT_FILE is not configured")
+        return False
+
+    credential_path = Path(service_account_file)
+    if not credential_path.is_file():
+        logger.error("FCM delivery skipped: Firebase service-account file does not exist")
+        return False
+
+    try:
+        import firebase_admin
+        from firebase_admin import credentials, messaging
+
+        try:
+            firebase_admin.get_app()
+        except ValueError:
+            firebase_admin.initialize_app(credentials.Certificate(str(credential_path)))
+
+        message = messaging.Message(
+            token=token,
+            notification=messaging.Notification(title=title, body=body),
+            data={key: str(value) for key, value in (data or {}).items()},
+            android=messaging.AndroidConfig(
+                priority="high",
+                notification=messaging.AndroidNotification(channel_id=channel_id),
+            ),
+        )
+        messaging.send(message)
+        return True
+    except Exception as exc:
+        logger.warning("FCM notification failed: %s", exc)
+        return False
 
 
 async def send_push_notification(
@@ -24,10 +70,15 @@ async def send_push_notification(
     priority: str = "high",
     category: Optional[str] = None,
     android: Optional[dict] = None,
+    token_provider: str = "expo",
 ) -> bool:
-    """Send a single rich push notification via Expo Push API."""
+    """Send a single rich push notification via Expo Push API or FCM."""
     if not token:
         return False
+
+    if token_provider == "fcm":
+        channel_id = android.get("channelId", "default") if isinstance(android, dict) else "default"
+        return _send_fcm_notification(token, title, body, data, channel_id)
 
     message: dict = {
         "to": token,
@@ -71,7 +122,7 @@ async def send_push_notification(
 
 
 def send_push_notifications(
-    tokens: list[str],
+    tokens: list[tuple[str, str]],
     title: str,
     body: str,
     data: Optional[dict] = None,
@@ -80,7 +131,7 @@ def send_push_notifications(
     badge: Optional[int] = None,
 ) -> dict:
     """
-    Send push notifications to a list of Expo push tokens.
+    Send push notifications to Expo and FCM device tokens.
 
     Batches tokens in groups of 100 (Expo API limit).
     Returns summary of sent/failed counts.
@@ -88,8 +139,22 @@ def send_push_notifications(
     if not tokens:
         return {"sent": 0, "failed": 0}
 
+    expo_tokens = [token for token, provider in tokens if provider == "expo"]
+    fcm_tokens = [token for token, provider in tokens if provider == "fcm"]
+
+    sent = 0
+    failed = 0
+    for token in fcm_tokens:
+        if _send_fcm_notification(token, title, body, data, channel_id):
+            sent += 1
+        else:
+            failed += 1
+
+    if not expo_tokens:
+        return {"sent": sent, "failed": failed}
+
     messages = []
-    for token in tokens:
+    for token in expo_tokens:
         msg = {
             "to": token,
             "title": title,
@@ -106,8 +171,6 @@ def send_push_notifications(
             msg["data"] = data
         messages.append(msg)
 
-    sent = 0
-    failed = 0
     chunk_size = 100
 
     with httpx.Client(timeout=30.0) as client:
@@ -190,11 +253,11 @@ def notify_users_for_article(
 
         # Get push tokens for those users
         tokens = (
-            db.query(PushToken.token)
+            db.query(PushToken.token, PushToken.token_provider)
             .filter(PushToken.user_id.in_(user_id_list))
             .all()
         )
-        token_list = [t[0] for t in tokens]
+        token_list = [(token, provider) for token, provider in tokens]
 
         if not token_list:
             return {"sent": 0, "failed": 0, "reason": "no_tokens"}

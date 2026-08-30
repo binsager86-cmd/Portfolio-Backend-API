@@ -30,6 +30,7 @@ router = APIRouter(prefix="/notifications", tags=["Notifications"])
 class RegisterTokenRequest(BaseModel):
     token: str
     platform: str = "unknown"  # ios / android / web
+    token_provider: str = "expo"  # expo / fcm
 
 
 class RegisterTokenResponse(BaseModel):
@@ -52,6 +53,11 @@ def _is_valid_expo_push_token(token: str) -> bool:
     return t.startswith("ExponentPushToken[") or t.startswith("ExpoPushToken[")
 
 
+def _is_valid_fcm_token(token: str) -> bool:
+    """FCM tokens are opaque, but must be bounded non-empty strings."""
+    return bool(token and 1 <= len(token.strip()) <= 4096)
+
+
 # ── Endpoints ────────────────────────────────────────────────────────
 
 @router.post("/register-token", response_model=RegisterTokenResponse)
@@ -60,10 +66,15 @@ async def register_push_token(
     current_user: TokenData = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Register an Expo push token for receiving push notifications."""
+    """Register an Expo or FCM device token for receiving push notifications."""
     token = (body.token or "").strip()
-    if not _is_valid_expo_push_token(token):
+    token_provider = (body.token_provider or "expo").strip().lower()
+    if token_provider not in {"expo", "fcm"}:
+        raise HTTPException(status_code=400, detail="Unsupported push token provider")
+    if token_provider == "expo" and not _is_valid_expo_push_token(token):
         raise HTTPException(status_code=400, detail="Invalid Expo push token format")
+    if token_provider == "fcm" and not _is_valid_fcm_token(token):
+        raise HTTPException(status_code=400, detail="Invalid FCM push token format")
 
     # Check if token already exists
     existing = db.query(PushToken).filter(PushToken.token == token).first()
@@ -71,6 +82,7 @@ async def register_push_token(
         # Update user_id and platform if changed
         existing.user_id = current_user.user_id
         existing.platform = body.platform
+        existing.token_provider = token_provider
         existing.updated_at = datetime.utcnow()
         db.commit()
         return RegisterTokenResponse(ok=True, message="Token updated")
@@ -80,6 +92,7 @@ async def register_push_token(
         user_id=current_user.user_id,
         token=token,
         platform=body.platform,
+        token_provider=token_provider,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
     )
