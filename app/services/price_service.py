@@ -23,6 +23,52 @@ from app.core.database import get_conn, add_column_if_missing
 
 logger = logging.getLogger(__name__)
 
+# ── Latest-EPS lookup (ml_fundamentals) — used to derive P/E when the
+#    live price provider itself has no P/E figure available. ──────────
+_eps_lookup_cache: Dict[str, tuple] = {}
+_EPS_CACHE_TTL_SEC = 6 * 60 * 60  # EPS changes quarterly; a few hours of staleness is fine
+
+
+def _latest_eps_for_symbol(symbol: str) -> Optional[float]:
+    """Look up the most recent TTM EPS for ``symbol`` from ``ml_fundamentals``."""
+    import re as _re
+
+    ticker = _re.sub(r"\.(KW|US)$", "", (symbol or "").strip().upper())
+    if not ticker:
+        return None
+
+    now = time.time()
+    cached = _eps_lookup_cache.get(ticker)
+    if cached and cached[1] > now:
+        return cached[0]
+
+    eps: Optional[float] = None
+    try:
+        from app.core.database import query_one as _query_one
+        row = _query_one(
+            "SELECT eps FROM ml_fundamentals WHERE stock_ticker = ? AND eps IS NOT NULL "
+            "ORDER BY disclosure_date DESC LIMIT 1",
+            (ticker,),
+        )
+        if row is not None:
+            raw = row["eps"] if hasattr(row, "__getitem__") else None
+            eps = float(raw) if raw is not None else None
+    except Exception as exc:
+        logger.debug("Latest-EPS lookup failed for %s: %s", ticker, exc)
+
+    _eps_lookup_cache[ticker] = (eps, now + _EPS_CACHE_TTL_SEC)
+    return eps
+
+
+def _derive_pe_from_latest_eps(symbol: str, live_price: float) -> Optional[float]:
+    """Compute P/E = live price / latest cached TTM EPS, if both are usable."""
+    if live_price is None or live_price <= 0:
+        return None
+    eps = _latest_eps_for_symbol(symbol)
+    if eps is None or eps <= 0:
+        return None
+    return round(live_price / eps, 2)
+
 
 # ── Reference list lookup (mirrors Streamlit resolve_yf_ticker) ──────
 
@@ -229,6 +275,14 @@ async def get_price_snapshot(symbol: str, currency: str = "KWD", force_refresh: 
 
     Tries TickerChart first (accurate KSE / US exchange data), then falls
     back to Yahoo Finance if TickerChart is unavailable or returns no data.
+
+    P/E ratio always tracks *today's* live price: whenever the upstream
+    price provider itself doesn't supply a P/E, we derive one from the just
+    -fetched live price divided by the latest known TTM EPS (refreshed daily
+    into ``ml_fundamentals``). This keeps the ratio moving with price even on
+    days the P/E-specific TickerChart/Yahoo lookups fail or the daily
+    fundamentals cron hasn't run — a stale EPS is far less noticeable than a
+    P/E that never updates at all.
     """
     key = cache_key("price", symbol.strip().upper(), currency.upper())
     cached = None if force_refresh else price_cache.get(key)
@@ -238,6 +292,8 @@ async def get_price_snapshot(symbol: str, currency: str = "KWD", force_refresh: 
     # --- Primary: TickerChart ---
     try:
         result = await _fetch_snapshot_from_tickerchart(symbol, currency)
+        if result.get("pe_ratio") is None and result.get("price"):
+            result["pe_ratio"] = _derive_pe_from_latest_eps(symbol, float(result["price"]))
         price_cache[key] = result
         return result
     except Exception as tc_exc:
@@ -249,6 +305,8 @@ async def get_price_snapshot(symbol: str, currency: str = "KWD", force_refresh: 
     # --- Fallback: Yahoo Finance ---
     try:
         result = await asyncio.to_thread(_fetch_price_snapshot_sync, symbol, currency)
+        if result.get("pe_ratio") is None and result.get("price"):
+            result["pe_ratio"] = _derive_pe_from_latest_eps(symbol, float(result["price"]))
         price_cache[key] = result
         return result
     except Exception as exc:

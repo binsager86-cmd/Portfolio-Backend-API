@@ -250,22 +250,26 @@ def _scrape_ratios_page(url: str) -> Tuple[List[Optional[Tuple[int, str]]], List
 
     html = resp.text
 
-    # Find the financials table (stockanalysis.com uses id="main-table")
-    table_m = re.search(
-        r"<table[^>]*id=\"main-table\"[^>]*>(.*?)</table>", html, re.DOTALL,
-    )
-    if not table_m:
-        # Fallback by class
-        table_m = re.search(
-            r"<table[^>]*class=\"[^\"]*financials-table[^\"]*\"[^>]*>(.*?)</table>",
-            html, re.DOTALL,
-        )
-    if not table_m:
-        # Last resort: first table
-        table_m = re.search(r"<table[^>]*>(.*?)</table>", html, re.DOTALL)
-    if not table_m:
+    # stockanalysis.com splits the ratios page into several section tables
+    # (e.g. id="main-table-total-valuation", "main-table-price-ratios",
+    # "main-table-ev-ratios", ...). The "PE Ratio" row only lives in one of
+    # them, so scan every table on the page and pick the one that actually
+    # contains a "PE Ratio" row label instead of assuming the first table
+    # (or the first "main-table*"/"financials-table" match) is the right one.
+    candidate_tables: List[str] = [
+        m.group(1) for m in re.finditer(r"<table[^>]*>(.*?)</table>", html, re.DOTALL)
+    ]
+    table_html: Optional[str] = None
+    for candidate in candidate_tables:
+        if re.search(r">\s*PE\s*Ratio\s*<", candidate, re.IGNORECASE):
+            table_html = candidate
+            break
+    if table_html is None and candidate_tables:
+        # Fall back to the first table so headers can still be parsed even
+        # if the PE row lookup below comes up empty.
+        table_html = candidate_tables[0]
+    if table_html is None:
         return [], []
-    table_html = table_m.group(1)
 
     # Headers — first row contains <th> with column labels
     head_row_m = re.search(r"<tr[^>]*>(.*?)</tr>", table_html, re.DOTALL)
