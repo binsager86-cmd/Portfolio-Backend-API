@@ -51,3 +51,28 @@ class TrendHoldBookTrade(BaseModel):
 
 class TrendHoldBookTradesResponse(BaseModel):
     trades: List[TrendHoldBookTrade]
+
+
+class TrendHoldBookNavPoint(BaseModel):
+    nav_date: str
+    cash_kwd: float
+    equity_kwd: float
+    open_position_count: int
+
+
+class TrendHoldBookNavHistoryResponse(BaseModel):
+    points: List[TrendHoldBookNavPoint]
+
+
+class TrendHoldDecisionLogEntry(BaseModel):
+    ticker: str
+    trade_date: str
+    decision: str
+    reason: Optional[str] = None
+    position_state: Optional[str] = None
+    close: Optional[float] = None
+    structural_stop: Optional[float] = None
+
+
+class TrendHoldDecisionLogResponse(BaseModel):
+    entries: List[TrendHoldDecisionLogEntry]

@@ -57,7 +57,12 @@ def run_trend_hold_scan() -> Dict[str, Any]:
     compute_all_ratings()'s resilience pattern (one bad symbol's OHLCV or a
     transient error never blocks the rest of the universe).
     """
-    from app.services.eagle_eye.store import list_tickers_with_ohlcv, load_ohlcv, save_trend_hold_state
+    from app.services.eagle_eye.store import (
+        list_tickers_with_ohlcv,
+        load_ohlcv,
+        save_trend_hold_state,
+        save_trend_hold_state_snapshot,
+    )
     from app.services.eagle_eye_v2.trend_hold_engine import compute_daily_features, replay_symbol
 
     t0 = time.time()
@@ -76,6 +81,7 @@ def run_trend_hold_scan() -> Dict[str, Any]:
                 stats["skipped"] += 1
                 continue
             save_trend_hold_state(ticker, rows[-1])
+            save_trend_hold_state_snapshot(ticker, rows[-1])
             stats["scored"] += 1
         except Exception as exc:
             logger.warning("trend_hold_batch: error scoring %s: %s", ticker, exc)

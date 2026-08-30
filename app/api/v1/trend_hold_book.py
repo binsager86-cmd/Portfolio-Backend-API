@@ -19,11 +19,15 @@ from fastapi import APIRouter, Depends, Query
 from app.api.deps import get_current_user
 from app.core.security import TokenData
 from app.schemas.trend_hold_book import (
+    TrendHoldBookNavHistoryResponse,
+    TrendHoldBookNavPoint,
     TrendHoldBookPortfolio,
     TrendHoldBookPosition,
     TrendHoldBookPositionsResponse,
     TrendHoldBookTrade,
     TrendHoldBookTradesResponse,
+    TrendHoldDecisionLogEntry,
+    TrendHoldDecisionLogResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -142,3 +146,65 @@ async def get_trend_hold_book_trades(
         for r in rows
     ]
     return TrendHoldBookTradesResponse(trades=trades)
+
+
+@router.get("/nav-history", response_model=TrendHoldBookNavHistoryResponse)
+async def get_trend_hold_book_nav_history(
+    days: int = Query(default=180, ge=1, le=1000),
+    _user: TokenData = Depends(get_current_user),
+):
+    """Return the Trend-Hold Book's daily equity history, oldest first -- powers the equity curve chart."""
+    from app.services.eagle_eye_v2 import trend_hold_book_store as book
+
+    book.ensure_trend_hold_book_tables()
+    rows = book.load_nav_history(days=days)
+
+    points = [
+        TrendHoldBookNavPoint(
+            nav_date=r["nav_date"],
+            cash_kwd=_safe_float(r.get("cash_kwd")) or 0.0,
+            equity_kwd=_safe_float(r.get("equity_kwd")) or 0.0,
+            open_position_count=int(r.get("open_position_count") or 0),
+        )
+        for r in rows
+    ]
+    return TrendHoldBookNavHistoryResponse(points=points)
+
+
+@router.get("/decision-log", response_model=TrendHoldDecisionLogResponse)
+async def get_trend_hold_decision_log(
+    limit: int = Query(default=200, ge=1, le=1000),
+    include_wait: bool = Query(default=False),
+    ticker: Optional[str] = Query(default=None),
+    _user: TokenData = Depends(get_current_user),
+):
+    """
+    Return the trend-hold engine's decision history log -- what it decided
+    and why, for every scanned ticker across every session. This is
+    independent of the Trend-Hold Book's trade ledger: it includes every
+    decision the engine made (BUY/HOLD/SCALE_OUT/SELL_SIGNAL, and WAIT when
+    include_wait=true), not just the ones the book actually acted on.
+    """
+    from app.services.eagle_eye.store import (
+        load_trend_hold_decision_log,
+        load_trend_hold_decision_log_for_ticker,
+    )
+
+    if ticker:
+        rows = load_trend_hold_decision_log_for_ticker(ticker.upper(), limit=limit)
+    else:
+        rows = load_trend_hold_decision_log(limit=limit, include_wait=include_wait)
+
+    entries = [
+        TrendHoldDecisionLogEntry(
+            ticker=r["ticker"],
+            trade_date=r["trade_date"],
+            decision=r.get("decision") or "WAIT",
+            reason=r.get("reason"),
+            position_state=r.get("position_state"),
+            close=_safe_float(r.get("close")),
+            structural_stop=_safe_float(r.get("structural_stop")),
+        )
+        for r in rows
+    ]
+    return TrendHoldDecisionLogResponse(entries=entries)

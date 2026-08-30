@@ -60,6 +60,19 @@ def ensure_trend_hold_book_tables() -> None:
 
     exec_sql(
         """
+        CREATE TABLE IF NOT EXISTS ee_trend_hold_book_nav_history (
+            nav_date            TEXT PRIMARY KEY,
+            cash_kwd            REAL,
+            equity_kwd          REAL,
+            open_position_count INTEGER,
+            updated_at          INTEGER
+        )
+        """,
+        (),
+    )
+
+    exec_sql(
+        """
         CREATE TABLE IF NOT EXISTS ee_trend_hold_book_trades (
             id               INTEGER PRIMARY KEY AUTOINCREMENT,
             ticker           TEXT NOT NULL,
@@ -319,3 +332,42 @@ def load_recent_trades(limit: int = 300) -> List[dict]:
         (limit,),
     )
     return [dict(r.items()) for r in rows or []]
+
+
+# ---------------------------------------------------------------------------
+# NAV history (daily equity snapshot, powers the equity curve)
+# ---------------------------------------------------------------------------
+
+def save_nav_snapshot(nav_date: str, cash_kwd: float, equity_kwd: float, open_position_count: int) -> None:
+    """Upsert today's book equity snapshot -- safe to call more than once per day."""
+    from app.core.database import exec_sql
+
+    exec_sql(
+        """
+        INSERT INTO ee_trend_hold_book_nav_history (
+            nav_date, cash_kwd, equity_kwd, open_position_count, updated_at
+        ) VALUES (?,?,?,?,?)
+        ON CONFLICT (nav_date) DO UPDATE SET
+            cash_kwd = excluded.cash_kwd,
+            equity_kwd = excluded.equity_kwd,
+            open_position_count = excluded.open_position_count,
+            updated_at = excluded.updated_at
+        """,
+        (nav_date, _f(cash_kwd), _f(equity_kwd), open_position_count, int(time.time())),
+    )
+
+
+def load_nav_history(days: int = 180) -> List[dict]:
+    """Return the last *days* daily equity snapshots, oldest first (chart order)."""
+    from app.core.database import query_all
+
+    rows = query_all(
+        """
+        SELECT nav_date, cash_kwd, equity_kwd, open_position_count
+        FROM   ee_trend_hold_book_nav_history
+        ORDER BY nav_date DESC
+        LIMIT  ?
+        """,
+        (days,),
+    )
+    return list(reversed([dict(r.items()) for r in rows or []]))

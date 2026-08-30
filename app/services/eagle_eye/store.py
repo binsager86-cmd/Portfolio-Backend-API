@@ -195,6 +195,31 @@ def ensure_tables() -> None:
         (),
     )
 
+    # Append-only daily decision log for the trend-hold engine -- one row per
+    # ticker per session, so the user can look back and learn from what the
+    # engine decided over time (not just today's overwritten snapshot).
+    # Mirrors ratings_history's (ticker, computed_date) upsert-per-day shape.
+    exec_sql(
+        """
+        CREATE TABLE IF NOT EXISTS ee_trend_hold_state_history (
+            ticker             TEXT NOT NULL,
+            trade_date         TEXT NOT NULL,
+            decision           TEXT,
+            reason             TEXT,
+            position_state     TEXT,
+            entry_date         TEXT,
+            entry_price        REAL,
+            structural_stop    REAL,
+            position_fraction  REAL,
+            close              REAL,
+            computed_at        TEXT,
+            updated_at         INTEGER,
+            PRIMARY KEY (ticker, trade_date)
+        )
+        """,
+        (),
+    )
+
 
 # ---------------------------------------------------------------------------
 # OHLCV helpers
@@ -758,6 +783,100 @@ def load_all_trend_hold_state() -> Dict[str, dict]:
         (),
     )
     return {str(r["ticker"]).upper(): dict(r.items()) for r in rows or []}
+
+
+def save_trend_hold_state_snapshot(ticker: str, row: dict) -> None:
+    """
+    Append (or overwrite, if this ticker/session already has a row) one
+    day's trend-hold decision into the append-only history log.
+
+    Called alongside save_trend_hold_state() so the daily batch keeps both
+    "current state" (ee_trend_hold_state) and the full decision trail
+    (ee_trend_hold_state_history) in sync from one source row.
+    """
+    from app.core.database import exec_sql
+
+    trade_date = row.get("trade_date")
+    if not trade_date:
+        return
+
+    exec_sql(
+        """
+        INSERT INTO ee_trend_hold_state_history (
+            ticker, trade_date, decision, reason, position_state, entry_date,
+            entry_price, structural_stop, position_fraction, close,
+            computed_at, updated_at
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT (ticker, trade_date) DO UPDATE SET
+            decision = excluded.decision,
+            reason = excluded.reason,
+            position_state = excluded.position_state,
+            entry_date = excluded.entry_date,
+            entry_price = excluded.entry_price,
+            structural_stop = excluded.structural_stop,
+            position_fraction = excluded.position_fraction,
+            close = excluded.close,
+            computed_at = excluded.computed_at,
+            updated_at = excluded.updated_at
+        """,
+        (
+            ticker.upper(),
+            trade_date,
+            row.get("decision"),
+            row.get("reason"),
+            row.get("position_state"),
+            row.get("entry_date"),
+            _f(row.get("entry_price")),
+            _f(row.get("structural_stop")),
+            _f(row.get("position_fraction")),
+            _f(row.get("close")),
+            datetime.now().isoformat(timespec="seconds"),
+            int(time.time()),
+        ),
+    )
+
+
+def load_trend_hold_decision_log(limit: int = 200, include_wait: bool = False) -> List[dict]:
+    """
+    Return recent rows from the trend-hold decision history, newest first.
+
+    Excludes WAIT decisions by default -- with ~141 tickers scanned daily,
+    an unfiltered feed is mostly "no qualifying breakout" noise. BUY/HOLD/
+    SCALE_OUT/SELL_SIGNAL rows are the ones worth learning from.
+    """
+    from app.core.database import query_all
+
+    where = "" if include_wait else "WHERE decision != 'WAIT'"
+    rows = query_all(
+        f"""
+        SELECT ticker, trade_date, decision, reason, position_state, entry_date,
+               entry_price, structural_stop, position_fraction, close, computed_at
+        FROM   ee_trend_hold_state_history
+        {where}
+        ORDER BY trade_date DESC, ticker ASC
+        LIMIT ?
+        """,
+        (limit,),
+    )
+    return [dict(r.items()) for r in rows or []]
+
+
+def load_trend_hold_decision_log_for_ticker(ticker: str, limit: int = 200) -> List[dict]:
+    """Return one ticker's full decision history, newest first."""
+    from app.core.database import query_all
+
+    rows = query_all(
+        """
+        SELECT ticker, trade_date, decision, reason, position_state, entry_date,
+               entry_price, structural_stop, position_fraction, close, computed_at
+        FROM   ee_trend_hold_state_history
+        WHERE  ticker = ?
+        ORDER BY trade_date DESC
+        LIMIT ?
+        """,
+        (ticker.upper(), limit),
+    )
+    return [dict(r.items()) for r in rows or []]
 
 
 def snapshot_ratings_history(computed_date: Optional[str] = None) -> int:

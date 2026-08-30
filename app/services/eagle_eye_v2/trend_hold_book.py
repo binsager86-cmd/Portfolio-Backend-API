@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 import math
+from datetime import date
 from typing import Any, Dict, Optional
 
 from app.services.eagle_eye_v2.trend_hold_engine import SCALE_OUT_FRACTION
@@ -198,6 +199,16 @@ def run_trend_hold_book_step() -> Dict[str, Any]:
             logger.warning("trend_hold_book: error processing %s (%s): %s", ticker, decision, exc)
             stats["errors"] += 1
 
+    final_equity = equity()
+    session_date = max((row.get("trade_date") for row in trend_hold_map.values() if row.get("trade_date")), default=None)
+    book.save_nav_snapshot(
+        nav_date=session_date or date.today().isoformat(),
+        cash_kwd=cash,
+        equity_kwd=final_equity,
+        open_position_count=len(positions),
+    )
+
     stats["cash_kwd"] = round(cash, 3)
+    stats["equity_kwd"] = round(final_equity, 3)
     stats["open_positions"] = len(positions)
     return stats
