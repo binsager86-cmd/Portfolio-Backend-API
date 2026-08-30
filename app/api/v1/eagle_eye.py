@@ -111,6 +111,31 @@ def _get_meta_map() -> Dict[str, object]:
         return _META_MAP_CACHE or {}
 
 
+_TREND_HOLD_MAP_CACHE: Optional[Dict[str, dict]] = None
+_TREND_HOLD_MAP_CACHE_AT: float = 0.0
+_TREND_HOLD_MAP_TTL_SEC: float = 600.0  # 10 minutes, same cadence as _get_meta_map
+
+
+def _get_trend_hold_map() -> Dict[str, dict]:
+    """Return a cached ticker → ee_trend_hold_state row lookup, rebuilt at
+    most every 10 min. Independent of ee_ratings_cache/_get_meta_map -- a
+    miss here just means no trend-hold fields on that stock, never a reason
+    to fall back to or substitute the primary rating."""
+    global _TREND_HOLD_MAP_CACHE, _TREND_HOLD_MAP_CACHE_AT
+    now = time.time()
+    if _TREND_HOLD_MAP_CACHE is not None and (now - _TREND_HOLD_MAP_CACHE_AT) < _TREND_HOLD_MAP_TTL_SEC:
+        return _TREND_HOLD_MAP_CACHE
+    try:
+        from app.services.eagle_eye.store import load_all_trend_hold_state
+        trend_hold_map = load_all_trend_hold_state()
+        _TREND_HOLD_MAP_CACHE = trend_hold_map
+        _TREND_HOLD_MAP_CACHE_AT = now
+        return trend_hold_map
+    except Exception:
+        logger.warning("Could not refresh trend-hold map; using stale cache or empty dict")
+        return _TREND_HOLD_MAP_CACHE or {}
+
+
 def _cache_key(ticker: str, as_of: Optional[date] = None) -> str:
     d = (as_of or date.today()).isoformat()
     return f"{ticker.upper()}:{d}"
@@ -607,6 +632,7 @@ async def get_scanner(
 
         # ── Use cached meta map (rebuilt at most every 10 min) ───────────────
         meta_map = _get_meta_map()
+        trend_hold_map = _get_trend_hold_map()
 
         results: List[RatedStock] = []
         for row in db_rows:
@@ -690,6 +716,10 @@ async def get_scanner(
                 latest_volume=_safe_float(vc_raw.get("today_volume")),
                 computed_at=row.get("computed_at"),
                 volume_context=vc_summary,
+                trend_hold_decision=(trend_hold_map.get(t) or {}).get("decision"),
+                trend_hold_reason=(trend_hold_map.get(t) or {}).get("reason"),
+                trend_hold_stop=_safe_float((trend_hold_map.get(t) or {}).get("structural_stop")),
+                trend_hold_entry_price=_safe_float((trend_hold_map.get(t) or {}).get("entry_price")),
             ))
 
         # Cache the unfiltered response for 30 s

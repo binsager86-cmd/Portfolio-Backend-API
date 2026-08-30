@@ -1,12 +1,14 @@
 """
 Eagle Eye — Persistent DB store.
 
-Creates and manages 5 tables in the shared SQLite/PostgreSQL database:
+Creates and manages 6 tables in the shared SQLite/PostgreSQL database:
   - ee_ohlcv_cache      : daily OHLCV bars per ticker
   - ee_dna_profiles     : behavioral DNA JSON blobs
   - ee_ratings_cache    : current scanner ratings (one row per ticker)
     - ratings_history     : daily point-in-time ratings snapshots
   - ee_compute_log      : audit trail for pipeline runs
+  - ee_trend_hold_state : current trend_hold_engine.py decision (one row per
+    ticker) -- independent of ee_ratings_cache, never merged into `rating`
 
 All DDL uses CREATE TABLE/INDEX IF NOT EXISTS — fully idempotent.
 Single-row writes use portable ``ON CONFLICT`` upserts via the backend's
@@ -164,6 +166,30 @@ def ensure_tables() -> None:
             status   TEXT,
             message  TEXT,
             run_at   INTEGER
+        )
+        """,
+        (),
+    )
+
+    # trend_hold_engine.py output — one row per ticker, upserted daily.
+    # Independent of ee_ratings_cache: never merged into `rating`, always
+    # surfaced as its own labeled field. See app/services/eagle_eye_v2/
+    # trend_hold_batch.py for the writer.
+    exec_sql(
+        """
+        CREATE TABLE IF NOT EXISTS ee_trend_hold_state (
+            ticker             TEXT PRIMARY KEY,
+            decision           TEXT,
+            reason             TEXT,
+            position_state     TEXT,
+            entry_date         TEXT,
+            entry_price        REAL,
+            structural_stop    REAL,
+            position_fraction  REAL,
+            close              REAL,
+            trade_date         TEXT,
+            computed_at        TEXT,
+            updated_at         INTEGER
         )
         """,
         (),
@@ -664,6 +690,74 @@ def load_rating(ticker: str) -> Optional[dict]:
 
         d.update(compute_continue_rising(indicators, str(d.get("stage") or "")))
     return d
+
+
+# ---------------------------------------------------------------------------
+# Trend-hold engine state (app/services/eagle_eye_v2/trend_hold_batch.py)
+# ---------------------------------------------------------------------------
+
+def save_trend_hold_state(ticker: str, row: dict) -> None:
+    """
+    Upsert one ticker's latest trend-hold decision into ee_trend_hold_state.
+
+    *row* is one entry from trend_hold_engine.replay_symbol()'s output list
+    (today's/the latest available session's row), keyed by the field names
+    that function returns: trade_date, close, decision, reason,
+    position_state, entry_date, entry_price, structural_stop,
+    position_fraction.
+    """
+    from app.core.database import exec_sql
+
+    exec_sql(
+        """
+        INSERT INTO ee_trend_hold_state (
+            ticker, decision, reason, position_state, entry_date, entry_price,
+            structural_stop, position_fraction, close, trade_date,
+            computed_at, updated_at
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT (ticker) DO UPDATE SET
+            decision = excluded.decision,
+            reason = excluded.reason,
+            position_state = excluded.position_state,
+            entry_date = excluded.entry_date,
+            entry_price = excluded.entry_price,
+            structural_stop = excluded.structural_stop,
+            position_fraction = excluded.position_fraction,
+            close = excluded.close,
+            trade_date = excluded.trade_date,
+            computed_at = excluded.computed_at,
+            updated_at = excluded.updated_at
+        """,
+        (
+            ticker.upper(),
+            row.get("decision"),
+            row.get("reason"),
+            row.get("position_state"),
+            row.get("entry_date"),
+            _f(row.get("entry_price")),
+            _f(row.get("structural_stop")),
+            _f(row.get("position_fraction")),
+            _f(row.get("close")),
+            row.get("trade_date"),
+            datetime.now().isoformat(timespec="seconds"),
+            int(time.time()),
+        ),
+    )
+
+
+def load_all_trend_hold_state() -> Dict[str, dict]:
+    """Return {ticker: row} for every ticker with a saved trend-hold state."""
+    from app.core.database import query_all
+
+    rows = query_all(
+        """
+        SELECT ticker, decision, reason, position_state, entry_date, entry_price,
+               structural_stop, position_fraction, close, trade_date, computed_at
+        FROM   ee_trend_hold_state
+        """,
+        (),
+    )
+    return {str(r["ticker"]).upper(): dict(r.items()) for r in rows or []}
 
 
 def snapshot_ratings_history(computed_date: Optional[str] = None) -> int:

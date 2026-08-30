@@ -69,6 +69,15 @@ class RatedStock(BaseModel):
     risky_near_resistance: bool = False
     risk_reward_ratio: Optional[float] = None
 
+    # trend_hold_engine.py output (ee_trend_hold_state) -- an independent
+    # second read (Donchian/EMA-cross entry, chandelier trailing stop,
+    # +20% scale-out), computed and persisted separately from `rating`
+    # above. Never merges into or overrides `rating`.
+    trend_hold_decision: Optional[str] = None   # BUY / HOLD / SCALE_OUT / SELL_SIGNAL / WAIT
+    trend_hold_reason: Optional[str] = None
+    trend_hold_stop: Optional[float] = None
+    trend_hold_entry_price: Optional[float] = None
+
 
 class ScannerResponse(BaseModel):
     status: str = "ok"

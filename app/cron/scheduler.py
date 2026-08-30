@@ -375,6 +375,23 @@ def start_scheduler() -> None:
             """Weekly full recompute including DNA profiles (Sundays)."""
             run_nightly_recompute(dna_refresh=True, verbose=False)
 
+        def _run_trend_hold_scan() -> None:
+            """Daily trend_hold_engine scan across the full scanner universe.
+
+            Independent of the rating/V2 pipelines above -- writes only to
+            ee_trend_hold_state, never touches ee_ratings_cache or `rating`.
+            Runs after the 14:05 nightly OHLCV refresh so ee_ohlcv_cache is
+            current, before the 14:20 simulator job."""
+            try:
+                from app.services.eagle_eye_v2.trend_hold_batch import run_trend_hold_scan
+                summary = run_trend_hold_scan()
+                if summary.get("scored", 0) == 0 and summary.get("expected", 0) > 0:
+                    logger.error("trend_hold_batch: zero tickers scored: %s", summary)
+                else:
+                    logger.info("trend_hold_batch: complete: %s", summary)
+            except Exception as exc:
+                logger.warning("trend_hold_batch: run failed: %s", exc)
+
         # Sun–Thu at 14:35 Asia/Kuwait — secondary refresh after nightly recompute (~14:05–14:25)
         _scheduler.add_job(
             _run_eagle_eye_secondary_refresh,
@@ -402,6 +419,23 @@ def start_scheduler() -> None:
             ),
             id="eagle_eye_nightly",
             name="Eagle Eye nightly recompute",
+            replace_existing=True,
+            coalesce=True,
+            max_instances=1,
+        )
+
+        # Sun–Thu at 14:15 Asia/Kuwait — trend-hold engine scan, full universe.
+        # After the 14:05 nightly OHLCV refresh, before the 14:20 simulator job.
+        _scheduler.add_job(
+            _run_trend_hold_scan,
+            trigger=CronTrigger(
+                day_of_week="sun,mon,tue,wed,thu",
+                hour=14,
+                minute=15,
+                timezone="Asia/Kuwait",
+            ),
+            id="eagle_eye_trend_hold_scan",
+            name="Eagle Eye trend-hold engine scan",
             replace_existing=True,
             coalesce=True,
             max_instances=1,
@@ -512,7 +546,8 @@ def start_scheduler() -> None:
 
         logger.info(
             "Eagle Eye jobs scheduled "
-            "(Sun–Thu 14:05 nightly; Sun–Thu 14:35 secondary refresh; DNA rebuild Sun 14:30; Simulator 14:20 Asia/Kuwait)"
+            "(Sun–Thu 14:05 nightly; 14:15 trend-hold scan; 14:35 secondary refresh; "
+            "DNA rebuild Sun 14:30; Simulator 14:20 Asia/Kuwait)"
         )
     except Exception as exc:
         logger.warning("Could not schedule Eagle Eye jobs: %s", exc)
