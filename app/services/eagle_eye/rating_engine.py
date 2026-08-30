@@ -807,12 +807,32 @@ def compute_entry_stop_targets(
         tp2_prob = _dna_tp_prob(1, 0.35)
         tp3_prob = _dna_tp_prob(2, 0.15)
 
-        # Use DNA-derived TP levels when available; fall back to ATR plan
+        # Use DNA-derived TP levels when available; fall back to ATR plan.
+        # A DNA cluster's gain_pct_from_entry is historical and isn't
+        # guaranteed to sit above entry for every cluster/entry combination --
+        # only accept dna_tp1 as this plan's TP1 if it's actually an upside
+        # target, otherwise keep the ATR/resistance-based plan tp1.
         entry_for_dna  = plan["entry_primary"] or current_close
         dna_tp1, dna_tp2, dna_tp3 = _dna_target_prices(entry_for_dna)
-        tp1_final = dna_tp1 if dna_tp1 is not None else plan["tp1"]
+        tp1_final = dna_tp1 if dna_tp1 is not None and dna_tp1 > entry_for_dna else plan["tp1"]
         tp2_final = dna_tp2 if dna_tp2 is not None else plan["tp2"]
         tp3_final = dna_tp3 if dna_tp3 is not None else plan["tp3"]
+
+        # risk_reward_ratio / gain_pct_to_tp1 were validated against
+        # min_favorable_rr using plan["tp1"] (the ATR/resistance target)
+        # BEFORE this DNA swap. If tp1_final ends up different from
+        # plan["tp1"] -- which happens whenever DNA clusters are available --
+        # the validated ratio no longer describes the TP1 actually returned
+        # below, silently breaking the "ACTIVE/CONDITIONAL plans always meet
+        # min_favorable_rr" guarantee the rest of this function relies on.
+        # Recompute both from the actual final entry/stop/tp1 so the numbers
+        # shown are internally consistent.
+        entry_price = float(plan["entry_primary"])
+        stop_price = float(plan["stop_loss"])
+        risk = entry_price - stop_price
+        reward = float(tp1_final) - entry_price
+        risk_reward_ratio = round(reward / risk, 4) if risk > 0 else plan["risk_reward_ratio"]
+        gain_pct_to_tp1 = round((reward / entry_price) * 100.0, 4) if entry_price > 0 else None
 
         # Hit-rate probabilities from DNA clusters when available
         clusters = getattr(dna, "historical_target_clusters", []) if dna else []
@@ -838,9 +858,9 @@ def compute_entry_stop_targets(
             "tp2_probability":    round(float(tp2_prob), 3),
             "tp3":                tp3_final,
             "tp3_probability":    round(float(tp3_prob), 3),
-            "tp_source":          "dna_clusters" if dna_tp1 is not None else "atr_based",
-            "risk_reward_ratio":  plan["risk_reward_ratio"],
-            "gain_pct_to_tp1":    plan["gain_pct_to_tp1"],
+            "tp_source":          "dna_clusters" if tp1_final == dna_tp1 else "atr_based",
+            "risk_reward_ratio":  risk_reward_ratio,
+            "gain_pct_to_tp1":    gain_pct_to_tp1,
             # Informational: optimal hold window from DNA
             "optimal_hold_window_days": getattr(dna, "optimal_hold_window_days", None),
         }
