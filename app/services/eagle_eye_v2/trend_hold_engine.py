@@ -68,6 +68,26 @@ alternative was also tried for the EXIT side (trailing on EMA30, or
 requiring both EMA and chandelier to break) -- on this data the chandelier
 stop was never the looser constraint during either live trade, so it made
 no difference and was left out to keep the exit to one mechanism.
+
+Revision note (v5): tried to make the single exit "smarter" about blow-off
+tops (MABANEE peaked at 1149 on 2025-11-26 and the chandelier didn't confirm
+until 1050 on 2025-12-04, giving back ~8.6%). Two indicator-based triggers
+were tested and rejected: RSI14 >= 80 as a tightening signal, and a 3-day
+parabolic-return threshold. Both fail the same way -- MABANEE's RSI first
+crossed 80 on 2025-08-24 at 948, three months before the real top, during
+what was just a healthy trend (a well-known trap: RSI overbought does not
+mean "sell" in a strong trend). Using either as a sticky tighten-the-stop
+trigger fragmented the single +15% trade into two smaller, worse ones. No
+single indicator reliably separates "healthy strength" from "the real top"
+in real time, so stop tightening it is. Instead, added a profit-milestone
+partial scale-out: once unrealized gain from entry reaches SCALE_OUT_GAIN_PCT,
+sell SCALE_OUT_FRACTION of the position (once per trade) and let the
+remainder keep running on the untouched, already-validated chandelier stop.
+This sidesteps the classification problem entirely -- it doesn't need to
+guess whether any given extension is the top -- and on replay the milestone
+happened to land exactly on MABANEE's peak session (2025-11-26, +25.8%),
+banking half the position at the top while the runner still captures
+whatever the trend does next.
 """
 
 from dataclasses import dataclass
@@ -83,6 +103,8 @@ DONCHIAN_LOOKBACK_SESSIONS = 40    # ~2 trading months; entry = fresh high over 
 CHANDELIER_ATR_MULT = 3.5          # trailing-stop distance, in ATR14s, off the post-entry high
 MIN_REL_VOLUME = 0.8               # entry day just needs to not be a dead/no-volume day
 CMF_FLOOR = -0.05                  # entry flow filter is lenient: "not distributing," not "must accumulate"
+SCALE_OUT_GAIN_PCT = 0.20          # bank profit once unrealized gain from entry reaches this
+SCALE_OUT_FRACTION = 0.5           # fraction of the position sold at that milestone (once per trade)
 
 
 @dataclass
@@ -94,6 +116,8 @@ class TrendHoldState:
     highest_close_since_entry: Optional[float] = None
     structural_stop: Optional[float] = None
     exit_reason: Optional[str] = None
+    position_fraction: float = 1.0   # remaining position size, 1.0 = full
+    scaled_out: bool = False         # whether the profit-milestone scale-out already fired
 
 
 def compute_daily_features(ohlcv: pd.DataFrame) -> pd.DataFrame:
@@ -177,7 +201,16 @@ def replay_symbol(df: pd.DataFrame) -> list[dict[str, Any]]:
             chandelier_stop = state.highest_close_since_entry - CHANDELIER_ATR_MULT * atr_val
             state.structural_stop = max(float(state.structural_stop), chandelier_stop)
 
-            if close < state.structural_stop:
+            unrealized_gain = close / float(state.entry_price) - 1.0
+            if (not state.scaled_out) and unrealized_gain >= SCALE_OUT_GAIN_PCT:
+                decision = "SCALE_OUT"
+                state.scaled_out = True
+                state.position_fraction = 1.0 - SCALE_OUT_FRACTION
+                reason = (
+                    f"unrealized gain {unrealized_gain:.1%} reached the {SCALE_OUT_GAIN_PCT:.0%} milestone -- "
+                    f"banking {SCALE_OUT_FRACTION:.0%} of the position, runner continues on the trailing stop"
+                )
+            elif close < state.structural_stop:
                 decision = "SELL_SIGNAL"
                 reason = (
                     f"close {close:.3f} broke trailing stop {state.structural_stop:.3f} "
@@ -199,6 +232,7 @@ def replay_symbol(df: pd.DataFrame) -> list[dict[str, Any]]:
                 "entry_date": state.entry_date,
                 "entry_price": state.entry_price,
                 "structural_stop": state.structural_stop,
+                "position_fraction": state.position_fraction,
             }
         )
 

@@ -51,20 +51,33 @@ def summarize(symbol: str, rows: list[dict]) -> None:
     open_trade: dict | None = None
     for r in rows:
         if r["decision"] == "BUY":
-            open_trade = {"entry_date": r["trade_date"], "entry_price": r["close"]}
+            open_trade = {
+                "entry_date": r["trade_date"],
+                "entry_price": r["close"],
+                "legs": [],  # (fraction, return_pct, label) for each realized leg
+                "prev_fraction": 1.0,
+            }
+        elif r["decision"] == "SCALE_OUT" and open_trade is not None:
+            sold_fraction = open_trade["prev_fraction"] - r["position_fraction"]
+            leg_ret = (r["close"] / open_trade["entry_price"] - 1.0) * 100.0
+            open_trade["legs"].append((sold_fraction, leg_ret, f"scale-out {r['trade_date']} @ {r['close']:.3f}"))
+            open_trade["prev_fraction"] = r["position_fraction"]
         elif r["decision"] == "SELL_SIGNAL" and open_trade is not None:
-            ret_pct = (r["close"] / open_trade["entry_price"] - 1.0) * 100.0
+            leg_ret = (r["close"] / open_trade["entry_price"] - 1.0) * 100.0
+            open_trade["legs"].append((open_trade["prev_fraction"], leg_ret, f"exit {r['trade_date']} @ {r['close']:.3f}"))
             hold_days = (
                 datetime.strptime(r["trade_date"], "%Y-%m-%d")
                 - datetime.strptime(open_trade["entry_date"], "%Y-%m-%d")
             ).days
+            blended_ret = sum(frac * ret for frac, ret, _ in open_trade["legs"])
             trades.append(
                 {
                     "entry_date": open_trade["entry_date"],
                     "entry_price": open_trade["entry_price"],
                     "exit_date": r["trade_date"],
                     "exit_price": r["close"],
-                    "return_pct": ret_pct,
+                    "return_pct": blended_ret,
+                    "legs": open_trade["legs"],
                     "hold_calendar_days": hold_days,
                     "exit_reason": r["reason"],
                 }
@@ -77,22 +90,34 @@ def summarize(symbol: str, rows: list[dict]) -> None:
         print(
             f"  BUY  {t['entry_date']} @ {t['entry_price']:.3f}  ->  "
             f"SELL {t['exit_date']} @ {t['exit_price']:.3f}   "
-            f"return={t['return_pct']:+.1f}%   held={t['hold_calendar_days']}d"
+            f"blended return={t['return_pct']:+.1f}%   held={t['hold_calendar_days']}d"
         )
+        if len(t["legs"]) > 1:
+            for frac, ret, label in t["legs"]:
+                print(f"       leg: {frac:.0%} @ {label}   return={ret:+.1f}%")
         print(f"       exit reason: {t['exit_reason']}")
     if open_trade is not None:
         last = rows[-1]
-        ret_pct = (last["close"] / open_trade["entry_price"] - 1.0) * 100.0
+        tail_ret = (last["close"] / open_trade["entry_price"] - 1.0) * 100.0
+        blended_unrl = sum(frac * ret for frac, ret, _ in open_trade["legs"]) + open_trade["prev_fraction"] * tail_ret
         print(
             f"  BUY  {open_trade['entry_date']} @ {open_trade['entry_price']:.3f}  ->  "
             f"STILL HOLDING as of {last['trade_date']} @ {last['close']:.3f}   "
-            f"unrealized={ret_pct:+.1f}%   stop={last['structural_stop']:.3f}"
+            f"blended unrealized={blended_unrl:+.1f}%   "
+            f"position={open_trade['prev_fraction']:.0%}   stop={last['structural_stop']:.3f}"
         )
+        if open_trade["legs"]:
+            for frac, ret, label in open_trade["legs"]:
+                print(f"       leg: {frac:.0%} @ {label}   return={ret:+.1f}%")
 
     hold_days_total = sum(1 for r in rows if r["decision"] == "HOLD")
     buy_days_total = sum(1 for r in rows if r["decision"] == "BUY")
+    scale_days_total = sum(1 for r in rows if r["decision"] == "SCALE_OUT")
     sell_days_total = sum(1 for r in rows if r["decision"] == "SELL_SIGNAL")
-    print(f"\n  decision counts: BUY={buy_days_total}  HOLD={hold_days_total}  SELL_SIGNAL={sell_days_total}")
+    print(
+        f"\n  decision counts: BUY={buy_days_total}  HOLD={hold_days_total}  "
+        f"SCALE_OUT={scale_days_total}  SELL_SIGNAL={sell_days_total}"
+    )
 
 
 def main() -> None:
