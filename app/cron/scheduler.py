@@ -352,9 +352,14 @@ def start_scheduler() -> None:
     try:
         from app.services.eagle_eye.ingest import run_nightly_recompute
 
-        def _run_eagle_eye_intraday_refresh() -> None:
-            """Intraday ratings refresh — runs near market close (13:15) to
-            capture late-session signals before the post-close recompute."""
+        def _run_eagle_eye_secondary_refresh() -> None:
+            """Secondary ratings refresh — runs at 14:35, 30 minutes after the
+            14:05 primary nightly recompute, as a retry/backstop pass in case
+            that run failed or left symbols stale (_run_eagle_eye_daily raises
+            if its own ingest didn't succeed). Renamed from
+            _run_eagle_eye_intraday_refresh: that name and its old docstring
+            (claiming a 13:15 pre-close run) were stale leftovers from before
+            this job was moved to run after, not before, the primary pass."""
             run_nightly_recompute(dna_refresh=False, verbose=False)
 
         def _run_eagle_eye_daily() -> None:
@@ -372,7 +377,7 @@ def start_scheduler() -> None:
 
         # Sun–Thu at 14:35 Asia/Kuwait — secondary refresh after nightly recompute (~14:05–14:25)
         _scheduler.add_job(
-            _run_eagle_eye_intraday_refresh,
+            _run_eagle_eye_secondary_refresh,
             trigger=CronTrigger(
                 day_of_week="sun,mon,tue,wed,thu",
                 hour=14,
@@ -380,7 +385,7 @@ def start_scheduler() -> None:
                 timezone="Asia/Kuwait",
             ),
             id="eagle_eye_intraday_refresh",
-            name="Eagle Eye intraday refresh",
+            name="Eagle Eye secondary refresh",
             replace_existing=True,
             coalesce=True,
             max_instances=1,
