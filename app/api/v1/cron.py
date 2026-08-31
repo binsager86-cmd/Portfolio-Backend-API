@@ -327,3 +327,46 @@ async def trigger_eagle_eye_recompute(
             "Ratings will update progressively over the next ~20 minutes."
         ),
     }
+
+
+@router.post("/trend-hold-recompute")
+async def trigger_trend_hold_recompute(
+    x_cron_key: Optional[str] = Header(None, alias="X-Cron-Key"),
+):
+    """
+    Trigger a full trend-hold engine scan + Trend-Hold Book paper-trading
+    step immediately. Equivalent to the scheduled 14:15 + 14:18 Asia/Kuwait
+    jobs. Use this to force a run right now -- e.g. right after deploying a
+    code change, without waiting for the next scheduled cycle -- and to
+    check the returned counts/log for what actually happened.
+    """
+    _verify_cron_key(x_cron_key)
+
+    import threading
+
+    logger.info("📈 Trend-hold recompute triggered via API")
+
+    def _run() -> None:
+        try:
+            from app.services.eagle_eye_v2.trend_hold_batch import run_trend_hold_scan
+            scan_summary = run_trend_hold_scan()
+            logger.info("📈 Trend-hold scan via API: %s", scan_summary)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("📈 Trend-hold scan via API failed: %s", exc)
+            return
+        try:
+            from app.services.eagle_eye_v2.trend_hold_book import run_trend_hold_book_step
+            book_summary = run_trend_hold_book_step()
+            logger.info("📈 Trend-hold book step via API: %s", book_summary)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("📈 Trend-hold book step via API failed: %s", exc)
+
+    threading.Thread(target=_run, daemon=True).start()
+
+    return {
+        "status": "accepted",
+        "message": (
+            "Trend-hold scan + book step started in background. "
+            "Check server logs or GET /api/v1/trend-hold-book/portfolio in ~1 minute."
+        ),
+    }
