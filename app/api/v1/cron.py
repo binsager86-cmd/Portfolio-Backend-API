@@ -344,22 +344,22 @@ async def trigger_trend_hold_recompute(
 
     import threading
 
-    logger.info("📈 Trend-hold recompute triggered via API")
+    logger.info("Trend-hold recompute triggered via API")
 
     def _run() -> None:
         try:
             from app.services.eagle_eye_v2.trend_hold_batch import run_trend_hold_scan
             scan_summary = run_trend_hold_scan()
-            logger.info("📈 Trend-hold scan via API: %s", scan_summary)
+            logger.info("Trend-hold scan via API: %s", scan_summary)
         except Exception as exc:  # noqa: BLE001
-            logger.warning("📈 Trend-hold scan via API failed: %s", exc)
+            logger.warning("Trend-hold scan via API failed: %s", exc)
             return
         try:
             from app.services.eagle_eye_v2.trend_hold_book import run_trend_hold_book_step
             book_summary = run_trend_hold_book_step()
-            logger.info("📈 Trend-hold book step via API: %s", book_summary)
+            logger.info("Trend-hold book step via API: %s", book_summary)
         except Exception as exc:  # noqa: BLE001
-            logger.warning("📈 Trend-hold book step via API failed: %s", exc)
+            logger.warning("Trend-hold book step via API failed: %s", exc)
 
     threading.Thread(target=_run, daemon=True).start()
 
