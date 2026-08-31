@@ -102,3 +102,18 @@ class TrendHoldBookLessonsSummary(BaseModel):
     by_outcome: dict
     avg_loss_mae_pct: Optional[float] = None
     avg_win_giveback_pct: Optional[float] = None
+
+
+class TrendHoldBookPerformance(BaseModel):
+    total_closed: int
+    win_count: int
+    loss_count: int
+    win_rate_pct: Optional[float] = None
+    total_realized_pnl_kwd: float
+    max_profit_kwd: Optional[float] = None
+    max_loss_kwd: Optional[float] = None
+    avg_win_kwd: Optional[float] = None
+    avg_loss_kwd: Optional[float] = None
+    profit_factor: Optional[float] = None
+    expectancy_kwd: Optional[float] = None
+    total_commission_paid_kwd: float

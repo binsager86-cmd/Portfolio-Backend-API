@@ -506,3 +506,57 @@ def load_lessons_summary() -> Dict[str, Any]:
         "avg_loss_mae_pct": round(sum(loss_mae) / len(loss_mae), 2) if loss_mae else None,
         "avg_win_giveback_pct": round(sum(win_giveback) / len(win_giveback), 2) if win_giveback else None,
     }
+
+
+# ---------------------------------------------------------------------------
+# Performance statistics (standard trading scorecard, from realized P&L)
+# ---------------------------------------------------------------------------
+
+def load_performance_stats() -> Dict[str, Any]:
+    """
+    Standard trading performance scorecard computed directly from
+    ee_trend_hold_book_trades.realized_pnl_kwd -- win/loss counts, best/
+    worst trade, profit factor, expectancy. Independent of the lessons
+    classifier (works even before any lesson has been computed), and the
+    KWD-denominated companion to load_lessons_summary()'s percentage-based
+    excursion metrics.
+    """
+    from app.core.database import query_all
+
+    rows = query_all(
+        "SELECT realized_pnl_kwd, commission_kwd FROM ee_trend_hold_book_trades",
+        (),
+    )
+    rows = [dict(r.items()) for r in rows or []]
+
+    total_commission = sum(_f(r.get("commission_kwd")) or 0.0 for r in rows)
+    pnls = [float(r["realized_pnl_kwd"]) for r in rows if r.get("realized_pnl_kwd") is not None]
+    wins = [p for p in pnls if p >= 0]
+    losses = [p for p in pnls if p < 0]
+
+    total_closed = len(pnls)
+    win_count = len(wins)
+    loss_count = len(losses)
+    total_pnl = sum(pnls)
+    gross_profit = sum(wins)
+    gross_loss = sum(losses)  # <= 0
+
+    # profit_factor is undefined (not 0, not infinite) until there's at
+    # least one loss to divide by -- returned as None rather than a
+    # non-JSON-safe float('inf') when every closed trade so far has won.
+    profit_factor = (gross_profit / abs(gross_loss)) if gross_loss < 0 else None
+
+    return {
+        "total_closed": total_closed,
+        "win_count": win_count,
+        "loss_count": loss_count,
+        "win_rate_pct": round(win_count / total_closed * 100.0, 2) if total_closed else None,
+        "total_realized_pnl_kwd": round(total_pnl, 3),
+        "max_profit_kwd": round(max(wins), 3) if wins else None,
+        "max_loss_kwd": round(min(losses), 3) if losses else None,
+        "avg_win_kwd": round(gross_profit / win_count, 3) if win_count else None,
+        "avg_loss_kwd": round(gross_loss / loss_count, 3) if loss_count else None,
+        "profit_factor": round(profit_factor, 2) if profit_factor is not None else None,
+        "expectancy_kwd": round(total_pnl / total_closed, 3) if total_closed else None,
+        "total_commission_paid_kwd": round(total_commission, 3),
+    }

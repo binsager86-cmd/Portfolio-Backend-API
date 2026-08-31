@@ -24,6 +24,7 @@ from app.schemas.trend_hold_book import (
     TrendHoldBookLessonsSummary,
     TrendHoldBookNavHistoryResponse,
     TrendHoldBookNavPoint,
+    TrendHoldBookPerformance,
     TrendHoldBookPortfolio,
     TrendHoldBookPosition,
     TrendHoldBookPositionsResponse,
@@ -264,3 +265,21 @@ async def get_trend_hold_book_lessons_summary(
     book.ensure_trend_hold_book_tables()
     summary = book.load_lessons_summary()
     return TrendHoldBookLessonsSummary(**summary)
+
+
+@router.get("/performance", response_model=TrendHoldBookPerformance)
+async def get_trend_hold_book_performance(
+    _user: TokenData = Depends(get_current_user),
+):
+    """
+    Standard trading performance scorecard: win/loss counts and rate,
+    total realized P&L, best/worst single trade, average win/loss,
+    profit factor, and per-trade expectancy -- computed directly from
+    the trade ledger's realized_pnl_kwd, independent of the lessons
+    classifier (populated as soon as any trade closes, lessons or not).
+    """
+    from app.services.eagle_eye_v2 import trend_hold_book_store as book
+
+    book.ensure_trend_hold_book_tables()
+    stats = book.load_performance_stats()
+    return TrendHoldBookPerformance(**stats)
