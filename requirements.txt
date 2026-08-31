@@ -57,7 +57,7 @@ APScheduler==3.11.3
 sentry-sdk==2.64.0
 prometheus-fastapi-instrumentator==7.1.0
 prometheus_client==0.25.0
-firebase-admin>=6.5,<8
+firebase-admin>=6.5,<7
 
 # ── Caching ──────────────────────────────────────────────────────────
 cachetools>=5.3,<7.0
