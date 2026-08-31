@@ -19,6 +19,9 @@ from fastapi import APIRouter, Depends, Query
 from app.api.deps import get_current_user
 from app.core.security import TokenData
 from app.schemas.trend_hold_book import (
+    TrendHoldBookLesson,
+    TrendHoldBookLessonsResponse,
+    TrendHoldBookLessonsSummary,
     TrendHoldBookNavHistoryResponse,
     TrendHoldBookNavPoint,
     TrendHoldBookPortfolio,
@@ -208,3 +211,56 @@ async def get_trend_hold_decision_log(
         for r in rows
     ]
     return TrendHoldDecisionLogResponse(entries=entries)
+
+
+@router.get("/lessons", response_model=TrendHoldBookLessonsResponse)
+async def get_trend_hold_book_lessons(
+    limit: int = Query(default=200, ge=1, le=1000),
+    _user: TokenData = Depends(get_current_user),
+):
+    """
+    Return the Trend-Hold Book's post-trade "autopsy" log -- one entry per
+    closed leg (SCALE_OUT/EXIT), explaining what happened and why using the
+    realized price path (MAE/MFE, holding period, single-session vs
+    grinding decline), plus an enhancement suggestion. See
+    trend_hold_lessons.py for the (fully rule-based, auditable) classifier.
+    """
+    from app.services.eagle_eye_v2 import trend_hold_book_store as book
+
+    book.ensure_trend_hold_book_tables()
+    rows = book.load_lessons(limit=limit)
+
+    lessons = [
+        TrendHoldBookLesson(
+            ticker=r["ticker"],
+            trade_date=r["trade_date"],
+            side=r["side"],
+            classification=r["classification"],
+            outcome=r["outcome"],
+            mae_pct=_safe_float(r.get("mae_pct")),
+            mfe_pct=_safe_float(r.get("mfe_pct")),
+            giveback_pct=_safe_float(r.get("giveback_pct")),
+            holding_days=r.get("holding_days"),
+            reason=r.get("reason") or "",
+            enhancement=r.get("enhancement") or "",
+        )
+        for r in rows
+    ]
+    return TrendHoldBookLessonsResponse(lessons=lessons)
+
+
+@router.get("/lessons/summary", response_model=TrendHoldBookLessonsSummary)
+async def get_trend_hold_book_lessons_summary(
+    _user: TokenData = Depends(get_current_user),
+):
+    """
+    Aggregate rollup of the lessons log -- counts per classification/
+    outcome and average excursion metrics. This is the evidence a human
+    would want before deciding whether a trend_hold_engine.py parameter
+    (CHANDELIER_ATR_MULT, SCALE_OUT_GAIN_PCT, ...) actually needs to change.
+    """
+    from app.services.eagle_eye_v2 import trend_hold_book_store as book
+
+    book.ensure_trend_hold_book_tables()
+    summary = book.load_lessons_summary()
+    return TrendHoldBookLessonsSummary(**summary)

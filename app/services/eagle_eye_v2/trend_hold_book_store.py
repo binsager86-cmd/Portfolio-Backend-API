@@ -5,9 +5,12 @@ Mechanically "executes" (virtual money only) the decisions already written
 by trend_hold_batch.py into ee_trend_hold_state -- BUY / SCALE_OUT /
 SELL_SIGNAL -- into a separate, independent 3-table ledger:
 
-  - ee_trend_hold_book_state     : singleton row, cash + starting capital
-  - ee_trend_hold_book_positions : open paper positions, one row per ticker
-  - ee_trend_hold_book_trades    : append-only fill ledger (BUY/SCALE_OUT/EXIT)
+  - ee_trend_hold_book_state       : singleton row, cash + starting capital
+  - ee_trend_hold_book_positions   : open paper positions, one row per ticker
+  - ee_trend_hold_book_trades      : append-only fill ledger (BUY/SCALE_OUT/EXIT)
+  - ee_trend_hold_book_nav_history : daily equity/cash snapshot (equity curve)
+  - ee_trend_hold_book_lessons     : post-trade "autopsy" for each closed leg
+    (SCALE_OUT/EXIT), written by trend_hold_lessons.py -- see that module
 
 This is NOT the real portfolio (app/models/portfolio.py -- real user money)
 and NOT the unrelated eagle_eye_v2/simulator/ system (3-symbol backtest
@@ -86,6 +89,30 @@ def ensure_trend_hold_book_tables() -> None:
             reason           TEXT,
             executed_at      INTEGER,
             UNIQUE (ticker, trade_date)
+        )
+        """,
+        (),
+    )
+
+    # Post-trade "autopsy" for each closed leg -- shares the trades table's
+    # natural (ticker, trade_date) key, since exactly one trade fires per
+    # ticker per session (see UNIQUE above), so no surrogate FK is needed.
+    exec_sql(
+        """
+        CREATE TABLE IF NOT EXISTS ee_trend_hold_book_lessons (
+            ticker          TEXT NOT NULL,
+            trade_date      TEXT NOT NULL,
+            side            TEXT NOT NULL,
+            classification  TEXT NOT NULL,
+            outcome         TEXT NOT NULL,
+            mae_pct         REAL,
+            mfe_pct         REAL,
+            giveback_pct    REAL,
+            holding_days    INTEGER,
+            reason          TEXT,
+            enhancement     TEXT,
+            computed_at     INTEGER,
+            PRIMARY KEY (ticker, trade_date)
         )
         """,
         (),
@@ -233,6 +260,45 @@ def record_buy_fill(
     )
 
 
+def _lesson_insert_statement(ticker: str, trade_date: str, side: str, lesson: Optional[dict], now: int):
+    """Build the (sql, params) tuple for one lesson row, or None if no lesson was computed."""
+    if lesson is None:
+        return None
+    return (
+        """
+        INSERT INTO ee_trend_hold_book_lessons (
+            ticker, trade_date, side, classification, outcome, mae_pct,
+            mfe_pct, giveback_pct, holding_days, reason, enhancement, computed_at
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT (ticker, trade_date) DO UPDATE SET
+            side = excluded.side,
+            classification = excluded.classification,
+            outcome = excluded.outcome,
+            mae_pct = excluded.mae_pct,
+            mfe_pct = excluded.mfe_pct,
+            giveback_pct = excluded.giveback_pct,
+            holding_days = excluded.holding_days,
+            reason = excluded.reason,
+            enhancement = excluded.enhancement,
+            computed_at = excluded.computed_at
+        """,
+        (
+            ticker.upper(),
+            trade_date,
+            side,
+            lesson["classification"],
+            lesson["outcome"],
+            _f(lesson.get("mae_pct")),
+            _f(lesson.get("mfe_pct")),
+            _f(lesson.get("giveback_pct")),
+            lesson.get("holding_days"),
+            lesson.get("reason"),
+            lesson.get("enhancement"),
+            now,
+        ),
+    )
+
+
 def record_scale_out_fill(
     ticker: str,
     trade_date: str,
@@ -247,38 +313,41 @@ def record_scale_out_fill(
     remaining_entry_commission_kwd: float,
     avg_cost: float,
     opened_date: str,
+    lesson: Optional[dict] = None,
 ) -> None:
     from app.core.database import exec_sql_batch
 
     now = int(time.time())
-    exec_sql_batch(
-        [
+    statements = [
+        (
+            """
+            UPDATE ee_trend_hold_book_positions
+            SET quantity = ?, entry_commission_kwd = ?, avg_cost = ?, opened_date = ?, updated_at = ?
+            WHERE ticker = ?
+            """,
+            (_f(remaining_quantity), _f(remaining_entry_commission_kwd), _f(avg_cost), opened_date, now, ticker.upper()),
+        ),
+        (
+            """
+            INSERT INTO ee_trend_hold_book_trades (
+                ticker, side, trade_date, quantity, price, gross_kwd,
+                commission_kwd, realized_pnl_kwd, reason, executed_at
+            ) VALUES (?,'SCALE_OUT',?,?,?,?,?,?,?,?)
+            """,
             (
-                """
-                UPDATE ee_trend_hold_book_positions
-                SET quantity = ?, entry_commission_kwd = ?, avg_cost = ?, opened_date = ?, updated_at = ?
-                WHERE ticker = ?
-                """,
-                (_f(remaining_quantity), _f(remaining_entry_commission_kwd), _f(avg_cost), opened_date, now, ticker.upper()),
+                ticker.upper(), trade_date, _f(sell_quantity), _f(price), _f(gross_kwd),
+                _f(commission_kwd), _f(realized_pnl_kwd), reason, now,
             ),
-            (
-                """
-                INSERT INTO ee_trend_hold_book_trades (
-                    ticker, side, trade_date, quantity, price, gross_kwd,
-                    commission_kwd, realized_pnl_kwd, reason, executed_at
-                ) VALUES (?,'SCALE_OUT',?,?,?,?,?,?,?,?)
-                """,
-                (
-                    ticker.upper(), trade_date, _f(sell_quantity), _f(price), _f(gross_kwd),
-                    _f(commission_kwd), _f(realized_pnl_kwd), reason, now,
-                ),
-            ),
-            (
-                "UPDATE ee_trend_hold_book_state SET cash_kwd = ?, updated_at = ? WHERE id = 1",
-                (_f(cash_kwd), now),
-            ),
-        ]
-    )
+        ),
+        (
+            "UPDATE ee_trend_hold_book_state SET cash_kwd = ?, updated_at = ? WHERE id = 1",
+            (_f(cash_kwd), now),
+        ),
+    ]
+    lesson_stmt = _lesson_insert_statement(ticker, trade_date, "SCALE_OUT", lesson, now)
+    if lesson_stmt is not None:
+        statements.append(lesson_stmt)
+    exec_sql_batch(statements)
 
 
 def record_exit_fill(
@@ -291,31 +360,34 @@ def record_exit_fill(
     realized_pnl_kwd: float,
     reason: Optional[str],
     cash_kwd: float,
+    lesson: Optional[dict] = None,
 ) -> None:
     from app.core.database import exec_sql_batch
 
     now = int(time.time())
-    exec_sql_batch(
-        [
-            ("DELETE FROM ee_trend_hold_book_positions WHERE ticker = ?", (ticker.upper(),)),
+    statements = [
+        ("DELETE FROM ee_trend_hold_book_positions WHERE ticker = ?", (ticker.upper(),)),
+        (
+            """
+            INSERT INTO ee_trend_hold_book_trades (
+                ticker, side, trade_date, quantity, price, gross_kwd,
+                commission_kwd, realized_pnl_kwd, reason, executed_at
+            ) VALUES (?,'EXIT',?,?,?,?,?,?,?,?)
+            """,
             (
-                """
-                INSERT INTO ee_trend_hold_book_trades (
-                    ticker, side, trade_date, quantity, price, gross_kwd,
-                    commission_kwd, realized_pnl_kwd, reason, executed_at
-                ) VALUES (?,'EXIT',?,?,?,?,?,?,?,?)
-                """,
-                (
-                    ticker.upper(), trade_date, _f(sell_quantity), _f(price), _f(gross_kwd),
-                    _f(commission_kwd), _f(realized_pnl_kwd), reason, now,
-                ),
+                ticker.upper(), trade_date, _f(sell_quantity), _f(price), _f(gross_kwd),
+                _f(commission_kwd), _f(realized_pnl_kwd), reason, now,
             ),
-            (
-                "UPDATE ee_trend_hold_book_state SET cash_kwd = ?, updated_at = ? WHERE id = 1",
-                (_f(cash_kwd), now),
-            ),
-        ]
-    )
+        ),
+        (
+            "UPDATE ee_trend_hold_book_state SET cash_kwd = ?, updated_at = ? WHERE id = 1",
+            (_f(cash_kwd), now),
+        ),
+    ]
+    lesson_stmt = _lesson_insert_statement(ticker, trade_date, "EXIT", lesson, now)
+    if lesson_stmt is not None:
+        statements.append(lesson_stmt)
+    exec_sql_batch(statements)
 
 
 def load_recent_trades(limit: int = 300) -> List[dict]:
@@ -371,3 +443,66 @@ def load_nav_history(days: int = 180) -> List[dict]:
         (days,),
     )
     return list(reversed([dict(r.items()) for r in rows or []]))
+
+
+# ---------------------------------------------------------------------------
+# Lessons (post-trade autopsy, see trend_hold_lessons.py)
+# ---------------------------------------------------------------------------
+
+def load_lessons(limit: int = 200) -> List[dict]:
+    """Return recent trade lessons, newest first."""
+    from app.core.database import query_all
+
+    rows = query_all(
+        """
+        SELECT ticker, trade_date, side, classification, outcome, mae_pct,
+               mfe_pct, giveback_pct, holding_days, reason, enhancement, computed_at
+        FROM   ee_trend_hold_book_lessons
+        ORDER BY trade_date DESC, ticker ASC
+        LIMIT  ?
+        """,
+        (limit,),
+    )
+    return [dict(r.items()) for r in rows or []]
+
+
+def load_lessons_summary() -> Dict[str, Any]:
+    """
+    Aggregate the lessons log into a "what's actually going wrong" rollup:
+    counts per classification/outcome, plus average excursion metrics for
+    losing trades -- the evidence a human would want before touching any
+    trend_hold_engine.py parameter.
+    """
+    from app.core.database import query_all
+
+    rows = query_all(
+        """
+        SELECT classification, outcome, mae_pct, mfe_pct, giveback_pct, holding_days
+        FROM   ee_trend_hold_book_lessons
+        """,
+        (),
+    )
+    rows = [dict(r.items()) for r in rows or []]
+
+    by_classification: Dict[str, int] = {}
+    by_outcome: Dict[str, int] = {}
+    loss_mae: List[float] = []
+    win_giveback: List[float] = []
+
+    for r in rows:
+        cls = r.get("classification") or "UNKNOWN"
+        outcome = r.get("outcome") or "UNKNOWN"
+        by_classification[cls] = by_classification.get(cls, 0) + 1
+        by_outcome[outcome] = by_outcome.get(outcome, 0) + 1
+        if outcome == "LOSS" and r.get("mae_pct") is not None:
+            loss_mae.append(float(r["mae_pct"]))
+        if outcome == "WIN" and r.get("giveback_pct") is not None:
+            win_giveback.append(float(r["giveback_pct"]))
+
+    return {
+        "total_closed": len(rows),
+        "by_classification": by_classification,
+        "by_outcome": by_outcome,
+        "avg_loss_mae_pct": round(sum(loss_mae) / len(loss_mae), 2) if loss_mae else None,
+        "avg_win_giveback_pct": round(sum(win_giveback) / len(win_giveback), 2) if win_giveback else None,
+    }

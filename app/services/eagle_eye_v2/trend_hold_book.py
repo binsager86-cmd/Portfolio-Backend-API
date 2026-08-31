@@ -39,6 +39,43 @@ def _f(v: Any) -> Optional[float]:
         return None
 
 
+def _build_lesson(
+    ticker: str, side: str, entry_date: Optional[str], entry_price: Optional[float],
+    exit_date: str, exit_price: float,
+) -> Optional[dict]:
+    """
+    Best-effort post-trade autopsy for one closing leg. Never allowed to
+    block or fail the actual trade fill -- a lesson-analysis error just
+    means that trade's row has no lesson yet, not a failed trade.
+    """
+    try:
+        from app.services.eagle_eye.store import load_ohlcv
+        from app.services.eagle_eye_v2.trend_hold_lessons import analyze_trade
+
+        ohlcv = load_ohlcv(ticker)
+        lesson = analyze_trade(
+            side=side,
+            entry_date=entry_date,
+            entry_price=entry_price,
+            exit_date=exit_date,
+            exit_price=exit_price,
+            ohlcv=ohlcv,
+        )
+        return {
+            "classification": lesson.classification,
+            "outcome": lesson.outcome,
+            "mae_pct": lesson.mae_pct,
+            "mfe_pct": lesson.mfe_pct,
+            "giveback_pct": lesson.giveback_pct,
+            "holding_days": lesson.holding_days,
+            "reason": lesson.reason,
+            "enhancement": lesson.enhancement,
+        }
+    except Exception as exc:
+        logger.warning("trend_hold_book: lesson analysis failed for %s: %s", ticker, exc)
+        return None
+
+
 def run_trend_hold_book_step() -> Dict[str, Any]:
     from app.services.eagle_eye.store import load_all_trend_hold_state
     from app.services.eagle_eye_v2 import trend_hold_book_store as book
@@ -142,6 +179,9 @@ def run_trend_hold_book_step() -> Dict[str, Any]:
                 remaining_qty = qty_before - sell_qty
                 remaining_entry_commission = float(pos["entry_commission_kwd"] or 0.0) - entry_commission_share
 
+                lesson = _build_lesson(
+                    ticker, "SCALE_OUT", pos.get("opened_date"), float(pos["avg_cost"]), trade_date, price,
+                )
                 book.record_scale_out_fill(
                     ticker=ticker,
                     trade_date=trade_date,
@@ -156,6 +196,7 @@ def run_trend_hold_book_step() -> Dict[str, Any]:
                     remaining_entry_commission_kwd=remaining_entry_commission,
                     avg_cost=float(pos["avg_cost"]),
                     opened_date=pos["opened_date"],
+                    lesson=lesson,
                 )
                 positions[ticker]["quantity"] = remaining_qty
                 positions[ticker]["entry_commission_kwd"] = remaining_entry_commission
@@ -181,6 +222,9 @@ def run_trend_hold_book_step() -> Dict[str, Any]:
                 )
                 cash += (gross - commission)
 
+                lesson = _build_lesson(
+                    ticker, "EXIT", pos.get("opened_date"), float(pos["avg_cost"]), trade_date, price,
+                )
                 book.record_exit_fill(
                     ticker=ticker,
                     trade_date=trade_date,
@@ -191,6 +235,7 @@ def run_trend_hold_book_step() -> Dict[str, Any]:
                     realized_pnl_kwd=realized_pnl,
                     reason=reason,
                     cash_kwd=cash,
+                    lesson=lesson,
                 )
                 del positions[ticker]
                 stats["exited"] += 1

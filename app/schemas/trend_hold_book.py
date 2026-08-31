@@ -76,3 +76,29 @@ class TrendHoldDecisionLogEntry(BaseModel):
 
 class TrendHoldDecisionLogResponse(BaseModel):
     entries: List[TrendHoldDecisionLogEntry]
+
+
+class TrendHoldBookLesson(BaseModel):
+    ticker: str
+    trade_date: str
+    side: str  # SCALE_OUT / EXIT
+    classification: str
+    outcome: str  # WIN / LOSS / PARTIAL / UNKNOWN
+    mae_pct: Optional[float] = None
+    mfe_pct: Optional[float] = None
+    giveback_pct: Optional[float] = None
+    holding_days: Optional[int] = None
+    reason: str
+    enhancement: str
+
+
+class TrendHoldBookLessonsResponse(BaseModel):
+    lessons: List[TrendHoldBookLesson]
+
+
+class TrendHoldBookLessonsSummary(BaseModel):
+    total_closed: int
+    by_classification: dict
+    by_outcome: dict
+    avg_loss_mae_pct: Optional[float] = None
+    avg_win_giveback_pct: Optional[float] = None
