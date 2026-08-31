@@ -413,7 +413,18 @@ app.add_middleware(
     allow_origin_regex=None if settings.is_production else _dev_origin_regex,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
+    # Include conditional-cache headers used by /news/feed (ETag/Last-Modified)
+    # so browser preflight requests are accepted.
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Requested-With",
+        "If-None-Match",
+        "If-Modified-Since",
+        "Cache-Control",
+        "Pragma",
+    ],
     # Chrome Private Network Access: localhost:8081 → 127.0.0.1:8004
     allow_private_network=not settings.is_production,
 )

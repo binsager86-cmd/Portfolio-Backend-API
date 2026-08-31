@@ -25,6 +25,8 @@ def format_signal(
     data_as_of: str,
     walk_forward_window: str = "N/A — live mode",
     entry_trigger: dict[str, Any] | None = None,
+    recommendation_contract: dict[str, Any] | None = None,
+    data_quality_reasons: list[str] | None = None,
 ) -> dict[str, Any]:
     """Assemble the canonical signal output dict.
 
@@ -51,22 +53,78 @@ def format_signal(
     else:
         reason = None
 
+    contract = recommendation_contract or {
+        "direction": "NEUTRAL",
+        "direction_score": 0,
+        "setup_quality_score": 0,
+        "timing_score": 0,
+        "data_quality_score": 0.0,
+        "expected_value_r": None,
+        "recommendation": "INSUFFICIENT_DATA",
+        "actionable": False,
+    }
+
+    execution_direction = str(contract.get("direction") or "NEUTRAL").upper()
+    execution_actionable = bool(contract.get("actionable")) and signal_direction in {"BUY", "SELL", "STRONG_BUY"}
+    scenario_levels = confluence.get("scenario_levels") or {
+        "direction": execution_direction,
+        "entry_zone_fils": [levels.get("entry_low"), levels.get("entry_high")],
+        "stop_loss_fils": levels.get("stop_loss"),
+        "tp1_fils": levels.get("tp1"),
+        "tp2_fils": levels.get("tp2"),
+        "tp3_fils": levels.get("tp3"),
+        "risk_reward_ratio": levels.get("risk_reward_ratio"),
+    }
+
+    if execution_actionable:
+        entry_zone_fils = [levels.get("entry_low"), levels.get("entry_high")]
+        stop_loss_fils = levels.get("stop_loss")
+        tp1_fils = levels.get("tp1")
+        tp2_fils = levels.get("tp2")
+        tp3_fils = levels.get("tp3")
+        tp_methods = levels.get("tp_methods")
+        preferred_order_type = preferred_order
+    else:
+        entry_zone_fils = None
+        stop_loss_fils = None
+        tp1_fils = None
+        tp2_fils = None
+        tp3_fils = None
+        tp_methods = None
+        preferred_order_type = None
+
     return {
         "timestamp": now_iso,
         "stock_code": stock_code.upper(),
         "segment": segment.upper(),
+        # New contract fields (direction/quality/timing/action split)
+        "direction": contract.get("direction"),
+        "direction_score": contract.get("direction_score"),
+        "setup_quality_score": contract.get("setup_quality_score"),
+        "timing_score": contract.get("timing_score"),
+        "data_quality_score": contract.get("data_quality_score"),
+        "expected_value_r": contract.get("expected_value_r"),
+        "recommendation": contract.get("recommendation"),
+        "actionable": contract.get("actionable"),
+        # Legacy field retained for compatibility. Prefer `recommendation` + `direction`.
         "signal": signal_direction,
         "reason": reason,
         "setup_type": setup_type,
         "execution": {
-            "entry_zone_fils": [levels.get("entry_low"), levels.get("entry_high")],
-            "stop_loss_fils": levels.get("stop_loss"),
-            "tp1_fils": levels.get("tp1"),
-            "tp2_fils": levels.get("tp2"),
-            "tp3_fils": levels.get("tp3"),
-            "tp_methods": levels.get("tp_methods"),
+            "actionable": execution_actionable,
+            "direction": execution_direction,
+            "entry_zone_fils": entry_zone_fils,
+            "stop_loss_fils": stop_loss_fils,
+            "tp1_fils": tp1_fils,
+            "tp2_fils": tp2_fils,
+            "tp3_fils": tp3_fils,
+            "tp_methods": tp_methods,
+            "target_metrics": levels.get("target_metrics"),
+            "costs": levels.get("costs"),
             "tick_alignment": tick_note,
-            "preferred_order_type": preferred_order,
+            "preferred_order_type": preferred_order_type,
+            "scenario_levels": scenario_levels,
+            "gate_audit": confluence.get("gate_audit"),
         },
         "risk_metrics": {
             "risk_per_share_fils": levels.get("risk_per_share"),
@@ -74,6 +132,13 @@ def format_signal(
             "position_size_percent": risk_metrics.get("equity_pct"),
             "cvar_95_fils": risk_metrics.get("cvar_fils"),
             "liquidity_adjustment_factor": risk_metrics.get("liquidity_factor"),
+            "risk_pct_of_equity": risk_metrics.get("risk_pct_of_equity"),
+            "position_value_pct_of_equity": risk_metrics.get("position_value_pct_of_equity"),
+            "position_value_kwd": risk_metrics.get("position_value_kd"),
+            "maximum_loss_kwd": risk_metrics.get("maximum_loss_kwd"),
+            "liquidity_cap": risk_metrics.get("liquidity_cap"),
+            "cash_cap": risk_metrics.get("cash_cap"),
+            "portfolio_heat_cap": risk_metrics.get("portfolio_heat_cap"),
         },
         "probabilities": {
             "p_tp1_before_sl": probabilities.get("p_tp1_before_sl"),
@@ -81,6 +146,12 @@ def format_signal(
             "confidence_interval_95": probabilities.get("confidence_interval_95"),
             "expected_return_r_multiple": probabilities.get("expected_return_r_multiple"),
             "calibration_method": probabilities.get("calibration_method"),
+            "probability_status": probabilities.get("probability_status", "UNVALIDATED"),
+            "sample_size": probabilities.get("sample_size", 0),
+            "calibrated_as_of": probabilities.get("calibrated_as_of"),
+            "brier_score": probabilities.get("brier_score"),
+            "log_loss": probabilities.get("log_loss"),
+            "calibration_curve": probabilities.get("calibration_curve"),
         },
         "confluence_details": {
             "total_score": confluence.get("total_score"),
@@ -100,6 +171,11 @@ def format_signal(
             "volume_profile": confluence.get("volume_profile"),
             "indicator_breakdown": confluence.get("indicator_breakdown"),
             "four_scores": confluence.get("four_scores"),
+            "component_scores": confluence.get("component_scores"),
+            "scoring_model": confluence.get("scoring_model"),
+            "component_availability": confluence.get("component_availability"),
+            "component_coverage": confluence.get("component_coverage"),
+            "effective_weights": confluence.get("effective_weights"),
         },
         "entry_trigger": entry_trigger or {
             "action": "HOLD", "trigger": "none",
@@ -113,6 +189,17 @@ def format_signal(
             "data_as_of": data_as_of,
             "walk_forward_window": walk_forward_window,
             "statistical_confidence": probabilities.get("p_tp1_before_sl"),
+            "execution_semantics": {
+                "sell": "SELL is an exit/reduction recommendation for long-only books unless client enables shorting workflows.",
+            },
+            "data_quality_reasons": list(data_quality_reasons or []),
+            "deprecated_fields": [
+                {
+                    "field": "signal",
+                    "replacement": ["direction", "recommendation", "actionable"],
+                    "status": "deprecated",
+                }
+            ],
         },
     }
 

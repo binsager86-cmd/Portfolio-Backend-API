@@ -86,6 +86,31 @@ class TestKelly:
                                          win_probability=0.99)
         assert result["risk_fraction_used"] / 100.0 <= KELLY_MAX_FRACTION + 0.01
 
+    def test_uncalibrated_probability_does_not_enable_kelly(self):
+        fixed = calculate_position_size(100_000.0, 500.0, 490.0, 1_000_000.0)
+        unvalidated = calculate_position_size(
+            100_000.0,
+            500.0,
+            490.0,
+            1_000_000.0,
+            win_probability=0.99,
+            probability_status="UNVALIDATED",
+            net_rr=4.0,
+        )
+        assert unvalidated["shares"] == fixed["shares"]
+
+    def test_shares_respect_cash_position_and_liquidity_caps(self):
+        result = calculate_position_size(
+            100_000.0,
+            500.0,
+            490.0,
+            20_000.0,
+            available_cash_kd=1_000.0,
+        )
+        assert result["position_value_kd"] <= 1_000.0
+        assert result["position_value_kd"] <= 20_000.0 * 0.05 + 1.0
+        assert result["position_value_pct_of_equity"] <= 25.0
+
 
 class TestCVaRReduction:
     def test_cvar_reduction_reduces_shares(self):

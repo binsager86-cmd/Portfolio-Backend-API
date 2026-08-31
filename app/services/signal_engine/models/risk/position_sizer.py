@@ -16,6 +16,9 @@ from app.services.signal_engine.config.risk_config import (
     LIQUIDITY_THRESHOLD_KD,
     RISK_PER_TRADE,
     USE_HALF_KELLY,
+    TC_COMMISSION,
+    TC_SLIPPAGE_MAIN,
+    TC_SLIPPAGE_PREMIER,
 )
 
 
@@ -26,7 +29,16 @@ def calculate_position_size(
     adtv_kd: float,
     win_probability: float | None = None,
     cvar_reduction: float = 1.0,
-) -> dict[str, float]:
+    *,
+    net_rr: float | None = None,
+    probability_status: str | None = None,
+    available_cash_kd: float | None = None,
+    max_position_value_pct: float = 0.25,
+    max_adtv_pct: float = 0.05,
+    segment: str = "PREMIER",
+    spread_pct: float = 0.0,
+    gap_risk_fils: float = 0.0,
+) -> dict[str, float | str | None]:
     """Calculate the recommended position size (number of shares and % of equity).
 
     Args:
@@ -42,8 +54,8 @@ def calculate_position_size(
         Dict with keys: shares, equity_pct, position_value_kd.
     """
     risk_per_share = abs(entry_price - stop_loss)
-    if risk_per_share <= 0 or entry_price <= 0:
-        return {"shares": 0, "equity_pct": 0.0, "position_value_kd": 0.0}
+    if risk_per_share <= 0 or entry_price <= 0 or account_equity <= 0:
+        return {"shares": 0, "equity_pct": 0.0, "position_value_kd": 0.0, "maximum_loss_kwd": 0.0}
 
     # ── Liquidity factor ─────────────────────────────────────────────────────
     liquidity_factor = min(1.0, adtv_kd / LIQUIDITY_THRESHOLD_KD) if adtv_kd > 0 else 0.5
@@ -51,15 +63,22 @@ def calculate_position_size(
     # ── Base risk fraction ────────────────────────────────────────────────────
     risk_fraction = RISK_PER_TRADE * liquidity_factor * cvar_reduction
 
-    # ── Optional half-Kelly scaling ──────────────────────────────────────────
-    if win_probability is not None and 0.0 < win_probability < 1.0 and USE_HALF_KELLY:
-        # Kelly fraction = (p * b - q) / b  where b = reward/risk ≈ 1.5
-        b = 1.5   # assumed reward multiple for Kelly (TP1 target)
-        kelly = (win_probability * b - (1.0 - win_probability)) / b
-        kelly = max(0.0, kelly)
-        half_kelly = kelly / 2.0
-        # Use the smaller of base risk fraction and half-Kelly
-        risk_fraction = min(risk_fraction, half_kelly)
+    # ── Optional fractional Kelly scaling ────────────────────────────────────
+    if (
+        win_probability is not None
+        and 0.0 < win_probability < 1.0
+        and probability_status == "CALIBRATED"
+        and USE_HALF_KELLY
+    ):
+        b = float(net_rr or 0.0)
+        if b <= 0:
+            win_probability = None
+        else:
+            kelly = (win_probability * b - (1.0 - win_probability)) / b
+            kelly = max(0.0, kelly)
+            half_kelly = kelly / 2.0
+            # Use the smaller of base risk fraction and half-Kelly
+            risk_fraction = min(risk_fraction, half_kelly)
 
     risk_fraction = min(risk_fraction, KELLY_MAX_FRACTION)
 
@@ -70,10 +89,19 @@ def calculate_position_size(
     risk_per_share_kd = abs(entry_kd - stop_kd)
 
     if risk_per_share_kd <= 0:
-        return {"shares": 0, "equity_pct": 0.0, "position_value_kd": 0.0}
+        return {"shares": 0, "equity_pct": 0.0, "position_value_kd": 0.0, "maximum_loss_kwd": 0.0}
 
     max_risk_kd = account_equity * risk_fraction
-    shares = int(max_risk_kd / risk_per_share_kd)
+    slippage = TC_SLIPPAGE_PREMIER if segment.upper() == "PREMIER" else TC_SLIPPAGE_MAIN
+    round_trip_cost_per_share = entry_kd * (TC_COMMISSION + slippage) + stop_kd * (TC_COMMISSION + slippage)
+    spread_cost_per_share = entry_kd * max(0.0, spread_pct) / 100.0
+    net_risk_per_share = risk_per_share_kd + round_trip_cost_per_share + (gap_risk_fils / 1000.0) + spread_cost_per_share
+    risk_shares = int(max_risk_kd / net_risk_per_share) if net_risk_per_share > 0 else 0
+    equity_cap_shares = int((account_equity * max_position_value_pct) / entry_kd)
+    cash_cap_shares = int((available_cash_kd if available_cash_kd is not None else account_equity) / entry_kd)
+    liquidity_cap_value = max(0.0, adtv_kd * max_adtv_pct)
+    liquidity_cap_shares = int(liquidity_cap_value / entry_kd) if entry_kd > 0 else 0
+    shares = min(risk_shares, equity_cap_shares, cash_cap_shares, liquidity_cap_shares)
     position_value_kd = shares * entry_kd
     equity_pct = round(position_value_kd / account_equity * 100.0, 2) if account_equity > 0 else 0.0
 
@@ -81,6 +109,13 @@ def calculate_position_size(
         "shares": shares,
         "equity_pct": equity_pct,
         "position_value_kd": round(position_value_kd, 2),
+        "risk_pct_of_equity": round((shares * net_risk_per_share / account_equity) * 100.0, 3),
+        "position_value_pct_of_equity": equity_pct,
+        "maximum_loss_kwd": round(shares * net_risk_per_share, 2),
+        "liquidity_cap": round(liquidity_cap_value, 2),
+        "cash_cap": round(cash_cap_shares * entry_kd, 2),
+        "portfolio_heat_cap": round(account_equity * RISK_PER_TRADE, 2),
+        "probability_status": probability_status,
         "liquidity_factor": round(liquidity_factor, 3),
         "risk_fraction_used": round(risk_fraction * 100.0, 2),
     }

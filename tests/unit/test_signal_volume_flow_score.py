@@ -67,12 +67,12 @@ class TestOBV:
         _, d = compute_volume_flow_score(_rows_falling_obv(), auction_intensity=1.0)
         assert d["obv_pts"] <= 5
 
-    def test_missing_obv_gives_neutral(self):
+    def test_missing_obv_is_unavailable_with_zero_credit(self):
         rows = _rows_rising_obv()
         for r in rows:
             r["obv"] = None
         _, d = compute_volume_flow_score(rows, auction_intensity=1.0)
-        assert d["obv_pts"] == 12
+        assert d["obv_pts"] == 0
 
 
 # ── CMF ───────────────────────────────────────────────────────────────────────
@@ -92,11 +92,11 @@ class TestCMF:
         _, d = compute_volume_flow_score(rows, auction_intensity=1.0)
         assert d["cmf_pts"] == 0
 
-    def test_missing_cmf_gives_neutral(self):
+    def test_missing_cmf_is_unavailable_with_zero_credit(self):
         rows = _rows_rising_obv()
         rows[-1]["cmf_20"] = None
         _, d = compute_volume_flow_score(rows, auction_intensity=1.0)
-        assert d["cmf_pts"] == 14
+        assert d["cmf_pts"] == 0
 
 
 # ── RVOL ──────────────────────────────────────────────────────────────────────
@@ -125,23 +125,36 @@ class TestRVOL:
         _, d = compute_volume_flow_score(rows, auction_intensity=1.0)
         assert d["rvol_pts"] == 0
 
-    def test_insufficient_data_gives_neutral(self):
-        """< 21 rows → 12 pts neutral."""
+    def test_insufficient_data_is_unavailable_with_zero_credit(self):
+        """Fewer than 20 prior valid sessions gives no RVOL credit."""
         rows = [_row() for _ in range(15)]
         _, d = compute_volume_flow_score(rows, auction_intensity=1.0)
-        assert d["rvol_pts"] == 12
+        assert d["rvol_pts"] == 0
+
+    def test_rvol_uses_previous_twenty_valid_sessions_only(self):
+        rows = [_row(vol=1_000_000.0) for _ in range(20)]
+        rows.extend([_row(vol=0.0), _row(vol=2_000_000.0)])
+        _, details = compute_volume_flow_score(rows, auction_intensity=None)
+        assert details["rvol_pts"] == 25
+        assert "rvol_2.0x" in details["rvol_desc"]
+
+    def test_missing_current_volume_is_unavailable(self):
+        rows = [_row(vol=1_000_000.0) for _ in range(21)]
+        rows[-1]["volume"] = None
+        _, details = compute_volume_flow_score(rows, auction_intensity=None)
+        assert details["rvol_pts"] == 0
 
 
 # ── Auction ───────────────────────────────────────────────────────────────────
 
 class TestAuction:
-    def test_high_intensity_gives_max_auction_pts(self):
+    def test_auction_is_excluded_without_intraday_data(self):
         _, d = compute_volume_flow_score(_rows_rising_obv(), auction_intensity=2.0)
-        assert d["auction_pts"] == 15
+        assert d["auction_pts"] == 0
 
-    def test_low_intensity_gives_low_pts(self):
+    def test_unavailable_auction_has_zero_points(self):
         _, d = compute_volume_flow_score(_rows_rising_obv(), auction_intensity=0.3)
-        assert d["auction_pts"] == 3
+        assert d["auction_pts"] == 0
 
     def test_score_capped_at_100(self):
         """CMF=35 + OBV=25 + RVOL=25 + Auction=15 = 100 exactly."""
@@ -149,4 +162,4 @@ class TestAuction:
         rows = [_row(obv=500_000.0 * (i + 1), cmf=0.30, vol=base_vol) for i in range(24)]
         rows.append(_row(obv=500_000.0 * 25, cmf=0.30, vol=base_vol * 2.5))
         score, _ = compute_volume_flow_score(rows, auction_intensity=2.0)
-        assert score == 100
+        assert score == 85

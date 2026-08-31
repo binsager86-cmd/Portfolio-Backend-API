@@ -1,0 +1,1222 @@
+trade_date,close,decision,reason,position_state,entry_date,entry_price,structural_stop
+2021-07-11,837.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-07-12,842.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-07-13,844.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-07-14,840.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-07-15,846.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-07-25,854.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-07-26,855.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-07-27,854.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-07-28,853.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-07-29,848.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-08-01,845.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-08-02,843.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-08-03,826.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-08-04,840.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-08-05,840.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-08-10,837.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-08-11,840.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-08-12,843.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-08-15,849.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-08-16,846.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-08-17,850.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-08-18,847.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-08-19,848.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-08-22,841.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-08-23,848.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-08-24,850.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-08-25,850.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-08-26,869.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-08-29,879.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-08-30,875.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-08-31,873.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-09-01,866.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-09-02,874.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-09-05,877.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-09-06,874.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-09-07,874.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-09-08,874.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-09-09,877.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-09-12,868.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-09-13,867.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-09-14,866.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-09-15,862.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-09-16,864.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-09-19,865.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-09-20,874.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-09-21,870.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-09-22,874.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-09-23,874.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-09-26,876.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-09-27,872.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-09-28,878.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-09-29,885.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-09-30,900.0,BUY,"fresh 40-session high, close 900.000 broke ceiling 888.000",IN_POSITION,2021-09-30,900.0,866.1540802374766
+2021-10-03,894.0,HOLD,close 894.000 above trailing stop 866.154,IN_POSITION,2021-09-30,900.0,866.1540802374766
+2021-10-04,892.0,HOLD,close 892.000 above trailing stop 866.513,IN_POSITION,2021-09-30,900.0,866.5129569394569
+2021-10-05,890.0,HOLD,close 890.000 above trailing stop 867.155,IN_POSITION,2021-09-30,900.0,867.1548885866385
+2021-10-06,891.0,HOLD,close 891.000 above trailing stop 867.155,IN_POSITION,2021-09-30,900.0,867.1548885866385
+2021-10-07,885.0,HOLD,close 885.000 above trailing stop 867.155,IN_POSITION,2021-09-30,900.0,867.1548885866385
+2021-10-10,884.0,HOLD,close 884.000 above trailing stop 867.155,IN_POSITION,2021-09-30,900.0,867.1548885866385
+2021-10-11,877.0,HOLD,close 877.000 above trailing stop 867.155,IN_POSITION,2021-09-30,900.0,867.1548885866385
+2021-10-12,899.0,HOLD,close 899.000 above trailing stop 867.155,IN_POSITION,2021-09-30,900.0,867.1548885866385
+2021-10-13,949.0,HOLD,close 949.000 above trailing stop 896.848,IN_POSITION,2021-09-30,900.0,896.8475261455665
+2021-10-14,965.0,HOLD,close 965.000 above trailing stop 909.573,IN_POSITION,2021-09-30,900.0,909.5727028494546
+2021-10-17,952.0,HOLD,close 952.000 above trailing stop 909.573,IN_POSITION,2021-09-30,900.0,909.5727028494546
+2021-10-18,935.0,HOLD,close 935.000 above trailing stop 909.573,IN_POSITION,2021-09-30,900.0,909.5727028494546
+2021-10-19,928.0,HOLD,close 928.000 above trailing stop 909.573,IN_POSITION,2021-09-30,900.0,909.5727028494546
+2021-10-20,917.0,HOLD,close 917.000 above trailing stop 909.573,IN_POSITION,2021-09-30,900.0,909.5727028494546
+2021-10-24,915.0,HOLD,close 915.000 above trailing stop 909.573,IN_POSITION,2021-09-30,900.0,909.5727028494546
+2021-10-25,917.0,HOLD,close 917.000 above trailing stop 909.573,IN_POSITION,2021-09-30,900.0,909.5727028494546
+2021-10-26,914.0,HOLD,close 914.000 above trailing stop 910.287,IN_POSITION,2021-09-30,900.0,910.2873578226272
+2021-10-27,920.0,HOLD,close 920.000 above trailing stop 911.445,IN_POSITION,2021-09-30,900.0,911.4454036924396
+2021-10-28,920.0,HOLD,close 920.000 above trailing stop 913.771,IN_POSITION,2021-09-30,900.0,913.7707320001225
+2021-10-31,921.0,HOLD,close 921.000 above trailing stop 914.680,IN_POSITION,2021-09-30,900.0,914.6799654286851
+2021-11-01,954.0,HOLD,close 954.000 above trailing stop 914.680,IN_POSITION,2021-09-30,900.0,914.6799654286851
+2021-11-02,967.0,HOLD,close 967.000 above trailing stop 914.680,IN_POSITION,2021-09-30,900.0,914.6799654286851
+2021-11-03,950.0,HOLD,close 950.000 above trailing stop 914.680,IN_POSITION,2021-09-30,900.0,914.6799654286851
+2021-11-04,955.0,HOLD,close 955.000 above trailing stop 914.680,IN_POSITION,2021-09-30,900.0,914.6799654286851
+2021-11-07,952.0,HOLD,close 952.000 above trailing stop 914.680,IN_POSITION,2021-09-30,900.0,914.6799654286851
+2021-11-08,938.0,HOLD,close 938.000 above trailing stop 914.680,IN_POSITION,2021-09-30,900.0,914.6799654286851
+2021-11-09,935.0,HOLD,close 935.000 above trailing stop 914.680,IN_POSITION,2021-09-30,900.0,914.6799654286851
+2021-11-10,930.0,HOLD,close 930.000 above trailing stop 914.680,IN_POSITION,2021-09-30,900.0,914.6799654286851
+2021-11-11,927.0,HOLD,close 927.000 above trailing stop 914.680,IN_POSITION,2021-09-30,900.0,914.6799654286851
+2021-11-14,922.0,HOLD,close 922.000 above trailing stop 914.680,IN_POSITION,2021-09-30,900.0,914.6799654286851
+2021-11-15,921.0,HOLD,close 921.000 above trailing stop 914.680,IN_POSITION,2021-09-30,900.0,914.6799654286851
+2021-11-16,924.0,HOLD,close 924.000 above trailing stop 914.680,IN_POSITION,2021-09-30,900.0,914.6799654286851
+2021-11-17,936.0,HOLD,close 936.000 above trailing stop 914.680,IN_POSITION,2021-09-30,900.0,914.6799654286851
+2021-11-18,933.0,HOLD,close 933.000 above trailing stop 914.680,IN_POSITION,2021-09-30,900.0,914.6799654286851
+2021-11-21,925.0,HOLD,close 925.000 above trailing stop 914.680,IN_POSITION,2021-09-30,900.0,914.6799654286851
+2021-11-22,924.0,HOLD,close 924.000 above trailing stop 915.049,IN_POSITION,2021-09-30,900.0,915.0493748574272
+2021-11-23,917.0,HOLD,close 917.000 above trailing stop 915.049,IN_POSITION,2021-09-30,900.0,915.0493748574272
+2021-11-24,900.0,SELL_SIGNAL,close 900.000 broke trailing stop 915.049 (chandelier 3.5x ATR14 off high 967.000),EXIT_SIGNAL,2021-09-30,900.0,915.0493748574272
+2021-11-25,900.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-11-28,865.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-11-29,865.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-11-30,825.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-12-01,835.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-12-02,837.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-12-05,857.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-12-06,862.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-12-07,873.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-12-08,872.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-12-09,868.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-12-12,878.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-12-13,873.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-12-14,880.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-12-15,886.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-12-16,867.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-12-19,867.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-12-20,865.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-12-21,870.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-12-22,870.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-12-23,875.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-12-26,870.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-12-27,859.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-12-28,855.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-12-29,849.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2021-12-30,852.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-01-03,849.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-01-04,849.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-01-05,848.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-01-06,846.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-01-09,850.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-01-10,859.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-01-11,853.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-01-12,857.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-01-13,884.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-01-16,900.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-01-17,941.0,BUY,"fresh 40-session high, close 941.000 broke ceiling 927.000",IN_POSITION,2022-01-17,941.0,883.1258999154132
+2022-01-18,927.0,HOLD,close 927.000 above trailing stop 883.126,IN_POSITION,2022-01-17,941.0,883.1258999154132
+2022-01-19,922.0,HOLD,close 922.000 above trailing stop 883.973,IN_POSITION,2022-01-17,941.0,883.9733524780859
+2022-01-20,930.0,HOLD,close 930.000 above trailing stop 883.973,IN_POSITION,2022-01-17,941.0,883.9733524780859
+2022-01-23,924.0,HOLD,close 924.000 above trailing stop 883.973,IN_POSITION,2022-01-17,941.0,883.9733524780859
+2022-01-24,915.0,HOLD,close 915.000 above trailing stop 883.973,IN_POSITION,2022-01-17,941.0,883.9733524780859
+2022-01-25,911.0,HOLD,close 911.000 above trailing stop 883.973,IN_POSITION,2022-01-17,941.0,883.9733524780859
+2022-01-26,919.0,HOLD,close 919.000 above trailing stop 885.670,IN_POSITION,2022-01-17,941.0,885.6700165140379
+2022-01-27,919.0,HOLD,close 919.000 above trailing stop 887.622,IN_POSITION,2022-01-17,941.0,887.6221581916067
+2022-01-30,917.0,HOLD,close 917.000 above trailing stop 890.185,IN_POSITION,2022-01-17,941.0,890.1848611779204
+2022-01-31,916.0,HOLD,close 916.000 above trailing stop 891.565,IN_POSITION,2022-01-17,941.0,891.5645139509261
+2022-02-01,919.0,HOLD,close 919.000 above trailing stop 892.846,IN_POSITION,2022-01-17,941.0,892.8456200972886
+2022-02-02,917.0,HOLD,close 917.000 above trailing stop 895.785,IN_POSITION,2022-01-17,941.0,895.785218661768
+2022-02-03,911.0,HOLD,close 911.000 above trailing stop 896.765,IN_POSITION,2022-01-17,941.0,896.7648459002131
+2022-02-06,913.0,HOLD,close 913.000 above trailing stop 897.424,IN_POSITION,2022-01-17,941.0,897.4244997644836
+2022-02-07,920.0,HOLD,close 920.000 above trailing stop 897.537,IN_POSITION,2022-01-17,941.0,897.5370354955919
+2022-02-08,943.0,HOLD,close 943.000 above trailing stop 897.537,IN_POSITION,2022-01-17,941.0,897.5370354955919
+2022-02-09,944.0,HOLD,close 944.000 above trailing stop 897.537,IN_POSITION,2022-01-17,941.0,897.5370354955919
+2022-02-10,949.0,HOLD,close 949.000 above trailing stop 902.418,IN_POSITION,2022-01-17,941.0,902.417954440166
+2022-02-13,942.0,HOLD,close 942.000 above trailing stop 902.418,IN_POSITION,2022-01-17,941.0,902.417954440166
+2022-02-14,939.0,HOLD,close 939.000 above trailing stop 902.418,IN_POSITION,2022-01-17,941.0,902.417954440166
+2022-02-15,946.0,HOLD,close 946.000 above trailing stop 902.418,IN_POSITION,2022-01-17,941.0,902.417954440166
+2022-02-16,948.0,HOLD,close 948.000 above trailing stop 903.927,IN_POSITION,2022-01-17,941.0,903.9269496242603
+2022-02-17,947.0,HOLD,close 947.000 above trailing stop 905.146,IN_POSITION,2022-01-17,941.0,905.1464532225273
+2022-02-20,942.0,HOLD,close 942.000 above trailing stop 906.279,IN_POSITION,2022-01-17,941.0,906.2788494209183
+2022-02-21,959.0,HOLD,close 959.000 above trailing stop 914.330,IN_POSITION,2022-01-17,941.0,914.330360176567
+2022-02-22,947.0,HOLD,close 947.000 above trailing stop 914.330,IN_POSITION,2022-01-17,941.0,914.330360176567
+2022-02-23,940.0,HOLD,close 940.000 above trailing stop 915.484,IN_POSITION,2022-01-17,941.0,915.4838309685705
+2022-02-24,934.0,HOLD,close 934.000 above trailing stop 915.484,IN_POSITION,2022-01-17,941.0,915.4838309685705
+2022-03-02,940.0,HOLD,close 940.000 above trailing stop 915.484,IN_POSITION,2022-01-17,941.0,915.4838309685705
+2022-03-03,953.0,HOLD,close 953.000 above trailing stop 915.484,IN_POSITION,2022-01-17,941.0,915.4838309685705
+2022-03-06,981.0,HOLD,close 981.000 above trailing stop 928.522,IN_POSITION,2022-01-17,941.0,928.5222874920174
+2022-03-07,995.0,HOLD,close 995.000 above trailing stop 942.021,IN_POSITION,2022-01-17,941.0,942.0206955283019
+2022-03-08,1003.0,HOLD,close 1003.000 above trailing stop 949.555,IN_POSITION,2022-01-17,941.0,949.5549315619946
+2022-03-09,1023.0,HOLD,close 1023.000 above trailing stop 966.622,IN_POSITION,2022-01-17,941.0,966.6224364504236
+2022-03-10,993.0,HOLD,close 993.000 above trailing stop 966.622,IN_POSITION,2022-01-17,941.0,966.6224364504236
+2022-03-13,985.0,HOLD,close 985.000 above trailing stop 966.622,IN_POSITION,2022-01-17,941.0,966.6224364504236
+2022-03-14,975.0,HOLD,close 975.000 above trailing stop 966.622,IN_POSITION,2022-01-17,941.0,966.6224364504236
+2022-03-15,965.0,SELL_SIGNAL,close 965.000 broke trailing stop 966.622 (chandelier 3.5x ATR14 off high 1023.000),EXIT_SIGNAL,2022-01-17,941.0,966.6224364504236
+2022-03-16,963.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-03-17,972.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-03-20,965.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-03-21,972.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-03-22,969.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-03-23,978.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-03-24,999.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-03-27,1007.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-03-28,997.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-03-29,1011.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-03-30,1012.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-03-31,1000.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-04-03,996.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-04-04,984.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-04-05,983.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-04-06,987.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-04-07,983.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-04-10,985.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-04-11,993.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-04-12,1000.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-04-13,1000.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-04-14,1003.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-04-17,1003.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-04-18,1000.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-04-19,1005.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-04-20,1002.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-04-21,1001.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-04-24,1001.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-04-25,1004.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-04-26,1015.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-04-27,1008.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-04-28,1016.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-05-05,1030.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-05-08,1071.0,BUY,"fresh 40-session high, close 1071.000 broke ceiling 1035.000",IN_POSITION,2022-05-08,1071.0,1007.3133565463522
+2022-05-09,1096.0,HOLD,close 1096.000 above trailing stop 1023.612,IN_POSITION,2022-05-08,1071.0,1023.612402507327
+2022-05-10,1077.0,HOLD,close 1077.000 above trailing stop 1024.033,IN_POSITION,2022-05-08,1071.0,1024.0329451853752
+2022-05-11,1053.0,HOLD,close 1053.000 above trailing stop 1024.033,IN_POSITION,2022-05-08,1071.0,1024.0329451853752
+2022-05-12,1020.0,SELL_SIGNAL,close 1020.000 broke trailing stop 1024.033 (chandelier 3.5x ATR14 off high 1096.000),EXIT_SIGNAL,2022-05-08,1071.0,1024.0329451853752
+2022-05-16,1000.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-05-17,1023.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-05-18,1049.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-05-19,1039.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-05-22,1031.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-05-23,1039.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-05-24,1040.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-05-25,1033.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-05-26,1045.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-05-29,1065.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-05-30,1100.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-05-31,1100.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-06-01,1085.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-06-02,1086.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-06-05,1066.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-06-06,1074.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-06-07,1080.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-06-08,1074.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-06-09,1056.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-06-12,1040.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-06-13,960.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-06-14,932.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-06-15,940.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-06-16,932.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-06-19,886.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-06-20,880.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-06-21,900.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-06-22,891.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-06-23,901.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-06-26,915.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-06-27,915.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-06-28,917.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-06-29,921.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-06-30,923.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-07-03,923.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-07-04,921.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-07-05,917.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-07-06,913.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-07-07,911.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-07-14,911.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-07-17,910.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-07-18,920.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-07-19,920.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-07-20,925.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-07-21,945.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-07-24,930.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-07-25,930.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-07-26,931.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-07-27,929.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-07-28,933.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-01,943.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-02,921.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-03,925.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-04,930.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-07,922.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-08,924.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-09,932.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-10,926.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-11,925.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-14,932.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-15,933.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-16,931.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-17,930.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-18,925.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-21,927.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-22,932.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-23,936.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-24,922.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-25,921.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-28,913.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-29,915.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-30,908.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-08-31,917.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-09-01,906.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-09-04,900.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-09-05,898.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-09-06,892.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-09-07,901.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-09-08,900.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-09-11,900.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-09-12,900.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-09-13,900.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-09-14,900.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-09-15,907.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-09-18,899.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-09-19,890.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-09-20,896.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-09-21,892.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-09-22,882.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-09-25,866.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-09-26,862.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-09-27,842.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-09-28,830.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-10-02,809.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-10-03,803.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-10-04,806.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-10-05,809.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-10-06,812.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-10-10,803.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-10-11,800.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-10-12,800.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-10-13,805.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-10-16,803.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-10-17,790.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-10-18,797.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-10-19,800.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-10-20,812.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-10-23,819.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-10-24,791.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-10-25,790.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-10-26,791.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-10-27,793.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-10-30,792.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-10-31,797.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-11-01,799.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-11-02,799.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-11-03,798.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-11-06,803.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-11-07,801.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-11-08,802.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-11-09,817.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-11-10,816.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-11-13,820.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-11-14,822.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-11-15,821.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-11-16,813.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-11-17,813.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-11-20,815.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-11-21,817.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-11-22,819.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-11-23,818.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-11-24,820.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-11-27,817.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-11-28,818.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-11-29,818.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-11-30,817.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-12-01,823.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-12-04,818.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-12-05,816.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-12-06,814.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-12-07,811.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-12-08,805.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-12-11,809.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-12-12,810.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-12-13,802.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-12-14,810.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-12-15,801.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-12-18,807.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-12-19,808.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-12-20,800.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-12-21,809.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-12-22,803.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-12-25,802.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-12-26,803.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-12-27,800.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-12-28,804.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2022-12-29,800.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-01-02,791.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-01-03,790.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-01-04,780.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-01-05,770.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-01-08,770.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-01-09,770.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-01-10,770.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-01-11,771.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-01-12,771.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-01-15,775.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-01-16,774.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-01-17,783.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-01-18,781.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-01-19,779.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-01-22,791.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-01-23,796.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-01-24,794.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-01-25,797.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-01-26,796.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-01-29,801.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-01-30,798.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-01-31,799.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-02-01,796.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-02-02,803.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-02-05,800.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-02-06,799.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-02-07,796.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-02-08,799.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-02-09,792.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-02-12,792.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-02-13,790.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-02-14,791.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-02-15,790.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-02-16,794.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-02-20,794.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-02-21,796.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-02-22,790.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-02-23,791.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-02-28,779.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-03-01,780.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-03-02,785.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-03-05,785.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-03-06,782.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-03-07,779.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-03-08,780.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-03-09,780.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-03-12,784.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-03-13,781.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-03-14,764.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-03-15,771.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-03-16,760.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-03-19,762.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-03-20,755.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-03-21,749.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-03-22,745.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-03-23,758.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-03-26,763.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-03-27,760.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-03-28,762.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-03-29,773.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-03-30,782.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-04-02,774.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-04-03,787.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-04-04,779.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-04-05,770.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-04-06,769.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-04-09,767.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-04-10,760.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-04-11,767.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-04-12,767.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-04-13,761.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-04-16,765.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-04-17,768.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-04-18,770.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-04-19,775.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-04-20,806.0,BUY,EMA10 crossed above EMA30 with close 806.000 above EMA50 776.487 (intermediate trend turned),IN_POSITION,2023-04-20,806.0,756.177414168245
+2023-04-26,815.0,HOLD,close 815.000 above trailing stop 762.486,IN_POSITION,2023-04-20,806.0,762.4861702990846
+2023-04-27,816.0,HOLD,close 816.000 above trailing stop 764.737,IN_POSITION,2023-04-20,806.0,764.7371581348643
+2023-04-30,815.0,HOLD,close 815.000 above trailing stop 766.899,IN_POSITION,2023-04-20,806.0,766.8987896966597
+2023-05-01,806.0,HOLD,close 806.000 above trailing stop 766.899,IN_POSITION,2023-04-20,806.0,766.8987896966597
+2023-05-02,802.0,HOLD,close 802.000 above trailing stop 768.198,IN_POSITION,2023-04-20,806.0,768.1984462180383
+2023-05-03,789.0,HOLD,close 789.000 above trailing stop 768.198,IN_POSITION,2023-04-20,806.0,768.1984462180383
+2023-05-04,775.0,HOLD,close 775.000 above trailing stop 768.198,IN_POSITION,2023-04-20,806.0,768.1984462180383
+2023-05-07,780.0,HOLD,close 780.000 above trailing stop 768.198,IN_POSITION,2023-04-20,806.0,768.1984462180383
+2023-05-08,775.0,HOLD,close 775.000 above trailing stop 768.198,IN_POSITION,2023-04-20,806.0,768.1984462180383
+2023-05-09,775.0,HOLD,close 775.000 above trailing stop 768.198,IN_POSITION,2023-04-20,806.0,768.1984462180383
+2023-05-10,776.0,HOLD,close 776.000 above trailing stop 768.198,IN_POSITION,2023-04-20,806.0,768.1984462180383
+2023-05-11,780.0,HOLD,close 780.000 above trailing stop 768.198,IN_POSITION,2023-04-20,806.0,768.1984462180383
+2023-05-14,778.0,HOLD,close 778.000 above trailing stop 768.965,IN_POSITION,2023-04-20,806.0,768.9648086921577
+2023-05-15,774.0,HOLD,close 774.000 above trailing stop 769.824,IN_POSITION,2023-04-20,806.0,769.8244652141465
+2023-05-16,789.0,HOLD,close 789.000 above trailing stop 769.824,IN_POSITION,2023-04-20,806.0,769.8244652141465
+2023-05-17,765.0,SELL_SIGNAL,close 765.000 broke trailing stop 769.824 (chandelier 3.5x ATR14 off high 816.000),EXIT_SIGNAL,2023-04-20,806.0,769.8244652141465
+2023-05-18,774.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-05-21,786.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-05-22,789.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-05-23,792.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-05-24,791.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-05-25,801.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-05-28,799.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-05-29,801.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-05-30,802.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-05-31,805.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-06-01,805.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-06-04,807.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-06-05,808.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-06-07,797.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-06-08,795.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-06-11,797.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-06-12,809.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-06-13,805.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-06-14,803.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-06-15,807.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-06-18,807.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-06-19,807.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-06-20,817.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-06-21,755.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-06-22,755.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-06-25,740.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-06-26,745.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-07-03,740.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-07-04,747.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-07-05,737.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-07-06,738.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-07-09,741.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-07-10,743.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-07-11,742.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-07-12,741.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-07-13,742.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-07-16,755.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-07-17,743.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-07-18,744.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-07-23,741.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-07-24,729.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-07-25,737.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-07-26,732.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-07-27,733.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-07-30,734.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-07-31,739.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-01,737.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-02,733.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-03,719.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-06,716.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-07,719.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-08,722.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-09,715.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-10,707.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-13,712.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-14,719.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-15,712.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-16,715.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-17,712.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-20,715.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-21,713.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-22,729.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-23,721.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-24,730.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-27,739.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-28,737.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-29,728.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-30,729.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-08-31,740.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-09-03,726.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-09-04,718.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-09-05,715.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-09-06,723.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-09-07,730.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-09-10,732.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-09-11,736.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-09-12,738.0,BUY,EMA10 crossed above EMA30 with close 738.000 above EMA50 735.795 (intermediate trend turned),IN_POSITION,2023-09-12,738.0,701.8186340454271
+2023-09-13,739.0,HOLD,close 739.000 above trailing stop 704.653,IN_POSITION,2023-09-12,738.0,704.6530173278966
+2023-09-14,717.0,HOLD,close 717.000 above trailing stop 704.653,IN_POSITION,2023-09-12,738.0,704.6530173278966
+2023-09-17,706.0,HOLD,close 706.000 above trailing stop 704.653,IN_POSITION,2023-09-12,738.0,704.6530173278966
+2023-09-18,705.0,HOLD,close 705.000 above trailing stop 704.653,IN_POSITION,2023-09-12,738.0,704.6530173278966
+2023-09-19,705.0,HOLD,close 705.000 above trailing stop 704.653,IN_POSITION,2023-09-12,738.0,704.6530173278966
+2023-09-20,702.0,SELL_SIGNAL,close 702.000 broke trailing stop 704.653 (chandelier 3.5x ATR14 off high 739.000),EXIT_SIGNAL,2023-09-12,738.0,704.6530173278966
+2023-09-21,698.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-09-24,688.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-09-25,684.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-09-26,695.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-09-27,693.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-01,704.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-02,700.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-03,700.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-04,697.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-05,683.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-08,685.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-09,680.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-10,672.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-11,670.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-12,665.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-15,657.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-16,656.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-17,657.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-18,645.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-19,646.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-22,639.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-23,639.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-24,620.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-25,624.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-26,614.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-29,608.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-30,605.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-10-31,613.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-11-01,604.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-11-02,607.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-11-05,629.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-11-06,617.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-11-07,617.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-11-08,620.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-11-09,617.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-11-12,629.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-11-13,625.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-11-14,621.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-11-15,622.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-11-16,617.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-11-19,619.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-11-20,616.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-11-21,621.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-11-22,615.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-11-23,612.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-11-26,616.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-11-27,611.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-11-28,611.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-11-29,610.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-11-30,649.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-12-03,626.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-12-04,635.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-12-05,630.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-12-06,625.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-12-07,620.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-12-10,616.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-12-11,605.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-12-12,602.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-12-13,595.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-12-14,600.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-12-20,585.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-12-21,580.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-12-24,580.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-12-25,590.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-12-26,580.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-12-27,582.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2023-12-28,585.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-01-02,595.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-01-03,603.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-01-04,607.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-01-07,626.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-01-08,625.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-01-09,627.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-01-10,632.0,BUY,EMA10 crossed above EMA30 with close 632.000 above EMA50 620.336 (intermediate trend turned),IN_POSITION,2024-01-10,632.0,589.9989369478246
+2024-01-11,631.0,HOLD,close 631.000 above trailing stop 590.249,IN_POSITION,2024-01-10,632.0,590.2490128801229
+2024-01-14,627.0,HOLD,close 627.000 above trailing stop 591.731,IN_POSITION,2024-01-10,632.0,591.7312262458285
+2024-01-15,628.0,HOLD,close 628.000 above trailing stop 594.358,IN_POSITION,2024-01-10,632.0,594.3575672282692
+2024-01-16,614.0,HOLD,close 614.000 above trailing stop 594.358,IN_POSITION,2024-01-10,632.0,594.3575672282692
+2024-01-17,610.0,HOLD,close 610.000 above trailing stop 594.358,IN_POSITION,2024-01-10,632.0,594.3575672282692
+2024-01-18,607.0,HOLD,close 607.000 above trailing stop 594.377,IN_POSITION,2024-01-10,632.0,594.3766673471237
+2024-01-21,610.0,HOLD,close 610.000 above trailing stop 595.064,IN_POSITION,2024-01-10,632.0,595.0640482509006
+2024-01-22,612.0,HOLD,close 612.000 above trailing stop 595.702,IN_POSITION,2024-01-10,632.0,595.7023305186934
+2024-01-23,615.0,HOLD,close 615.000 above trailing stop 596.795,IN_POSITION,2024-01-10,632.0,596.7950211959296
+2024-01-24,620.0,HOLD,close 620.000 above trailing stop 596.795,IN_POSITION,2024-01-10,632.0,596.7950211959296
+2024-01-25,610.0,HOLD,close 610.000 above trailing stop 596.795,IN_POSITION,2024-01-10,632.0,596.7950211959296
+2024-01-28,599.0,HOLD,close 599.000 above trailing stop 596.795,IN_POSITION,2024-01-10,632.0,596.7950211959296
+2024-01-29,597.0,HOLD,close 597.000 above trailing stop 596.795,IN_POSITION,2024-01-10,632.0,596.7950211959296
+2024-01-30,600.0,HOLD,close 600.000 above trailing stop 596.795,IN_POSITION,2024-01-10,632.0,596.7950211959296
+2024-01-31,595.0,SELL_SIGNAL,close 595.000 broke trailing stop 596.795 (chandelier 3.5x ATR14 off high 632.000),EXIT_SIGNAL,2024-01-10,632.0,596.7950211959296
+2024-02-01,590.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-02-04,585.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-02-05,583.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-02-06,580.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-02-07,580.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-02-11,585.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-02-12,594.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-02-13,601.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-02-14,599.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-02-15,592.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-02-18,590.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-02-19,601.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-02-20,603.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-02-21,614.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-02-22,624.0,BUY,EMA10 crossed above EMA30 with close 624.000 above EMA50 607.043 (intermediate trend turned),IN_POSITION,2024-02-22,624.0,587.4581351841061
+2024-02-27,619.0,HOLD,close 619.000 above trailing stop 588.568,IN_POSITION,2024-02-22,624.0,588.5682683852415
+2024-02-28,614.0,HOLD,close 614.000 above trailing stop 588.599,IN_POSITION,2024-02-22,624.0,588.5991063577242
+2024-02-29,609.0,HOLD,close 609.000 above trailing stop 589.128,IN_POSITION,2024-02-22,624.0,589.1277416178867
+2024-03-03,607.0,HOLD,close 607.000 above trailing stop 589.369,IN_POSITION,2024-02-22,624.0,589.3686172166091
+2024-03-04,607.0,HOLD,close 607.000 above trailing stop 590.842,IN_POSITION,2024-02-22,624.0,590.8422874154228
+2024-03-05,610.0,HOLD,close 610.000 above trailing stop 591.961,IN_POSITION,2024-02-22,624.0,591.9606954571783
+2024-03-06,610.0,HOLD,close 610.000 above trailing stop 592.999,IN_POSITION,2024-02-22,624.0,592.9992172102369
+2024-03-07,612.0,HOLD,close 612.000 above trailing stop 594.464,IN_POSITION,2024-02-22,624.0,594.4635588380772
+2024-03-10,608.0,HOLD,close 608.000 above trailing stop 594.573,IN_POSITION,2024-02-22,624.0,594.5733046353574
+2024-03-11,604.0,HOLD,close 604.000 above trailing stop 594.573,IN_POSITION,2024-02-22,624.0,594.5733046353574
+2024-03-12,611.0,HOLD,close 611.000 above trailing stop 594.573,IN_POSITION,2024-02-22,624.0,594.5733046353574
+2024-03-13,611.0,HOLD,close 611.000 above trailing stop 594.573,IN_POSITION,2024-02-22,624.0,594.5733046353574
+2024-03-14,612.0,HOLD,close 612.000 above trailing stop 594.573,IN_POSITION,2024-02-22,624.0,594.5733046353574
+2024-03-17,613.0,HOLD,close 613.000 above trailing stop 595.252,IN_POSITION,2024-02-22,624.0,595.2517301161267
+2024-03-18,607.0,HOLD,close 607.000 above trailing stop 595.555,IN_POSITION,2024-02-22,624.0,595.5551779649749
+2024-03-19,607.0,HOLD,close 607.000 above trailing stop 596.587,IN_POSITION,2024-02-22,624.0,596.5869509674766
+2024-03-20,608.0,HOLD,close 608.000 above trailing stop 598.045,IN_POSITION,2024-02-22,624.0,598.0450258983711
+2024-03-21,609.0,HOLD,close 609.000 above trailing stop 599.149,IN_POSITION,2024-02-22,624.0,599.148952619916
+2024-03-24,612.0,HOLD,close 612.000 above trailing stop 600.174,IN_POSITION,2024-02-22,624.0,600.1740274327792
+2024-03-25,610.0,HOLD,close 610.000 above trailing stop 601.126,IN_POSITION,2024-02-22,624.0,601.1258826161521
+2024-03-26,608.0,HOLD,close 608.000 above trailing stop 602.010,IN_POSITION,2024-02-22,624.0,602.0097481435698
+2024-03-27,610.0,HOLD,close 610.000 above trailing stop 602.580,IN_POSITION,2024-02-22,624.0,602.5804804190291
+2024-03-28,618.0,HOLD,close 618.000 above trailing stop 602.580,IN_POSITION,2024-02-22,624.0,602.5804804190291
+2024-03-31,625.0,HOLD,close 625.000 above trailing stop 602.580,IN_POSITION,2024-02-22,624.0,602.5804804190291
+2024-04-01,617.0,HOLD,close 617.000 above trailing stop 602.580,IN_POSITION,2024-02-22,624.0,602.5804804190291
+2024-04-02,618.0,HOLD,close 618.000 above trailing stop 602.580,IN_POSITION,2024-02-22,624.0,602.5804804190291
+2024-04-03,620.0,HOLD,close 620.000 above trailing stop 602.580,IN_POSITION,2024-02-22,624.0,602.5804804190291
+2024-04-07,620.0,HOLD,close 620.000 above trailing stop 602.580,IN_POSITION,2024-02-22,624.0,602.5804804190291
+2024-04-08,625.0,HOLD,close 625.000 above trailing stop 602.580,IN_POSITION,2024-02-22,624.0,602.5804804190291
+2024-04-14,611.0,HOLD,close 611.000 above trailing stop 602.580,IN_POSITION,2024-02-22,624.0,602.5804804190291
+2024-04-15,615.0,HOLD,close 615.000 above trailing stop 602.580,IN_POSITION,2024-02-22,624.0,602.5804804190291
+2024-04-16,609.0,HOLD,close 609.000 above trailing stop 602.580,IN_POSITION,2024-02-22,624.0,602.5804804190291
+2024-04-17,609.0,HOLD,close 609.000 above trailing stop 602.580,IN_POSITION,2024-02-22,624.0,602.5804804190291
+2024-04-18,613.0,HOLD,close 613.000 above trailing stop 602.580,IN_POSITION,2024-02-22,624.0,602.5804804190291
+2024-04-21,626.0,HOLD,close 626.000 above trailing stop 602.580,IN_POSITION,2024-02-22,624.0,602.5804804190291
+2024-04-22,667.0,HOLD,close 667.000 above trailing stop 627.730,IN_POSITION,2024-02-22,624.0,627.7304222192911
+2024-04-23,675.0,HOLD,close 675.000 above trailing stop 630.535,IN_POSITION,2024-02-22,624.0,630.5353920607703
+2024-04-24,680.0,HOLD,close 680.000 above trailing stop 634.461,IN_POSITION,2024-02-22,624.0,634.461435485001
+2024-04-25,676.0,HOLD,close 676.000 above trailing stop 635.714,IN_POSITION,2024-02-22,624.0,635.7141900932152
+2024-04-28,682.0,HOLD,close 682.000 above trailing stop 637.127,IN_POSITION,2024-02-22,624.0,637.127462229414
+2024-04-29,689.0,HOLD,close 689.000 above trailing stop 645.083,IN_POSITION,2024-02-22,624.0,645.0826434987416
+2024-04-30,688.0,HOLD,close 688.000 above trailing stop 645.720,IN_POSITION,2024-02-22,624.0,645.7195975345458
+2024-05-01,685.0,HOLD,close 685.000 above trailing stop 646.811,IN_POSITION,2024-02-22,624.0,646.8110548535068
+2024-05-02,672.0,HOLD,close 672.000 above trailing stop 646.811,IN_POSITION,2024-02-22,624.0,646.8110548535068
+2024-05-05,670.0,HOLD,close 670.000 above trailing stop 646.811,IN_POSITION,2024-02-22,624.0,646.8110548535068
+2024-05-06,677.0,HOLD,close 677.000 above trailing stop 646.811,IN_POSITION,2024-02-22,624.0,646.8110548535068
+2024-05-07,677.0,HOLD,close 677.000 above trailing stop 647.191,IN_POSITION,2024-02-22,624.0,647.1913405266297
+2024-05-08,672.0,HOLD,close 672.000 above trailing stop 647.678,IN_POSITION,2024-02-22,624.0,647.6776733461562
+2024-05-09,668.0,HOLD,close 668.000 above trailing stop 649.129,IN_POSITION,2024-02-22,624.0,649.129268107145
+2024-05-12,667.0,HOLD,close 667.000 above trailing stop 650.727,IN_POSITION,2024-02-22,624.0,650.7271775280633
+2024-05-13,669.0,HOLD,close 669.000 above trailing stop 652.461,IN_POSITION,2024-02-22,624.0,652.460950561773
+2024-05-14,681.0,HOLD,close 681.000 above trailing stop 652.461,IN_POSITION,2024-02-22,624.0,652.460950561773
+2024-05-15,676.0,HOLD,close 676.000 above trailing stop 652.461,IN_POSITION,2024-02-22,624.0,652.460950561773
+2024-05-16,674.0,HOLD,close 674.000 above trailing stop 652.461,IN_POSITION,2024-02-22,624.0,652.460950561773
+2024-05-19,669.0,HOLD,close 669.000 above trailing stop 652.461,IN_POSITION,2024-02-22,624.0,652.460950561773
+2024-05-20,667.0,HOLD,close 667.000 above trailing stop 653.350,IN_POSITION,2024-02-22,624.0,653.3503743174949
+2024-05-21,663.0,HOLD,close 663.000 above trailing stop 654.147,IN_POSITION,2024-02-22,624.0,654.1467761519596
+2024-05-22,658.0,HOLD,close 658.000 above trailing stop 654.886,IN_POSITION,2024-02-22,624.0,654.8862921411053
+2024-05-23,660.0,HOLD,close 660.000 above trailing stop 656.323,IN_POSITION,2024-02-22,624.0,656.3229855595978
+2024-05-26,658.0,HOLD,close 658.000 above trailing stop 657.407,IN_POSITION,2024-02-22,624.0,657.4070580196266
+2024-05-27,650.0,SELL_SIGNAL,close 650.000 broke trailing stop 657.414 (chandelier 3.5x ATR14 off high 689.000),EXIT_SIGNAL,2024-02-22,624.0,657.4136967325103
+2024-05-28,653.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-05-29,653.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-05-30,660.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-06-02,659.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-06-03,658.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-06-04,665.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-06-05,667.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-06-06,687.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-06-09,680.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-06-10,675.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-06-11,673.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-06-12,669.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-06-13,665.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-06-19,657.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-06-20,655.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-06-23,656.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-06-24,653.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-06-25,657.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-06-26,660.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-06-27,593.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-06-30,587.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-07-01,588.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-07-02,582.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-07-03,579.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-07-04,586.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-07-08,585.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-07-09,585.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-07-10,584.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-07-11,587.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-07-14,585.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-07-15,588.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-07-16,588.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-07-17,587.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-07-18,585.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-07-21,586.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-07-22,585.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-07-23,583.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-07-24,583.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-07-25,580.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-07-28,580.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-07-29,580.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-07-30,585.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-07-31,582.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-08-01,581.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-08-04,574.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-08-05,566.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-08-06,569.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-08-07,580.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-08-08,582.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-08-11,587.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-08-12,585.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-08-13,584.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-08-14,593.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-08-15,589.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-08-18,593.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-08-19,601.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-08-20,605.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2024-08-21,614.0,BUY,EMA10 crossed above EMA30 with close 614.000 above EMA50 601.546 (intermediate trend turned),IN_POSITION,2024-08-21,614.0,585.3415515532641
+2024-08-22,628.0,HOLD,close 628.000 above trailing stop 596.889,IN_POSITION,2024-08-21,614.0,596.8885835851738
+2024-08-25,630.0,HOLD,close 630.000 above trailing stop 596.889,IN_POSITION,2024-08-21,614.0,596.8885835851738
+2024-08-26,642.0,HOLD,close 642.000 above trailing stop 607.246,IN_POSITION,2024-08-21,614.0,607.2457684994611
+2024-08-27,642.0,HOLD,close 642.000 above trailing stop 607.978,IN_POSITION,2024-08-21,614.0,607.9782136066425
+2024-08-28,660.0,HOLD,close 660.000 above trailing stop 622.908,IN_POSITION,2024-08-21,614.0,622.908341206168
+2024-08-29,655.0,HOLD,close 655.000 above trailing stop 622.908,IN_POSITION,2024-08-21,614.0,622.908341206168
+2024-09-01,648.0,HOLD,close 648.000 above trailing stop 622.908,IN_POSITION,2024-08-21,614.0,622.908341206168
+2024-09-02,654.0,HOLD,close 654.000 above trailing stop 622.908,IN_POSITION,2024-08-21,614.0,622.908341206168
+2024-09-03,648.0,HOLD,close 648.000 above trailing stop 622.908,IN_POSITION,2024-08-21,614.0,622.908341206168
+2024-09-04,647.0,HOLD,close 647.000 above trailing stop 622.908,IN_POSITION,2024-08-21,614.0,622.908341206168
+2024-09-05,641.0,HOLD,close 641.000 above trailing stop 622.908,IN_POSITION,2024-08-21,614.0,622.908341206168
+2024-09-08,632.0,HOLD,close 632.000 above trailing stop 622.908,IN_POSITION,2024-08-21,614.0,622.908341206168
+2024-09-09,630.0,HOLD,close 630.000 above trailing stop 622.908,IN_POSITION,2024-08-21,614.0,622.908341206168
+2024-09-10,640.0,HOLD,close 640.000 above trailing stop 622.908,IN_POSITION,2024-08-21,614.0,622.908341206168
+2024-09-11,643.0,HOLD,close 643.000 above trailing stop 622.908,IN_POSITION,2024-08-21,614.0,622.908341206168
+2024-09-12,636.0,HOLD,close 636.000 above trailing stop 622.908,IN_POSITION,2024-08-21,614.0,622.908341206168
+2024-09-16,638.0,HOLD,close 638.000 above trailing stop 622.908,IN_POSITION,2024-08-21,614.0,622.908341206168
+2024-09-17,632.0,HOLD,close 632.000 above trailing stop 622.908,IN_POSITION,2024-08-21,614.0,622.908341206168
+2024-09-18,635.0,HOLD,close 635.000 above trailing stop 622.908,IN_POSITION,2024-08-21,614.0,622.908341206168
+2024-09-19,645.0,HOLD,close 645.000 above trailing stop 622.908,IN_POSITION,2024-08-21,614.0,622.908341206168
+2024-09-22,646.0,HOLD,close 646.000 above trailing stop 622.908,IN_POSITION,2024-08-21,614.0,622.908341206168
+2024-09-23,638.0,HOLD,close 638.000 above trailing stop 622.908,IN_POSITION,2024-08-21,614.0,622.908341206168
+2024-09-24,643.0,HOLD,close 643.000 above trailing stop 622.908,IN_POSITION,2024-08-21,614.0,622.908341206168
+2024-09-25,648.0,HOLD,close 648.000 above trailing stop 622.908,IN_POSITION,2024-08-21,614.0,622.908341206168
+2024-09-26,643.0,HOLD,close 643.000 above trailing stop 623.065,IN_POSITION,2024-08-21,614.0,623.0650500498842
+2024-09-29,645.0,HOLD,close 645.000 above trailing stop 623.453,IN_POSITION,2024-08-21,614.0,623.4532607606068
+2024-09-30,640.0,HOLD,close 640.000 above trailing stop 624.064,IN_POSITION,2024-08-21,614.0,624.0637421348492
+2024-10-01,642.0,HOLD,close 642.000 above trailing stop 624.881,IN_POSITION,2024-08-21,614.0,624.8806176966457
+2024-10-02,633.0,HOLD,close 633.000 above trailing stop 624.889,IN_POSITION,2024-08-21,614.0,624.8891450040281
+2024-10-03,631.0,HOLD,close 631.000 above trailing stop 625.397,IN_POSITION,2024-08-21,614.0,625.3970632180261
+2024-10-06,629.0,HOLD,close 629.000 above trailing stop 625.397,IN_POSITION,2024-08-21,614.0,625.3970632180261
+2024-10-07,640.0,HOLD,close 640.000 above trailing stop 625.397,IN_POSITION,2024-08-21,614.0,625.3970632180261
+2024-10-08,644.0,HOLD,close 644.000 above trailing stop 625.397,IN_POSITION,2024-08-21,614.0,625.3970632180261
+2024-10-09,644.0,HOLD,close 644.000 above trailing stop 625.397,IN_POSITION,2024-08-21,614.0,625.3970632180261
+2024-10-10,639.0,HOLD,close 639.000 above trailing stop 625.397,IN_POSITION,2024-08-21,614.0,625.3970632180261
+2024-10-13,630.0,HOLD,close 630.000 above trailing stop 625.397,IN_POSITION,2024-08-21,614.0,625.3970632180261
+2024-10-14,627.0,HOLD,close 627.000 above trailing stop 625.397,IN_POSITION,2024-08-21,614.0,625.3970632180261
+2024-10-15,635.0,HOLD,close 635.000 above trailing stop 625.397,IN_POSITION,2024-08-21,614.0,625.3970632180261
+2024-10-16,643.0,HOLD,close 643.000 above trailing stop 625.397,IN_POSITION,2024-08-21,614.0,625.3970632180261
+2024-10-17,644.0,HOLD,close 644.000 above trailing stop 625.397,IN_POSITION,2024-08-21,614.0,625.3970632180261
+2024-10-20,644.0,HOLD,close 644.000 above trailing stop 625.397,IN_POSITION,2024-08-21,614.0,625.3970632180261
+2024-10-21,640.0,HOLD,close 640.000 above trailing stop 625.475,IN_POSITION,2024-08-21,614.0,625.4745216882258
+2024-10-22,630.0,HOLD,close 630.000 above trailing stop 625.475,IN_POSITION,2024-08-21,614.0,625.4745216882258
+2024-10-23,634.0,HOLD,close 634.000 above trailing stop 625.475,IN_POSITION,2024-08-21,614.0,625.4745216882258
+2024-10-24,633.0,HOLD,close 633.000 above trailing stop 625.475,IN_POSITION,2024-08-21,614.0,625.4745216882258
+2024-10-27,639.0,HOLD,close 639.000 above trailing stop 625.475,IN_POSITION,2024-08-21,614.0,625.4745216882258
+2024-10-28,644.0,HOLD,close 644.000 above trailing stop 625.475,IN_POSITION,2024-08-21,614.0,625.4745216882258
+2024-10-29,669.0,HOLD,close 669.000 above trailing stop 628.535,IN_POSITION,2024-08-21,614.0,628.535399267023
+2024-10-30,662.0,HOLD,close 662.000 above trailing stop 628.926,IN_POSITION,2024-08-21,614.0,628.9257278908071
+2024-10-31,670.0,HOLD,close 670.000 above trailing stop 629.788,IN_POSITION,2024-08-21,614.0,629.7881758986066
+2024-11-03,674.0,HOLD,close 674.000 above trailing stop 632.660,IN_POSITION,2024-08-21,614.0,632.6604490487061
+2024-11-04,668.0,HOLD,close 668.000 above trailing stop 632.660,IN_POSITION,2024-08-21,614.0,632.6604490487061
+2024-11-05,661.0,HOLD,close 661.000 above trailing stop 632.660,IN_POSITION,2024-08-21,614.0,632.6604490487061
+2024-11-06,668.0,HOLD,close 668.000 above trailing stop 633.563,IN_POSITION,2024-08-21,614.0,633.563231253647
+2024-11-07,665.0,HOLD,close 665.000 above trailing stop 634.702,IN_POSITION,2024-08-21,614.0,634.7015718783865
+2024-11-10,666.0,HOLD,close 666.000 above trailing stop 636.509,IN_POSITION,2024-08-21,614.0,636.5086024585017
+2024-11-11,668.0,HOLD,close 668.000 above trailing stop 637.687,IN_POSITION,2024-08-21,614.0,637.6865594257516
+2024-11-12,663.0,HOLD,close 663.000 above trailing stop 638.530,IN_POSITION,2024-08-21,614.0,638.5303766096265
+2024-11-13,665.0,HOLD,close 665.000 above trailing stop 639.314,IN_POSITION,2024-08-21,614.0,639.3139211375103
+2024-11-14,664.0,HOLD,close 664.000 above trailing stop 640.791,IN_POSITION,2024-08-21,614.0,640.7914981991167
+2024-11-17,677.0,HOLD,close 677.000 above trailing stop 642.414,IN_POSITION,2024-08-21,614.0,642.413534042037
+2024-11-18,676.0,HOLD,close 676.000 above trailing stop 642.414,IN_POSITION,2024-08-21,614.0,642.413534042037
+2024-11-19,678.0,HOLD,close 678.000 above trailing stop 643.374,IN_POSITION,2024-08-21,614.0,643.3744247607359
+2024-11-20,691.0,HOLD,close 691.000 above trailing stop 654.848,IN_POSITION,2024-08-21,614.0,654.8476801349691
+2024-11-21,702.0,HOLD,close 702.000 above trailing stop 662.930,IN_POSITION,2024-08-21,614.0,662.929988696757
+2024-11-24,695.0,HOLD,close 695.000 above trailing stop 662.930,IN_POSITION,2024-08-21,614.0,662.929988696757
+2024-11-25,696.0,HOLD,close 696.000 above trailing stop 664.276,IN_POSITION,2024-08-21,614.0,664.2763678048568
+2024-11-26,700.0,HOLD,close 700.000 above trailing stop 665.221,IN_POSITION,2024-08-21,614.0,665.2209129616527
+2024-11-27,697.0,HOLD,close 697.000 above trailing stop 665.221,IN_POSITION,2024-08-21,614.0,665.2209129616527
+2024-11-28,692.0,HOLD,close 692.000 above trailing stop 665.252,IN_POSITION,2024-08-21,614.0,665.251705563874
+2024-12-02,699.0,HOLD,close 699.000 above trailing stop 665.252,IN_POSITION,2024-08-21,614.0,665.251705563874
+2024-12-03,703.0,HOLD,close 703.000 above trailing stop 667.028,IN_POSITION,2024-08-21,614.0,667.0282563280342
+2024-12-04,700.0,HOLD,close 700.000 above trailing stop 667.098,IN_POSITION,2024-08-21,614.0,667.0976665903175
+2024-12-05,701.0,HOLD,close 701.000 above trailing stop 668.912,IN_POSITION,2024-08-21,614.0,668.9121189767234
+2024-12-08,702.0,HOLD,close 702.000 above trailing stop 670.347,IN_POSITION,2024-08-21,614.0,670.3469676212432
+2024-12-09,700.0,HOLD,close 700.000 above trailing stop 671.429,IN_POSITION,2024-08-21,614.0,671.4293270768686
+2024-12-10,708.0,HOLD,close 708.000 above trailing stop 676.684,IN_POSITION,2024-08-21,614.0,676.6843751428066
+2024-12-11,703.0,HOLD,close 703.000 above trailing stop 677.671,IN_POSITION,2024-08-21,614.0,677.671205489749
+2024-12-12,705.0,HOLD,close 705.000 above trailing stop 679.088,IN_POSITION,2024-08-21,614.0,679.0875479547669
+2024-12-15,700.0,HOLD,close 700.000 above trailing stop 679.653,IN_POSITION,2024-08-21,614.0,679.652723100855
+2024-12-16,698.0,HOLD,close 698.000 above trailing stop 679.678,IN_POSITION,2024-08-21,614.0,679.677528593651
+2024-12-17,705.0,HOLD,close 705.000 above trailing stop 679.678,IN_POSITION,2024-08-21,614.0,679.677528593651
+2024-12-18,698.0,HOLD,close 698.000 above trailing stop 679.678,IN_POSITION,2024-08-21,614.0,679.677528593651
+2024-12-19,696.0,HOLD,close 696.000 above trailing stop 679.678,IN_POSITION,2024-08-21,614.0,679.677528593651
+2024-12-22,688.0,HOLD,close 688.000 above trailing stop 679.678,IN_POSITION,2024-08-21,614.0,679.677528593651
+2024-12-23,686.0,HOLD,close 686.000 above trailing stop 679.678,IN_POSITION,2024-08-21,614.0,679.677528593651
+2024-12-24,681.0,HOLD,close 681.000 above trailing stop 679.678,IN_POSITION,2024-08-21,614.0,679.677528593651
+2024-12-25,684.0,HOLD,close 684.000 above trailing stop 679.678,IN_POSITION,2024-08-21,614.0,679.677528593651
+2024-12-26,680.0,HOLD,close 680.000 above trailing stop 679.678,IN_POSITION,2024-08-21,614.0,679.677528593651
+2024-12-29,680.0,HOLD,close 680.000 above trailing stop 679.998,IN_POSITION,2024-08-21,614.0,679.9982216945094
+2024-12-30,678.0,SELL_SIGNAL,close 678.000 broke trailing stop 680.748 (chandelier 3.5x ATR14 off high 708.000),EXIT_SIGNAL,2024-08-21,614.0,680.7483487163302
+2024-12-31,650.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-01-05,671.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-01-06,670.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-01-07,669.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-01-08,678.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-01-09,670.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-01-12,668.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-01-13,672.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-01-14,671.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-01-15,671.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-01-16,672.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-01-19,673.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-01-20,671.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-01-21,664.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-01-22,660.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-01-23,660.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-01-26,658.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-01-27,663.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-01-28,659.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-01-29,666.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-02-02,666.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-02-03,674.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-02-04,685.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-02-05,687.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-02-06,689.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-02-09,687.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-02-10,684.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-02-11,687.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-02-12,688.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-02-13,696.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-02-16,692.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-02-17,693.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-02-18,695.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-02-19,698.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-02-20,699.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-02-23,699.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-02-24,709.0,BUY,"fresh 40-session high, close 709.000 broke ceiling 704.000",IN_POSITION,2025-02-24,709.0,679.1631470086649
+2025-03-02,717.0,HOLD,close 717.000 above trailing stop 686.794,IN_POSITION,2025-02-24,709.0,686.7943507937603
+2025-03-03,718.0,HOLD,close 718.000 above trailing stop 688.202,IN_POSITION,2025-02-24,709.0,688.2018971656345
+2025-03-04,720.0,HOLD,close 720.000 above trailing stop 690.580,IN_POSITION,2025-02-24,709.0,690.5803330823749
+2025-03-05,716.0,HOLD,close 716.000 above trailing stop 690.932,IN_POSITION,2025-02-24,709.0,690.9317378622052
+2025-03-06,698.0,HOLD,close 698.000 above trailing stop 690.932,IN_POSITION,2025-02-24,709.0,690.9317378622052
+2025-03-09,687.0,SELL_SIGNAL,close 687.000 broke trailing stop 690.932 (chandelier 3.5x ATR14 off high 720.000),EXIT_SIGNAL,2025-02-24,709.0,690.9317378622052
+2025-03-10,680.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-03-11,665.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-03-12,665.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-03-13,652.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-03-16,656.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-03-17,670.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-03-18,681.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-03-19,681.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-03-20,674.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-03-23,666.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-03-24,670.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-03-25,672.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-03-26,678.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-03-27,687.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-04-02,700.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-04-03,701.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-04-06,658.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-04-07,645.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-04-08,654.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-04-09,651.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-04-10,669.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-04-13,662.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-04-14,664.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-04-15,669.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-04-16,670.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-04-17,669.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-04-20,670.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-04-21,686.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-04-22,699.0,BUY,EMA10 crossed above EMA30 with close 699.000 above EMA50 676.682 (intermediate trend turned),IN_POSITION,2025-04-22,699.0,651.7153783946723
+2025-04-23,704.0,HOLD,close 704.000 above trailing stop 656.843,IN_POSITION,2025-04-22,699.0,656.8428513664815
+2025-04-24,702.0,HOLD,close 702.000 above trailing stop 656.843,IN_POSITION,2025-04-22,699.0,656.8428513664815
+2025-04-27,703.0,HOLD,close 703.000 above trailing stop 656.843,IN_POSITION,2025-04-22,699.0,656.8428513664815
+2025-04-28,697.0,HOLD,close 697.000 above trailing stop 656.843,IN_POSITION,2025-04-22,699.0,656.8428513664815
+2025-04-29,698.0,HOLD,close 698.000 above trailing stop 657.667,IN_POSITION,2025-04-22,699.0,657.666836158842
+2025-04-30,695.0,HOLD,close 695.000 above trailing stop 659.976,IN_POSITION,2025-04-22,699.0,659.9763478617818
+2025-05-01,701.0,HOLD,close 701.000 above trailing stop 660.871,IN_POSITION,2025-04-22,699.0,660.8708944430832
+2025-05-04,698.0,HOLD,close 698.000 above trailing stop 662.702,IN_POSITION,2025-04-22,699.0,662.7015448400058
+2025-05-05,696.0,HOLD,close 696.000 above trailing stop 664.901,IN_POSITION,2025-04-22,699.0,664.9014344942912
+2025-05-06,704.0,HOLD,close 704.000 above trailing stop 665.194,IN_POSITION,2025-04-22,699.0,665.1941891732703
+2025-05-07,700.0,HOLD,close 700.000 above trailing stop 666.466,IN_POSITION,2025-04-22,699.0,666.466032803751
+2025-05-08,699.0,HOLD,close 699.000 above trailing stop 666.466,IN_POSITION,2025-04-22,699.0,666.466032803751
+2025-05-11,678.0,HOLD,close 678.000 above trailing stop 666.466,IN_POSITION,2025-04-22,699.0,666.466032803751
+2025-05-12,678.0,HOLD,close 678.000 above trailing stop 666.466,IN_POSITION,2025-04-22,699.0,666.466032803751
+2025-05-13,678.0,HOLD,close 678.000 above trailing stop 666.466,IN_POSITION,2025-04-22,699.0,666.466032803751
+2025-05-14,678.0,HOLD,close 678.000 above trailing stop 667.235,IN_POSITION,2025-04-22,699.0,667.234787249738
+2025-05-15,685.0,HOLD,close 685.000 above trailing stop 667.361,IN_POSITION,2025-04-22,699.0,667.3608738747567
+2025-05-18,684.0,HOLD,close 684.000 above trailing stop 668.978,IN_POSITION,2025-04-22,699.0,668.9779543122742
+2025-05-19,684.0,HOLD,close 684.000 above trailing stop 670.480,IN_POSITION,2025-04-22,699.0,670.4795290042546
+2025-05-20,682.0,HOLD,close 682.000 above trailing stop 671.874,IN_POSITION,2025-04-22,699.0,671.8738483610935
+2025-05-21,678.0,HOLD,close 678.000 above trailing stop 672.919,IN_POSITION,2025-04-22,699.0,672.9185734781582
+2025-05-22,684.0,HOLD,close 684.000 above trailing stop 672.919,IN_POSITION,2025-04-22,699.0,672.9185734781582
+2025-05-25,679.0,HOLD,close 679.000 above trailing stop 673.611,IN_POSITION,2025-04-22,699.0,673.610912845963
+2025-05-26,679.0,HOLD,close 679.000 above trailing stop 674.282,IN_POSITION,2025-04-22,699.0,674.2815619283942
+2025-05-27,679.0,HOLD,close 679.000 above trailing stop 675.654,IN_POSITION,2025-04-22,699.0,675.6543075049375
+2025-05-28,681.0,HOLD,close 681.000 above trailing stop 676.679,IN_POSITION,2025-04-22,699.0,676.6789998260134
+2025-05-29,687.0,HOLD,close 687.000 above trailing stop 676.679,IN_POSITION,2025-04-22,699.0,676.6789998260134
+2025-06-01,687.0,HOLD,close 687.000 above trailing stop 677.585,IN_POSITION,2025-04-22,699.0,677.5854641356952
+2025-06-02,687.0,HOLD,close 687.000 above trailing stop 677.972,IN_POSITION,2025-04-22,699.0,677.9722166974312
+2025-06-03,691.0,HOLD,close 691.000 above trailing stop 677.972,IN_POSITION,2025-04-22,699.0,677.9722166974312
+2025-06-04,690.0,HOLD,close 690.000 above trailing stop 678.701,IN_POSITION,2025-04-22,699.0,678.70053378503
+2025-06-10,697.0,HOLD,close 697.000 above trailing stop 678.701,IN_POSITION,2025-04-22,699.0,678.70053378503
+2025-06-11,699.0,HOLD,close 699.000 above trailing stop 679.329,IN_POSITION,2025-04-22,699.0,679.3285214779086
+2025-06-12,692.0,HOLD,close 692.000 above trailing stop 679.329,IN_POSITION,2025-04-22,699.0,679.3285214779086
+2025-06-15,676.0,SELL_SIGNAL,close 676.000 broke trailing stop 679.329 (chandelier 3.5x ATR14 off high 704.000),EXIT_SIGNAL,2025-04-22,699.0,679.3285214779086
+2025-06-16,645.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-06-17,643.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-06-18,619.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-06-19,620.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-06-22,619.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-06-23,632.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-06-24,641.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-06-25,648.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-06-29,658.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-06-30,642.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-01,647.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-02,647.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-03,645.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-06,643.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-07,646.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-08,645.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-09,648.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-10,650.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-13,650.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-14,645.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-15,644.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-16,641.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-17,645.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-20,645.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-21,646.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-22,644.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-23,644.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-24,647.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-27,648.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-28,645.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-29,648.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-30,650.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-07-31,647.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-08-03,648.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-08-04,644.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-08-05,646.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-08-06,647.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-08-07,646.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-08-10,644.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-08-11,646.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-08-12,644.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-08-13,644.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-08-14,646.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-08-17,648.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-08-18,653.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-08-19,646.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-08-20,646.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-08-21,645.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-08-24,651.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-08-25,650.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-08-26,648.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-08-27,646.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-08-28,641.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-08-31,641.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-09-01,639.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-09-02,637.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-09-03,637.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-09-07,630.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-09-08,641.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-09-09,640.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-09-10,637.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-09-11,641.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-09-14,639.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-09-15,640.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-09-16,639.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-09-17,638.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-09-18,639.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-09-21,636.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-09-22,633.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-09-23,633.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-09-24,630.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-09-25,634.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-09-28,631.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-09-29,630.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-09-30,627.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-10-01,626.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-10-02,620.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-10-05,619.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-10-06,610.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-10-07,618.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-10-08,632.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-10-09,618.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-10-12,614.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-10-13,615.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-10-14,615.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-10-15,620.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-10-16,619.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-10-19,616.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-10-20,615.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-10-21,618.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-10-22,613.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-10-23,613.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-10-26,612.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-10-27,607.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-10-28,612.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-10-29,612.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-10-30,613.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-11-02,611.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-11-03,612.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-11-04,610.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-11-05,609.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-11-06,610.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-11-09,610.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-11-10,611.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-11-11,611.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-11-12,609.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-11-13,610.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-11-16,609.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-11-17,608.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-11-18,606.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-11-19,606.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-11-20,602.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-11-23,593.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-11-24,593.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-11-25,590.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-11-26,588.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-11-27,590.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-11-30,592.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-01,589.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-02,590.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-03,592.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-04,598.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-07,600.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-08,607.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-09,607.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-10,607.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-11,609.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-14,610.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-15,608.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-16,604.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-17,608.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-18,608.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-21,597.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-22,594.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-23,593.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-24,591.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-25,591.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-28,589.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-29,588.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-30,587.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2025-12-31,587.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-01-04,587.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-01-05,587.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-01-06,585.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-01-07,586.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-01-08,589.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-01-11,585.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-01-12,580.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-01-13,586.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-01-14,579.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-01-15,574.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-01-19,574.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-01-20,580.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-01-21,583.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-01-22,585.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-01-25,578.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-01-26,573.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-01-27,580.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-01-28,579.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-01-29,566.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-02-01,567.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-02-02,573.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-02-03,574.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-02-04,574.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-02-05,568.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-02-08,571.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-02-09,570.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-02-10,564.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-02-11,563.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-02-12,560.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-02-15,559.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-02-16,557.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-02-17,566.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-02-18,567.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-02-19,567.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-02-22,562.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-02-23,563.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-02-24,559.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-03-02,557.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-03-03,566.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-03-04,563.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-03-05,570.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-03-08,566.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-03-09,560.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-03-10,570.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-03-11,571.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-03-12,566.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-03-15,570.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-03-16,567.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-03-17,579.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-03-18,576.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-03-24,580.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-03-25,580.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-03-26,576.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-03-29,561.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-03-30,561.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-03-31,555.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-04-01,575.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-04-02,575.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-04-05,567.0,WAIT,no qualifying breakout,NO_POSITION,,,
+2026-04-06,575.0,BUY,EMA10 crossed above EMA30 with close 575.000 above EMA50 572.700 (intermediate trend turned),IN_POSITION,2026-04-06,575.0,536.3238198540353
+2026-04-07,566.0,HOLD,close 566.000 above trailing stop 536.586,IN_POSITION,2026-04-06,575.0,536.5864041501757
+2026-04-08,577.0,HOLD,close 577.000 above trailing stop 536.830,IN_POSITION,2026-04-06,575.0,536.8302324251631
+2026-04-09,581.0,HOLD,close 581.000 above trailing stop 542.450,IN_POSITION,2026-04-06,575.0,542.4495015376515
+2026-04-12,577.0,HOLD,close 577.000 above trailing stop 543.453,IN_POSITION,2026-04-06,575.0,543.4531085706764
+2026-04-13,603.0,HOLD,close 603.000 above trailing stop 561.385,IN_POSITION,2026-04-06,575.0,561.3850293870566
+2026-04-14,604.0,HOLD,close 604.000 above trailing stop 563.108,IN_POSITION,2026-04-06,575.0,563.1075272879812
+2026-04-15,610.0,HOLD,close 610.000 above trailing stop 570.028,IN_POSITION,2026-04-06,575.0,570.0284181959825
+2026-04-16,614.0,HOLD,close 614.000 above trailing stop 574.884,IN_POSITION,2026-04-06,575.0,574.8835311819837
+2026-04-19,607.0,HOLD,close 607.000 above trailing stop 575.928,IN_POSITION,2026-04-06,575.0,575.9275646689849
+2026-04-20,604.0,HOLD,close 604.000 above trailing stop 576.897,IN_POSITION,2026-04-06,575.0,576.897024335486
+2026-04-21,612.0,HOLD,close 612.000 above trailing stop 577.047,IN_POSITION,2026-04-06,575.0,577.0472368829512
+2026-04-22,608.0,HOLD,close 608.000 above trailing stop 578.187,IN_POSITION,2026-04-06,575.0,578.1867199627404
+2026-04-23,608.0,HOLD,close 608.000 above trailing stop 578.995,IN_POSITION,2026-04-06,575.0,578.9948113939732
+2026-04-26,613.0,HOLD,close 613.000 above trailing stop 579.495,IN_POSITION,2026-04-06,575.0,579.4951820086894
+2026-04-27,611.0,HOLD,close 611.000 above trailing stop 579.960,IN_POSITION,2026-04-06,575.0,579.9598118652117
+2026-04-28,611.0,HOLD,close 611.000 above trailing stop 581.141,IN_POSITION,2026-04-06,575.0,581.1412538748394
+2026-04-29,608.0,HOLD,close 608.000 above trailing stop 582.238,IN_POSITION,2026-04-06,575.0,582.2383071694937
+2026-04-30,614.0,HOLD,close 614.000 above trailing stop 582.238,IN_POSITION,2026-04-06,575.0,582.2383071694937
+2026-05-03,626.0,HOLD,close 626.000 above trailing stop 590.846,IN_POSITION,2026-04-06,575.0,590.8457852634921
+2026-05-04,630.0,HOLD,close 630.000 above trailing stop 595.107,IN_POSITION,2026-04-06,575.0,595.106800601814
+2026-05-05,628.0,HOLD,close 628.000 above trailing stop 596.349,IN_POSITION,2026-04-06,575.0,596.3491719873987
+2026-05-06,631.0,HOLD,close 631.000 above trailing stop 598.253,IN_POSITION,2026-04-06,575.0,598.2528025597273
+2026-05-07,637.0,HOLD,close 637.000 above trailing stop 605.092,IN_POSITION,2026-04-06,575.0,605.0918880911754
+2026-05-10,633.0,HOLD,close 633.000 above trailing stop 605.092,IN_POSITION,2026-04-06,575.0,605.0918880911754
+2026-05-11,626.0,HOLD,close 626.000 above trailing stop 605.184,IN_POSITION,2026-04-06,575.0,605.1838218745339
+2026-05-12,627.0,HOLD,close 627.000 above trailing stop 605.184,IN_POSITION,2026-04-06,575.0,605.1838218745339
+2026-05-13,624.0,HOLD,close 624.000 above trailing stop 605.184,IN_POSITION,2026-04-06,575.0,605.1838218745339
+2026-05-14,636.0,HOLD,close 636.000 above trailing stop 605.184,IN_POSITION,2026-04-06,575.0,605.1838218745339
+2026-05-17,630.0,HOLD,close 630.000 above trailing stop 605.184,IN_POSITION,2026-04-06,575.0,605.1838218745339
+2026-05-18,634.0,HOLD,close 634.000 above trailing stop 605.184,IN_POSITION,2026-04-06,575.0,605.1838218745339
+2026-05-19,636.0,HOLD,close 636.000 above trailing stop 605.184,IN_POSITION,2026-04-06,575.0,605.1838218745339
+2026-05-20,635.0,HOLD,close 635.000 above trailing stop 605.184,IN_POSITION,2026-04-06,575.0,605.1838218745339
+2026-05-21,641.0,HOLD,close 641.000 above trailing stop 608.687,IN_POSITION,2026-04-06,575.0,608.6872715359458
+2026-05-24,652.0,HOLD,close 652.000 above trailing stop 616.995,IN_POSITION,2026-04-06,575.0,616.9953235690925
+2026-05-25,660.0,HOLD,close 660.000 above trailing stop 622.996,IN_POSITION,2026-04-06,575.0,622.9956575998716
+2026-06-01,665.0,HOLD,close 665.000 above trailing stop 627.639,IN_POSITION,2026-04-06,575.0,627.6388249141665
+2026-06-02,668.0,HOLD,close 668.000 above trailing stop 629.307,IN_POSITION,2026-04-06,575.0,629.3074802774404
+2026-06-03,668.0,HOLD,close 668.000 above trailing stop 629.307,IN_POSITION,2026-04-06,575.0,629.3074802774404
+2026-06-04,673.0,HOLD,close 673.000 above trailing stop 633.852,IN_POSITION,2026-04-06,575.0,633.8518579943236
+2026-06-07,669.0,HOLD,close 669.000 above trailing stop 633.852,IN_POSITION,2026-04-06,575.0,633.8518579943236
+2026-06-08,652.0,HOLD,close 652.000 above trailing stop 633.852,IN_POSITION,2026-04-06,575.0,633.8518579943236
+2026-06-09,670.0,HOLD,close 670.000 above trailing stop 633.852,IN_POSITION,2026-04-06,575.0,633.8518579943236
+2026-06-10,676.0,HOLD,close 676.000 above trailing stop 633.852,IN_POSITION,2026-04-06,575.0,633.8518579943236
+2026-06-11,668.0,HOLD,close 668.000 above trailing stop 633.852,IN_POSITION,2026-04-06,575.0,633.8518579943236
+2026-06-14,673.0,HOLD,close 673.000 above trailing stop 633.852,IN_POSITION,2026-04-06,575.0,633.8518579943236
+2026-06-15,694.0,HOLD,close 694.000 above trailing stop 648.023,IN_POSITION,2026-04-06,575.0,648.022937216264
+2026-06-17,695.0,HOLD,close 695.000 above trailing stop 649.307,IN_POSITION,2026-04-06,575.0,649.307013129388
+2026-06-18,698.0,HOLD,close 698.000 above trailing stop 653.321,IN_POSITION,2026-04-06,575.0,653.3207979058603
+2026-06-21,692.0,HOLD,close 692.000 above trailing stop 654.762,IN_POSITION,2026-04-06,575.0,654.7621694840132
+2026-06-22,688.0,HOLD,close 688.000 above trailing stop 655.601,IN_POSITION,2026-04-06,575.0,655.6005859494408
+2026-06-23,686.0,HOLD,close 686.000 above trailing stop 657.379,IN_POSITION,2026-04-06,575.0,657.3791155244808
+2026-06-24,685.0,HOLD,close 685.000 above trailing stop 659.531,IN_POSITION,2026-04-06,575.0,659.5306072727321
+2026-06-25,686.0,HOLD,close 686.000 above trailing stop 660.778,IN_POSITION,2026-04-06,575.0,660.7784210389655
+2026-06-28,684.0,HOLD,close 684.000 above trailing stop 662.437,IN_POSITION,2026-04-06,575.0,662.437105250468
+2026-06-29,697.0,HOLD,close 697.000 above trailing stop 662.437,IN_POSITION,2026-04-06,575.0,662.437105250468
+2026-06-30,694.0,HOLD,close 694.000 above trailing stop 663.086,IN_POSITION,2026-04-06,575.0,663.0860754455566
+2026-07-01,698.0,HOLD,close 698.000 above trailing stop 664.080,IN_POSITION,2026-04-06,575.0,664.0799271994454
+2026-07-02,696.0,HOLD,close 696.000 above trailing stop 664.753,IN_POSITION,2026-04-06,575.0,664.7527895423422
+2026-07-05,699.0,HOLD,close 699.000 above trailing stop 667.128,IN_POSITION,2026-04-06,575.0,667.1275902893177
+2026-07-06,700.0,HOLD,close 700.000 above trailing stop 668.654,IN_POSITION,2026-04-06,575.0,668.6541909829378
+2026-07-07,699.0,HOLD,close 699.000 above trailing stop 669.643,IN_POSITION,2026-04-06,575.0,669.6431773412994
+2026-07-08,695.0,HOLD,close 695.000 above trailing stop 669.643,IN_POSITION,2026-04-06,575.0,669.6431773412994
+2026-07-09,691.0,HOLD,close 691.000 above trailing stop 669.643,IN_POSITION,2026-04-06,575.0,669.6431773412994

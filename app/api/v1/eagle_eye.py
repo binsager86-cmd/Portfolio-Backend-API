@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import sqlite3
 import threading
 import time
 import uuid
@@ -134,6 +135,110 @@ def _get_trend_hold_map() -> Dict[str, dict]:
     except Exception:
         logger.warning("Could not refresh trend-hold map; using stale cache or empty dict")
         return _TREND_HOLD_MAP_CACHE or {}
+
+
+def _scanner_coverage_summary(scanner_symbols: set[str]) -> dict:
+    """Explain scanner coverage against the sealed V2 canonical universe."""
+    from app.core.database import query_all, query_one
+    from app.data.stock_lists import KUWAIT_STOCKS
+
+    def _value(sql: str, params: tuple = ()) -> Optional[str]:
+        try:
+            row = query_one(sql, params)
+            if row is None:
+                return None
+            return str(row[0] if not isinstance(row, dict) else next(iter(row.values())))
+        except Exception:
+            return None
+
+    def _symbols(sql: str, params: tuple = ()) -> set[str]:
+        try:
+            return {str(row[0] if not isinstance(row, dict) else next(iter(row.values()))).upper() for row in query_all(sql, params)}
+        except Exception:
+            return set()
+
+    canonical: set[str] = set()
+    quarantine: dict[str, str] = {}
+    quarantine_session: Optional[str] = None
+
+    try:
+        from app.services.eagle_eye_v2.simulator.constants import FORWARD_SURFACE_DB
+
+        sealed_db = FORWARD_SURFACE_DB.parent / "r12_exam_surface_v4_5_runtime.db"
+        if sealed_db.exists():
+            with sqlite3.connect(f"file:{sealed_db.as_posix()}?mode=ro", uri=True) as conn:
+                canonical = {str(row[0]).upper() for row in conn.execute("SELECT DISTINCT original_symbol FROM ee_symbol_segment_map")}
+        if FORWARD_SURFACE_DB.exists():
+            with sqlite3.connect(f"file:{FORWARD_SURFACE_DB.as_posix()}?mode=ro", uri=True) as conn:
+                row = conn.execute("SELECT MAX(session) FROM forward_surface_quarantine").fetchone()
+                quarantine_session = None if row is None or row[0] is None else str(row[0])
+                if quarantine_session:
+                    quarantine = {
+                        str(symbol).upper(): str(reason)
+                        for symbol, reason in conn.execute(
+                            "SELECT symbol, reason FROM forward_surface_quarantine WHERE session = ?",
+                            (quarantine_session,),
+                        )
+                    }
+    except Exception:
+        canonical = set()
+        quarantine = {}
+
+    if not canonical:
+        canonical = {
+            str(item.get("symbol") or "").upper().replace(".KW", "").strip()
+            for item in KUWAIT_STOCKS
+            if str(item.get("symbol") or "").strip()
+        }
+
+    latest_ohlcv = _value("SELECT MAX(bar_date) FROM ee_ohlcv_cache")
+    latest_sim = _value("SELECT MAX(session) FROM sim_symbol_state")
+    scanner_rating_date = _value("SELECT MAX(COALESCE(computed_date, substr(computed_at, 1, 10))) FROM ee_ratings_cache")
+    ohlcv_symbols = _symbols("SELECT DISTINCT ticker FROM ee_ohlcv_cache WHERE bar_date = ?", (latest_ohlcv,)) if latest_ohlcv else set()
+    sim_symbols = _symbols("SELECT DISTINCT COALESCE(canonical_symbol, symbol) FROM sim_symbol_state WHERE session = ?", (latest_sim,)) if latest_sim else set()
+
+    bucket_defs = [
+        ("displayed_in_scanner", "Displayed in scanner", "Has a scanner rating row in ee_ratings_cache."),
+        ("simulated_no_scanner_rating", "Simulated, no scanner rating", "Has simulator state for the latest simulator session but no current scanner rating row."),
+        ("ohlcv_no_simulator_state", "OHLCV, no simulator state", "Has a latest-session OHLCV row but no simulator projection row."),
+        ("no_ohlcv_latest_session", "No OHLCV row", "No OHLCV row for the latest market session."),
+        ("forward_surface_quarantined", "Forward-surface quarantined", "Quarantined by the forward-surface builder for the latest quarantine session."),
+    ]
+    bucket_symbols: dict[str, list[str]] = {key: [] for key, _, _ in bucket_defs}
+    for symbol in sorted(canonical):
+        if symbol in scanner_symbols:
+            bucket_symbols["displayed_in_scanner"].append(symbol)
+        elif symbol in quarantine:
+            bucket_symbols["forward_surface_quarantined"].append(symbol)
+        elif symbol not in ohlcv_symbols:
+            bucket_symbols["no_ohlcv_latest_session"].append(symbol)
+        elif symbol not in sim_symbols:
+            bucket_symbols["ohlcv_no_simulator_state"].append(symbol)
+        else:
+            bucket_symbols["simulated_no_scanner_rating"].append(symbol)
+
+    evaluated = len(set(scanner_symbols) & canonical)
+    return {
+        "total": len(canonical),
+        "evaluated_count": evaluated,
+        "not_evaluated_count": max(0, len(canonical) - evaluated),
+        "scanner_count": len(scanner_symbols),
+        "scanner_extra_symbols": sorted(set(scanner_symbols) - canonical),
+        "scanner_rating_date": scanner_rating_date,
+        "latest_ohlcv_session": latest_ohlcv,
+        "latest_simulator_session": latest_sim,
+        "quarantine_session": quarantine_session,
+        "buckets": [
+            {
+                "key": key,
+                "label": label,
+                "count": len(bucket_symbols[key]),
+                "symbols": bucket_symbols[key],
+                "description": description,
+            }
+            for key, label, description in bucket_defs
+        ],
+    }
 
 
 def _cache_key(ticker: str, as_of: Optional[date] = None) -> str:
@@ -607,7 +712,7 @@ async def get_scanner(
     )
     if use_resp_cache:
         cached = _SCANNER_RESP_CACHE
-        return ScannerResponse(status="ok", count=len(cached), stocks=cached)
+        return ScannerResponse(status="ok", count=len(cached), stocks=cached, coverage=_scanner_coverage_summary({stock.ticker for stock in cached}))
 
     # ── DB fast path: read pre-computed ratings ──────────────────────────────
     # NOTE: Live compute fallback removed — it fetched OHLCV for 100+ stocks
@@ -727,7 +832,7 @@ async def get_scanner(
             _SCANNER_RESP_CACHE = results
             _SCANNER_RESP_CACHE_AT = now
 
-        return ScannerResponse(status="ok", count=len(results), stocks=results)
+        return ScannerResponse(status="ok", count=len(results), stocks=results, coverage=_scanner_coverage_summary({stock.ticker for stock in results}))
 
     except Exception as exc:
         logger.warning("DB scanner failed: %s", exc)

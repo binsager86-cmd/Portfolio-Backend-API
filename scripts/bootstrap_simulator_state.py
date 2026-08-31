@@ -28,13 +28,19 @@ def main() -> None:
     started = time.perf_counter()
     completed = 0
     total = len(sessions)
+    failures: list[dict[str, str]] = []
     print(json.dumps({"bootstrap_session": session, "symbols": total, "mode": "offline_full_replay"}), flush=True)
     for segment_symbol in sorted(sessions):
         canonical = segment_symbol.split("__SEG", 1)[0]
-        result = runner.bootstrap_machine_state(canonical, session, surface_db)
         completed += 1
-        print(json.dumps({"symbol": canonical, "completed": completed, "total": total, "elapsed_sec": result["elapsed_sec"]}), flush=True)
-    print(json.dumps({"status": "BOOTSTRAP_COMPLETE", "symbols": completed, "elapsed_sec": round(time.perf_counter() - started, 3)}), flush=True)
+        try:
+            result = runner.bootstrap_machine_state(canonical, session, surface_db)
+            print(json.dumps({"symbol": canonical, "status": "BOOTSTRAPPED", "completed": completed, "total": total, "elapsed_sec": result["elapsed_sec"]}), flush=True)
+        except Exception as exc:
+            failure = {"symbol": canonical, "error": f"{type(exc).__name__}: {exc}"}
+            failures.append(failure)
+            print(json.dumps({"symbol": canonical, "status": "FAILED", "completed": completed, "total": total, **failure}), flush=True)
+    print(json.dumps({"status": "BOOTSTRAP_COMPLETE", "symbols": completed - len(failures), "failed": len(failures), "failures": failures, "elapsed_sec": round(time.perf_counter() - started, 3)}), flush=True)
 
 
 if __name__ == "__main__":

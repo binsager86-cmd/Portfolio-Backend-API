@@ -79,10 +79,32 @@ class RatedStock(BaseModel):
     trend_hold_entry_price: Optional[float] = None
 
 
+class ScannerCoverageBucket(BaseModel):
+    key: str
+    label: str
+    count: int
+    symbols: List[str]
+    description: Optional[str] = None
+
+
+class ScannerCoverageSummary(BaseModel):
+    total: int
+    evaluated_count: int
+    not_evaluated_count: int
+    scanner_count: int
+    scanner_extra_symbols: List[str] = []
+    scanner_rating_date: Optional[str] = None
+    latest_ohlcv_session: Optional[str] = None
+    latest_simulator_session: Optional[str] = None
+    quarantine_session: Optional[str] = None
+    buckets: List[ScannerCoverageBucket] = []
+
+
 class ScannerResponse(BaseModel):
     status: str = "ok"
     count: int
     stocks: List[RatedStock]
+    coverage: Optional[ScannerCoverageSummary] = None
     progress_phase: Optional[str] = None
     progress_message: Optional[str] = None
     progress_current: Optional[int] = None

@@ -24,24 +24,24 @@ from typing import Any
 
 import numpy as np
 
-from app.services.signal_engine.config.model_params import OBV_SLOPE_BARS
+from app.services.signal_engine.config.model_params import OBV_SLOPE_BARS, RVOL_LOOKBACK
 
 
 def _obv_score(rows: list[dict[str, Any]]) -> tuple[int, str]:
     """Score OBV trend via linear-regression slope (max 25 pts)."""
     if len(rows) < OBV_SLOPE_BARS + 1:
-        return 12, "obv_insufficient_data"
+        return 0, "obv_unavailable_insufficient_data"
 
     recent = rows[-(OBV_SLOPE_BARS + 1):]
     obvs = [r.get("obv") for r in recent]
     if any(v is None for v in obvs):
-        return 12, "obv_missing"
+        return 0, "obv_unavailable_missing"
 
     vals = np.array([float(v) for v in obvs])
     x = np.arange(len(vals), dtype=float)
     y_mean = vals.mean()
     if y_mean == 0:
-        return 12, "obv_zero"
+        return 0, "obv_unavailable_zero_baseline"
     slope, _ = np.polyfit(x, vals, 1)
     slope_pct = slope / abs(y_mean) * 100.0
 
@@ -60,7 +60,7 @@ def _cmf_score(last: dict[str, Any]) -> tuple[int, str]:
     """Score Chaikin Money Flow (max 35 pts)."""
     cmf = last.get("cmf_20")
     if cmf is None:
-        return 14, "cmf_missing"
+        return 0, "cmf_unavailable_missing"
     v = float(cmf)
     if v > 0.20:
         return 35, f"strong_accumulation_cmf_{v:.3f}"
@@ -81,17 +81,37 @@ def _rvol_score(rows: list[dict[str, Any]]) -> tuple[int, str]:
     """Relative Volume confirmation (max 25 pts).
 
     Filters low-volume traps and confirms institutional participation.
-    RVOL = current_volume / 20-day median volume.
+    RVOL = current_volume / median(previous 20 valid sessions' volume).
     """
-    if len(rows) < 21:
-        return 12, "rvol_insufficient_data"
+    if not rows:
+        return 0, "rvol_unavailable_no_rows"
 
-    volumes = [float(r.get("volume") or 0.0) for r in rows]
-    current_vol = volumes[-1]
-    median_vol = float(np.median(volumes[:-1]))  # exclude current day
+    current_raw = rows[-1].get("volume")
+    if current_raw in (None, ""):
+        return 0, "rvol_unavailable_current_volume_missing"
+    current_vol = float(current_raw)
+    if current_vol < 0:
+        return 0, "rvol_unavailable_current_volume_invalid"
+
+    prior_valid: list[float] = []
+    for row in reversed(rows[:-1]):  # current bar is never part of the baseline
+        raw = row.get("volume")
+        if raw in (None, ""):
+            continue
+        volume = float(raw)
+        # Zero-volume bars are suspensions/forward-filled placeholders, not sessions.
+        if volume > 0:
+            prior_valid.append(volume)
+        if len(prior_valid) == RVOL_LOOKBACK:
+            break
+
+    if len(prior_valid) < RVOL_LOOKBACK:
+        return 0, f"rvol_unavailable_valid_history_{len(prior_valid)}_{RVOL_LOOKBACK}"
+
+    median_vol = float(np.median(prior_valid))
 
     if median_vol <= 0:
-        return 12, "rvol_zero_median"
+        return 0, "rvol_unavailable_zero_median"
 
     rvol = current_vol / median_vol
 
@@ -108,13 +128,11 @@ def _rvol_score(rows: list[dict[str, Any]]) -> tuple[int, str]:
     return 0, f"thin_volume_rvol_{rvol:.1f}x"
 
 
-def _auction_score(intensity: float) -> tuple[int, str]:
-    """Score auction intensity proxy (max 15 pts)."""
-    if intensity > 1.8:
-        return 15, f"high_institutional_auction_{intensity:.2f}"
-    if intensity >= 1.0:
-        return 10, f"normal_auction_{intensity:.2f}"
-    return 3, f"low_institutional_auction_{intensity:.2f}"
+def _auction_score(intensity: float | None) -> tuple[int, str]:
+    """Auction data is unavailable on daily bars and contributes no points."""
+    if intensity is None:
+        return 0, "auction_unavailable_no_intraday_data"
+    return 0, "auction_excluded_from_live_score"
 
 
 def _orderbook_adjustment(ob_data: dict[str, Any] | None) -> tuple[int, str]:
@@ -150,14 +168,14 @@ def _orderbook_adjustment(ob_data: dict[str, Any] | None) -> tuple[int, str]:
 
 def compute_volume_flow_score(
     rows: list[dict[str, Any]],
-    auction_intensity: float,
+    auction_intensity: float | None,
     orderbook_imbalance: dict[str, Any] | None = None,
 ) -> tuple[int, dict[str, Any]]:
     """Compute the raw volume/flow score and component breakdown.
 
     Args:
         rows: OHLCV + indicator rows sorted ascending by date.
-        auction_intensity: Pre-computed auction intensity from auction_proxy or real OB.
+            auction_intensity: Optional real auction metric; daily-bar proxies are excluded.
         orderbook_imbalance: Optional dict with ``imbalance_ratio`` and ``liquidity_wall``
                              from order book analysis.  Pass None when OB is unavailable.
 
@@ -168,11 +186,11 @@ def compute_volume_flow_score(
         CMF(20)    : 35 pts  — primary flow signal
         OBV slope  : 25 pts  — trend alignment
         RVOL       : 25 pts  — breakout confirmation (replaces A/D Line)
-        Auction    : 15 pts  — closing-auction block execution
+        Auction    : 0 pts   — unavailable without intraday auction data
         OB adjust  : ±10 pts (+5 wall bonus, total ±15)
     """
     if not rows:
-        return 50, {"error": "no_rows"}
+        return 0, {"error": "no_rows", "available": False}
 
     last = rows[-1]
 
@@ -198,6 +216,13 @@ def compute_volume_flow_score(
         "auction_intensity": auction_intensity,
         "orderbook_imbalance": orderbook_imbalance,
         "raw_score": raw,
+        "available": not any("unavailable" in desc for desc in (cmf_desc, obv_desc, rvol_desc)),
+        "component_coverage": {
+            "cmf": "unavailable" not in cmf_desc,
+            "obv": "unavailable" not in obv_desc,
+            "rvol": "unavailable" not in rvol_desc,
+            "auction": auction_intensity is not None,
+        },
     }
     return raw, details
 

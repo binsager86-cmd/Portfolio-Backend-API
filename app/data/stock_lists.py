@@ -117,7 +117,7 @@ KUWAIT_STOCKS: List[Dict[str, str]] = [
     {"symbol": "THURAYA", "name": "Dar Al-Thuraya Real Estate Company K.S.C.P.", "yf_ticker": "THURAYA.KW"},
     {"symbol": "KBT", "name": "Kuwait Business Town Real Estate Company - KPSC", "yf_ticker": "KBT.KW"},
     {"symbol": "ARABREC", "name": "Al-Arabiya Real Estate Company K.S.C.P.", "yf_ticker": "ARABREC.KW"},
-    {"symbol": "ERESCO", "name": "Al-Enma'a Real Estate Company K.S.C.P.", "yf_ticker": "ERESCO.KW"},
+    {"symbol": "ALENMA", "name": "Al-Enma'a Real Estate Company K.S.C.P.", "yf_ticker": "ALENMA.KW"},
     {"symbol": "MARAKEZ", "name": "Marakez Real Estate Development Company (K.P.S.C)", "yf_ticker": "MARAKEZ.KW"},
     {"symbol": "MENA", "name": "MENA Real Estate Company - KSCP", "yf_ticker": "MENA.KW"},
     {"symbol": "EMIRATES", "name": "Kuwait Emirates Holding Company K.S.C.P.", "yf_ticker": "EMIRATES.KW"},

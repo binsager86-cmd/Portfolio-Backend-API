@@ -11,14 +11,13 @@ score ≥ 75) and is refined once enough live trades are recorded.
 from __future__ import annotations
 
 import logging
+import math
 from typing import Any
 
 from app.services.signal_engine.config.risk_config import (
     BAYES_PRIOR_PSEUDO_OBS,
     ISO_MIN_SAMPLES,
     REGIME_WIN_RATE_MULTIPLIERS,
-    SCORE_TO_WIN_RATE,
-    TP2_WIN_RATE_FRACTION,
 )
 
 logger = logging.getLogger(__name__)
@@ -30,21 +29,6 @@ try:
 except ImportError:
     _SKLEARN_AVAILABLE = False
     logger.info("scikit-learn not installed — using lookup-table probability calibration")
-
-
-def _lookup_win_rate(total_score: int) -> float:
-    """Interpolate win rate from the pre-seeded score-to-win-rate table."""
-    breakpoints = sorted(SCORE_TO_WIN_RATE.keys())
-    if total_score <= breakpoints[0]:
-        return SCORE_TO_WIN_RATE[breakpoints[0]]
-    if total_score >= breakpoints[-1]:
-        return SCORE_TO_WIN_RATE[breakpoints[-1]]
-    for i in range(len(breakpoints) - 1):
-        lo, hi = breakpoints[i], breakpoints[i + 1]
-        if lo <= total_score < hi:
-            frac = (total_score - lo) / (hi - lo)
-            return SCORE_TO_WIN_RATE[lo] + (SCORE_TO_WIN_RATE[hi] - SCORE_TO_WIN_RATE[lo]) * frac
-    return 0.50
 
 
 def _bayesian_update(prior_win_rate: float, recent_performance: dict[str, Any]) -> float:
@@ -76,6 +60,8 @@ def calibrate_probabilities(
     recent_performance: dict[str, Any] | None = None,
     historical_scores: list[float] | None = None,
     historical_outcomes: list[int] | None = None,
+    historical_scores_tp2: list[float] | None = None,
+    historical_outcomes_tp2: list[int] | None = None,
 ) -> dict[str, Any]:
     """Map a raw confluence score to calibrated win probabilities.
 
@@ -90,33 +76,50 @@ def calibrate_probabilities(
         Dict with p_tp1_before_sl, p_tp2_before_sl, confidence_interval_95,
         expected_return_r_multiple, calibration_method.
     """
-    # ── Stage 1: isotonic regression or lookup table ──────────────────────────
+    def unavailable(status: str, sample_size: int = 0) -> dict[str, Any]:
+        return {
+            "p_tp1_before_sl": None,
+            "p_tp2_before_sl": None,
+            "confidence_interval_95": None,
+            "expected_return_r_multiple": None,
+            "calibration_method": None,
+            "probability_status": status,
+            "sample_size": sample_size,
+            "calibrated_as_of": None,
+            "brier_score": None,
+            "log_loss": None,
+            "calibration_curve": None,
+        }
+
+    # Live inference must never present the seeded score table as observed probability.
+    if historical_scores is None or historical_outcomes is None:
+        return unavailable("UNVALIDATED")
+    if len(historical_scores) != len(historical_outcomes):
+        return unavailable("INSUFFICIENT_SAMPLE", len(historical_outcomes))
+
+    # ── Stage 1: point-in-time isotonic calibration only ─────────────────────
     use_iso = (
         _SKLEARN_AVAILABLE
-        and historical_scores is not None
-        and historical_outcomes is not None
         and len(historical_scores) >= ISO_MIN_SAMPLES
     )
+    if not use_iso:
+        return unavailable("INSUFFICIENT_SAMPLE", len(historical_outcomes))
 
     if use_iso:
         try:
             iso = IsotonicRegression(out_of_bounds="clip")
             iso.fit(historical_scores, historical_outcomes)
-            raw_p = float(iso.predict([[total_score]])[0])
+            raw_p = float(iso.predict([total_score])[0])
             method = "isotonic_regression"
         except Exception as exc:  # noqa: BLE001
-            logger.warning("Isotonic regression failed (%s) — using lookup", exc)
-            raw_p = _lookup_win_rate(total_score)
-            method = "lookup_table_fallback"
-    else:
-        raw_p = _lookup_win_rate(total_score)
-        method = "lookup_table"
+            logger.warning("Isotonic regression failed (%s)", exc)
+            return unavailable("INSUFFICIENT_SAMPLE", len(historical_outcomes))
 
     # ── Regime adjustment ────────────────────────────────────────────────────
     regime_mult = REGIME_WIN_RATE_MULTIPLIERS.get(regime, 1.0)
     raw_p = min(0.95, raw_p * regime_mult)
 
-    # ── Stage 2: Bayesian update ──────────────────────────────────────────────
+    # ── Stage 2: Bayesian update only after empirical calibration ─────────────
     if recent_performance and int(recent_performance.get("total") or 0) > 0:
         p_tp1 = _bayesian_update(raw_p, recent_performance)
         method += "+bayesian_update"
@@ -124,24 +127,42 @@ def calibrate_probabilities(
         p_tp1 = raw_p
 
     p_tp1 = round(min(0.95, max(0.05, p_tp1)), 3)
-    p_tp2 = round(p_tp1 * TP2_WIN_RATE_FRACTION, 3)
+    p_tp2 = None
+    if historical_scores_tp2 is not None and historical_outcomes_tp2 is not None:
+        if len(historical_scores_tp2) == len(historical_outcomes_tp2) and len(historical_outcomes_tp2) >= ISO_MIN_SAMPLES:
+            iso_tp2 = IsotonicRegression(out_of_bounds="clip")
+            iso_tp2.fit(historical_scores_tp2, historical_outcomes_tp2)
+            p_tp2 = round(min(0.95, max(0.05, float(iso_tp2.predict([total_score])[0]))), 3)
 
-    # 95 % confidence interval via normal approximation (Wilson interval)
+    # Wilson interval from observed outcomes only; no pseudo-observations.
     n_trades = int((recent_performance or {}).get("total") or 0)
-    n = max(10, n_trades + BAYES_PRIOR_PSEUDO_OBS)
+    n = len(historical_outcomes)
+    observed_wins = sum(int(value) for value in historical_outcomes)
+    observed_p = observed_wins / n if n else 0.0
     z = 1.96
-    se = (p_tp1 * (1 - p_tp1) / n) ** 0.5
-    ci_low = round(max(0.0, p_tp1 - z * se), 3)
-    ci_high = round(min(1.0, p_tp1 + z * se), 3)
+    denominator = 1.0 + z * z / n
+    centre = observed_p + z * z / (2.0 * n)
+    margin = z * math.sqrt((observed_p * (1.0 - observed_p) + z * z / (4.0 * n)) / n)
+    ci_low = round(max(0.0, (centre - margin) / denominator), 3)
+    ci_high = round(min(1.0, (centre + margin) / denominator), 3)
 
-    # Expected return in R-multiples (TP1 probability × reward_multiple − loss_prob × 1.0)
-    reward_r = 1.5   # TP1 is set at 1.5R
-    expected_r = round(p_tp1 * reward_r - (1.0 - p_tp1) * 1.0, 3)
+    brier = sum((float(outcome) - raw_prediction) ** 2 for outcome, raw_prediction in zip(historical_outcomes, iso.predict(historical_scores))) / n
+    log_loss = -sum(
+        outcome * math.log(max(1e-6, min(1.0 - 1e-6, prediction)))
+        + (1 - outcome) * math.log(max(1e-6, min(1.0 - 1e-6, 1.0 - prediction)))
+        for outcome, prediction in zip(historical_outcomes, iso.predict(historical_scores))
+    ) / n
 
     return {
         "p_tp1_before_sl": p_tp1,
         "p_tp2_before_sl": p_tp2,
         "confidence_interval_95": [ci_low, ci_high],
-        "expected_return_r_multiple": expected_r,
+        "expected_return_r_multiple": None,
         "calibration_method": method,
+        "probability_status": "CALIBRATED",
+        "sample_size": n,
+        "calibrated_as_of": None,
+        "brier_score": round(brier, 4),
+        "log_loss": round(log_loss, 4),
+        "calibration_curve": None,
     }

@@ -27,7 +27,7 @@ def compute_potential_score(
 
 def compute_timing_score(
     sr_details: dict[str, Any],
-    auction_intensity: float,
+    auction_intensity: float | None,
     close: float,
     atr_14: float,
     atr_60: float | None = None,
@@ -45,9 +45,10 @@ def compute_timing_score(
         elif dist_atr <= 1.0:
             score += 10
 
-    score += min(5, max(0, int(round(float(auction_intensity) * 8))))
+    auction_available = auction_intensity is not None
     score = max(0, min(100, int(score)))
-    return score, _tier_from_score(score), "sr_alignment_auction"
+    description = "sr_alignment" if not auction_available else "sr_alignment_auction_data"
+    return score, _tier_from_score(score), description
 
 
 def compute_risk_score(
@@ -147,7 +148,7 @@ def compute_all_four_scores(
     momentum_raw: int,
     volume_raw: int,
     sr_details: dict[str, Any],
-    auction_intensity: float,
+    auction_intensity: float | None,
     rr_ratio: float,
     adtv_kwd: float,
     spread_pct: float,

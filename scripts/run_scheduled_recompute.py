@@ -68,7 +68,19 @@ def main() -> int:
         result = run_nightly_recompute(dna_refresh=with_dna, verbose=False)
 
         elapsed = round(time.time() - t0, 1)
+        ohlcv = result.get("ohlcv") if isinstance(result, dict) else {}
+        ohlcv_ok = int((ohlcv or {}).get("ok", 0) or 0)
+        ohlcv_errors = int((ohlcv or {}).get("errors", 0) or 0)
+        status = str(result.get("status", "ok") if isinstance(result, dict) else "ok")
+
         _log(f"run_nightly_recompute returned: {result}", log_path)
+
+        if status == "failure" or ohlcv_errors > 0 or ohlcv_ok == 0:
+            _log(f"FAILURE in {elapsed}s - mode: {mode} - OHLCV ok={ohlcv_ok} errors={ohlcv_errors}", log_path)
+            _log("Scheduler aborted because fresh market data was unavailable or ingest returned errors.", log_path)
+            _log("=" * 60, log_path)
+            return 1
+
         _log(f"SUCCESS in {elapsed}s - mode: {mode}", log_path)
 
         # Quick post-run verification: did a snapshot land for today?

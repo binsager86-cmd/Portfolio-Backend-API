@@ -3,8 +3,8 @@ Price Service — stock price update logic.
 
 Migrated from the legacy cron handler in ui.py (lines 1-125).
 Handles:
-    - TickerChart-first live price fetches
-    - Yahoo Finance fallback when TickerChart is unavailable
+  - Kuwait stocks via Yahoo Finance ({SYMBOL}.KW suffix)
+  - US stocks via Yahoo Finance (raw symbol)
   - KWD price normalisation (÷1000 when value >50)
   - Reference list lookup (matches Streamlit's resolve_yf_ticker)
   - Tracks update results for caller logging / API response
@@ -13,61 +13,14 @@ Handles:
 import asyncio
 import time
 import logging
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from typing import Optional, Dict
 
-from app.core.cache import cache_key, price_cache
+from app.core.cache import cache_key, price_cache, get_cached, set_cached
 from app.core.database import get_conn, add_column_if_missing
 
 logger = logging.getLogger(__name__)
-
-# ── Latest-EPS lookup (ml_fundamentals) — used to derive P/E when the
-#    live price provider itself has no P/E figure available. ──────────
-_eps_lookup_cache: Dict[str, tuple] = {}
-_EPS_CACHE_TTL_SEC = 6 * 60 * 60  # EPS changes quarterly; a few hours of staleness is fine
-
-
-def _latest_eps_for_symbol(symbol: str) -> Optional[float]:
-    """Look up the most recent TTM EPS for ``symbol`` from ``ml_fundamentals``."""
-    import re as _re
-
-    ticker = _re.sub(r"\.(KW|US)$", "", (symbol or "").strip().upper())
-    if not ticker:
-        return None
-
-    now = time.time()
-    cached = _eps_lookup_cache.get(ticker)
-    if cached and cached[1] > now:
-        return cached[0]
-
-    eps: Optional[float] = None
-    try:
-        from app.core.database import query_one as _query_one
-        row = _query_one(
-            "SELECT eps FROM ml_fundamentals WHERE stock_ticker = ? AND eps IS NOT NULL "
-            "ORDER BY disclosure_date DESC LIMIT 1",
-            (ticker,),
-        )
-        if row is not None:
-            raw = row["eps"] if hasattr(row, "__getitem__") else None
-            eps = float(raw) if raw is not None else None
-    except Exception as exc:
-        logger.debug("Latest-EPS lookup failed for %s: %s", ticker, exc)
-
-    _eps_lookup_cache[ticker] = (eps, now + _EPS_CACHE_TTL_SEC)
-    return eps
-
-
-def _derive_pe_from_latest_eps(symbol: str, live_price: float) -> Optional[float]:
-    """Compute P/E = live price / latest cached TTM EPS, if both are usable."""
-    if live_price is None or live_price <= 0:
-        return None
-    eps = _latest_eps_for_symbol(symbol)
-    if eps is None or eps <= 0:
-        return None
-    return round(live_price / eps, 2)
 
 
 # ── Reference list lookup (mirrors Streamlit resolve_yf_ticker) ──────
@@ -201,116 +154,22 @@ def _fetch_price_snapshot_sync(symbol: str, currency: str) -> dict:
         "pe_ratio": pe_ratio,
         "currency": currency,
         "fetched_at": datetime.now(timezone.utc).isoformat(),
-        "source": "yahoo",
     }
 
 
-async def _fetch_snapshot_from_tickerchart(symbol: str, currency: str) -> dict:
-    """Fetch a live price snapshot from TickerChart's OHLCV endpoint.
-
-    Returns the same shape as _fetch_price_snapshot_sync.
-    KSE prices are in fils → divided by 1000 to get KWD.
-    """
-    from datetime import date, timedelta
-    from app.services import tickerchart_service as tc
-
-    sym_upper = symbol.strip().upper()
-
-    # Map currency to TickerChart market abbreviation
-    if currency == "KWD":
-        market_abb = "KSE"
-    elif currency == "USD":
-        market_abb = "USA"
-    else:
-        raise ValueError(f"Unsupported currency for TickerChart snapshot: {currency}")
-
-    # Request the last 7 calendar days to guarantee at least 2 trading-day closes
-    to_d = date.today()
-    from_d = to_d - timedelta(days=7)
-
-    # 5-second hard cap so a slow/unreachable TickerChart host doesn't stall
-    # all parallel holdings requests (Yahoo Finance fallback fires immediately).
-    rows = await asyncio.wait_for(
-        tc.fetch_ohlcv(sym_upper, market_abb, from_d=from_d, to_d=to_d, interval="day"),
-        timeout=5.0,
-    )
-    if not rows:
-        raise ValueError(f"No TickerChart data for {sym_upper}.{market_abb}")
-
-    # TickerChart parser returns rows in ASC order (oldest first)
-    latest = rows[-1]
-    raw_price = float(latest["close"])
-    price = _normalise_kwd_price(raw_price, currency)
-
-    previous_close: Optional[float] = None
-    if len(rows) >= 2:
-        raw_prev = float(rows[-2]["close"])
-        previous_close = _normalise_kwd_price(raw_prev, currency)
-
-    pe_ratio = tc.read_quotes_snapshot_pe(sym_upper, market_abb)
-    if pe_ratio is None and price > 0:
-        try:
-            ltm_eps = await tc.fetch_ltm_eps(sym_upper, market_abb)
-        except Exception as exc:
-            logger.debug("TickerChart EPS fetch failed for %s.%s: %s", sym_upper, market_abb, exc)
-        else:
-            if ltm_eps is not None and ltm_eps > 0:
-                pe_ratio = round(price / ltm_eps, 2)
-    elif pe_ratio is not None:
-        pe_ratio = round(pe_ratio, 2)
-
-    return {
-        "symbol": symbol,
-        "price": round(price, 6),
-        "previous_close": round(previous_close, 6) if previous_close is not None else None,
-        "pe_ratio": pe_ratio,
-        "currency": currency,
-        "fetched_at": datetime.now(timezone.utc).isoformat(),
-        "source": "tickerchart",
-    }
-
-
-async def get_price_snapshot(symbol: str, currency: str = "KWD", force_refresh: bool = False) -> dict:
-    """Return a cached live quote, degrading gracefully on upstream failures.
-
-    Tries TickerChart first (accurate KSE / US exchange data), then falls
-    back to Yahoo Finance if TickerChart is unavailable or returns no data.
-
-    P/E ratio always tracks *today's* live price: whenever the upstream
-    price provider itself doesn't supply a P/E, we derive one from the just
-    -fetched live price divided by the latest known TTM EPS (refreshed daily
-    into ``ml_fundamentals``). This keeps the ratio moving with price even on
-    days the P/E-specific TickerChart/Yahoo lookups fail or the daily
-    fundamentals cron hasn't run — a stale EPS is far less noticeable than a
-    P/E that never updates at all.
-    """
+async def get_price_snapshot(symbol: str, currency: str = "KWD") -> dict:
+    """Return a cached live quote, degrading gracefully on upstream failures."""
     key = cache_key("price", symbol.strip().upper(), currency.upper())
-    cached = None if force_refresh else price_cache.get(key)
+    cached = price_cache.get(key)
     if cached is not None:
         return cached
 
-    # --- Primary: TickerChart ---
-    try:
-        result = await _fetch_snapshot_from_tickerchart(symbol, currency)
-        if result.get("pe_ratio") is None and result.get("price"):
-            result["pe_ratio"] = _derive_pe_from_latest_eps(symbol, float(result["price"]))
-        price_cache[key] = result
-        return result
-    except Exception as tc_exc:
-        logger.debug(
-            "TickerChart snapshot failed for %s (%s): %s — falling back to Yahoo Finance",
-            symbol, currency, tc_exc,
-        )
-
-    # --- Fallback: Yahoo Finance ---
     try:
         result = await asyncio.to_thread(_fetch_price_snapshot_sync, symbol, currency)
-        if result.get("pe_ratio") is None and result.get("price"):
-            result["pe_ratio"] = _derive_pe_from_latest_eps(symbol, float(result["price"]))
         price_cache[key] = result
         return result
     except Exception as exc:
-        return {
+        fallback = cached if cached is not None else {
             "symbol": symbol,
             "price": None,
             "previous_close": None,
@@ -318,6 +177,7 @@ async def get_price_snapshot(symbol: str, currency: str = "KWD", force_refresh: 
             "currency": currency,
             "error": str(exc),
         }
+        return fallback
 
 
 # ── Result container ─────────────────────────────────────────────────
@@ -332,7 +192,6 @@ class PriceUpdateResult:
     details: list = field(default_factory=list)
     errors: list = field(default_factory=list)
     elapsed_sec: float = 0.0
-    used_full_scan_fallback: bool = False
 
     def to_dict(self) -> dict:
         return {
@@ -343,7 +202,6 @@ class PriceUpdateResult:
             "elapsed_sec": round(self.elapsed_sec, 2),
             "details": self.details,
             "errors": self.errors,
-            "used_full_scan_fallback": self.used_full_scan_fallback,
         }
 
 
@@ -365,6 +223,15 @@ def update_all_prices(
         If True, only update stocks that have a positive share balance
         (i.e. net buys − sells > 0.001).  Saves API calls on dead positions.
     """
+    # Lazy-import so the module loads even if yfinance is missing in test envs
+    try:
+        import yfinance as yf
+    except ImportError:
+        logger.error("yfinance is not installed – cannot update prices.")
+        res = PriceUpdateResult()
+        res.errors.append("yfinance not installed")
+        return res
+
     t0 = time.time()
     result = PriceUpdateResult()
 
@@ -372,135 +239,127 @@ def update_all_prices(
     cur = conn.cursor()
 
     try:
-        # Ensure additive columns exist across SQLite/PostgreSQL before reads
-        add_column_if_missing("stocks", "pe_ratio", "REAL")
-        add_column_if_missing("stocks", "previous_close", "REAL")
-
-        def _select_all_stocks() -> list:
-            cur.execute(
-                """
-                SELECT s.id, s.symbol, s.currency, s.yf_ticker, s.pe_ratio, 0 AS net_shares
-                FROM stocks s
-                WHERE s.user_id = ?
-                  AND s.symbol IS NOT NULL AND s.symbol != ''
-                """,
-                (user_id,),
-            )
-            return cur.fetchall()
-
         # ── Fetch eligible stocks ────────────────────────────────────
-        stocks = []
         if only_with_holdings:
             cur.execute(
                 """
-                SELECT s.id, s.symbol, s.currency, s.yf_ticker, s.pe_ratio,
+                SELECT s.id, s.symbol, s.currency, s.yf_ticker,
                     COALESCE(
-                        SUM(CASE
-                            WHEN UPPER(TRIM(t.txn_type)) = 'BUY'
-                                THEN COALESCE(t.shares, 0) + COALESCE(t.bonus_shares, 0)
-                            WHEN UPPER(TRIM(t.txn_type)) = 'SELL'
-                                THEN -COALESCE(t.shares, 0)
-                            ELSE COALESCE(t.bonus_shares, 0)
-                        END),
+                        SUM(CASE WHEN t.txn_type = 'Buy'  THEN t.shares ELSE 0 END) -
+                        SUM(CASE WHEN t.txn_type = 'Sell' THEN t.shares ELSE 0 END),
                     0) AS net_shares
                 FROM stocks s
                 LEFT JOIN transactions t
-                    ON UPPER(TRIM(s.symbol)) = UPPER(TRIM(t.stock_symbol))
-                   AND s.user_id = t.user_id
-                   AND COALESCE(NULLIF(TRIM(s.portfolio), ''), 'KFH') = COALESCE(NULLIF(TRIM(t.portfolio), ''), 'KFH')
-                   AND COALESCE(t.category, 'portfolio') = 'portfolio'
-                   AND COALESCE(t.is_deleted, 0) = 0
+                    ON s.symbol = t.stock_symbol AND s.user_id = t.user_id
                 WHERE s.user_id = ?
                   AND s.symbol IS NOT NULL AND s.symbol != ''
-                GROUP BY s.id, s.symbol, s.currency, s.yf_ticker, s.pe_ratio
+                GROUP BY s.id, s.symbol, s.currency, s.yf_ticker
                 HAVING COALESCE(
-                    SUM(CASE
-                        WHEN UPPER(TRIM(t.txn_type)) = 'BUY'
-                            THEN COALESCE(t.shares, 0) + COALESCE(t.bonus_shares, 0)
-                        WHEN UPPER(TRIM(t.txn_type)) = 'SELL'
-                            THEN -COALESCE(t.shares, 0)
-                        ELSE COALESCE(t.bonus_shares, 0)
-                    END),
-                0) > 0.001
+                        SUM(CASE WHEN t.txn_type = 'Buy'  THEN t.shares ELSE 0 END) -
+                        SUM(CASE WHEN t.txn_type = 'Sell' THEN t.shares ELSE 0 END),
+                       0) > 0.001
                 """,
                 (user_id,),
             )
-            # Strict holdings-only refresh: do not fall back to full-table scans.
-            stocks = cur.fetchall()
-            result.stocks_found = len(stocks)
-            if result.stocks_found == 0:
-                logger.info("Price updater: 0 holdings found for user_id=%s, skipping update", user_id)
-                return result
         else:
-            stocks = _select_all_stocks()
+            cur.execute(
+                """
+                SELECT s.id, s.symbol, s.currency, s.yf_ticker, 0 AS net_shares
+                FROM stocks s
+                WHERE s.user_id = ?
+                  AND s.symbol IS NOT NULL AND s.symbol != ''
+                """,
+                (user_id,),
+            )
 
+        stocks = cur.fetchall()
         result.stocks_found = len(stocks)
         logger.info("Price updater: found %d stocks to update", len(stocks))
 
-        # ── Fetch prices concurrently, then write them on this thread ──
-        # Upstream requests are I/O-bound. Keep the worker count bounded so
-        # one user's manual refresh cannot flood either provider or SQLite.
-        def _fetch_snapshot(stock: tuple) -> tuple:
-            stock_id, symbol, currency, stored_yf_ticker, existing_pe_ratio, _ = stock
+        # Ensure additive columns exist across SQLite/PostgreSQL
+        add_column_if_missing("stocks", "pe_ratio", "REAL")
+        add_column_if_missing("stocks", "previous_close", "REAL")
+
+        # ── Fetch & write prices ─────────────────────────────────────
+        for stock_id, symbol, currency, stored_yf_ticker, _ in stocks:
             try:
-                snapshot = asyncio.run(
-                    get_price_snapshot(symbol, currency or "KWD", force_refresh=True)
-                )
-                return stock, snapshot, None
-            except Exception as exc:
-                return stock, None, exc
+                # Prefer stored yf_ticker if available, else derive from symbol+currency
+                yahoo_sym = stored_yf_ticker if stored_yf_ticker else _yahoo_symbol(symbol, currency)
 
-        max_workers = min(8, max(1, len(stocks)))
-        with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="price-fetch") as executor:
-            fetched = list(executor.map(_fetch_snapshot, stocks))
+                # Check price cache before hitting yfinance network
+                cached_data = get_cached(price_cache, yahoo_sym)
+                if cached_data is not None:
+                    price = cached_data["price"]
+                    previous_close = cached_data["previous_close"]
+                    pe_ratio = cached_data["pe_ratio"]
+                else:
+                    ticker = yf.Ticker(yahoo_sym)
 
-        # Database writes and the final commit stay serialized on the owning
-        # connection; only network-bound quote retrieval is parallelized.
-        for (stock_id, symbol, currency, stored_yf_ticker, existing_pe_ratio, _), snapshot, fetch_error in fetched:
-            try:
-                if fetch_error is not None:
-                    raise fetch_error
-                assert snapshot is not None
-                price = snapshot.get("price")
-                if price is None:
-                    logger.warning("No price data for %s: %s", symbol, snapshot.get("error") or "no_data")
-                    result.skipped += 1
-                    result.details.append({"symbol": symbol, "status": "no_data", "error": snapshot.get("error")})
-                    continue
+                    # Use 5d window so weekends / holidays still return data
+                    hist = ticker.history(period="5d", interval="1d")
 
-                previous_close = snapshot.get("previous_close")
-                pe_ratio = snapshot.get("pe_ratio") if snapshot.get("pe_ratio") is not None else existing_pe_ratio
-                price_source = str(snapshot.get("source") or "yahoo").upper()
+                    # yfinance ≥ 1.0 may return MultiIndex columns
+                    if hist is not None and hist.columns.nlevels > 1:
+                        hist.columns = hist.columns.get_level_values(0)
+
+                    if hist is None or hist.empty or "Close" not in hist.columns:
+                        logger.warning("No data for %s (yahoo: %s)", symbol, yahoo_sym)
+                        result.skipped += 1
+                        result.details.append({"symbol": symbol, "status": "no_data"})
+                        continue
+
+                    closes = hist["Close"].dropna()
+                    raw_price = float(closes.iloc[-1])
+                    price = _normalise_kwd_price(raw_price, currency)
+                    previous_close = None
+                    if len(closes) >= 2:
+                        previous_close = _normalise_kwd_price(float(closes.iloc[-2]), currency)
+
+                    # Fetch P/E ratio from ticker info
+                    pe_ratio = None
+                    try:
+                        info = ticker.info
+                        pe_val = info.get("trailingPE") or info.get("forwardPE")
+                        if pe_val is not None:
+                            pe_ratio = round(float(pe_val), 2)
+                    except Exception as pe_exc:
+                        logger.debug("P/E fetch failed for %s: %s", yahoo_sym, pe_exc)
+
+                    # Cache result for 5 minutes (TTL set on price_cache instance)
+                    set_cached(price_cache, yahoo_sym, {
+                        "price": price,
+                        "previous_close": previous_close,
+                        "pe_ratio": pe_ratio,
+                    })
 
                 cur.execute(
                     """
                     UPDATE stocks
                     SET current_price = ?,
                         last_updated  = ?,
-                        price_source  = ?,
+                        price_source  = 'YAHOO',
                         pe_ratio      = ?,
                         previous_close = ?
                     WHERE id = ? AND user_id = ?
                     """,
-                    (round(float(price), 6), int(time.time()), price_source, pe_ratio, previous_close, stock_id, user_id),
+                    (round(price, 6), int(time.time()), pe_ratio, previous_close, stock_id, user_id),
                 )
+                conn.commit()
 
                 result.updated += 1
                 result.details.append({
                     "symbol": symbol,
-                    "source": price_source,
-                    "price": round(float(price), 6),
+                    "yahoo": yahoo_sym,
+                    "price": round(price, 6),
                     "currency": currency,
                     "status": "ok",
                 })
-                logger.info("✅ %s → %s %.6f %s", symbol, price_source, float(price), currency)
+                logger.info("✅ %s → %s %.6f %s", symbol, yahoo_sym, price, currency)
 
             except Exception as exc:
                 result.failed += 1
                 result.errors.append({"symbol": symbol, "error": str(exc)})
                 logger.warning("❌ %s: %s", symbol, exc)
-
-        conn.commit()
 
     finally:
         conn.close()

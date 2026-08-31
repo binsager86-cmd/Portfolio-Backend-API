@@ -37,6 +37,9 @@
 - [detail-genesis.svg](screenshots/detail-genesis.svg)
 - [cycle-history-genesis.svg](screenshots/cycle-history-genesis.svg)
 
+## Environment declaration
+"The forward record is generated only in the local sealed-ledger environment (F:\eagle_eye_archive). The production deployment does not host the ledger, does not run the daily cycle, and displays no simulator data. Any future production display would be a read-only mirror of a projection exported from the sealed environment, and requires owner ratification."
+
 ## Manifest readiness
 - Current simulator code hashes were written to F:\eagle_eye_archive\MANIFEST.json under the simulator/code_genesis archive path.
 - Seal verification should pass once the manifest is read by the simulator API.
