@@ -370,3 +370,38 @@ async def trigger_trend_hold_recompute(
             "Check server logs or GET /api/v1/trend-hold-book/portfolio in ~1 minute."
         ),
     }
+
+
+@router.post("/v1-rating-book-recompute")
+async def trigger_v1_rating_book_recompute(
+    x_cron_key: Optional[str] = Header(None, alias="X-Cron-Key"),
+):
+    """
+    Trigger the V1 Rating Book paper-trading step immediately. Equivalent
+    to the scheduled 14:19 Asia/Kuwait job. Reads whatever is currently in
+    ee_ratings_cache -- run /eagle-eye-recompute first if that needs
+    refreshing too.
+    """
+    _verify_cron_key(x_cron_key)
+
+    import threading
+
+    logger.info("V1 rating book recompute triggered via API")
+
+    def _run() -> None:
+        try:
+            from app.services.eagle_eye_v2.v1_rating_book import run_v1_rating_book_step
+            summary = run_v1_rating_book_step()
+            logger.info("V1 rating book step via API: %s", summary)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("V1 rating book step via API failed: %s", exc)
+
+    threading.Thread(target=_run, daemon=True).start()
+
+    return {
+        "status": "accepted",
+        "message": (
+            "V1 rating book step started in background. "
+            "Check server logs or GET /api/v1/v1-rating-book/portfolio in ~1 minute."
+        ),
+    }

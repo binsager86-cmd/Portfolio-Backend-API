@@ -123,3 +123,9 @@ class TrendHoldBookPerformance(BaseModel):
     profit_factor: Optional[float] = None
     expectancy_kwd: Optional[float] = None
     total_commission_paid_kwd: float
+
+
+class BookComparisonResponse(BaseModel):
+    """Both paper books' scorecards side by side -- the head-to-head "which one is best" view."""
+    trend_hold: TrendHoldBookPerformance
+    v1_rating: TrendHoldBookPerformance

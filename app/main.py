@@ -161,13 +161,13 @@ async def lifespan(app: FastAPI):
         except Exception as sim_err:
             logger.warning("⚠️  Simulator schema init failed: %s", sim_err)
 
-        # ── Trend-Hold Book tables (independent paper-trading ledger) ──
+        # ── Paper Book tables (Trend-Hold + V1 Rating, independent ledgers) ──
         try:
-            from app.services.eagle_eye_v2.trend_hold_book_store import ensure_trend_hold_book_tables as _thb_init
-            _thb_init()
-            logger.info("✅  Trend-Hold Book schema ensured (idempotent)")
-        except Exception as thb_err:
-            logger.warning("⚠️  Trend-Hold Book schema init failed: %s", thb_err)
+            from app.services.eagle_eye_v2.paper_book_store import ensure_paper_book_tables as _pb_init
+            _pb_init()
+            logger.info("✅  Paper Book schema ensured (idempotent)")
+        except Exception as pb_err:
+            logger.warning("⚠️  Paper Book schema init failed: %s", pb_err)
 
         start_scheduler()
 

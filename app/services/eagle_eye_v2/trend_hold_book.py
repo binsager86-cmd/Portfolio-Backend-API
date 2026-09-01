@@ -2,14 +2,15 @@
 Trend-Hold Book — execution engine.
 
 Mechanically turns each ticker's latest ee_trend_hold_state decision into a
-virtual fill against the Trend-Hold Book ledger (trend_hold_book_store.py).
-Adds no new signal logic of its own -- it only reacts to BUY / SCALE_OUT /
-SELL_SIGNAL decisions the existing trend_hold_batch.py job already wrote.
+virtual fill against the "trend_hold" paper book (paper_book_store.py, a
+multi-book ledger shared with v1_rating_book.py -- see that module's own
+docstring for the V1-driven comparison book). Adds no new signal logic of
+its own -- it only reacts to BUY / SCALE_OUT / SELL_SIGNAL decisions the
+existing trend_hold_batch.py job already wrote.
 
-Position sizing / commission constants are deliberately the same ones
-already established in this app for this exact market by the (unrelated)
-eagle_eye_v2/simulator/ backtest engine
-(app/services/eagle_eye_v2/simulator/constants.py).
+Position sizing / commission constants live in paper_book_store.py and are
+shared with the V1 rating book, so the two books' performance scorecards
+are directly, fairly comparable.
 """
 from __future__ import annotations
 
@@ -22,9 +23,7 @@ from app.services.eagle_eye_v2.trend_hold_engine import SCALE_OUT_FRACTION
 
 logger = logging.getLogger(__name__)
 
-POSITION_SIZE_FRACTION = 0.10
-MAX_CONCURRENT_POSITIONS = 10
-COMMISSION_RATE = 0.00325
+BOOK_ID = "trend_hold"
 
 _ACTIONABLE_DECISIONS = {"BUY", "SCALE_OUT", "SELL_SIGNAL"}
 
@@ -78,13 +77,13 @@ def _build_lesson(
 
 def run_trend_hold_book_step() -> Dict[str, Any]:
     from app.services.eagle_eye.store import load_all_trend_hold_state
-    from app.services.eagle_eye_v2 import trend_hold_book_store as book
+    from app.services.eagle_eye_v2 import paper_book_store as book
 
-    book.ensure_trend_hold_book_tables()
+    book.ensure_paper_book_tables()
 
     trend_hold_map = load_all_trend_hold_state()
-    book_state = book.load_book_state()
-    positions = book.load_all_positions()
+    book_state = book.load_book_state(BOOK_ID)
+    positions = book.load_all_positions(BOOK_ID)
     cash = float(book_state["cash_kwd"])
 
     stats = {"bought": 0, "scaled_out": 0, "exited": 0, "skipped": 0, "errors": 0}
@@ -111,7 +110,7 @@ def run_trend_hold_book_step() -> Dict[str, Any]:
         if not trade_date or price is None or price <= 0:
             stats["skipped"] += 1
             continue
-        if book.trade_exists(ticker, trade_date):
+        if book.trade_exists(BOOK_ID, ticker, trade_date):
             # Already actioned this ticker's signal for this session -- the
             # idempotency guard that makes a scheduler re-run safe.
             stats["skipped"] += 1
@@ -126,21 +125,22 @@ def run_trend_hold_book_step() -> Dict[str, Any]:
                     )
                     stats["skipped"] += 1
                     continue
-                if len(positions) >= MAX_CONCURRENT_POSITIONS:
+                if len(positions) >= book.MAX_CONCURRENT_POSITIONS:
                     stats["skipped"] += 1
                     continue
 
-                spend = min(POSITION_SIZE_FRACTION * equity(), cash)
+                spend = min(book.POSITION_SIZE_FRACTION * equity(), cash)
                 if spend <= 0:
                     stats["skipped"] += 1
                     continue
 
-                quantity = spend / (price * (1 + COMMISSION_RATE))
+                quantity = spend / (price * (1 + book.COMMISSION_RATE))
                 gross = quantity * price
-                commission = gross * COMMISSION_RATE
+                commission = gross * book.COMMISSION_RATE
                 cash -= (gross + commission)
 
                 book.record_buy_fill(
+                    book_id=BOOK_ID,
                     ticker=ticker,
                     trade_date=trade_date,
                     quantity=quantity,
@@ -172,7 +172,7 @@ def run_trend_hold_book_step() -> Dict[str, Any]:
 
                 sell_qty = qty_before * SCALE_OUT_FRACTION
                 gross = sell_qty * price
-                commission = gross * COMMISSION_RATE
+                commission = gross * book.COMMISSION_RATE
                 entry_commission_share = float(pos["entry_commission_kwd"] or 0.0) * (sell_qty / qty_before)
                 realized_pnl = sell_qty * (price - float(pos["avg_cost"])) - commission - entry_commission_share
                 cash += (gross - commission)
@@ -184,6 +184,7 @@ def run_trend_hold_book_step() -> Dict[str, Any]:
                     ticker, "SCALE_OUT", pos.get("opened_date"), float(pos["avg_cost"]), trade_date, price,
                 )
                 book.record_scale_out_fill(
+                    book_id=BOOK_ID,
                     ticker=ticker,
                     trade_date=trade_date,
                     sell_quantity=sell_qty,
@@ -215,7 +216,7 @@ def run_trend_hold_book_step() -> Dict[str, Any]:
 
                 sell_qty = qty_before
                 gross = sell_qty * price
-                commission = gross * COMMISSION_RATE
+                commission = gross * book.COMMISSION_RATE
                 realized_pnl = (
                     sell_qty * (price - float(pos["avg_cost"]))
                     - commission
@@ -227,6 +228,7 @@ def run_trend_hold_book_step() -> Dict[str, Any]:
                     ticker, "EXIT", pos.get("opened_date"), float(pos["avg_cost"]), trade_date, price,
                 )
                 book.record_exit_fill(
+                    book_id=BOOK_ID,
                     ticker=ticker,
                     trade_date=trade_date,
                     sell_quantity=sell_qty,
@@ -249,6 +251,7 @@ def run_trend_hold_book_step() -> Dict[str, Any]:
     final_equity = equity()
     session_date = max((row.get("trade_date") for row in trend_hold_map.values() if row.get("trade_date")), default=None)
     book.save_nav_snapshot(
+        book_id=BOOK_ID,
         nav_date=session_date or date.today().isoformat(),
         cash_kwd=cash,
         equity_kwd=final_equity,
