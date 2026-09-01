@@ -231,13 +231,18 @@ class _PgCursorProxy:
 
     def execute(self, sql, params=None):
         translated = self._translate(sql)
-        # Auto-append RETURNING id for INSERT statements so .lastrowid works
+        # Auto-append RETURNING id for INSERT statements so .lastrowid works.
+        # Skipped for INSERT ... SELECT bulk copies (e.g. schema-migration
+        # backfills): those can target tables with no surrogate `id` column
+        # at all, where RETURNING id would fail with UndefinedColumn, and
+        # "last inserted row" is meaningless for a multi-row copy anyway.
         stripped = translated.strip().rstrip(";")
         is_insert = stripped.upper().lstrip().startswith("INSERT")
-        if is_insert and "RETURNING" not in stripped.upper():
+        is_bulk_copy = is_insert and "SELECT" in stripped.upper()
+        if is_insert and not is_bulk_copy and "RETURNING" not in stripped.upper():
             translated = stripped + " RETURNING id"
         self._cur.execute(translated, params)
-        if is_insert:
+        if is_insert and not is_bulk_copy:
             row = self._cur.fetchone()
             self._lastrowid = row[0] if row else None
         else:

@@ -75,7 +75,7 @@ def _migrate_add_book_id(table: str, create_sql: str, copy_columns: str, order_b
     pre-existing broken `holdings` view from an older schema generation).
     """
     from app.core.config import get_settings
-    from app.core.database import column_exists, get_connection, table_exists
+    from app.core.database import _normalize_ddl_for_pg, column_exists, get_connection, table_exists
 
     if not table_exists(table) or column_exists(table, "book_id"):
         return
@@ -89,7 +89,7 @@ def _migrate_add_book_id(table: str, create_sql: str, copy_columns: str, order_b
             if not is_pg:
                 cur.execute("PRAGMA legacy_alter_table = ON")
             cur.execute(f"ALTER TABLE {table} RENAME TO {old}")
-            cur.execute(create_sql)
+            cur.execute(_normalize_ddl_for_pg(create_sql) if is_pg else create_sql)
             cur.execute(
                 f"INSERT INTO {table} (book_id, {copy_columns}) "
                 f"SELECT 'trend_hold', {copy_columns} FROM {old} ORDER BY {order_by}"
@@ -115,7 +115,7 @@ def ensure_paper_book_tables() -> None:
         """
     _migrate_add_book_id(
         "ee_trend_hold_book_state", state_sql,
-        "cash_kwd, starting_capital_kwd, updated_at", "id",
+        "cash_kwd, starting_capital_kwd, updated_at", "updated_at",
     )
     exec_sql(state_sql, ())
 
