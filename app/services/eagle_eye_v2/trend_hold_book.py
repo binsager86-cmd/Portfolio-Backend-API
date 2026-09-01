@@ -149,6 +149,7 @@ def run_trend_hold_book_step() -> Dict[str, Any]:
                     commission_kwd=commission,
                     reason=reason,
                     cash_kwd=cash,
+                    confidence=_f(row.get("confidence")),
                 )
                 positions[ticker] = {
                     "ticker": ticker,
@@ -236,6 +237,7 @@ def run_trend_hold_book_step() -> Dict[str, Any]:
                     reason=reason,
                     cash_kwd=cash,
                     lesson=lesson,
+                    confidence=_f(row.get("confidence")),
                 )
                 del positions[ticker]
                 stats["exited"] += 1

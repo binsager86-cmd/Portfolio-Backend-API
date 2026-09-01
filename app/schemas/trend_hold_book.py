@@ -47,6 +47,11 @@ class TrendHoldBookTrade(BaseModel):
     commission_kwd: float
     realized_pnl_kwd: Optional[float] = None
     reason: Optional[str] = None
+    # 0-100 signal-strength score computed at the moment this decision fired
+    # (see trend_hold_engine.py's _entry_confidence/_exit_confidence) --
+    # BUY and EXIT only; null for SCALE_OUT (a fixed profit-milestone rule,
+    # not a judged signal).
+    confidence: Optional[float] = None
 
 
 class TrendHoldBookTradesResponse(BaseModel):
@@ -72,6 +77,7 @@ class TrendHoldDecisionLogEntry(BaseModel):
     position_state: Optional[str] = None
     close: Optional[float] = None
     structural_stop: Optional[float] = None
+    confidence: Optional[float] = None
 
 
 class TrendHoldDecisionLogResponse(BaseModel):

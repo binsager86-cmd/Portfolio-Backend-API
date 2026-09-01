@@ -107,6 +107,70 @@ SCALE_OUT_GAIN_PCT = 0.20          # bank profit once unrealized gain from entry
 SCALE_OUT_FRACTION = 0.5           # fraction of the position sold at that milestone (once per trade)
 
 
+# ---- Signal-strength scoring (informational only) ----
+#
+# BUY and SELL_SIGNAL each get a 0-100 "confidence" score, built purely
+# from the exact inputs that fired that decision. This score NEVER feeds
+# back into the entry/exit rules above -- it is computed strictly after
+# the decision already fired, as a diagnostic annotation for the trade
+# log so a person can see how decisive a given signal was. Deliberately
+# NOT computed for HOLD/WAIT (nothing decisive happened) or SCALE_OUT
+# (a fixed profit-milestone rule, not a judged signal -- see
+# _scale_out_confidence's docstring below for why "confidence" isn't a
+# meaningful concept there).
+
+def _clamp01_100(x: float) -> float:
+    return max(0.0, min(100.0, x))
+
+
+def _entry_confidence(
+    donchian_fire: bool,
+    close: float,
+    donchian_high: float,
+    ema50: float,
+    rel_volume: float,
+    cmf10: float,
+    obv_slope40: float,
+) -> float:
+    """
+    0-100 BUY signal strength: breakout strength (50%) + volume
+    confirmation (25%) + flow confirmation (25%) -- the same three gates
+    replay_symbol()'s entry_fire check already evaluates, scored instead
+    of just pass/failed.
+    """
+    # Breakout strength: how decisively price cleared the trigger level
+    # (the Donchian ceiling on that path, else the EMA50 reclaim level).
+    if donchian_fire and pd.notna(donchian_high) and donchian_high > 0:
+        excess_pct = (close - float(donchian_high)) / float(donchian_high) * 100.0
+    elif pd.notna(ema50) and ema50 > 0:
+        excess_pct = (close - float(ema50)) / float(ema50) * 100.0
+    else:
+        excess_pct = 0.0
+    breakout_score = _clamp01_100(50.0 + excess_pct * 10.0)
+
+    # Volume confirmation, relative to the MIN_REL_VOLUME pass threshold.
+    if pd.isna(rel_volume):
+        volume_score = 50.0  # entry_fire itself treats missing volume as neutral/pass
+    else:
+        volume_score = _clamp01_100((float(rel_volume) / MIN_REL_VOLUME) * 50.0)
+
+    # Flow confirmation: entry_fire passes on EITHER condition, so score
+    # is the stronger of the two independent pieces of evidence.
+    cmf_score = _clamp01_100(50.0 + (float(cmf10) - CMF_FLOOR) * 250.0) if pd.notna(cmf10) else 0.0
+    obv_score = 65.0 if (pd.notna(obv_slope40) and obv_slope40 > 0) else 0.0
+    flow_score = max(cmf_score, obv_score)
+
+    return round(_clamp01_100(breakout_score * 0.5 + volume_score * 0.25 + flow_score * 0.25), 1)
+
+
+def _exit_confidence(close: float, structural_stop: float) -> float:
+    """0-100 SELL_SIGNAL strength: how decisively price closed below the trailing stop."""
+    if not structural_stop or structural_stop <= 0:
+        return 50.0
+    overshoot_pct = (float(structural_stop) - close) / float(structural_stop) * 100.0
+    return round(_clamp01_100(50.0 + overshoot_pct * 16.67), 1)
+
+
 @dataclass
 class TrendHoldState:
     position_state: str = "NO_POSITION"  # NO_POSITION | IN_POSITION | EXIT_SIGNAL
@@ -159,6 +223,7 @@ def replay_symbol(df: pd.DataFrame) -> list[dict[str, Any]]:
         close = float(row["close"])
         decision = "WAIT"
         reason = "no qualifying breakout"
+        confidence: Optional[float] = None  # only scored for BUY / SELL_SIGNAL -- see module notes above
 
         if state.position_state != "IN_POSITION":
             donchian_high = row["donchian_high"]
@@ -195,6 +260,15 @@ def replay_symbol(df: pd.DataFrame) -> list[dict[str, Any]]:
                         f"EMA10 crossed above EMA30 with close {close:.3f} above EMA50 "
                         f"{float(row['ema50']):.3f} (intermediate trend turned)"
                     )
+                confidence = _entry_confidence(
+                    donchian_fire=donchian_fire,
+                    close=close,
+                    donchian_high=donchian_high,
+                    ema50=row["ema50"],
+                    rel_volume=row["rel_volume"],
+                    cmf10=row["cmf10"],
+                    obv_slope40=row["obv_slope40"],
+                )
         else:
             state.highest_close_since_entry = max(float(state.highest_close_since_entry), close)
             atr_val = float(row["atr14"]) if pd.notna(row["atr14"]) else 0.0
@@ -216,6 +290,7 @@ def replay_symbol(df: pd.DataFrame) -> list[dict[str, Any]]:
                     f"close {close:.3f} broke trailing stop {state.structural_stop:.3f} "
                     f"(chandelier {CHANDELIER_ATR_MULT}x ATR14 off high {state.highest_close_since_entry:.3f})"
                 )
+                confidence = _exit_confidence(close, state.structural_stop)
                 state.exit_reason = reason
                 state.position_state = "EXIT_SIGNAL"
             else:
@@ -233,6 +308,7 @@ def replay_symbol(df: pd.DataFrame) -> list[dict[str, Any]]:
                 "entry_price": state.entry_price,
                 "structural_stop": state.structural_stop,
                 "position_fraction": state.position_fraction,
+                "confidence": confidence,
             }
         )
 

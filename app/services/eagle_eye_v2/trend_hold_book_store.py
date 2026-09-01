@@ -88,11 +88,14 @@ def ensure_trend_hold_book_tables() -> None:
             realized_pnl_kwd REAL,
             reason           TEXT,
             executed_at      INTEGER,
+            confidence       REAL,
             UNIQUE (ticker, trade_date)
         )
         """,
         (),
     )
+    from app.core.database import add_column_if_missing
+    add_column_if_missing("ee_trend_hold_book_trades", "confidence", "REAL")
 
     # Post-trade "autopsy" for each closed leg -- shares the trades table's
     # natural (ticker, trade_date) key, since exactly one trade fires per
@@ -223,6 +226,7 @@ def record_buy_fill(
     commission_kwd: float,
     reason: Optional[str],
     cash_kwd: float,
+    confidence: Optional[float] = None,
 ) -> None:
     from app.core.database import exec_sql_batch
 
@@ -247,10 +251,13 @@ def record_buy_fill(
                 """
                 INSERT INTO ee_trend_hold_book_trades (
                     ticker, side, trade_date, quantity, price, gross_kwd,
-                    commission_kwd, realized_pnl_kwd, reason, executed_at
-                ) VALUES (?,'BUY',?,?,?,?,?,NULL,?,?)
+                    commission_kwd, realized_pnl_kwd, reason, executed_at, confidence
+                ) VALUES (?,'BUY',?,?,?,?,?,NULL,?,?,?)
                 """,
-                (ticker.upper(), trade_date, _f(quantity), _f(price), _f(gross_kwd), _f(commission_kwd), reason, now),
+                (
+                    ticker.upper(), trade_date, _f(quantity), _f(price), _f(gross_kwd),
+                    _f(commission_kwd), reason, now, _f(confidence),
+                ),
             ),
             (
                 "UPDATE ee_trend_hold_book_state SET cash_kwd = ?, updated_at = ? WHERE id = 1",
@@ -361,6 +368,7 @@ def record_exit_fill(
     reason: Optional[str],
     cash_kwd: float,
     lesson: Optional[dict] = None,
+    confidence: Optional[float] = None,
 ) -> None:
     from app.core.database import exec_sql_batch
 
@@ -371,12 +379,12 @@ def record_exit_fill(
             """
             INSERT INTO ee_trend_hold_book_trades (
                 ticker, side, trade_date, quantity, price, gross_kwd,
-                commission_kwd, realized_pnl_kwd, reason, executed_at
-            ) VALUES (?,'EXIT',?,?,?,?,?,?,?,?)
+                commission_kwd, realized_pnl_kwd, reason, executed_at, confidence
+            ) VALUES (?,'EXIT',?,?,?,?,?,?,?,?,?)
             """,
             (
                 ticker.upper(), trade_date, _f(sell_quantity), _f(price), _f(gross_kwd),
-                _f(commission_kwd), _f(realized_pnl_kwd), reason, now,
+                _f(commission_kwd), _f(realized_pnl_kwd), reason, now, _f(confidence),
             ),
         ),
         (
@@ -396,7 +404,7 @@ def load_recent_trades(limit: int = 300) -> List[dict]:
     rows = query_all(
         """
         SELECT id, ticker, side, trade_date, quantity, price, gross_kwd,
-               commission_kwd, realized_pnl_kwd, reason, executed_at
+               commission_kwd, realized_pnl_kwd, reason, executed_at, confidence
         FROM   ee_trend_hold_book_trades
         ORDER BY id DESC
         LIMIT  ?

@@ -146,6 +146,7 @@ async def get_trend_hold_book_trades(
             commission_kwd=_safe_float(r.get("commission_kwd")) or 0.0,
             realized_pnl_kwd=_safe_float(r.get("realized_pnl_kwd")),
             reason=r.get("reason"),
+            confidence=_safe_float(r.get("confidence")),
         )
         for r in rows
     ]
@@ -208,6 +209,7 @@ async def get_trend_hold_decision_log(
             position_state=r.get("position_state"),
             close=_safe_float(r.get("close")),
             structural_stop=_safe_float(r.get("structural_stop")),
+            confidence=_safe_float(r.get("confidence")),
         )
         for r in rows
     ]

@@ -189,11 +189,13 @@ def ensure_tables() -> None:
             close              REAL,
             trade_date         TEXT,
             computed_at        TEXT,
-            updated_at         INTEGER
+            updated_at         INTEGER,
+            confidence         REAL
         )
         """,
         (),
     )
+    _acim("ee_trend_hold_state", "confidence", "REAL")
 
     # Append-only daily decision log for the trend-hold engine -- one row per
     # ticker per session, so the user can look back and learn from what the
@@ -214,11 +216,13 @@ def ensure_tables() -> None:
             close              REAL,
             computed_at        TEXT,
             updated_at         INTEGER,
+            confidence         REAL,
             PRIMARY KEY (ticker, trade_date)
         )
         """,
         (),
     )
+    _acim("ee_trend_hold_state_history", "confidence", "REAL")
 
 
 # ---------------------------------------------------------------------------
@@ -729,7 +733,7 @@ def save_trend_hold_state(ticker: str, row: dict) -> None:
     (today's/the latest available session's row), keyed by the field names
     that function returns: trade_date, close, decision, reason,
     position_state, entry_date, entry_price, structural_stop,
-    position_fraction.
+    position_fraction, confidence.
     """
     from app.core.database import exec_sql
 
@@ -738,8 +742,8 @@ def save_trend_hold_state(ticker: str, row: dict) -> None:
         INSERT INTO ee_trend_hold_state (
             ticker, decision, reason, position_state, entry_date, entry_price,
             structural_stop, position_fraction, close, trade_date,
-            computed_at, updated_at
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+            computed_at, updated_at, confidence
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT (ticker) DO UPDATE SET
             decision = excluded.decision,
             reason = excluded.reason,
@@ -751,7 +755,8 @@ def save_trend_hold_state(ticker: str, row: dict) -> None:
             close = excluded.close,
             trade_date = excluded.trade_date,
             computed_at = excluded.computed_at,
-            updated_at = excluded.updated_at
+            updated_at = excluded.updated_at,
+            confidence = excluded.confidence
         """,
         (
             ticker.upper(),
@@ -766,6 +771,7 @@ def save_trend_hold_state(ticker: str, row: dict) -> None:
             row.get("trade_date"),
             datetime.now().isoformat(timespec="seconds"),
             int(time.time()),
+            _f(row.get("confidence")),
         ),
     )
 
@@ -777,7 +783,8 @@ def load_all_trend_hold_state() -> Dict[str, dict]:
     rows = query_all(
         """
         SELECT ticker, decision, reason, position_state, entry_date, entry_price,
-               structural_stop, position_fraction, close, trade_date, computed_at
+               structural_stop, position_fraction, close, trade_date, computed_at,
+               confidence
         FROM   ee_trend_hold_state
         """,
         (),
@@ -805,8 +812,8 @@ def save_trend_hold_state_snapshot(ticker: str, row: dict) -> None:
         INSERT INTO ee_trend_hold_state_history (
             ticker, trade_date, decision, reason, position_state, entry_date,
             entry_price, structural_stop, position_fraction, close,
-            computed_at, updated_at
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+            computed_at, updated_at, confidence
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT (ticker, trade_date) DO UPDATE SET
             decision = excluded.decision,
             reason = excluded.reason,
@@ -817,7 +824,8 @@ def save_trend_hold_state_snapshot(ticker: str, row: dict) -> None:
             position_fraction = excluded.position_fraction,
             close = excluded.close,
             computed_at = excluded.computed_at,
-            updated_at = excluded.updated_at
+            updated_at = excluded.updated_at,
+            confidence = excluded.confidence
         """,
         (
             ticker.upper(),
@@ -832,6 +840,7 @@ def save_trend_hold_state_snapshot(ticker: str, row: dict) -> None:
             _f(row.get("close")),
             datetime.now().isoformat(timespec="seconds"),
             int(time.time()),
+            _f(row.get("confidence")),
         ),
     )
 
@@ -850,7 +859,8 @@ def load_trend_hold_decision_log(limit: int = 200, include_wait: bool = False) -
     rows = query_all(
         f"""
         SELECT ticker, trade_date, decision, reason, position_state, entry_date,
-               entry_price, structural_stop, position_fraction, close, computed_at
+               entry_price, structural_stop, position_fraction, close, computed_at,
+               confidence
         FROM   ee_trend_hold_state_history
         {where}
         ORDER BY trade_date DESC, ticker ASC
@@ -868,7 +878,8 @@ def load_trend_hold_decision_log_for_ticker(ticker: str, limit: int = 200) -> Li
     rows = query_all(
         """
         SELECT ticker, trade_date, decision, reason, position_state, entry_date,
-               entry_price, structural_stop, position_fraction, close, computed_at
+               entry_price, structural_stop, position_fraction, close, computed_at,
+               confidence
         FROM   ee_trend_hold_state_history
         WHERE  ticker = ?
         ORDER BY trade_date DESC

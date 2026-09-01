@@ -825,6 +825,7 @@ async def get_scanner(
                 trend_hold_reason=(trend_hold_map.get(t) or {}).get("reason"),
                 trend_hold_stop=_safe_float((trend_hold_map.get(t) or {}).get("structural_stop")),
                 trend_hold_entry_price=_safe_float((trend_hold_map.get(t) or {}).get("entry_price")),
+                trend_hold_confidence=_safe_float((trend_hold_map.get(t) or {}).get("confidence")),
             ))
 
         # Cache the unfiltered response for 30 s
@@ -939,6 +940,7 @@ async def get_stock_analysis(
         trend_hold_reason=trend_hold_row.get("reason"),
         trend_hold_stop=_safe_float(trend_hold_row.get("structural_stop")),
         trend_hold_entry_price=_safe_float(trend_hold_row.get("entry_price")),
+        trend_hold_confidence=_safe_float(trend_hold_row.get("confidence")),
         computed_at=analysis.get("computed_at"),
         days_of_history=analysis.get("days_of_history"),
     )

@@ -77,6 +77,9 @@ class RatedStock(BaseModel):
     trend_hold_reason: Optional[str] = None
     trend_hold_stop: Optional[float] = None
     trend_hold_entry_price: Optional[float] = None
+    # 0-100 signal-strength score, BUY/SELL_SIGNAL only (see
+    # trend_hold_engine.py's _entry_confidence/_exit_confidence).
+    trend_hold_confidence: Optional[float] = None
 
 
 class ScannerCoverageBucket(BaseModel):
@@ -174,6 +177,9 @@ class FullStockAnalysis(BaseModel):
     trend_hold_reason: Optional[str] = None
     trend_hold_stop: Optional[float] = None
     trend_hold_entry_price: Optional[float] = None
+    # 0-100 signal-strength score, BUY/SELL_SIGNAL only (see
+    # trend_hold_engine.py's _entry_confidence/_exit_confidence).
+    trend_hold_confidence: Optional[float] = None
 
     # Meta
     computed_at: Optional[str] = None
