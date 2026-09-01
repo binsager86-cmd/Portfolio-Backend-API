@@ -165,6 +165,16 @@ class FullStockAnalysis(BaseModel):
     # Signals
     signals: List[SignalBreakdown] = []
 
+    # trend_hold_engine.py output (ee_trend_hold_state) -- an independent
+    # second read (Donchian/EMA-cross entry, chandelier trailing stop,
+    # +20% scale-out), computed and persisted separately from `rating`
+    # above. Never merges into or overrides `rating`. Can legitimately
+    # disagree with `rating`/`thesis` -- different methodology, not a bug.
+    trend_hold_decision: Optional[str] = None   # BUY / HOLD / SCALE_OUT / SELL_SIGNAL / WAIT
+    trend_hold_reason: Optional[str] = None
+    trend_hold_stop: Optional[float] = None
+    trend_hold_entry_price: Optional[float] = None
+
     # Meta
     computed_at: Optional[str] = None
     days_of_history: Optional[int] = None

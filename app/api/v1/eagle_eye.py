@@ -903,6 +903,8 @@ async def get_stock_analysis(
     sr_supports = [SupportResistanceLevel(**s) for s in analysis.get("supports", [])]
     sr_resistances = [SupportResistanceLevel(**r) for r in analysis.get("resistances", [])]
 
+    trend_hold_row = _get_trend_hold_map().get(t) or {}
+
     data = FullStockAnalysis(
         ticker=analysis["ticker"],
         name_en=analysis["ticker"],  # name resolved by adapter if available
@@ -933,6 +935,10 @@ async def get_stock_analysis(
         liquidity_capped=liq_capped,
         requires_confirmation=req_confirm,
         signals=signals,
+        trend_hold_decision=trend_hold_row.get("decision"),
+        trend_hold_reason=trend_hold_row.get("reason"),
+        trend_hold_stop=_safe_float(trend_hold_row.get("structural_stop")),
+        trend_hold_entry_price=_safe_float(trend_hold_row.get("entry_price")),
         computed_at=analysis.get("computed_at"),
         days_of_history=analysis.get("days_of_history"),
     )
