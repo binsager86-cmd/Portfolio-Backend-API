@@ -207,22 +207,21 @@ def _scrape_ratios_page(url: str) -> Tuple[List[Optional[Tuple[int, str]]], List
 
     html = resp.text
 
-    # Find the financials table (stockanalysis.com uses id="main-table")
-    table_m = re.search(
-        r"<table[^>]*id=\"main-table\"[^>]*>(.*?)</table>", html, re.DOTALL,
-    )
-    if not table_m:
-        # Fallback by class
-        table_m = re.search(
-            r"<table[^>]*class=\"[^\"]*financials-table[^\"]*\"[^>]*>(.*?)</table>",
-            html, re.DOTALL,
-        )
-    if not table_m:
-        # Last resort: first table
-        table_m = re.search(r"<table[^>]*>(.*?)</table>", html, re.DOTALL)
-    if not table_m:
+    # stockanalysis.com splits the ratios page into several <table> sections
+    # (main-table-price-ratios, main-table-ev-ratios, main-table-yields, ...)
+    # each sharing the same "financials-table" class, so neither a fixed
+    # id="main-table" nor "first table on the page" reliably picks the right
+    # one. Instead anchor directly on the (unique) "PE Ratio" row label and
+    # walk out to its enclosing <table>.
+    label_m = re.search(r">\s*PE\s*Ratio\s*<", html, re.IGNORECASE)
+    if not label_m:
         return [], []
-    table_html = table_m.group(1)
+
+    table_start = html.rfind("<table", 0, label_m.start())
+    table_end = html.find("</table>", label_m.end())
+    if table_start == -1 or table_end == -1:
+        return [], []
+    table_html = html[table_start:table_end]
 
     # Headers — first row contains <th> with column labels
     head_row_m = re.search(r"<tr[^>]*>(.*?)</tr>", table_html, re.DOTALL)
@@ -235,15 +234,13 @@ def _scrape_ratios_page(url: str) -> Tuple[List[Optional[Tuple[int, str]]], List
         if headers and headers[0] is None:
             headers = headers[1:]
 
-    # PE Ratio row — locate by label text inside the row.
-    # The label is nested inside <div>...</div> within the first <td>, so we
-    # search for ">PE Ratio<" and walk back to the enclosing <tr>.
+    # PE Ratio row — locate by label text inside the row (now scoped to the
+    # correct table), then walk back to the enclosing <tr>.
     pe_values: List[Optional[float]] = []
-    label_m = re.search(r">\s*PE\s*Ratio\s*<", table_html, re.IGNORECASE)
-    if label_m:
-        # Find the <tr that opens before this position
-        tr_start = table_html.rfind("<tr", 0, label_m.start())
-        tr_end = table_html.find("</tr>", label_m.end())
+    row_label_m = re.search(r">\s*PE\s*Ratio\s*<", table_html, re.IGNORECASE)
+    if row_label_m:
+        tr_start = table_html.rfind("<tr", 0, row_label_m.start())
+        tr_end = table_html.find("</tr>", row_label_m.end())
         if tr_start != -1 and tr_end != -1:
             row_html = table_html[tr_start:tr_end]
             cells = re.findall(r"<td[^>]*>(.*?)</td>", row_html, re.DOTALL)
