@@ -2245,7 +2245,7 @@ _SA_FIELD_MAP_CASHFLOW = {
     # Net change in cash
     "ncf": ("net_change_in_cash", "Net Change in Cash"),
     # Free cash flow
-    "leveredFCF": ("free_cash_flow", "Free Cash Flow"),
+    "leveredFCF": ("levered_free_cash_flow", "Levered Free Cash Flow"),
     "unleveredFCF": ("unlevered_fcf", "Unlevered Free Cash Flow"),
     # Other
     "cashInterestPaid": ("interest_paid", "Interest Paid"),
@@ -6943,8 +6943,16 @@ def _calculate_all_metrics(
         if final_fcf is not None and shares and shares != 0:
             cfm["FCF / Share"] = final_fcf / shares
 
-    # Levered Free Cash Flow — pick up directly from statement line items
+    # Levered Free Cash Flow — retrieve from the statement first; only
+    # calculate it when not disclosed directly.
+    # CFA: Levered FCF = Free Cash Flow (CFO − CapEx) − Mandatory Debt
+    # Repayments (principal) — cash left for equity holders after covering
+    # scheduled debt service, not just capex.
     lfcf = _get("LEVERED_FREE_CASH_FLOW")
+    if lfcf is None:
+        debt_repaid = _get("DEBT_REPAID") or _get("DEBT_REPAID_LONG_TERM")
+        if fcf is not None and debt_repaid is not None:
+            lfcf = fcf - abs(debt_repaid)
     if lfcf is not None:
         cfm["Levered Free Cash Flow"] = lfcf
 
