@@ -5,6 +5,14 @@ Main application entry point.
 Run with:  uvicorn app.main:app --reload --port 8004
 """
 
+# Must run before any other import that might touch ssl.SSLContext (httpx,
+# requests, yfinance, ...). Verifies outbound TLS against the OS certificate
+# store instead of the static certifi bundle, so corporate/AV network
+# filters whose root CA is trusted by Windows (and by curl) are trusted
+# here too, rather than failing scrapers with CERTIFICATE_VERIFY_FAILED.
+import truststore
+truststore.inject_into_ssl()
+
 import logging
 import os
 import json

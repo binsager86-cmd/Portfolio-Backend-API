@@ -480,6 +480,20 @@ async def pe_quarterly(
             if cur is not None and base is not None and base != 0:
                 growth_table[y][q] = round(((cur - base) / base) * 100.0, 2)
 
+    # QoQ growth table: sequential % change within the same fiscal year
+    # qoq[year][q] = (pe[year][q] - pe[year][q-1]) / pe[year][q-1] * 100
+    # Q1 has no prior quarter within the year, so it's always None.
+    qoq_growth_table: Dict[int, Dict[str, Optional[float]]] = {
+        y: {"q1": None, "q2": None, "q3": None, "q4": None} for y in years
+    }
+    for y in years:
+        row = pe_table[y]
+        for prev_q, q in (("q1", "q2"), ("q2", "q3"), ("q3", "q4")):
+            cur = row[q]
+            base = row[prev_q]
+            if cur is not None and base is not None and base != 0:
+                qoq_growth_table[y][q] = round(((cur - base) / base) * 100.0, 2)
+
     # Current quarter (calendar quarter of today's month)
     current_quarter = _QUARTER_OF_MONTH[today.month]
     compare_avg = averages[current_quarter]
@@ -500,6 +514,7 @@ async def pe_quarterly(
             "years": years,
             "pe_table": pe_table_out,
             "growth_table": growth_table,
+            "qoq_growth_table": qoq_growth_table,
             "averages": averages,
             "current_pe": round(current_pe, 2) if current_pe is not None else None,
             "current_quarter": current_quarter,
