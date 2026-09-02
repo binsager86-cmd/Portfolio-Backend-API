@@ -6789,7 +6789,12 @@ def _calculate_all_metrics(
     if ar is None:
         ar = _get("ACCOUNTS_RECEIVABLE")
     ap = _get("ACCOUNTS_PAYABLE")
-    cogs = _get("COST_OF_REVENUE") or _get("COST_OF_OPERATIONS") or _get("PROPERTY_EXPENSES") or _get("OPERATING_EXPENSES")
+    # CFA: Inventory/Payables Turnover use Cost of Goods Sold, not total
+    # Operating Expenses (which is SG&A-inclusive and not a COGS proxy).
+    # COST_OF_OPERATIONS / PROPERTY_EXPENSES are legitimate sector-specific
+    # COGS equivalents (e.g. REITs); OPERATING_EXPENSES is not, so it is
+    # deliberately excluded — better to report N/A than a distorted ratio.
+    cogs = _get("COST_OF_REVENUE") or _get("COST_OF_OPERATIONS") or _get("PROPERTY_EXPENSES")
     ppe = _get("NET_FIXED_ASSETS") or _get("PROPERTY_PLANT_EQUIPMENT") or _get("PPE_NET")
     if revenue and total_assets and total_assets != 0:
         eff["Asset Turnover"] = revenue / total_assets
@@ -6826,6 +6831,11 @@ def _calculate_all_metrics(
         or _get("TOTAL_COMMON_SHARES_OUTSTANDING")
         or _get("FILING_DATE_SHARES_OUTSTANDING")
     )
+    # CFA: EPS = Net Income / Weighted-Average Diluted Shares Outstanding.
+    # Retrieve the reported EPS line item first; only calculate it when the
+    # statement doesn't disclose EPS directly (common for non-US filings).
+    if eps is None and net_income is not None and shares and shares != 0:
+        eps = net_income / shares
     if total_equity is not None and shares and shares != 0:
         val["Book Value / Share"] = total_equity / shares
     if eps is not None:
@@ -7789,7 +7799,8 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
             if eps and eps > 0:
                 latest["Earnings Yield"] = round(eps / cp, 6)
 
-            # Fetch shares, EBIT, total debt, cash from balance sheet line items
+            # Fetch shares, EBIT (+ fallback components), total debt, cash from
+            # balance sheet / income statement line items
             li_row = query_one("""
                 SELECT
                     (SELECT li2.amount FROM financial_line_items li2
@@ -7803,18 +7814,51 @@ def _compute_stock_score(stock_id: int, user_id: int) -> Dict[str, Any]:
                      ORDER BY fs2.period_end_date DESC LIMIT 1) AS ebit,
                     (SELECT li2.amount FROM financial_line_items li2
                      JOIN financial_statements fs2 ON li2.statement_id = fs2.id
+                     WHERE fs2.stock_id = ? AND li2.line_item_code = 'OPERATING_INCOME'
+                     ORDER BY fs2.period_end_date DESC LIMIT 1) AS operating_income,
+                    (SELECT li2.amount FROM financial_line_items li2
+                     JOIN financial_statements fs2 ON li2.statement_id = fs2.id
+                     WHERE fs2.stock_id = ? AND li2.line_item_code = 'NET_INCOME'
+                     ORDER BY fs2.period_end_date DESC LIMIT 1) AS net_income,
+                    (SELECT li2.amount FROM financial_line_items li2
+                     JOIN financial_statements fs2 ON li2.statement_id = fs2.id
+                     WHERE fs2.stock_id = ? AND li2.line_item_code = 'INTEREST_EXPENSE'
+                     ORDER BY fs2.period_end_date DESC LIMIT 1) AS interest_expense,
+                    (SELECT li2.amount FROM financial_line_items li2
+                     JOIN financial_statements fs2 ON li2.statement_id = fs2.id
+                     WHERE fs2.stock_id = ? AND li2.line_item_code = 'INCOME_TAX_EXPENSE'
+                     ORDER BY fs2.period_end_date DESC LIMIT 1) AS income_tax_expense,
+                    (SELECT li2.amount FROM financial_line_items li2
+                     JOIN financial_statements fs2 ON li2.statement_id = fs2.id
                      WHERE fs2.stock_id = ? AND li2.line_item_code = 'TOTAL_DEBT'
                      ORDER BY fs2.period_end_date DESC LIMIT 1) AS total_debt,
                     (SELECT li2.amount FROM financial_line_items li2
                      JOIN financial_statements fs2 ON li2.statement_id = fs2.id
                      WHERE fs2.stock_id = ? AND li2.line_item_code = 'CASH_EQUIVALENTS'
                      ORDER BY fs2.period_end_date DESC LIMIT 1) AS cash
-            """, (stock_id, stock_id, stock_id, stock_id))
+            """, (stock_id,) * 8)
             if li_row:
-                shares = li_row[0] if isinstance(li_row, (tuple, list)) else li_row.get("shares")
-                ebit = li_row[1] if isinstance(li_row, (tuple, list)) else li_row.get("ebit")
-                total_debt = li_row[2] if isinstance(li_row, (tuple, list)) else li_row.get("total_debt")
-                cash = li_row[3] if isinstance(li_row, (tuple, list)) else li_row.get("cash")
+                is_seq = isinstance(li_row, (tuple, list))
+                shares = li_row[0] if is_seq else li_row.get("shares")
+                ebit_reported = li_row[1] if is_seq else li_row.get("ebit")
+                operating_income_li = li_row[2] if is_seq else li_row.get("operating_income")
+                net_income_li = li_row[3] if is_seq else li_row.get("net_income")
+                interest_expense_li = li_row[4] if is_seq else li_row.get("interest_expense")
+                income_tax_expense_li = li_row[5] if is_seq else li_row.get("income_tax_expense")
+                total_debt = li_row[6] if is_seq else li_row.get("total_debt")
+                cash = li_row[7] if is_seq else li_row.get("cash")
+
+                # CFA: EBIT = Operating Income (pretax, pre-interest earnings).
+                # Retrieve the reported EBIT line item first; fall back to
+                # Operating Income, then reconstruct via
+                # Net Income + Interest Expense + Income Tax Expense — only
+                # calculating when the statement doesn't disclose EBIT
+                # directly.
+                ebit = ebit_reported
+                if ebit is None:
+                    ebit = operating_income_li
+                if ebit is None and net_income_li is not None:
+                    ebit = net_income_li + abs(interest_expense_li or 0) + abs(income_tax_expense_li or 0)
 
                 if shares and shares > 0:
                     latest["Market Cap"] = cp * shares
@@ -8358,7 +8402,12 @@ def _score_efficiency_detailed(m: Dict[str, float]):
 
     cash_conversion_cycle = m.get("Cash Conversion Cycle")
     if cash_conversion_cycle is not None:
-        if cash_conversion_cycle < 30:    _add("Cash Conversion Cycle", round(cash_conversion_cycle, 1), 10, "< 30 days (excellent cash discipline)")
+        # Sanity bound: no real operating cycle runs this extreme — a CCC
+        # beyond ±250 days is almost always a COGS/AR/AP line-item mismatch,
+        # not genuine efficiency. Flag it instead of scoring it at face value.
+        if abs(cash_conversion_cycle) > 250:
+            _add("Cash Conversion Cycle", round(cash_conversion_cycle, 1), 0, "Implausible magnitude — likely a data mismatch, verify against Metrics tab")
+        elif cash_conversion_cycle < 30:    _add("Cash Conversion Cycle", round(cash_conversion_cycle, 1), 10, "< 30 days (excellent cash discipline)")
         elif cash_conversion_cycle < 60:  _add("Cash Conversion Cycle", round(cash_conversion_cycle, 1), 6, "< 60 days (healthy)")
         elif cash_conversion_cycle < 90:  _add("Cash Conversion Cycle", round(cash_conversion_cycle, 1), 2, "< 90 days (acceptable)")
         elif cash_conversion_cycle > 150: _add("Cash Conversion Cycle", round(cash_conversion_cycle, 1), -8, "> 150 days (cash tied up)")
