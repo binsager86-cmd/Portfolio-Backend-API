@@ -37,6 +37,7 @@ httpx==0.28.1
 requests==2.34.2
 tenacity==9.1.4
 slowapi==0.1.10
+truststore==0.10.4
 
 # ── AI / AI services ─────────────────────────────────────────────────
 google-genai==1.73.1
