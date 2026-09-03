@@ -44,14 +44,28 @@ def safe_float(v) -> Optional[float]:
 
 
 def _mark_positions(positions: dict, price_map: Dict[str, float]) -> list[dict]:
-    """Attach latest price + unrealized P&L to each open position."""
+    """
+    Attach latest price + unrealized P&L to each open position.
+
+    unrealized_pnl_kwd nets out the entry commission already paid to open
+    the position -- that cost already left cash the moment the position was
+    bought (see record_buy_fill), so a plain quantity*(price-avg_cost) would
+    overstate the gain (or understate the loss) by exactly that commission.
+    Netting it here is what makes realized_pnl_kwd + unrealized_pnl_kwd
+    (portfolio.net_pnl_kwd) actually reconcile to equity_kwd -
+    starting_capital_kwd, instead of being off by the open book's total
+    entry commissions.
+    """
     marked = []
     for ticker, pos in positions.items():
         latest_close = price_map.get(ticker)
         quantity = safe_float(pos.get("quantity")) or 0.0
         avg_cost = safe_float(pos.get("avg_cost")) or 0.0
+        entry_commission = safe_float(pos.get("entry_commission_kwd")) or 0.0
         market_value = quantity * latest_close if latest_close is not None else None
-        unrealized_pnl = quantity * (latest_close - avg_cost) if latest_close is not None else None
+        unrealized_pnl = (
+            quantity * (latest_close - avg_cost) - entry_commission if latest_close is not None else None
+        )
         marked.append(
             {
                 "ticker": ticker,
@@ -79,12 +93,23 @@ def build_portfolio_response(book_id: str, price_map: Dict[str, float]) -> Trend
     equity = cash + sum(p["market_value_kwd"] or (p["quantity"] * p["avg_cost"]) for p in marked)
     total_return_pct = ((equity / starting_capital) - 1.0) * 100.0 if starting_capital > 0 else 0.0
 
+    # Split P&L by source: realized (booked, from closed legs -- same number
+    # the Performance scorecard shows) vs unrealized (mark-to-market on open
+    # positions only, never booked/never touches cash). Net is the true
+    # bottom line and ties out to equity_kwd - starting_capital_kwd.
+    unrealized_pnl = sum(p["unrealized_pnl_kwd"] or 0.0 for p in marked if p["unrealized_pnl_kwd"] is not None)
+    realized_pnl = safe_float(book.load_performance_stats(book_id).get("total_realized_pnl_kwd")) or 0.0
+    net_pnl = realized_pnl + unrealized_pnl
+
     return TrendHoldBookPortfolio(
         cash_kwd=round(cash, 3),
         starting_capital_kwd=round(starting_capital, 3),
         equity_kwd=round(equity, 3),
         total_return_pct=round(total_return_pct, 3),
         open_position_count=len(marked),
+        realized_pnl_kwd=round(realized_pnl, 3),
+        unrealized_pnl_kwd=round(unrealized_pnl, 3),
+        net_pnl_kwd=round(net_pnl, 3),
         as_of=datetime.now(timezone.utc).isoformat(timespec="seconds"),
     )
 

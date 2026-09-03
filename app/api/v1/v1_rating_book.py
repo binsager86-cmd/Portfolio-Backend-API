@@ -138,8 +138,12 @@ async def get_v1_rating_book_performance(_user: TokenData = Depends(get_current_
 async def compare_paper_books(_user: TokenData = Depends(get_current_user)):
     """
     Both paper books' performance scorecards side by side -- the direct
-    "which one is best" answer, without two separate round trips.
+    "which one is best" answer, without two separate round trips. Includes
+    each book's portfolio view (realized/unrealized/net P&L) alongside the
+    realized-only performance scorecard, so the comparison strip isn't
+    limited to closed-trade numbers.
     """
+    from app.api.v1.trend_hold_book import _price_map as _trend_hold_price_map
     from app.services.eagle_eye_v2 import paper_book_store as book
     from app.services.eagle_eye_v2.trend_hold_book import BOOK_ID as TREND_HOLD_BOOK_ID
 
@@ -147,4 +151,6 @@ async def compare_paper_books(_user: TokenData = Depends(get_current_user)):
     return BookComparisonResponse(
         trend_hold=build_performance_response(TREND_HOLD_BOOK_ID),
         v1_rating=build_performance_response(BOOK_ID),
+        trend_hold_portfolio=build_portfolio_response(TREND_HOLD_BOOK_ID, _trend_hold_price_map()),
+        v1_rating_portfolio=build_portfolio_response(BOOK_ID, _price_map()),
     )

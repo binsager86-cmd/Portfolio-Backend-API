@@ -19,6 +19,18 @@ class TrendHoldBookPortfolio(BaseModel):
     equity_kwd: float
     total_return_pct: float
     open_position_count: int
+    # P&L, split by source so "how am I doing" isn't one ambiguous number:
+    #   realized_pnl_kwd   — booked gain/loss from closed legs only (SCALE_OUT
+    #                        + EXIT), i.e. TrendHoldBookPerformance.total_realized_pnl_kwd
+    #   unrealized_pnl_kwd — mark-to-market gain/loss on currently open
+    #                        positions only, using the same price source as
+    #                        /positions (never touches the decision engine)
+    #   net_pnl_kwd        — realized_pnl_kwd + unrealized_pnl_kwd, the true
+    #                        net portfolio performance (ties out to
+    #                        equity_kwd - starting_capital_kwd)
+    realized_pnl_kwd: float = 0.0
+    unrealized_pnl_kwd: float = 0.0
+    net_pnl_kwd: float = 0.0
     as_of: Optional[str] = None
 
 
@@ -129,3 +141,7 @@ class BookComparisonResponse(BaseModel):
     """Both paper books' scorecards side by side -- the head-to-head "which one is best" view."""
     trend_hold: TrendHoldBookPerformance
     v1_rating: TrendHoldBookPerformance
+    # Portfolio-level view (realized + unrealized + net) for each book, so
+    # the comparison strip isn't limited to realized-only performance stats.
+    trend_hold_portfolio: TrendHoldBookPortfolio
+    v1_rating_portfolio: TrendHoldBookPortfolio
