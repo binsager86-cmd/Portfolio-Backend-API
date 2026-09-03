@@ -372,6 +372,31 @@ async def trigger_trend_hold_recompute(
     }
 
 
+@router.post("/trend-hold-book-price-refresh")
+async def trigger_trend_hold_book_price_refresh(
+    x_cron_key: Optional[str] = Header(None, alias="X-Cron-Key"),
+):
+    """
+    Trigger an intraday mark-to-market price refresh for the Trend-Hold
+    Book's currently open positions only. Equivalent to the scheduled
+    every-15-min (08:00-14:00 Asia/Kuwait) job. Does not touch
+    ee_trend_hold_state and never triggers a BUY/SCALE_OUT/SELL_SIGNAL
+    decision -- purely a display-value refresh for whichever tickers the
+    book currently holds.
+    """
+    _verify_cron_key(x_cron_key)
+
+    from app.services.eagle_eye_v2.trend_hold_book import run_open_position_price_refresh
+
+    logger.info("Trend-hold book price refresh triggered via API")
+    result = await run_in_threadpool(run_open_position_price_refresh)
+    return {
+        "status": "ok",
+        "message": f"Refreshed {result.get('updated', 0)}/{result.get('positions', 0)} open position price(s)",
+        "data": result,
+    }
+
+
 @router.post("/v1-rating-book-recompute")
 async def trigger_v1_rating_book_recompute(
     x_cron_key: Optional[str] = Header(None, alias="X-Cron-Key"),

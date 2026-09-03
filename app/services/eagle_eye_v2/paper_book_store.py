@@ -208,6 +208,22 @@ def ensure_paper_book_tables() -> None:
     )
     exec_sql(lessons_sql, ())
 
+    # Intraday mark-to-market cache for currently open positions only (see
+    # trend_hold_book.py::run_open_position_price_refresh). Brand-new table,
+    # multi-book (book_id-scoped) from day one -- no _migrate_add_book_id
+    # needed. Deliberately separate from ee_trend_hold_state: this is a
+    # display-only price overlay, never read by the decision engine.
+    live_prices_sql = """
+        CREATE TABLE IF NOT EXISTS ee_trend_hold_book_live_prices (
+            book_id     TEXT NOT NULL,
+            ticker      TEXT NOT NULL,
+            price       REAL,
+            updated_at  INTEGER,
+            PRIMARY KEY (book_id, ticker)
+        )
+        """
+    exec_sql(live_prices_sql, ())
+
 
 # ---------------------------------------------------------------------------
 # Numeric helpers (same convention as app/services/eagle_eye/store.py's _f)
@@ -271,6 +287,51 @@ def load_all_positions(book_id: str) -> Dict[str, dict]:
         (book_id,),
     )
     return {str(r["ticker"]).upper(): dict(r.items()) for r in rows or []}
+
+
+# ---------------------------------------------------------------------------
+# Live prices — intraday mark-to-market cache for open positions only
+# ---------------------------------------------------------------------------
+
+def save_live_prices(book_id: str, prices: Dict[str, float]) -> None:
+    """
+    Replace *book_id*'s intraday price cache with *prices* -- a full
+    replace-all-for-book write (delete then insert), not a merge, so a
+    ticker whose position has since closed has its stale price dropped
+    automatically instead of lingering until some other cleanup runs.
+    """
+    from app.core.database import exec_sql_batch
+
+    now = int(time.time())
+    statements: list = [("DELETE FROM ee_trend_hold_book_live_prices WHERE book_id = ?", (book_id,))]
+    for ticker, price in prices.items():
+        p = _f(price)
+        if p is None:
+            continue
+        statements.append(
+            (
+                "INSERT INTO ee_trend_hold_book_live_prices (book_id, ticker, price, updated_at) VALUES (?,?,?,?)",
+                (book_id, ticker.upper(), p, now),
+            )
+        )
+    exec_sql_batch(statements)
+
+
+def load_live_prices(book_id: str) -> Dict[str, float]:
+    """Return {ticker: price} for book_id's cached intraday prices (open positions only)."""
+    from app.core.database import query_all
+
+    rows = query_all(
+        "SELECT ticker, price FROM ee_trend_hold_book_live_prices WHERE book_id = ?",
+        (book_id,),
+    )
+    out: Dict[str, float] = {}
+    for r in rows or []:
+        d = dict(r.items())
+        p = _f(d.get("price"))
+        if p is not None:
+            out[str(d["ticker"]).upper()] = p
+    return out
 
 
 # ---------------------------------------------------------------------------

@@ -262,3 +262,77 @@ def run_trend_hold_book_step() -> Dict[str, Any]:
     stats["equity_kwd"] = round(final_equity, 3)
     stats["open_positions"] = len(positions)
     return stats
+
+
+def run_open_position_price_refresh() -> Dict[str, Any]:
+    """
+    Intraday mark-to-market refresh for the Trend-Hold Book's currently open
+    positions ONLY -- not a universe scan and not a decision-engine run.
+
+    Fetches each open position's latest TickerChart close via fetch_ohlcv
+    and caches it in ee_trend_hold_book_live_prices (paper_book_store.py),
+    which the API layer (_price_map() in app/api/v1/trend_hold_book.py)
+    overlays on top of the once-daily trend_hold_engine close so the book's
+    displayed equity/positions can move during the session. Never writes to
+    ee_trend_hold_state and never influences a BUY/SCALE_OUT/SELL_SIGNAL
+    decision -- those stay exclusively the once-daily scan+book jobs'.
+    """
+    import asyncio
+    import threading
+    from datetime import date, timedelta
+
+    from app.services import tickerchart_service as tc
+    from app.services.eagle_eye_v2 import paper_book_store as book
+
+    book.ensure_paper_book_tables()
+    positions = book.load_all_positions(BOOK_ID)
+    if not positions:
+        book.save_live_prices(BOOK_ID, {})
+        return {"positions": 0, "updated": 0, "errors": 0}
+
+    tickers = sorted(positions.keys())
+    today = date.today()
+    from_d = today - timedelta(days=7)
+
+    async def _fetch_all() -> Dict[str, float]:
+        async def _one(ticker: str) -> tuple[str, Optional[float]]:
+            try:
+                rows = await tc.fetch_ohlcv(ticker, "KSE", from_d=from_d, to_d=today, interval="day")
+                if not rows:
+                    return ticker, None
+                latest = sorted(rows, key=lambda r: r["date"])[-1]
+                return ticker, _f(latest.get("close"))
+            except Exception as exc:
+                logger.warning("trend_hold_book: live price fetch failed for %s: %s", ticker, exc)
+                return ticker, None
+
+        results = await asyncio.gather(*[_one(t) for t in tickers])
+        return {t: p for t, p in results if p is not None and p > 0}
+
+    result_box: list = []
+    exc_box: list = []
+
+    def _target() -> None:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            result_box.append(loop.run_until_complete(_fetch_all()))
+        except Exception as exc:  # noqa: BLE001
+            exc_box.append(exc)
+        finally:
+            loop.close()
+
+    # Run in a fresh event loop on a background thread -- safe whether this
+    # is called from plain sync code (APScheduler) or from within a running
+    # event loop (a FastAPI request handler), where asyncio.run() would raise.
+    thread = threading.Thread(target=_target, daemon=True)
+    thread.start()
+    thread.join()
+
+    if exc_box:
+        logger.warning("trend_hold_book: intraday price refresh failed: %s", exc_box[0])
+        return {"positions": len(tickers), "updated": 0, "errors": len(tickers)}
+
+    prices = result_box[0] if result_box else {}
+    book.save_live_prices(BOOK_ID, prices)
+    return {"positions": len(tickers), "updated": len(prices), "errors": len(tickers) - len(prices)}

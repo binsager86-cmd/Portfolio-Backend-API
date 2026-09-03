@@ -406,6 +406,19 @@ def start_scheduler() -> None:
             except Exception as exc:
                 logger.warning("trend_hold_book: run failed: %s", exc)
 
+        def _run_trend_hold_book_price_refresh() -> None:
+            """Intraday mark-to-market refresh for the Trend-Hold Book's open
+            positions only -- NOT a universe scan, NOT a decision-engine run.
+            Fetches each currently-open position's latest TickerChart price so
+            the book's displayed equity/P&L can move during the trading
+            session instead of only once at 14:15/14:18."""
+            try:
+                from app.services.eagle_eye_v2.trend_hold_book import run_open_position_price_refresh
+                summary = run_open_position_price_refresh()
+                logger.info("trend_hold_book: intraday price refresh: %s", summary)
+            except Exception as exc:
+                logger.warning("trend_hold_book: intraday price refresh failed: %s", exc)
+
         def _run_v1_rating_book_step() -> None:
             """Daily V1 Rating Book paper-trading step.
 
@@ -482,6 +495,26 @@ def start_scheduler() -> None:
             ),
             id="eagle_eye_trend_hold_book",
             name="Eagle Eye trend-hold book paper-trading step",
+            replace_existing=True,
+            coalesce=True,
+            max_instances=1,
+        )
+
+        # Sun–Thu, every 15 min from 08:00–14:00 Asia/Kuwait (covers the KSE
+        # trading session) — Trend-Hold Book intraday price refresh. Marks
+        # only the book's currently open positions to market; the once-daily
+        # 14:15/14:18 scan+book jobs above remain the only source of BUY/
+        # SCALE_OUT/SELL_SIGNAL decisions.
+        _scheduler.add_job(
+            _run_trend_hold_book_price_refresh,
+            trigger=CronTrigger(
+                day_of_week="sun,mon,tue,wed,thu",
+                hour="8-14",
+                minute="*/15",
+                timezone="Asia/Kuwait",
+            ),
+            id="eagle_eye_trend_hold_book_price_refresh",
+            name="Eagle Eye trend-hold book intraday price refresh",
             replace_existing=True,
             coalesce=True,
             max_instances=1,

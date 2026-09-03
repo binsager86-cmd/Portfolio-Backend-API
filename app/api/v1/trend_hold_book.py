@@ -16,6 +16,7 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
+from starlette.concurrency import run_in_threadpool
 
 from app.api.deps import get_current_user
 from app.api.v1._paper_book_common import (
@@ -48,9 +49,19 @@ router = APIRouter(prefix="/trend-hold-book", tags=["Trend-Hold Book"])
 
 
 def _price_map() -> dict:
+    """
+    Base map is the once-daily trend_hold_engine close for the full
+    universe; live_prices overlays a fresher TickerChart quote for whichever
+    tickers the book currently holds (see
+    trend_hold_book.py::run_open_position_price_refresh), so open positions'
+    displayed value/P&L can move between full scans.
+    """
     from app.services.eagle_eye.store import load_all_trend_hold_state
+    from app.services.eagle_eye_v2 import paper_book_store as book
 
-    return {t: safe_float(row.get("close")) for t, row in load_all_trend_hold_state().items()}
+    price_map = {t: safe_float(row.get("close")) for t, row in load_all_trend_hold_state().items()}
+    price_map.update(book.load_live_prices(BOOK_ID))
+    return price_map
 
 
 @router.get("/portfolio", response_model=TrendHoldBookPortfolio)
@@ -60,6 +71,28 @@ async def get_trend_hold_book_portfolio(_user: TokenData = Depends(get_current_u
 
     book.ensure_paper_book_tables()
     return build_portfolio_response(BOOK_ID, _price_map())
+
+
+@router.post("/refresh-prices")
+async def refresh_trend_hold_book_prices(_user: TokenData = Depends(get_current_user)):
+    """
+    Manually fetch a fresh TickerChart price for whatever the Trend-Hold
+    Book currently holds -- the same intraday refresh the scheduler runs
+    every 15 minutes during the KSE session (see
+    run_open_position_price_refresh()), triggered on demand from the
+    "Fetch Price" button. Only marks open positions to market; never
+    touches ee_trend_hold_state or triggers a BUY/SCALE_OUT/SELL_SIGNAL
+    decision.
+    """
+    from app.services.eagle_eye_v2.trend_hold_book import run_open_position_price_refresh
+
+    result = await run_in_threadpool(run_open_position_price_refresh)
+    return {
+        "status": "ok",
+        "updated": result.get("updated", 0),
+        "positions": result.get("positions", 0),
+        "errors": result.get("errors", 0),
+    }
 
 
 @router.get("/positions", response_model=TrendHoldBookPositionsResponse)
