@@ -14,6 +14,7 @@ are directly, fairly comparable.
 """
 from __future__ import annotations
 
+import json
 import logging
 import math
 from datetime import date
@@ -38,9 +39,19 @@ def _f(v: Any) -> Optional[float]:
         return None
 
 
+def _parse_gate_json(text: Optional[str]) -> Optional[dict]:
+    if not text:
+        return None
+    try:
+        parsed = json.loads(text)
+        return parsed if isinstance(parsed, dict) else None
+    except (TypeError, ValueError):
+        return None
+
+
 def _build_lesson(
     ticker: str, side: str, entry_date: Optional[str], entry_price: Optional[float],
-    exit_date: str, exit_price: float,
+    exit_date: str, exit_price: float, entry_gate_json: Optional[str] = None,
 ) -> Optional[dict]:
     """
     Best-effort post-trade autopsy for one closing leg. Never allowed to
@@ -59,6 +70,7 @@ def _build_lesson(
             exit_date=exit_date,
             exit_price=exit_price,
             ohlcv=ohlcv,
+            entry_gate=_parse_gate_json(entry_gate_json),
         )
         return {
             "classification": lesson.classification,
@@ -139,6 +151,7 @@ def run_trend_hold_book_step() -> Dict[str, Any]:
                 commission = gross * book.COMMISSION_RATE
                 cash -= (gross + commission)
 
+                entry_gate_json = row.get("gate_snapshot_json")
                 book.record_buy_fill(
                     book_id=BOOK_ID,
                     ticker=ticker,
@@ -150,6 +163,7 @@ def run_trend_hold_book_step() -> Dict[str, Any]:
                     reason=reason,
                     cash_kwd=cash,
                     confidence=_f(row.get("confidence")),
+                    entry_gate_json=entry_gate_json,
                 )
                 positions[ticker] = {
                     "ticker": ticker,
@@ -157,6 +171,7 @@ def run_trend_hold_book_step() -> Dict[str, Any]:
                     "avg_cost": price,
                     "entry_commission_kwd": commission,
                     "opened_date": trade_date,
+                    "entry_gate_json": entry_gate_json,
                 }
                 stats["bought"] += 1
 
@@ -180,8 +195,11 @@ def run_trend_hold_book_step() -> Dict[str, Any]:
                 remaining_qty = qty_before - sell_qty
                 remaining_entry_commission = float(pos["entry_commission_kwd"] or 0.0) - entry_commission_share
 
+                entry_gate_json = pos.get("entry_gate_json")
+                exit_gate_json = row.get("gate_snapshot_json")
                 lesson = _build_lesson(
                     ticker, "SCALE_OUT", pos.get("opened_date"), float(pos["avg_cost"]), trade_date, price,
+                    entry_gate_json=entry_gate_json,
                 )
                 book.record_scale_out_fill(
                     book_id=BOOK_ID,
@@ -199,6 +217,8 @@ def run_trend_hold_book_step() -> Dict[str, Any]:
                     avg_cost=float(pos["avg_cost"]),
                     opened_date=pos["opened_date"],
                     lesson=lesson,
+                    entry_gate_json=entry_gate_json,
+                    exit_gate_json=exit_gate_json,
                 )
                 positions[ticker]["quantity"] = remaining_qty
                 positions[ticker]["entry_commission_kwd"] = remaining_entry_commission
@@ -224,8 +244,11 @@ def run_trend_hold_book_step() -> Dict[str, Any]:
                 )
                 cash += (gross - commission)
 
+                entry_gate_json = pos.get("entry_gate_json")
+                exit_gate_json = row.get("gate_snapshot_json")
                 lesson = _build_lesson(
                     ticker, "EXIT", pos.get("opened_date"), float(pos["avg_cost"]), trade_date, price,
+                    entry_gate_json=entry_gate_json,
                 )
                 book.record_exit_fill(
                     book_id=BOOK_ID,
@@ -240,6 +263,9 @@ def run_trend_hold_book_step() -> Dict[str, Any]:
                     cash_kwd=cash,
                     lesson=lesson,
                     confidence=_f(row.get("confidence")),
+                    entry_price=float(pos["avg_cost"]),
+                    entry_gate_json=entry_gate_json,
+                    exit_gate_json=exit_gate_json,
                 )
                 del positions[ticker]
                 stats["exited"] += 1

@@ -64,6 +64,16 @@ def _price_map() -> dict:
     return price_map
 
 
+def _stop_map() -> dict:
+    """{ticker: current trailing-stop level}, straight from today's
+    ee_trend_hold_state -- the "target price" answer for an open position
+    (there isn't one, only a live stop). Trend-Hold-specific; the V1 Rating
+    Book has no equivalent concept and doesn't call this."""
+    from app.services.eagle_eye.store import load_all_trend_hold_state
+
+    return {t: safe_float(row.get("structural_stop")) for t, row in load_all_trend_hold_state().items()}
+
+
 @router.get("/portfolio", response_model=TrendHoldBookPortfolio)
 async def get_trend_hold_book_portfolio(_user: TokenData = Depends(get_current_user)):
     """Return the Trend-Hold Book's current cash, mark-to-market equity, and total return."""
@@ -101,7 +111,7 @@ async def get_trend_hold_book_positions(_user: TokenData = Depends(get_current_u
     from app.services.eagle_eye_v2 import paper_book_store as book
 
     book.ensure_paper_book_tables()
-    return build_positions_response(BOOK_ID, _price_map())
+    return build_positions_response(BOOK_ID, _price_map(), _stop_map())
 
 
 @router.get("/trades", response_model=TrendHoldBookTradesResponse)

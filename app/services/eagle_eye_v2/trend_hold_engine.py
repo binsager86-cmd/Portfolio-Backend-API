@@ -90,7 +90,7 @@ banking half the position at the top while the runner still captures
 whatever the trend does next.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Optional
 
 import pandas as pd
@@ -123,6 +123,19 @@ def _clamp01_100(x: float) -> float:
     return max(0.0, min(100.0, x))
 
 
+@dataclass
+class EntryConfidence:
+    """Blended 0-100 score plus the three sub-scores it's built from, and the
+    raw breakout-margin % -- kept separate from the blended total so a
+    trade-log consumer can see *which* leg of the entry was strong/weak,
+    not just the combined number."""
+    total: float
+    breakout_score: float
+    volume_score: float
+    flow_score: float
+    breakout_margin_pct: float
+
+
 def _entry_confidence(
     donchian_fire: bool,
     close: float,
@@ -131,7 +144,7 @@ def _entry_confidence(
     rel_volume: float,
     cmf10: float,
     obv_slope40: float,
-) -> float:
+) -> EntryConfidence:
     """
     0-100 BUY signal strength: breakout strength (50%) + volume
     confirmation (25%) + flow confirmation (25%) -- the same three gates
@@ -160,7 +173,14 @@ def _entry_confidence(
     obv_score = 65.0 if (pd.notna(obv_slope40) and obv_slope40 > 0) else 0.0
     flow_score = max(cmf_score, obv_score)
 
-    return round(_clamp01_100(breakout_score * 0.5 + volume_score * 0.25 + flow_score * 0.25), 1)
+    total = round(_clamp01_100(breakout_score * 0.5 + volume_score * 0.25 + flow_score * 0.25), 1)
+    return EntryConfidence(
+        total=total,
+        breakout_score=round(breakout_score, 1),
+        volume_score=round(volume_score, 1),
+        flow_score=round(flow_score, 1),
+        breakout_margin_pct=round(excess_pct, 2),
+    )
 
 
 def _exit_confidence(close: float, structural_stop: float) -> float:
@@ -182,6 +202,88 @@ class TrendHoldState:
     exit_reason: Optional[str] = None
     position_fraction: float = 1.0   # remaining position size, 1.0 = full
     scaled_out: bool = False         # whether the profit-milestone scale-out already fired
+    peak_date: Optional[str] = None  # session that set highest_close_since_entry (for exit_gate's days_since_peak)
+    entry_gate: Optional[dict] = None  # full gate snapshot captured on entry, carried for the life of the trade
+
+
+def _build_entry_gate(
+    *,
+    donchian_fire: bool,
+    donchian_high: float,
+    ema10: float,
+    ema30: float,
+    ema50: float,
+    rel_volume: float,
+    cmf10: float,
+    obv_slope40: float,
+    adx14: float,
+    sma200: float,
+    sma200_slope: float,
+    atr14: float,
+    conf: EntryConfidence,
+) -> dict:
+    """Structured record of every gate input that decided a BUY -- what
+    actually fired it, not just the human-readable reason string. Persisted
+    verbatim (as JSON) so the Lessons Learned report can show the exact
+    numbers instead of a re-derived approximation."""
+    cmf_pass = bool(pd.notna(cmf10) and float(cmf10) >= CMF_FLOOR)
+    obv_pass = bool(pd.notna(obv_slope40) and float(obv_slope40) > 0)
+    flow_pass_via = "CMF+OBV" if (cmf_pass and obv_pass) else ("CMF" if cmf_pass else ("OBV" if obv_pass else None))
+    return {
+        "entry_path": "DONCHIAN" if donchian_fire else "EMA_CROSS",
+        "donchian_high": float(donchian_high) if pd.notna(donchian_high) else None,
+        "ema10": float(ema10) if pd.notna(ema10) else None,
+        "ema30": float(ema30) if pd.notna(ema30) else None,
+        "ema50": float(ema50) if pd.notna(ema50) else None,
+        "rel_volume": float(rel_volume) if pd.notna(rel_volume) else None,
+        "rel_volume_floor": MIN_REL_VOLUME,
+        "cmf10": float(cmf10) if pd.notna(cmf10) else None,
+        "cmf_floor": CMF_FLOOR,
+        "obv_slope40": float(obv_slope40) if pd.notna(obv_slope40) else None,
+        "flow_pass_via": flow_pass_via,
+        "adx14": float(adx14) if pd.notna(adx14) else None,
+        "sma200": float(sma200) if pd.notna(sma200) else None,
+        "sma200_slope": float(sma200_slope) if pd.notna(sma200_slope) else None,
+        "atr14": float(atr14) if pd.notna(atr14) else None,
+        "breakout_margin_pct": conf.breakout_margin_pct,
+        "confidence": conf.total,
+        "confidence_breakdown": {
+            "breakout_score": conf.breakout_score,
+            "volume_score": conf.volume_score,
+            "flow_score": conf.flow_score,
+        },
+    }
+
+
+def _build_exit_gate(
+    *,
+    trigger: str,
+    structural_stop: float,
+    highest_close_since_entry: float,
+    peak_date: Optional[str],
+    exit_date: str,
+    atr14: float,
+    adx14: float,
+) -> dict:
+    """Structured record of what fired a SELL_SIGNAL/SCALE_OUT -- the stop
+    level and volatility/regime context at that moment, plus how many
+    sessions passed between the trade's peak and the exit (a direct measure
+    of how much the fixed chandelier multiple lagged the actual top)."""
+    days_since_peak: Optional[int] = None
+    if peak_date:
+        try:
+            days_since_peak = (pd.Timestamp(exit_date) - pd.Timestamp(peak_date)).days
+        except (TypeError, ValueError):
+            days_since_peak = None
+    return {
+        "trigger": trigger,  # "CHANDELIER_STOP" | "SCALE_OUT_MILESTONE"
+        "structural_stop": float(structural_stop) if structural_stop is not None else None,
+        "highest_close_since_entry": float(highest_close_since_entry) if highest_close_since_entry is not None else None,
+        "peak_date": peak_date,
+        "days_since_peak": days_since_peak,
+        "atr14": float(atr14) if pd.notna(atr14) else None,
+        "adx14": float(adx14) if pd.notna(adx14) else None,
+    }
 
 
 def compute_daily_features(ohlcv: pd.DataFrame) -> pd.DataFrame:
@@ -224,6 +326,7 @@ def replay_symbol(df: pd.DataFrame) -> list[dict[str, Any]]:
         decision = "WAIT"
         reason = "no qualifying breakout"
         confidence: Optional[float] = None  # only scored for BUY / SELL_SIGNAL -- see module notes above
+        gate_snapshot: Optional[dict] = None  # entry_gate on BUY, exit_gate on SELL_SIGNAL/SCALE_OUT
 
         if state.position_state != "IN_POSITION":
             donchian_high = row["donchian_high"]
@@ -241,13 +344,40 @@ def replay_symbol(df: pd.DataFrame) -> list[dict[str, Any]]:
 
             if entry_fire:
                 atr_val = float(row["atr14"]) if pd.notna(row["atr14"]) else 0.0
+                trade_date_str = str(row["trade_date"])
+                conf = _entry_confidence(
+                    donchian_fire=donchian_fire,
+                    close=close,
+                    donchian_high=donchian_high,
+                    ema50=row["ema50"],
+                    rel_volume=row["rel_volume"],
+                    cmf10=row["cmf10"],
+                    obv_slope40=row["obv_slope40"],
+                )
+                entry_gate = _build_entry_gate(
+                    donchian_fire=donchian_fire,
+                    donchian_high=donchian_high,
+                    ema10=row["ema10"],
+                    ema30=row["ema30"],
+                    ema50=row["ema50"],
+                    rel_volume=row["rel_volume"],
+                    cmf10=row["cmf10"],
+                    obv_slope40=row["obv_slope40"],
+                    adx14=row["adx14"],
+                    sma200=row["sma200"],
+                    sma200_slope=row["sma200_slope"],
+                    atr14=row["atr14"],
+                    conf=conf,
+                )
                 state = TrendHoldState(
                     position_state="IN_POSITION",
-                    entry_date=str(row["trade_date"]),
+                    entry_date=trade_date_str,
                     entry_price=close,
                     base_high=float(donchian_high) if pd.notna(donchian_high) else None,
                     highest_close_since_entry=close,
                     structural_stop=close - CHANDELIER_ATR_MULT * atr_val,
+                    peak_date=trade_date_str,
+                    entry_gate=entry_gate,
                 )
                 decision = "BUY"
                 if donchian_fire:
@@ -260,16 +390,11 @@ def replay_symbol(df: pd.DataFrame) -> list[dict[str, Any]]:
                         f"EMA10 crossed above EMA30 with close {close:.3f} above EMA50 "
                         f"{float(row['ema50']):.3f} (intermediate trend turned)"
                     )
-                confidence = _entry_confidence(
-                    donchian_fire=donchian_fire,
-                    close=close,
-                    donchian_high=donchian_high,
-                    ema50=row["ema50"],
-                    rel_volume=row["rel_volume"],
-                    cmf10=row["cmf10"],
-                    obv_slope40=row["obv_slope40"],
-                )
+                confidence = conf.total
+                gate_snapshot = entry_gate
         else:
+            if close > float(state.highest_close_since_entry):
+                state.peak_date = str(row["trade_date"])
             state.highest_close_since_entry = max(float(state.highest_close_since_entry), close)
             atr_val = float(row["atr14"]) if pd.notna(row["atr14"]) else 0.0
             chandelier_stop = state.highest_close_since_entry - CHANDELIER_ATR_MULT * atr_val
@@ -284,6 +409,15 @@ def replay_symbol(df: pd.DataFrame) -> list[dict[str, Any]]:
                     f"unrealized gain {unrealized_gain:.1%} reached the {SCALE_OUT_GAIN_PCT:.0%} milestone -- "
                     f"banking {SCALE_OUT_FRACTION:.0%} of the position, runner continues on the trailing stop"
                 )
+                gate_snapshot = _build_exit_gate(
+                    trigger="SCALE_OUT_MILESTONE",
+                    structural_stop=state.structural_stop,
+                    highest_close_since_entry=state.highest_close_since_entry,
+                    peak_date=state.peak_date,
+                    exit_date=str(row["trade_date"]),
+                    atr14=row["atr14"],
+                    adx14=row["adx14"],
+                )
             elif close < state.structural_stop:
                 decision = "SELL_SIGNAL"
                 reason = (
@@ -291,6 +425,15 @@ def replay_symbol(df: pd.DataFrame) -> list[dict[str, Any]]:
                     f"(chandelier {CHANDELIER_ATR_MULT}x ATR14 off high {state.highest_close_since_entry:.3f})"
                 )
                 confidence = _exit_confidence(close, state.structural_stop)
+                gate_snapshot = _build_exit_gate(
+                    trigger="CHANDELIER_STOP",
+                    structural_stop=state.structural_stop,
+                    highest_close_since_entry=state.highest_close_since_entry,
+                    peak_date=state.peak_date,
+                    exit_date=str(row["trade_date"]),
+                    atr14=row["atr14"],
+                    adx14=row["adx14"],
+                )
                 state.exit_reason = reason
                 state.position_state = "EXIT_SIGNAL"
             else:
@@ -309,6 +452,8 @@ def replay_symbol(df: pd.DataFrame) -> list[dict[str, Any]]:
                 "structural_stop": state.structural_stop,
                 "position_fraction": state.position_fraction,
                 "confidence": confidence,
+                "gate_snapshot": gate_snapshot,
+                "entry_gate": state.entry_gate,
             }
         )
 

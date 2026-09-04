@@ -103,7 +103,7 @@ def _migrate_add_book_id(table: str, create_sql: str, copy_columns: str, order_b
 
 def ensure_paper_book_tables() -> None:
     """Create the Paper Book tables (or migrate them to the multi-book schema) if needed."""
-    from app.core.database import exec_sql
+    from app.core.database import add_column_if_missing, exec_sql
 
     state_sql = """
         CREATE TABLE IF NOT EXISTS ee_trend_hold_book_state (
@@ -136,6 +136,10 @@ def ensure_paper_book_tables() -> None:
         "ticker, quantity, avg_cost, entry_commission_kwd, opened_date, updated_at", "ticker",
     )
     exec_sql(positions_sql, ())
+    # Entry gate snapshot (JSON) carried from the BUY fill, so an *open*
+    # position can show what triggered its own buy without a join back to
+    # ee_trend_hold_book_trades.
+    add_column_if_missing("ee_trend_hold_book_positions", "entry_gate_json", "TEXT")
 
     nav_sql = """
         CREATE TABLE IF NOT EXISTS ee_trend_hold_book_nav_history (
@@ -178,6 +182,11 @@ def ensure_paper_book_tables() -> None:
         "realized_pnl_kwd, reason, executed_at, confidence", "id",
     )
     exec_sql(trades_sql, ())
+    # Full gate-input snapshot (JSON) for this fill -- entry_gate on the BUY
+    # row, exit_gate on the SCALE_OUT/EXIT row that closed it. See
+    # trend_hold_engine.py's _build_entry_gate/_build_exit_gate.
+    add_column_if_missing("ee_trend_hold_book_trades", "entry_gate_json", "TEXT")
+    add_column_if_missing("ee_trend_hold_book_trades", "exit_gate_json", "TEXT")
 
     # Post-trade "autopsy" for each closed leg -- shares the trades table's
     # natural (book_id, ticker, trade_date) key, since exactly one trade
@@ -207,6 +216,17 @@ def ensure_paper_book_tables() -> None:
         "giveback_pct, holding_days, reason, enhancement, computed_at", "trade_date",
     )
     exec_sql(lessons_sql, ())
+    # Denormalized copies of this closing leg's price/quantity/P&L plus both
+    # gate snapshots -- keeps a closed trade's full record self-contained in
+    # one row (no join back to ee_trend_hold_book_trades needed to render a
+    # complete lesson card).
+    add_column_if_missing("ee_trend_hold_book_lessons", "entry_price", "REAL")
+    add_column_if_missing("ee_trend_hold_book_lessons", "exit_price", "REAL")
+    add_column_if_missing("ee_trend_hold_book_lessons", "quantity", "REAL")
+    add_column_if_missing("ee_trend_hold_book_lessons", "realized_pnl_kwd", "REAL")
+    add_column_if_missing("ee_trend_hold_book_lessons", "commission_kwd", "REAL")
+    add_column_if_missing("ee_trend_hold_book_lessons", "entry_gate_json", "TEXT")
+    add_column_if_missing("ee_trend_hold_book_lessons", "exit_gate_json", "TEXT")
 
     # Intraday mark-to-market cache for currently open positions only (see
     # trend_hold_book.py::run_open_position_price_refresh). Brand-new table,
@@ -237,6 +257,31 @@ def _f(v: Any) -> Optional[float]:
         return None if (math.isnan(f) or math.isinf(f)) else f
     except (TypeError, ValueError):
         return None
+
+
+def _parse_gate_json(text: Any) -> Optional[Dict[str, Any]]:
+    """Best-effort JSON parse of a stored entry_gate_json/exit_gate_json column.
+    Never raises -- a malformed/legacy-null value just means no gate detail
+    for that row, not a broken response."""
+    if not text:
+        return None
+    import json
+
+    try:
+        parsed = json.loads(text)
+        return parsed if isinstance(parsed, dict) else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _adx_bucket(adx14: Optional[float]) -> Optional[str]:
+    if adx14 is None:
+        return None
+    if adx14 < 20:
+        return "WEAK_LT20"
+    if adx14 <= 40:
+        return "MODERATE_20_40"
+    return "STRONG_GT40"
 
 
 # ---------------------------------------------------------------------------
@@ -280,7 +325,7 @@ def load_all_positions(book_id: str) -> Dict[str, dict]:
 
     rows = query_all(
         """
-        SELECT ticker, quantity, avg_cost, entry_commission_kwd, opened_date, updated_at
+        SELECT ticker, quantity, avg_cost, entry_commission_kwd, opened_date, updated_at, entry_gate_json
         FROM   ee_trend_hold_book_positions
         WHERE  book_id = ?
         """,
@@ -368,6 +413,7 @@ def record_buy_fill(
     reason: Optional[str],
     cash_kwd: float,
     confidence: Optional[float] = None,
+    entry_gate_json: Optional[str] = None,
 ) -> None:
     from app.core.database import exec_sql_batch
 
@@ -377,27 +423,32 @@ def record_buy_fill(
             (
                 """
                 INSERT INTO ee_trend_hold_book_positions (
-                    book_id, ticker, quantity, avg_cost, entry_commission_kwd, opened_date, updated_at
-                ) VALUES (?,?,?,?,?,?,?)
+                    book_id, ticker, quantity, avg_cost, entry_commission_kwd, opened_date, updated_at,
+                    entry_gate_json
+                ) VALUES (?,?,?,?,?,?,?,?)
                 ON CONFLICT (book_id, ticker) DO UPDATE SET
                     quantity = excluded.quantity,
                     avg_cost = excluded.avg_cost,
                     entry_commission_kwd = excluded.entry_commission_kwd,
                     opened_date = excluded.opened_date,
-                    updated_at = excluded.updated_at
+                    updated_at = excluded.updated_at,
+                    entry_gate_json = excluded.entry_gate_json
                 """,
-                (book_id, ticker.upper(), _f(quantity), _f(price), _f(commission_kwd), trade_date, now),
+                (
+                    book_id, ticker.upper(), _f(quantity), _f(price), _f(commission_kwd), trade_date, now,
+                    entry_gate_json,
+                ),
             ),
             (
                 """
                 INSERT INTO ee_trend_hold_book_trades (
                     book_id, ticker, side, trade_date, quantity, price, gross_kwd,
-                    commission_kwd, realized_pnl_kwd, reason, executed_at, confidence
-                ) VALUES (?,?,'BUY',?,?,?,?,?,NULL,?,?,?)
+                    commission_kwd, realized_pnl_kwd, reason, executed_at, confidence, entry_gate_json
+                ) VALUES (?,?,'BUY',?,?,?,?,?,NULL,?,?,?,?)
                 """,
                 (
                     book_id, ticker.upper(), trade_date, _f(quantity), _f(price), _f(gross_kwd),
-                    _f(commission_kwd), reason, now, _f(confidence),
+                    _f(commission_kwd), reason, now, _f(confidence), entry_gate_json,
                 ),
             ),
             (
@@ -408,16 +459,40 @@ def record_buy_fill(
     )
 
 
-def _lesson_insert_statement(book_id: str, ticker: str, trade_date: str, side: str, lesson: Optional[dict], now: int):
-    """Build the (sql, params) tuple for one lesson row, or None if no lesson was computed."""
+def _lesson_insert_statement(
+    book_id: str,
+    ticker: str,
+    trade_date: str,
+    side: str,
+    lesson: Optional[dict],
+    now: int,
+    *,
+    entry_price: Optional[float] = None,
+    exit_price: Optional[float] = None,
+    quantity: Optional[float] = None,
+    realized_pnl_kwd: Optional[float] = None,
+    commission_kwd: Optional[float] = None,
+    entry_gate_json: Optional[str] = None,
+    exit_gate_json: Optional[str] = None,
+):
+    """Build the (sql, params) tuple for one lesson row, or None if no lesson was computed.
+
+    The price/quantity/P&L/gate columns are denormalized copies of what the
+    matching ee_trend_hold_book_trades row already has -- passed in
+    separately from *lesson* (trend_hold_lessons.analyze_trade()'s pure
+    classification output) so a closed trade's full record is
+    self-contained in one row without a join.
+    """
     if lesson is None:
         return None
     return (
         """
         INSERT INTO ee_trend_hold_book_lessons (
             book_id, ticker, trade_date, side, classification, outcome, mae_pct,
-            mfe_pct, giveback_pct, holding_days, reason, enhancement, computed_at
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+            mfe_pct, giveback_pct, holding_days, reason, enhancement, computed_at,
+            entry_price, exit_price, quantity, realized_pnl_kwd, commission_kwd,
+            entry_gate_json, exit_gate_json
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT (book_id, ticker, trade_date) DO UPDATE SET
             side = excluded.side,
             classification = excluded.classification,
@@ -428,7 +503,14 @@ def _lesson_insert_statement(book_id: str, ticker: str, trade_date: str, side: s
             holding_days = excluded.holding_days,
             reason = excluded.reason,
             enhancement = excluded.enhancement,
-            computed_at = excluded.computed_at
+            computed_at = excluded.computed_at,
+            entry_price = excluded.entry_price,
+            exit_price = excluded.exit_price,
+            quantity = excluded.quantity,
+            realized_pnl_kwd = excluded.realized_pnl_kwd,
+            commission_kwd = excluded.commission_kwd,
+            entry_gate_json = excluded.entry_gate_json,
+            exit_gate_json = excluded.exit_gate_json
         """,
         (
             book_id,
@@ -444,6 +526,13 @@ def _lesson_insert_statement(book_id: str, ticker: str, trade_date: str, side: s
             lesson.get("reason"),
             lesson.get("enhancement"),
             now,
+            _f(entry_price),
+            _f(exit_price),
+            _f(quantity),
+            _f(realized_pnl_kwd),
+            _f(commission_kwd),
+            entry_gate_json,
+            exit_gate_json,
         ),
     )
 
@@ -464,6 +553,8 @@ def record_scale_out_fill(
     avg_cost: float,
     opened_date: str,
     lesson: Optional[dict] = None,
+    entry_gate_json: Optional[str] = None,
+    exit_gate_json: Optional[str] = None,
 ) -> None:
     from app.core.database import exec_sql_batch
 
@@ -484,12 +575,12 @@ def record_scale_out_fill(
             """
             INSERT INTO ee_trend_hold_book_trades (
                 book_id, ticker, side, trade_date, quantity, price, gross_kwd,
-                commission_kwd, realized_pnl_kwd, reason, executed_at
-            ) VALUES (?,?,'SCALE_OUT',?,?,?,?,?,?,?,?)
+                commission_kwd, realized_pnl_kwd, reason, executed_at, entry_gate_json, exit_gate_json
+            ) VALUES (?,?,'SCALE_OUT',?,?,?,?,?,?,?,?,?,?)
             """,
             (
                 book_id, ticker.upper(), trade_date, _f(sell_quantity), _f(price), _f(gross_kwd),
-                _f(commission_kwd), _f(realized_pnl_kwd), reason, now,
+                _f(commission_kwd), _f(realized_pnl_kwd), reason, now, entry_gate_json, exit_gate_json,
             ),
         ),
         (
@@ -497,7 +588,12 @@ def record_scale_out_fill(
             (_f(cash_kwd), now, book_id),
         ),
     ]
-    lesson_stmt = _lesson_insert_statement(book_id, ticker, trade_date, "SCALE_OUT", lesson, now)
+    lesson_stmt = _lesson_insert_statement(
+        book_id, ticker, trade_date, "SCALE_OUT", lesson, now,
+        entry_price=avg_cost, exit_price=price, quantity=sell_quantity,
+        realized_pnl_kwd=realized_pnl_kwd, commission_kwd=commission_kwd,
+        entry_gate_json=entry_gate_json, exit_gate_json=exit_gate_json,
+    )
     if lesson_stmt is not None:
         statements.append(lesson_stmt)
     exec_sql_batch(statements)
@@ -516,6 +612,9 @@ def record_exit_fill(
     cash_kwd: float,
     lesson: Optional[dict] = None,
     confidence: Optional[float] = None,
+    entry_price: Optional[float] = None,
+    entry_gate_json: Optional[str] = None,
+    exit_gate_json: Optional[str] = None,
 ) -> None:
     from app.core.database import exec_sql_batch
 
@@ -526,12 +625,14 @@ def record_exit_fill(
             """
             INSERT INTO ee_trend_hold_book_trades (
                 book_id, ticker, side, trade_date, quantity, price, gross_kwd,
-                commission_kwd, realized_pnl_kwd, reason, executed_at, confidence
-            ) VALUES (?,?,'EXIT',?,?,?,?,?,?,?,?,?)
+                commission_kwd, realized_pnl_kwd, reason, executed_at, confidence,
+                entry_gate_json, exit_gate_json
+            ) VALUES (?,?,'EXIT',?,?,?,?,?,?,?,?,?,?,?)
             """,
             (
                 book_id, ticker.upper(), trade_date, _f(sell_quantity), _f(price), _f(gross_kwd),
                 _f(commission_kwd), _f(realized_pnl_kwd), reason, now, _f(confidence),
+                entry_gate_json, exit_gate_json,
             ),
         ),
         (
@@ -539,7 +640,12 @@ def record_exit_fill(
             (_f(cash_kwd), now, book_id),
         ),
     ]
-    lesson_stmt = _lesson_insert_statement(book_id, ticker, trade_date, "EXIT", lesson, now)
+    lesson_stmt = _lesson_insert_statement(
+        book_id, ticker, trade_date, "EXIT", lesson, now,
+        entry_price=entry_price, exit_price=price, quantity=sell_quantity,
+        realized_pnl_kwd=realized_pnl_kwd, commission_kwd=commission_kwd,
+        entry_gate_json=entry_gate_json, exit_gate_json=exit_gate_json,
+    )
     if lesson_stmt is not None:
         statements.append(lesson_stmt)
     exec_sql_batch(statements)
@@ -551,7 +657,8 @@ def load_recent_trades(book_id: str, limit: int = 300) -> List[dict]:
     rows = query_all(
         """
         SELECT id, ticker, side, trade_date, quantity, price, gross_kwd,
-               commission_kwd, realized_pnl_kwd, reason, executed_at, confidence
+               commission_kwd, realized_pnl_kwd, reason, executed_at, confidence,
+               entry_gate_json, exit_gate_json
         FROM   ee_trend_hold_book_trades
         WHERE  book_id = ?
         ORDER BY id DESC
@@ -613,7 +720,9 @@ def load_lessons(book_id: str, limit: int = 200) -> List[dict]:
     rows = query_all(
         """
         SELECT ticker, trade_date, side, classification, outcome, mae_pct,
-               mfe_pct, giveback_pct, holding_days, reason, enhancement, computed_at
+               mfe_pct, giveback_pct, holding_days, reason, enhancement, computed_at,
+               entry_price, exit_price, quantity, realized_pnl_kwd, commission_kwd,
+               entry_gate_json, exit_gate_json
         FROM   ee_trend_hold_book_lessons
         WHERE  book_id = ?
         ORDER BY trade_date DESC, ticker ASC
@@ -624,18 +733,25 @@ def load_lessons(book_id: str, limit: int = 200) -> List[dict]:
     return [dict(r.items()) for r in rows or []]
 
 
+MIN_BUCKET_SAMPLE = 5  # withhold a bucket's win_rate_pct below this many closed trades
+
+
 def load_lessons_summary(book_id: str) -> Dict[str, Any]:
     """
-    Aggregate *book_id*'s lessons log into a "what's actually going wrong"
-    rollup: counts per classification/outcome, plus average excursion
-    metrics for losing trades -- the evidence a human would want before
-    touching any decision-engine parameter.
+    Aggregate *book_id*'s lessons log into a "what's actually going wrong
+    -- and right" rollup: counts per classification/outcome, average
+    excursion metrics, and -- leading with the system's stated priority of
+    maximizing profit/win-rate -- profit-left-on-table and win-rate broken
+    out by entry path (Donchian vs EMA-cross) and ADX regime at entry. This
+    is the evidence a human would want before touching any decision-engine
+    parameter (CHANDELIER_ATR_MULT, SCALE_OUT_GAIN_PCT, MIN_REL_VOLUME, ...).
     """
     from app.core.database import query_all
 
     rows = query_all(
         """
-        SELECT classification, outcome, mae_pct, mfe_pct, giveback_pct, holding_days
+        SELECT classification, outcome, mae_pct, mfe_pct, giveback_pct, holding_days,
+               entry_gate_json
         FROM   ee_trend_hold_book_lessons
         WHERE  book_id = ?
         """,
@@ -647,6 +763,21 @@ def load_lessons_summary(book_id: str) -> Dict[str, Any]:
     by_outcome: Dict[str, int] = {}
     loss_mae: List[float] = []
     win_giveback: List[float] = []
+    left_on_table: List[float] = []
+    entry_confidence_win: List[float] = []
+    entry_confidence_loss: List[float] = []
+    path_buckets: Dict[str, Dict[str, int]] = {}
+    adx_buckets: Dict[str, Dict[str, int]] = {}
+
+    def _bump(buckets: Dict[str, Dict[str, int]], key: Optional[str], outcome: str) -> None:
+        if key is None:
+            return
+        b = buckets.setdefault(key, {"closed": 0, "wins": 0, "losses": 0})
+        b["closed"] += 1
+        if outcome == "WIN":
+            b["wins"] += 1
+        elif outcome == "LOSS":
+            b["losses"] += 1
 
     for r in rows:
         cls = r.get("classification") or "UNKNOWN"
@@ -657,6 +788,35 @@ def load_lessons_summary(book_id: str) -> Dict[str, Any]:
             loss_mae.append(float(r["mae_pct"]))
         if outcome == "WIN" and r.get("giveback_pct") is not None:
             win_giveback.append(float(r["giveback_pct"]))
+        # Profit-left-on-table: WIN/PARTIAL trades only, matching the
+        # frontend's pct_left_on_table field (== giveback_pct restricted to
+        # the profit-lens outcomes -- losses keep classification+reason,
+        # no equivalent "upside missed" concept per this system's priority).
+        if outcome in ("WIN", "PARTIAL") and r.get("giveback_pct") is not None:
+            left_on_table.append(float(r["giveback_pct"]))
+
+        gate = _parse_gate_json(r.get("entry_gate_json"))
+        if gate is not None:
+            conf = gate.get("confidence")
+            if conf is not None:
+                if outcome == "WIN":
+                    entry_confidence_win.append(float(conf))
+                elif outcome == "LOSS":
+                    entry_confidence_loss.append(float(conf))
+            _bump(path_buckets, gate.get("entry_path"), outcome)
+            _bump(adx_buckets, _adx_bucket(gate.get("adx14")), outcome)
+
+    def _finalize_buckets(buckets: Dict[str, Dict[str, int]]) -> Dict[str, Dict[str, Any]]:
+        out: Dict[str, Dict[str, Any]] = {}
+        for key, b in buckets.items():
+            win_rate = (b["wins"] / b["closed"] * 100.0) if b["closed"] else None
+            out[key] = {
+                "closed": b["closed"],
+                "wins": b["wins"],
+                "losses": b["losses"],
+                "win_rate_pct": round(win_rate, 1) if (win_rate is not None and b["closed"] >= MIN_BUCKET_SAMPLE) else None,
+            }
+        return out
 
     return {
         "total_closed": len(rows),
@@ -664,6 +824,12 @@ def load_lessons_summary(book_id: str) -> Dict[str, Any]:
         "by_outcome": by_outcome,
         "avg_loss_mae_pct": round(sum(loss_mae) / len(loss_mae), 2) if loss_mae else None,
         "avg_win_giveback_pct": round(sum(win_giveback) / len(win_giveback), 2) if win_giveback else None,
+        "avg_pct_left_on_table": round(sum(left_on_table) / len(left_on_table), 2) if left_on_table else None,
+        "trades_with_room_to_improve": sum(1 for v in left_on_table if v > 0.5),
+        "by_entry_path": _finalize_buckets(path_buckets),
+        "by_adx_bucket": _finalize_buckets(adx_buckets),
+        "avg_entry_confidence_win": round(sum(entry_confidence_win) / len(entry_confidence_win), 1) if entry_confidence_win else None,
+        "avg_entry_confidence_loss": round(sum(entry_confidence_loss) / len(entry_confidence_loss), 1) if entry_confidence_loss else None,
     }
 
 

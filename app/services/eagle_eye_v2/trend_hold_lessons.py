@@ -54,6 +54,51 @@ def _window(ohlcv: pd.DataFrame, entry_date: str, exit_date: str) -> pd.DataFram
     return ohlcv.loc[mask]
 
 
+def compute_forward_look(
+    ticker: str,
+    exit_date: str,
+    exit_price: float,
+    ohlcv: pd.DataFrame,
+    sessions: int = 5,
+) -> Optional[dict]:
+    """
+    Did the stock have more room to run after this system exited it?
+
+    Looks at the *sessions* (default 5 -- one trading week) sessions of real
+    OHLCV that came after *exit_date*, plus a longer ~20-session (~1 month)
+    window for the "how much further did it run at its best" question --
+    "1 week" alone is a single noisy data point, the extended peak gives a
+    steadier read on whether the exit was early or justified.
+
+    Returns None when fewer than *sessions* sessions of forward data exist
+    yet (the trade closed too recently) -- this is a hard limit, not a bug:
+    the answer literally doesn't exist until real time passes. Never raises;
+    a missing/malformed ohlcv just means no forward-look, same convention as
+    analyze_trade()'s other None-safe paths.
+    """
+    if ohlcv is None or ohlcv.empty or not exit_date or not exit_price or exit_price <= 0:
+        return None
+
+    forward = ohlcv.loc[ohlcv.index > pd.Timestamp(exit_date)].sort_index()
+    if len(forward) < sessions:
+        return {"available": False, "sessions_available": int(len(forward))}
+
+    price_1w = float(forward["close"].iloc[sessions - 1])
+    return_1w_pct = (price_1w / exit_price - 1.0) * 100.0
+
+    extended = forward.iloc[: min(len(forward), 20)]
+    peak_extended = float(extended["high"].max())
+    peak_extended_pct = (peak_extended / exit_price - 1.0) * 100.0
+
+    return {
+        "available": True,
+        "sessions_available": int(len(forward)),
+        "price_1w": price_1w,
+        "return_1w_pct": round(return_1w_pct, 2),
+        "peak_20d_pct": round(peak_extended_pct, 2),
+    }
+
+
 def analyze_trade(
     *,
     side: str,  # "SCALE_OUT" or "EXIT"
@@ -62,6 +107,7 @@ def analyze_trade(
     exit_date: str,
     exit_price: float,
     ohlcv: pd.DataFrame,
+    entry_gate: Optional[dict] = None,
 ) -> TradeLesson:
     """Classify one closed leg of a trade using its realized price path."""
     if not entry_date or not entry_price or entry_price <= 0:
@@ -139,11 +185,50 @@ def analyze_trade(
             f"Stopped out {holding_days} session(s) after entry at {realized_pct:.1f}% -- "
             f"the breakout failed almost immediately."
         )
-        enhancement = (
-            "A cluster of these suggests the entry's volume/flow confirmation (MIN_REL_VOLUME / "
-            "CMF_FLOOR) may be too lenient for this kind of setup -- worth checking whether "
-            "quick-stop trades share a common entry pattern."
-        )
+        if entry_gate and entry_gate.get("rel_volume") is not None and entry_gate.get("cmf10") is not None:
+            rv = float(entry_gate["rel_volume"])
+            rv_floor = float(entry_gate.get("rel_volume_floor") or 0.8)
+            cmf10 = float(entry_gate["cmf10"])
+            cmf_floor = float(entry_gate.get("cmf_floor") or -0.05)
+            cmf_passed = cmf10 >= cmf_floor
+            # "Marginal" means a gate barely cleared its own floor -- a
+            # large margin means weak entry confirmation ISN'T what
+            # explains this quick-stop, and claiming otherwise would
+            # misattribute the loss. Only meaningful for a gate that
+            # actually passed; a gate that failed (covered by the OTHER
+            # condition) gets its own, differently-worded line below.
+            rv_marginal = rv < rv_floor * 1.25
+            cmf_marginal = cmf_passed and (cmf10 - cmf_floor) < 0.03
+            gate_line = (
+                f"Entry rel-volume was {rv:.2f} vs the {rv_floor:.2f} floor, and CMF10 was "
+                f"{cmf10:.3f} vs the {cmf_floor:.2f} floor"
+            )
+            if entry_gate.get("flow_pass_via") == "CMF":
+                if rv_marginal and cmf_marginal:
+                    enhancement = (
+                        f"{gate_line} -- both barely cleared, consistent with a weak-confirmation breakout."
+                    )
+                else:
+                    enhancement = (
+                        f"{gate_line} -- both well clear of their floors, so this wasn't a marginal-"
+                        f"confirmation entry. The quick stop-out more likely reflects a single sharp "
+                        f"adverse session than a lenient gate; check the price path itself before "
+                        f"touching MIN_REL_VOLUME/CMF_FLOOR for cases like this."
+                    )
+            else:
+                cmf_note = (
+                    f"CMF actually failed its own floor by {(cmf_floor - cmf10):.3f} -- confirmation came "
+                    f"entirely from OBV slope"
+                    if not cmf_passed
+                    else "CMF also passed, just not the stronger of the two signals that day"
+                )
+                enhancement = f"{gate_line} -- {cmf_note}. Worth checking whether OBV-only confirmations underperform CMF-confirmed ones across more trades."
+        else:
+            enhancement = (
+                "A cluster of these suggests the entry's volume/flow confirmation (MIN_REL_VOLUME / "
+                "CMF_FLOOR) may be too lenient for this kind of setup -- worth checking whether "
+                "quick-stop trades share a common entry pattern."
+            )
 
     else:
         single_session_share: Optional[float] = None

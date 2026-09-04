@@ -196,6 +196,10 @@ def ensure_tables() -> None:
         (),
     )
     _acim("ee_trend_hold_state", "confidence", "REAL")
+    # Full gate-input snapshot (JSON) for whichever decision fired today --
+    # entry_gate on BUY, exit_gate on SELL_SIGNAL/SCALE_OUT, null on
+    # HOLD/WAIT. See trend_hold_engine.py's _build_entry_gate/_build_exit_gate.
+    _acim("ee_trend_hold_state", "gate_snapshot_json", "TEXT")
 
     # Append-only daily decision log for the trend-hold engine -- one row per
     # ticker per session, so the user can look back and learn from what the
@@ -223,6 +227,7 @@ def ensure_tables() -> None:
         (),
     )
     _acim("ee_trend_hold_state_history", "confidence", "REAL")
+    _acim("ee_trend_hold_state_history", "gate_snapshot_json", "TEXT")
 
 
 # ---------------------------------------------------------------------------
@@ -742,8 +747,8 @@ def save_trend_hold_state(ticker: str, row: dict) -> None:
         INSERT INTO ee_trend_hold_state (
             ticker, decision, reason, position_state, entry_date, entry_price,
             structural_stop, position_fraction, close, trade_date,
-            computed_at, updated_at, confidence
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+            computed_at, updated_at, confidence, gate_snapshot_json
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT (ticker) DO UPDATE SET
             decision = excluded.decision,
             reason = excluded.reason,
@@ -756,7 +761,8 @@ def save_trend_hold_state(ticker: str, row: dict) -> None:
             trade_date = excluded.trade_date,
             computed_at = excluded.computed_at,
             updated_at = excluded.updated_at,
-            confidence = excluded.confidence
+            confidence = excluded.confidence,
+            gate_snapshot_json = excluded.gate_snapshot_json
         """,
         (
             ticker.upper(),
@@ -772,6 +778,7 @@ def save_trend_hold_state(ticker: str, row: dict) -> None:
             datetime.now().isoformat(timespec="seconds"),
             int(time.time()),
             _f(row.get("confidence")),
+            json.dumps(row["gate_snapshot"]) if row.get("gate_snapshot") is not None else None,
         ),
     )
 
@@ -784,7 +791,7 @@ def load_all_trend_hold_state() -> Dict[str, dict]:
         """
         SELECT ticker, decision, reason, position_state, entry_date, entry_price,
                structural_stop, position_fraction, close, trade_date, computed_at,
-               confidence
+               confidence, gate_snapshot_json
         FROM   ee_trend_hold_state
         """,
         (),
@@ -812,8 +819,8 @@ def save_trend_hold_state_snapshot(ticker: str, row: dict) -> None:
         INSERT INTO ee_trend_hold_state_history (
             ticker, trade_date, decision, reason, position_state, entry_date,
             entry_price, structural_stop, position_fraction, close,
-            computed_at, updated_at, confidence
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+            computed_at, updated_at, confidence, gate_snapshot_json
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT (ticker, trade_date) DO UPDATE SET
             decision = excluded.decision,
             reason = excluded.reason,
@@ -825,7 +832,8 @@ def save_trend_hold_state_snapshot(ticker: str, row: dict) -> None:
             close = excluded.close,
             computed_at = excluded.computed_at,
             updated_at = excluded.updated_at,
-            confidence = excluded.confidence
+            confidence = excluded.confidence,
+            gate_snapshot_json = excluded.gate_snapshot_json
         """,
         (
             ticker.upper(),
@@ -841,6 +849,7 @@ def save_trend_hold_state_snapshot(ticker: str, row: dict) -> None:
             datetime.now().isoformat(timespec="seconds"),
             int(time.time()),
             _f(row.get("confidence")),
+            json.dumps(row["gate_snapshot"]) if row.get("gate_snapshot") is not None else None,
         ),
     )
 
