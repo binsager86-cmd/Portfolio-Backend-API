@@ -12,11 +12,17 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.api.deps import require_admin
 from app.core.database import get_db
 from app.services.eagle_eye_v2.simulator.constants import INITIAL_CAPITAL_KWD, MANIFEST_PATH, SIMULATOR_ROOT
 from app.services.eagle_eye_v2.simulator.projection import SQL_MAP_POSTGRES, table_name
 
-router = APIRouter(prefix="/simulator", tags=["Simulator v2"])
+# Admin-only: the mobile app hides the Simulator tab from non-admins
+# (components/eagle-eye/EagleEyeTopTabs.tsx), but every endpoint here
+# previously had NO auth dependency at all (not even get_current_user) --
+# require_admin below closes that gap so a non-admin (or unauthenticated)
+# caller is rejected server-side, not just kept out of the UI.
+router = APIRouter(prefix="/simulator", tags=["Simulator v2"], dependencies=[Depends(require_admin)])
 
 BOOKS = ("BUY", "WATCHLIST")
 CACHE_SECONDS = 60
