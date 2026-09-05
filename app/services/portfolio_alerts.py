@@ -80,7 +80,7 @@ def _format_pct(value: float) -> str:
 
 def _format_kwd(value: float) -> str:
     sign = "+" if value >= 0 else "-"
-    return f"{sign}KD {abs(value):,.3f}"
+    return f"{sign}{abs(value):,.3f} KWD"
 
 
 def notify_portfolio_update(user_id: int) -> dict:
