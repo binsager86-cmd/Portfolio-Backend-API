@@ -9,6 +9,14 @@ unrelated eagle_eye_v2/simulator/ system, and of the V1 Rating Book
 (app/api/v1/v1_rating_book.py) -- a second, independent paper book run
 side by side for comparison. Response-building logic is shared with that
 router via _paper_book_common.py; only book_id and the price source differ.
+
+Admin-only: every endpoint here requires require_admin (not just
+get_current_user), matching the mobile app's Eagle Eye tab bar, which
+hides the Trend-Hold Book tab entirely for non-admins
+(components/eagle-eye/EagleEyeTopTabs.tsx). This is server-side
+enforcement, not just a hidden tab -- a non-admin's JWT is rejected here
+even if called directly. The V1 Rating Book router is intentionally left
+un-gated (get_current_user only) since it wasn't part of this change.
 """
 from __future__ import annotations
 
@@ -18,7 +26,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from starlette.concurrency import run_in_threadpool
 
-from app.api.deps import get_current_user
+from app.api.deps import require_admin
 from app.api.v1._paper_book_common import (
     build_lessons_response,
     build_lessons_summary_response,
@@ -75,7 +83,7 @@ def _stop_map() -> dict:
 
 
 @router.get("/portfolio", response_model=TrendHoldBookPortfolio)
-async def get_trend_hold_book_portfolio(_user: TokenData = Depends(get_current_user)):
+async def get_trend_hold_book_portfolio(_user: TokenData = Depends(require_admin)):
     """Return the Trend-Hold Book's current cash, mark-to-market equity, and total return."""
     from app.services.eagle_eye_v2 import paper_book_store as book
 
@@ -84,7 +92,7 @@ async def get_trend_hold_book_portfolio(_user: TokenData = Depends(get_current_u
 
 
 @router.post("/refresh-prices")
-async def refresh_trend_hold_book_prices(_user: TokenData = Depends(get_current_user)):
+async def refresh_trend_hold_book_prices(_user: TokenData = Depends(require_admin)):
     """
     Manually fetch a fresh TickerChart price for whatever the Trend-Hold
     Book currently holds -- the same intraday refresh the scheduler runs
@@ -106,7 +114,7 @@ async def refresh_trend_hold_book_prices(_user: TokenData = Depends(get_current_
 
 
 @router.get("/positions", response_model=TrendHoldBookPositionsResponse)
-async def get_trend_hold_book_positions(_user: TokenData = Depends(get_current_user)):
+async def get_trend_hold_book_positions(_user: TokenData = Depends(require_admin)):
     """Return every currently open Trend-Hold Book paper position, marked to market."""
     from app.services.eagle_eye_v2 import paper_book_store as book
 
@@ -117,7 +125,7 @@ async def get_trend_hold_book_positions(_user: TokenData = Depends(get_current_u
 @router.get("/trades", response_model=TrendHoldBookTradesResponse)
 async def get_trend_hold_book_trades(
     limit: int = Query(default=300, ge=1, le=1000),
-    _user: TokenData = Depends(get_current_user),
+    _user: TokenData = Depends(require_admin),
 ):
     """Return the Trend-Hold Book's trade ledger, newest first."""
     from app.services.eagle_eye_v2 import paper_book_store as book
@@ -129,7 +137,7 @@ async def get_trend_hold_book_trades(
 @router.get("/nav-history", response_model=TrendHoldBookNavHistoryResponse)
 async def get_trend_hold_book_nav_history(
     days: int = Query(default=180, ge=1, le=1000),
-    _user: TokenData = Depends(get_current_user),
+    _user: TokenData = Depends(require_admin),
 ):
     """Return the Trend-Hold Book's daily equity history, oldest first -- powers the equity curve chart."""
     from app.services.eagle_eye_v2 import paper_book_store as book
@@ -143,7 +151,7 @@ async def get_trend_hold_decision_log(
     limit: int = Query(default=200, ge=1, le=1000),
     include_wait: bool = Query(default=False),
     ticker: Optional[str] = Query(default=None),
-    _user: TokenData = Depends(get_current_user),
+    _user: TokenData = Depends(require_admin),
 ):
     """
     Return the trend-hold engine's decision history log -- what it decided
@@ -182,7 +190,7 @@ async def get_trend_hold_decision_log(
 @router.get("/lessons", response_model=TrendHoldBookLessonsResponse)
 async def get_trend_hold_book_lessons(
     limit: int = Query(default=200, ge=1, le=1000),
-    _user: TokenData = Depends(get_current_user),
+    _user: TokenData = Depends(require_admin),
 ):
     """
     Return the Trend-Hold Book's post-trade "autopsy" log -- one entry per
@@ -198,7 +206,7 @@ async def get_trend_hold_book_lessons(
 
 
 @router.get("/lessons/summary", response_model=TrendHoldBookLessonsSummary)
-async def get_trend_hold_book_lessons_summary(_user: TokenData = Depends(get_current_user)):
+async def get_trend_hold_book_lessons_summary(_user: TokenData = Depends(require_admin)):
     """
     Aggregate rollup of the lessons log -- counts per classification/
     outcome and average excursion metrics. This is the evidence a human
@@ -212,7 +220,7 @@ async def get_trend_hold_book_lessons_summary(_user: TokenData = Depends(get_cur
 
 
 @router.get("/performance", response_model=TrendHoldBookPerformance)
-async def get_trend_hold_book_performance(_user: TokenData = Depends(get_current_user)):
+async def get_trend_hold_book_performance(_user: TokenData = Depends(require_admin)):
     """
     Standard trading performance scorecard: win/loss counts and rate,
     total realized P&L, best/worst single trade, average win/loss,
