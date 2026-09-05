@@ -162,19 +162,22 @@ def notify_portfolio_update(user_id: int) -> dict:
             value_str = f"KD {latest_value:,.3f}"
             if change_pct is not None:
                 direction_emoji = "📈" if change_pct >= 0 else "📉"
-                title = f"{direction_emoji} Daily Portfolio Summary"
-                body = f"{value_str}  •  {_format_pct(change_pct)}"
+                title = f"{direction_emoji} Daily Updates"
+                direction = "up" if change_pct >= 0 else "down"
+                body = f"Portfolio {direction} {abs(change_pct):.2f}%"
                 if daily_movement is not None:
-                    body += f"  ({_format_kwd(daily_movement)})"
+                    body += f" ({_format_kwd(daily_movement)})"
+                body += f"\n{value_str}"
             else:
-                title = "📊 Daily Portfolio Summary"
-                body = f"Today's value: {value_str}"
+                title = "📊 Daily Updates"
+                body = f"Today's portfolio value: {value_str}"
 
             data = {
                 "type": "daily_update",
                 "snapshotDate": str(latest.snapshot_date),
                 "value": latest_value,
                 "changePct": change_pct,
+                "dailyMovement": daily_movement,
             }
             res = send_push_notifications(
                 tokens, title, body, data,
