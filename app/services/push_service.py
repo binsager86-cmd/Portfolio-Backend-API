@@ -121,6 +121,7 @@ def send_push_notifications(
 
     sent = 0
     failed = invalid_local
+    unregister_tokens: set[str] = set()
     chunk_size = 100
     stop_due_to_invalid_credentials = False
 
@@ -148,13 +149,15 @@ def send_push_notifications(
                     tickets = [tickets]
 
                 invalid_credentials_hits = 0
-                for ticket in tickets:
+                for ticket_index, ticket in enumerate(tickets):
                     if ticket.get("status") == "ok":
                         sent += 1
                     else:
                         failed += 1
                         err = ticket.get("details", {}).get("error", "unknown")
-                        if err == "InvalidCredentials":
+                        if err == "DeviceNotRegistered":
+                            unregister_tokens.add(chunk[ticket_index]["to"])
+                        elif err == "InvalidCredentials":
                             invalid_credentials_hits += 1
                         else:
                             logger.warning("Push ticket error: %s", err)
@@ -170,6 +173,23 @@ def send_push_notifications(
             except Exception as e:
                 logger.warning("Expo push send failed: %s", e)
                 failed += len(chunk)
+
+    if unregister_tokens:
+        try:
+            from app.core.database import SessionLocal
+            from app.models.push_token import PushToken
+
+            db = SessionLocal()
+            try:
+                db.query(PushToken).filter(PushToken.token.in_(unregister_tokens)).delete(
+                    synchronize_session=False,
+                )
+                db.commit()
+                logger.info("Removed %d unregistered push token(s)", len(unregister_tokens))
+            finally:
+                db.close()
+        except Exception as exc:
+            logger.warning("Failed to remove unregistered push tokens: %s", exc)
 
     logger.info("Push notifications: sent=%d, failed=%d", sent, failed)
     return {"sent": sent, "failed": failed}
