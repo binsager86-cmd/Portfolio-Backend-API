@@ -619,17 +619,170 @@ def ensure_all_tables() -> None:
     if settings.use_postgres:
         _drop_stale_not_null_constraints()
 
-    # ── 18. Production indexes ───────────────────────────────────────
+    # ── 18. KFH read-only broker staging ─────────────────────────────
+    _ensure_kfh_import_tables(PK)
+
+    # ── 19. Production indexes ───────────────────────────────────────
     # PostgreSQL does NOT auto-index foreign-key columns.  These indexes
     # ensure common query patterns are fast on both SQLite and PG.
     _ensure_indexes()
 
-    # ── 19. PostgreSQL: upgrade REAL → DOUBLE PRECISION ──────────────
+    # ── 20. PostgreSQL: upgrade REAL → DOUBLE PRECISION ──────────────
     # PG REAL is 4-byte (~7 digits); financial data needs 8-byte (~15).
     if settings.use_postgres:
         _upgrade_real_to_float8()
 
     logger.info("🏁  Schema initialization complete — all tables ensured")
+
+
+def _ensure_kfh_import_tables(pk: str) -> None:
+    """Mirror the additive KFH Alembic migration for dev/test startup."""
+    try:
+        exec_sql(f"""
+            CREATE TABLE IF NOT EXISTS broker_connections (
+                id {pk},
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                broker TEXT NOT NULL,
+                broker_account_key TEXT NOT NULL,
+                account_label TEXT,
+                auth_mode TEXT NOT NULL DEFAULT 'LOCAL_BROWSER_SESSION',
+                status TEXT NOT NULL DEFAULT 'DISCONNECTED',
+                last_connected_at INTEGER,
+                last_successful_sync TEXT,
+                last_sync_status TEXT,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER,
+                UNIQUE (user_id, broker, broker_account_key)
+            )
+        """)
+        exec_sql(f"""
+            CREATE TABLE IF NOT EXISTS broker_raw_transactions (
+                id {pk},
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                broker_connection_id INTEGER NOT NULL REFERENCES broker_connections(id),
+                sync_batch_id INTEGER,
+                broker_transaction_ref TEXT NOT NULL,
+                secondary_fingerprint TEXT NOT NULL,
+                record_kind TEXT NOT NULL,
+                transaction_date TEXT NOT NULL,
+                transaction_timestamp TEXT,
+                settlement_date TEXT,
+                transaction_type TEXT NOT NULL,
+                symbol TEXT,
+                quantity NUMERIC(38,12),
+                price NUMERIC(38,12),
+                amount NUMERIC(38,12),
+                fees NUMERIC(38,12),
+                canonical_payload TEXT NOT NULL,
+                raw_payload TEXT,
+                raw_transaction_type TEXT,
+                raw_description TEXT,
+                raw_date TEXT,
+                raw_hash TEXT NOT NULL,
+                parser_version TEXT NOT NULL,
+                adapter_version TEXT NOT NULL,
+                committed_at INTEGER,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER,
+                UNIQUE (user_id, broker_connection_id, broker_transaction_ref)
+            )
+        """)
+        exec_sql(f"""
+            CREATE TABLE IF NOT EXISTS broker_import_batches (
+                id {pk},
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                broker_connection_id INTEGER NOT NULL REFERENCES broker_connections(id),
+                status TEXT NOT NULL,
+                mode TEXT,
+                requested_from TEXT,
+                requested_to TEXT,
+                started_at INTEGER NOT NULL,
+                fetched_at INTEGER,
+                committed_at INTEGER,
+                scope_json TEXT,
+                fetched_count INTEGER NOT NULL DEFAULT 0,
+                unsettled_count INTEGER NOT NULL DEFAULT 0,
+                new_count INTEGER NOT NULL DEFAULT 0,
+                duplicate_count INTEGER NOT NULL DEFAULT 0,
+                matched_count INTEGER NOT NULL DEFAULT 0,
+                conflict_count INTEGER NOT NULL DEFAULT 0,
+                unsupported_count INTEGER NOT NULL DEFAULT 0,
+                kfh_open_balance NUMERIC(38,3),
+                kfh_close_balance NUMERIC(38,3),
+                kfh_total_buy NUMERIC(38,3),
+                kfh_total_sell NUMERIC(38,3),
+                kfh_total_deposit NUMERIC(38,3),
+                kfh_total_withdrawal NUMERIC(38,3),
+                counts_json TEXT NOT NULL,
+                reconciliation_json TEXT,
+                cash_summary_json TEXT,
+                commit_result_json TEXT,
+                created_at INTEGER NOT NULL,
+                confirmed_at INTEGER
+            )
+        """)
+        exec_sql(f"""
+            CREATE TABLE IF NOT EXISTS broker_import_items (
+                id {pk},
+                batch_id INTEGER NOT NULL REFERENCES broker_import_batches(id),
+                broker_raw_transaction_id INTEGER NOT NULL REFERENCES broker_raw_transactions(id),
+                classification TEXT NOT NULL,
+                reason TEXT,
+                matched_record_kind TEXT,
+                matched_record_id INTEGER,
+                match_type TEXT,
+                confidence REAL,
+                saham_value_json TEXT,
+                kfh_value_json TEXT,
+                selected_default INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL,
+                UNIQUE (batch_id, broker_raw_transaction_id)
+            )
+        """)
+        exec_sql(f"""
+            CREATE TABLE IF NOT EXISTS broker_transaction_links (
+                id {pk},
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                broker_raw_transaction_id INTEGER NOT NULL UNIQUE
+                    REFERENCES broker_raw_transactions(id),
+                saham_record_kind TEXT NOT NULL,
+                saham_record_id INTEGER NOT NULL,
+                match_type TEXT NOT NULL,
+                confidence REAL NOT NULL,
+                linked_at INTEGER NOT NULL
+            )
+        """)
+        exec_sql(f"""
+            CREATE TABLE IF NOT EXISTS broker_unsettled_transactions (
+                id {pk},
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                sync_batch_id INTEGER NOT NULL REFERENCES broker_import_batches(id),
+                broker_connection_id INTEGER NOT NULL REFERENCES broker_connections(id),
+                broker_transaction_ref TEXT,
+                raw_transaction_type TEXT,
+                raw_description TEXT,
+                raw_date TEXT,
+                raw_payload TEXT NOT NULL,
+                raw_hash TEXT NOT NULL,
+                parser_version TEXT NOT NULL,
+                adapter_version TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'UNSETTLED',
+                created_at INTEGER NOT NULL
+            )
+        """)
+        for index_sql in (
+            "CREATE INDEX IF NOT EXISTS idx_broker_conn_user ON broker_connections (user_id)",
+            "CREATE INDEX IF NOT EXISTS idx_broker_raw_identity ON broker_raw_transactions (user_id, broker_connection_id, broker_transaction_ref)",
+            "CREATE INDEX IF NOT EXISTS idx_broker_raw_fingerprint ON broker_raw_transactions (user_id, secondary_fingerprint)",
+            "CREATE INDEX IF NOT EXISTS idx_broker_batch_user ON broker_import_batches (user_id, created_at)",
+            "CREATE INDEX IF NOT EXISTS idx_broker_item_batch ON broker_import_items (batch_id, classification)",
+            "CREATE INDEX IF NOT EXISTS idx_broker_link_record ON broker_transaction_links (user_id, saham_record_kind, saham_record_id)",
+            "CREATE INDEX IF NOT EXISTS idx_broker_unsettled_batch ON broker_unsettled_transactions (sync_batch_id, status)",
+        ):
+            exec_sql(index_sql)
+        logger.info("✅  KFH broker staging tables ensured")
+    except Exception as error:
+        logger.warning("⚠️  KFH broker staging table creation skipped: %s", error)
 
 
 def _drop_stale_not_null_constraints() -> None:

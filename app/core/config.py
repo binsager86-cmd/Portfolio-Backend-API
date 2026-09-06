@@ -46,6 +46,14 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: str = "http://localhost:19006,http://localhost:8081,http://localhost:3000"
 
+    # KFH read-only synchronization is deny-by-default and additionally scoped
+    # to an explicit test-user allowlist during controlled rollout.
+    KFH_AUTO_SYNC_ENABLED: bool = False
+    KFH_AUTO_SYNC_TEST_USER_IDS: str = ""
+    # Manual localhost-only statement review. This never enables scheduled or
+    # automatic KFH synchronization and is rejected in production.
+    KFH_LOCAL_TEST_ENABLED: bool = False
+
     # Redis / shared infrastructure
     REDIS_URL: str = ""                         # Used by Celery and shared rate limiting when configured
     ENABLE_PUBLIC_DOCS: bool = False             # Production docs/OpenAPI exposure opt-in
@@ -130,6 +138,14 @@ class Settings(BaseSettings):
     @property
     def google_client_ids_list(self) -> list[str]:
         return [client_id.strip() for client_id in self.GOOGLE_CLIENT_IDS.split(",") if client_id.strip()]
+
+    @property
+    def kfh_auto_sync_test_user_ids(self) -> set[int]:
+        return {
+            int(user_id)
+            for user_id in self.KFH_AUTO_SYNC_TEST_USER_IDS.split(",")
+            if user_id.strip().isdigit()
+        }
 
     @property
     def database_abs_path(self) -> str:

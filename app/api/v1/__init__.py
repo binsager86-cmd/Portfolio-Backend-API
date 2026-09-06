@@ -30,6 +30,7 @@ from app.api.v1.system import router as system_router
 from app.api.v1.eagle_eye import router as eagle_eye_router
 from app.api.v1.trend_hold_book import router as trend_hold_book_router
 from app.api.v1.v1_rating_book import router as v1_rating_book_router
+from app.api.v1.kfh_sync import router as kfh_sync_router
 
 try:
     from app.api.v1.orderbook import router as orderbook_router
@@ -69,6 +70,7 @@ v1_router.include_router(system_router)
 v1_router.include_router(eagle_eye_router)
 v1_router.include_router(trend_hold_book_router)
 v1_router.include_router(v1_rating_book_router)
+v1_router.include_router(kfh_sync_router)
 if orderbook_router is not None:
     v1_router.include_router(orderbook_router)
 if positions_router is not None:

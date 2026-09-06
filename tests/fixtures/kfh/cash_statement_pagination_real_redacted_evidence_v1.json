@@ -1,0 +1,470 @@
+{
+  "captureMethod": "OWNER_ARMED_KFH_UI_VIA_GATE_3A_R1",
+  "confidence": "SANITIZED_REAL_KFH_OBSERVATION",
+  "evidenceDate": "2026-09-02",
+  "fixtureType": "KFH_CASH_STATEMENT_PAGINATION_REAL_REDACTED_EVIDENCE_V1",
+  "pages": [
+    {
+      "page": 1,
+      "request": {
+        "DAT": {
+          "frmDate": "20251001",
+          "requestPageCapacity": 20,
+          "requestPageLabel": "REQUEST_PAGE_1",
+          "secAccNum": "<REDACTED_ACCOUNT>",
+          "sortMode": 0,
+          "startSeq": 0,
+          "toDate": "20260902",
+          "unqReqId": "<REDACTED_REQUEST_ID_PAGE_1>"
+        },
+        "HED": {
+          "chnlId": 30,
+          "msgGrp": 2,
+          "msgTyp": 7
+        }
+      },
+      "response": {
+        "DAT": {
+          "cashLogsCount": 19,
+          "firstTransactionRef": "TX_REF_0001",
+          "isNxtPagAvail": 1,
+          "lastTransactionRef": "TX_REF_0019",
+          "pageNo": -1,
+          "records": [
+            {
+              "date": "20260823090838",
+              "transactionRef": "TX_REF_0001"
+            },
+            {
+              "date": "20260818142943",
+              "transactionRef": "TX_REF_0002"
+            },
+            {
+              "date": "20260806123309",
+              "transactionRef": "TX_REF_0003"
+            },
+            {
+              "date": "20260728125647",
+              "transactionRef": "TX_REF_0004"
+            },
+            {
+              "date": "20260727121019",
+              "transactionRef": "TX_REF_0005"
+            },
+            {
+              "date": "20260727112010",
+              "transactionRef": "TX_REF_0006"
+            },
+            {
+              "date": "20260706123826",
+              "transactionRef": "TX_REF_0007"
+            },
+            {
+              "date": "20260706094131",
+              "transactionRef": "TX_REF_0008"
+            },
+            {
+              "date": "20260706092634",
+              "transactionRef": "TX_REF_0009"
+            },
+            {
+              "date": "20260706092538",
+              "transactionRef": "TX_REF_0010"
+            },
+            {
+              "date": "20260626103330",
+              "transactionRef": "TX_REF_0011"
+            },
+            {
+              "date": "20260618122336",
+              "transactionRef": "TX_REF_0012"
+            },
+            {
+              "date": "20260618122107",
+              "transactionRef": "TX_REF_0013"
+            },
+            {
+              "date": "20260618102230",
+              "transactionRef": "TX_REF_0014"
+            },
+            {
+              "date": "20260615090846",
+              "transactionRef": "TX_REF_0015"
+            },
+            {
+              "date": "20260608113650",
+              "transactionRef": "TX_REF_0016"
+            },
+            {
+              "date": "20260603115125",
+              "transactionRef": "TX_REF_0017"
+            },
+            {
+              "date": "20260602105324",
+              "transactionRef": "TX_REF_0018"
+            },
+            {
+              "date": "20260602101229",
+              "transactionRef": "TX_REF_0019"
+            }
+          ],
+          "requestPageLabel": "REQUEST_PAGE_1",
+          "responseTotalMatchingRecords": 69,
+          "totalPages": -1,
+          "unqReqId": "<REDACTED_REQUEST_ID_PAGE_1>",
+          "unsettledCashLogsCount": 0
+        },
+        "HED": {
+          "errCode": 0,
+          "msgGrp": 2,
+          "msgTyp": 107,
+          "resSts": 0
+        }
+      }
+    },
+    {
+      "page": 2,
+      "request": {
+        "DAT": {
+          "frmDate": "20251001",
+          "requestPageCapacity": 20,
+          "requestPageLabel": "REQUEST_PAGE_2",
+          "secAccNum": "<REDACTED_ACCOUNT>",
+          "sortMode": 0,
+          "startSeq": 20,
+          "toDate": "20260902",
+          "unqReqId": "<REDACTED_REQUEST_ID_PAGE_2>"
+        },
+        "HED": {
+          "chnlId": 30,
+          "msgGrp": 2,
+          "msgTyp": 7
+        }
+      },
+      "response": {
+        "DAT": {
+          "cashLogsCount": 20,
+          "firstTransactionRef": "TX_REF_0020",
+          "isNxtPagAvail": 1,
+          "lastTransactionRef": "TX_REF_0039",
+          "pageNo": -1,
+          "records": [
+            {
+              "date": "20260601114503",
+              "transactionRef": "TX_REF_0020"
+            },
+            {
+              "date": "20260601094033",
+              "transactionRef": "TX_REF_0021"
+            },
+            {
+              "date": "20260517091007",
+              "transactionRef": "TX_REF_0022"
+            },
+            {
+              "date": "20260517090729",
+              "transactionRef": "TX_REF_0023"
+            },
+            {
+              "date": "20260513130935",
+              "transactionRef": "TX_REF_0024"
+            },
+            {
+              "date": "20260512122650",
+              "transactionRef": "TX_REF_0025"
+            },
+            {
+              "date": "20260504122513",
+              "transactionRef": "TX_REF_0026"
+            },
+            {
+              "date": "20260504110156",
+              "transactionRef": "TX_REF_0027"
+            },
+            {
+              "date": "20260427073333",
+              "transactionRef": "TX_REF_0028"
+            },
+            {
+              "date": "20260423152600",
+              "transactionRef": "TX_REF_0029"
+            },
+            {
+              "date": "20260408093440",
+              "transactionRef": "TX_REF_0030"
+            },
+            {
+              "date": "20260407092051",
+              "transactionRef": "TX_REF_0031"
+            },
+            {
+              "date": "20260324105208",
+              "transactionRef": "TX_REF_0032"
+            },
+            {
+              "date": "20260324105024",
+              "transactionRef": "TX_REF_0033"
+            },
+            {
+              "date": "20260324103326",
+              "transactionRef": "TX_REF_0034"
+            },
+            {
+              "date": "20260305131216",
+              "transactionRef": "TX_REF_0035"
+            },
+            {
+              "date": "20260302130703",
+              "transactionRef": "TX_REF_0036"
+            },
+            {
+              "date": "20260302110555",
+              "transactionRef": "TX_REF_0037"
+            },
+            {
+              "date": "20260211234013",
+              "transactionRef": "TX_REF_0038"
+            },
+            {
+              "date": "20260128124659",
+              "transactionRef": "TX_REF_0039"
+            }
+          ],
+          "requestPageLabel": "REQUEST_PAGE_2",
+          "responseTotalMatchingRecords": 69,
+          "totalPages": -1,
+          "unqReqId": "<REDACTED_REQUEST_ID_PAGE_2>",
+          "unsettledCashLogsCount": 0
+        },
+        "HED": {
+          "errCode": 0,
+          "msgGrp": 2,
+          "msgTyp": 107,
+          "resSts": 0
+        }
+      }
+    },
+    {
+      "page": 3,
+      "request": {
+        "DAT": {
+          "frmDate": "20251001",
+          "requestPageCapacity": 20,
+          "requestPageLabel": "REQUEST_PAGE_3",
+          "secAccNum": "<REDACTED_ACCOUNT>",
+          "sortMode": 0,
+          "startSeq": 40,
+          "toDate": "20260902",
+          "unqReqId": "<REDACTED_REQUEST_ID_PAGE_3>"
+        },
+        "HED": {
+          "chnlId": 30,
+          "msgGrp": 2,
+          "msgTyp": 7
+        }
+      },
+      "response": {
+        "DAT": {
+          "cashLogsCount": 7,
+          "firstTransactionRef": "TX_REF_0040",
+          "isNxtPagAvail": 1,
+          "lastTransactionRef": "TX_REF_0046",
+          "pageNo": -1,
+          "records": [
+            {
+              "date": "20260128120735",
+              "transactionRef": "TX_REF_0040"
+            },
+            {
+              "date": "20260128120616",
+              "transactionRef": "TX_REF_0041"
+            },
+            {
+              "date": "20260128120456",
+              "transactionRef": "TX_REF_0042"
+            },
+            {
+              "date": "20251012151244",
+              "transactionRef": "TX_REF_0043"
+            },
+            {
+              "date": "20251008113704",
+              "transactionRef": "TX_REF_0044"
+            },
+            {
+              "date": "20251007091510",
+              "transactionRef": "TX_REF_0045"
+            },
+            {
+              "date": "20251001000000",
+              "transactionRef": "TX_REF_0046"
+            }
+          ],
+          "requestPageLabel": "REQUEST_PAGE_3",
+          "responseTotalMatchingRecords": 69,
+          "totalPages": -1,
+          "unqReqId": "<REDACTED_REQUEST_ID_PAGE_3>",
+          "unsettledCashLogsCount": 0
+        },
+        "HED": {
+          "errCode": 0,
+          "msgGrp": 2,
+          "msgTyp": 107,
+          "resSts": 0
+        }
+      }
+    },
+    {
+      "page": 4,
+      "request": {
+        "DAT": {
+          "frmDate": "20251001",
+          "requestPageCapacity": 20,
+          "requestPageLabel": "REQUEST_PAGE_4",
+          "secAccNum": "<REDACTED_ACCOUNT>",
+          "sortMode": 0,
+          "startSeq": 60,
+          "toDate": "20260902",
+          "unqReqId": "<REDACTED_REQUEST_ID_PAGE_4>"
+        },
+        "HED": {
+          "chnlId": 30,
+          "msgGrp": 2,
+          "msgTyp": 7
+        }
+      },
+      "response": {
+        "DAT": {
+          "cashLogsCount": 0,
+          "firstTransactionRef": null,
+          "isNxtPagAvail": 0,
+          "lastTransactionRef": null,
+          "pageNo": -1,
+          "records": [],
+          "requestPageLabel": "REQUEST_PAGE_4",
+          "responseTotalMatchingRecords": 69,
+          "totalPages": -1,
+          "unqReqId": "<REDACTED_REQUEST_ID_PAGE_4>",
+          "unsettledCashLogsCount": 0
+        },
+        "HED": {
+          "errCode": 0,
+          "msgGrp": 2,
+          "msgTyp": 107,
+          "resSts": 0
+        }
+      }
+    }
+  ],
+  "proof": {
+    "boundaryAnalysis": "CHRONOLOGICAL_WITHOUT_CROSS_PAGE_DUPLICATES",
+    "boundaryTransitions": [
+      {
+        "duplicateAtBoundary": false,
+        "fromPage": 1,
+        "lastTransactionRef": "TX_REF_0019",
+        "nextFirstTransactionRef": "TX_REF_0020",
+        "toPage": 2
+      },
+      {
+        "duplicateAtBoundary": false,
+        "fromPage": 2,
+        "lastTransactionRef": "TX_REF_0039",
+        "nextFirstTransactionRef": "TX_REF_0040",
+        "toPage": 3
+      },
+      {
+        "duplicateAtBoundary": false,
+        "fromPage": 3,
+        "lastTransactionRef": "TX_REF_0046",
+        "nextFirstTransactionRef": null,
+        "toPage": 4
+      }
+    ],
+    "captureValid": true,
+    "cashLogsCombinedCount": 46,
+    "cashLogsCounts": [
+      19,
+      20,
+      7,
+      0
+    ],
+    "cashLogsEqualResponseTotal": false,
+    "cashOnlyCombinedRecordCount": 46,
+    "cashOnlyTotalMatchesResponse": false,
+    "cashPlusUnsettledCombinedRecordCount": 46,
+    "cashPlusUnsettledEqualResponseTotal": false,
+    "cashPlusUnsettledTotalMatchesResponse": false,
+    "compatibleCursorRules": [
+      "REQUEST_PAGE_CAPACITY"
+    ],
+    "currentCaptureAttemptStopped": false,
+    "cursorRuleStatus": "VERIFIED",
+    "distinguishingContinuationObserved": true,
+    "duplicateReferencesAcrossPages": [],
+    "expectedPaginationWindows": 4,
+    "expectedStartSeqProgression": [
+      0,
+      20,
+      40,
+      60
+    ],
+    "gate5aPass": true,
+    "isNxtPagAvailSequence": [
+      1,
+      1,
+      1,
+      0
+    ],
+    "newQueryDetected": false,
+    "observedPaginationWindows": 4,
+    "pagesCaptured": 4,
+    "paginationBehaviorObserved": true,
+    "paginationRuleVerified": true,
+    "paginationWindowCoverageComplete": true,
+    "queryCaptureOrigin": "OWNER_ARMED_VIEW_ATTEMPT",
+    "repeatedPageRequestCount": 0,
+    "repeatedPageRequestObserved": false,
+    "requestIdBehavior": "REUSED_ACROSS_PAGES",
+    "requestIdsEchoedByResponse": true,
+    "requestIdsUniquePerPage": false,
+    "requestPageCapacitySequence": [
+      20,
+      20,
+      20,
+      20
+    ],
+    "requestPageCapacityStable": true,
+    "responseTotalMatchingRecordsSequence": [
+      69,
+      69,
+      69,
+      69
+    ],
+    "responseTotalSemantics": "PAGINATION_DOMAIN_TOTAL",
+    "responseTotalStable": true,
+    "responseTotalValue": 69,
+    "sortOrder": "NEWEST_TO_OLDEST",
+    "startSeqProgression": [
+      0,
+      20,
+      40,
+      60
+    ],
+    "unsettledCashLogsCounts": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "unsettledCombinedCount": 0,
+    "unsettledTotalSemantics": "NOT_DISTINGUISHABLE_FROM_CAPTURE"
+  },
+  "security": {
+    "account": "<REDACTED_ACCOUNT>",
+    "authenticationDataRetained": false,
+    "completeFinancialPayloadsRetained": false,
+    "requestIds": "REPLACED_WITH_STABLE_PAGE_LABELS",
+    "transactionReferences": "REPLACED_WITH_STABLE_FAKE_IDENTIFIERS"
+  }
+}
