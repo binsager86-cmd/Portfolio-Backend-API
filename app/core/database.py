@@ -263,6 +263,11 @@ class _PgCursorProxy:
     def description(self):
         return self._cur.description
 
+    @property
+    def rowcount(self):
+        """Expose the DB-API affected-row count used by mutation checks."""
+        return self._cur.rowcount
+
     def close(self):
         self._cur.close()
 
