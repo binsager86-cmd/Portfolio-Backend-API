@@ -19,7 +19,7 @@ from starlette.responses import StreamingResponse
 from app.api.deps import get_current_user
 from app.core.security import TokenData
 from app.core.exceptions import NotFoundError, BadRequestError
-from app.core.database import query_df, query_one, exec_sql, column_exists
+from app.core.database import query_df, query_one, exec_sql, column_exists, transaction
 from app.services.portfolio_service import (
     PortfolioService,
     get_complete_overview,
@@ -648,44 +648,41 @@ async def delete_transaction(
     current_user: TokenData = Depends(get_current_user),
 ):
     """Soft-delete a transaction."""
-    existing = query_one(
-        "SELECT id, portfolio, txn_type, purchase_cost, sell_value, "
-        "       cash_dividend, fees "
-        "FROM transactions WHERE id = ? AND user_id = ? AND COALESCE(is_deleted, 0) = 0",
-        (txn_id, current_user.user_id),
-    )
-    if not existing:
-        raise NotFoundError("Transaction", txn_id)
-
-    # Compute the delta this transaction was contributing, then reverse it
-    del_delta = _txn_cash_delta(
-        existing["txn_type"],
-        float(existing["purchase_cost"] or 0),
-        float(existing["sell_value"] or 0),
-        float(existing["cash_dividend"] or 0),
-        float(existing["fees"] or 0),
-    )
-
-    now = int(time.time())
-    exec_sql(
-        "UPDATE transactions SET is_deleted = 1, deleted_at = ? WHERE id = ? AND user_id = ?",
-        (now, txn_id, current_user.user_id),
-    )
-
-    log_event(
-        TXN_DELETE,
-        user_id=current_user.user_id,
-        resource_type="transaction",
-        resource_id=txn_id,
-        request=request,
-    )
-
-    # ── Ledger: recalculate portfolio cash (respects manual_override — matches Streamlit)
-    # Reverse the cash effect of the deleted transaction
     svc = PortfolioService(current_user.user_id)
-    svc.recalc_portfolio_cash(
-        deposit_delta=-del_delta, delta_portfolio=existing["portfolio"],
-    )
+    with transaction():
+        existing = query_one(
+            "SELECT id, portfolio, txn_type, purchase_cost, sell_value, "
+            "       cash_dividend, fees "
+            "FROM transactions WHERE id = ? AND user_id = ? AND COALESCE(is_deleted, 0) = 0",
+            (txn_id, current_user.user_id),
+        )
+        if not existing:
+            raise NotFoundError("Transaction", txn_id)
+
+        del_delta = _txn_cash_delta(
+            existing["txn_type"],
+            float(existing["purchase_cost"] or 0),
+            float(existing["sell_value"] or 0),
+            float(existing["cash_dividend"] or 0),
+            float(existing["fees"] or 0),
+        )
+
+        exec_sql(
+            "UPDATE transactions SET is_deleted = 1, deleted_at = ? WHERE id = ? AND user_id = ?",
+            (int(time.time()), txn_id, current_user.user_id),
+        )
+
+        log_event(
+            TXN_DELETE,
+            user_id=current_user.user_id,
+            resource_type="transaction",
+            resource_id=txn_id,
+            request=request,
+        )
+
+        svc.recalc_portfolio_cash(
+            deposit_delta=-del_delta, delta_portfolio=existing["portfolio"],
+        )
 
     unified = svc.get_total_portfolio_value()
 

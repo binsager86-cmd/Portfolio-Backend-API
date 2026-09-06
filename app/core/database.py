@@ -16,6 +16,7 @@ Both layers share the same underlying connection.
 import json
 import math
 import sqlite3
+import contextvars
 import threading
 from contextlib import contextmanager
 from contextlib import asynccontextmanager
@@ -35,6 +36,7 @@ _DB_PATH = _settings.database_abs_path
 _USE_PG = _settings.use_postgres
 _SQLITE_CONN: Optional[sqlite3.Connection] = None
 _SQLITE_CONN_LOCK = threading.Lock()
+_TRANSACTION_CONN: contextvars.ContextVar[Any] = contextvars.ContextVar("transaction_conn", default=None)
 
 # R11 defense-in-depth: enforce path isolation again at DB layer.
 enforce_environment_database_isolation(
@@ -296,6 +298,11 @@ class _PgCursorProxy:
     def description(self):
         return self._cur.description
 
+    @property
+    def rowcount(self):
+        """Expose the DB-API affected-row count used by mutation checks."""
+        return self._cur.rowcount
+
     def close(self):
         self._cur.close()
 
@@ -369,6 +376,28 @@ class _PgConnProxy:
         return cur
 
 
+class _BorrowedTransactionConn:
+    """Connection wrapper for service code running inside transaction()."""
+
+    def __init__(self, conn):
+        self._conn = conn
+
+    def cursor(self):
+        return self._conn.cursor()
+
+    def execute(self, sql, params=None):
+        return self._conn.execute(sql, params)
+
+    def commit(self):
+        return None
+
+    def rollback(self):
+        return None
+
+    def close(self):
+        return None
+
+
 @contextmanager
 def get_connection():
     """
@@ -394,12 +423,38 @@ def get_conn():
     For PostgreSQL: wraps the raw DBAPI connection in _PgConnProxy
     so that ?-style placeholders are translated to %s automatically.
     """
+    tx_conn = _TRANSACTION_CONN.get()
+    if tx_conn is not None:
+        return _BorrowedTransactionConn(tx_conn)
+
     if _USE_PG:
         raw = engine.raw_connection()
         return _PgConnProxy(raw)
     # Return a dedicated SQLite connection for legacy call-sites that
     # explicitly invoke conn.close() in finally blocks.
     return _open_sqlite_connection()
+
+
+@contextmanager
+def transaction():
+    """Run raw database helpers and legacy services atomically."""
+    current = _TRANSACTION_CONN.get()
+    if current is not None:
+        yield current
+        return
+
+    with get_connection() as conn:
+        token = _TRANSACTION_CONN.set(conn)
+        try:
+            if not _USE_PG:
+                conn.execute("BEGIN IMMEDIATE")
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            _TRANSACTION_CONN.reset(token)
 
 
 def query_df(sql: str, params: tuple = ()) -> pd.DataFrame:
@@ -433,6 +488,17 @@ def query_one(sql: str, params: tuple = ()):
     Returns a _DualRow for PG (supports both row[0] and row["col"]),
     or a sqlite3.Row for SQLite.
     """
+    tx_conn = _TRANSACTION_CONN.get()
+    if tx_conn is not None:
+        cur = tx_conn.cursor()
+        cur.execute(sql, params)
+        row = cur.fetchone()
+        if row is None:
+            return None
+        if hasattr(row, "keys"):
+            return _DualRow(row.keys(), tuple(row))
+        return _DualRow([c[0] for c in cur.description], row)
+
     if _USE_PG:
         pg_sql, named = _pg_sql_named(sql, params)
         with engine.connect() as conn:
@@ -494,6 +560,15 @@ def _normalize_ddl_for_pg(sql: str) -> str:
 
 def exec_sql(sql: str, params: tuple = ()) -> None:
     """Execute a write statement (INSERT / UPDATE / DELETE)."""
+    tx_conn = _TRANSACTION_CONN.get()
+    if tx_conn is not None:
+        if _USE_PG and isinstance(tx_conn, _PgConnProxy):
+            cur = tx_conn._conn.cursor()
+            cur.execute(_normalize_ddl_for_pg(sql).replace("?", "%s"), params)
+        else:
+            tx_conn.cursor().execute(sql, params)
+        return
+
     if _USE_PG:
         sql = _normalize_ddl_for_pg(sql)
         pg_sql, named = _pg_sql_named(sql, params)
